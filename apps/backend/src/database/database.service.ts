@@ -8,9 +8,17 @@ export class DatabaseService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
+    const url = process.env.DATABASE_URL;
+
+    if (!url) {
+      throw new Error('DATABASE_URL environment variable is not defined');
+    }
+
+    // Pass the connection string directly to the adapter
     const adapter = new PrismaPg({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: url,
     });
+
     super({ adapter });
   }
 

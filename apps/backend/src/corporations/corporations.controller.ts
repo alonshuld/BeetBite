@@ -8,14 +8,15 @@ import {
   Delete,
 } from '@nestjs/common';
 import { CorporationsService } from './corporations.service';
-import { Prisma } from 'src/generated/client';
+import { CreateCorporationDto } from './dto/create-corporation.dto';
+import { UpdateCorporationDto } from './dto/update-corporation.dto';
 
 @Controller('corporations')
 export class CorporationsController {
   constructor(private readonly corporationsService: CorporationsService) {}
 
   @Post()
-  create(@Body() createCorporationDto: Prisma.CorporationCreateInput) {
+  create(@Body() createCorporationDto: CreateCorporationDto) {
     return this.corporationsService.create(createCorporationDto);
   }
 
@@ -32,7 +33,7 @@ export class CorporationsController {
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body() updateCorporationDto: Prisma.CorporationUpdateInput,
+    @Body() updateCorporationDto: UpdateCorporationDto,
   ) {
     return this.corporationsService.update(id, updateCorporationDto);
   }

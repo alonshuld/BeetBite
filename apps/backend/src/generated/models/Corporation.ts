@@ -167,11 +167,11 @@ export type CorporationOrderByWithRelationInput = {
 
 export type CorporationWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  name?: string
   AND?: Prisma.CorporationWhereInput | Prisma.CorporationWhereInput[]
   OR?: Prisma.CorporationWhereInput[]
   NOT?: Prisma.CorporationWhereInput | Prisma.CorporationWhereInput[]
-  name?: Prisma.StringFilter<"Corporation"> | string
-}, "id">
+}, "id" | "name">
 
 export type CorporationOrderByWithAggregationInput = {
   id?: Prisma.SortOrder

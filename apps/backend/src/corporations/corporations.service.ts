@@ -1,37 +1,97 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { CreateCorporationDto } from './dto/create-corporation.dto';
+import { UpdateCorporationDto } from './dto/update-corporation.dto';
 import { DatabaseService } from 'src/database/database.service';
-import { Prisma, Corporation } from 'src/generated/client';
+import { Prisma } from 'src/generated/client';
+import { CorporationMapper } from './entities/corporation.mapper';
 
 @Injectable()
 export class CorporationsService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(private readonly db: DatabaseService) {}
 
-  async create(createCorporationDto: Prisma.CorporationCreateInput) {
-    return this.databaseService.corporation.create({
-      data: createCorporationDto,
-    });
+  async create(createCorporationDto: CreateCorporationDto) {
+    try {
+      const corporation = await this.db.corporation.create({
+        data: { ...createCorporationDto },
+      });
+      return CorporationMapper.toResponse(corporation);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Corporation already exists');
+      }
+
+      throw error;
+    }
   }
 
-  async findAll(): Promise<Corporation[]> {
-    return this.databaseService.corporation.findMany({});
+  async findAll() {
+    const corporations = await this.db.corporation.findMany();
+    return CorporationMapper.toResponseList(corporations);
   }
 
-  findOne(id: string) {
-    return this.databaseService.corporation.findUnique({
+  async findOne(id: string) {
+    const corporation = await this.db.corporation.findUnique({
       where: { id },
     });
+
+    if (!corporation) {
+      throw new NotFoundException('Corporation not found');
+    }
+
+    return CorporationMapper.toResponse(corporation);
   }
 
-  update(id: string, updateCorporationDto: Prisma.CorporationUpdateInput) {
-    return this.databaseService.corporation.update({
-      where: { id },
-      data: updateCorporationDto,
-    });
+  async update(id: string, updateCorporationDto: UpdateCorporationDto) {
+    try {
+      const corporation = await this.db.corporation.update({
+        where: { id },
+        data: { ...updateCorporationDto },
+      });
+
+      return CorporationMapper.toResponse(corporation);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException('Corporation not found');
+      }
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Corporation with this name already exists',
+        );
+      }
+
+      throw error;
+    }
   }
 
-  remove(id: string) {
-    return this.databaseService.corporation.delete({
-      where: { id },
-    });
+  async remove(id: string) {
+    try {
+      const corporation = await this.db.corporation.delete({
+        where: { id },
+      });
+
+      return CorporationMapper.toResponse(corporation);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException('Corporation not found');
+      }
+
+      throw error;
+    }
   }
 }
