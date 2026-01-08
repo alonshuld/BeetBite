@@ -3,10 +3,9 @@ import { PrismaClient } from 'src/generated/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 @Injectable()
-export class DatabaseService
+export class PrismaService
   extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy
-{
+  implements OnModuleInit, OnModuleDestroy {
   constructor() {
     const url = process.env.DATABASE_URL;
 

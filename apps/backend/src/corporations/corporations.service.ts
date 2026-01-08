@@ -5,13 +5,14 @@ import {
 } from '@nestjs/common';
 import { CreateCorporationDto } from './dto/create-corporation.dto';
 import { UpdateCorporationDto } from './dto/update-corporation.dto';
-import { DatabaseService } from 'src/database/database.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from 'src/generated/client';
 import { CorporationMapper } from './entities/corporation.mapper';
+import { PRISMA_ERROR_CODES } from 'src/constants';
 
 @Injectable()
 export class CorporationsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly db: PrismaService) { }
 
   async create(createCorporationDto: CreateCorporationDto) {
     try {
@@ -22,7 +23,7 @@ export class CorporationsService {
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
+        error.code === PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED
       ) {
         throw new ConflictException('Corporation already exists');
       }
@@ -59,13 +60,13 @@ export class CorporationsService {
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
+        error.code === PRISMA_ERROR_CODES.NOT_FOUND
       ) {
         throw new NotFoundException('Corporation not found');
       }
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
+        error.code === PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED
       ) {
         throw new ConflictException(
           'Corporation with this name already exists',
@@ -86,7 +87,7 @@ export class CorporationsService {
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
+        error.code === PRISMA_ERROR_CODES.NOT_FOUND
       ) {
         throw new NotFoundException('Corporation not found');
       }
