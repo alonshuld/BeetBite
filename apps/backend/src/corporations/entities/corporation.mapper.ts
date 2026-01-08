@@ -1,15 +1,15 @@
 import { Corporation } from 'src/generated/client';
-import { Corporation as CorporationEntity } from './corporation.entity';
+import { CorporationResponseDto } from '../dto/corporation-response.dto';
 
 export class CorporationMapper {
-  static toResponse(corporation: Corporation): CorporationEntity {
+  static toResponse(corporation: Corporation): CorporationResponseDto {
     return {
       id: corporation.id,
       name: corporation.name,
     };
   }
 
-  static toResponseList(corporations: Corporation[]): CorporationEntity[] {
+  static toResponseList(corporations: Corporation[]): CorporationResponseDto[] {
     return corporations.map((corp) => CorporationMapper.toResponse(corp));
   }
 }

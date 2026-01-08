@@ -7,6 +7,7 @@ export class CreateCorporationDto {
   @ApiProperty({
     example: 'Tech Innovators Inc.',
     description: 'Name of the corporation',
+    type: 'string',
   })
-  name: string;
+  name!: string;
 }

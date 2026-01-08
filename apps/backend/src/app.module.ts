@@ -4,12 +4,15 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { CorporationsModule } from './corporations/corporations.module';
 import { ConfigModule } from '@nestjs/config';
+import configuration from './config/configuration';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, // This makes process.env available everywhere
-      envFilePath: '.env', // Path relative to where you run the 'nest start' command
+      isGlobal: true,
+      load: [configuration],
+      envFilePath: ['.env.local', '.env'],
+      cache: true,
     }),
     PrismaModule,
     CorporationsModule,
@@ -17,4 +20,4 @@ import { ConfigModule } from '@nestjs/config';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
