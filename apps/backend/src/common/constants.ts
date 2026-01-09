@@ -3,3 +3,8 @@ export const PRISMA_ERROR_CODES = {
   FOREIGN_KEY_CONSTRAINT_FAILED: 'P2003',
   NOT_FOUND: 'P2025',
 };
+
+export const PAGINATION_DEFAULTS = {
+  LIMIT: 10,
+  PAGE: 1,
+};

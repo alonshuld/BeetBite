@@ -3,23 +3,23 @@ import { CreateCorporationDto } from './dto/create-corporation.dto';
 import { UpdateCorporationDto } from './dto/update-corporation.dto';
 import { CorporationResponseDto } from './dto/corporation-response.dto';
 import { PaginationQueryDto } from '../common/pagination-query.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from 'src/generated/client';
 import { CorporationMapper } from './entities/corporation.mapper';
-import { PRISMA_ERROR_CODES } from 'src/common/constants';
+import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { CorporationNotFoundError } from './errors/corporation-not-found.error';
-import { CorporationAlreadyExistsError } from './errors/corporation-already-exists.error';
+import { CorporationExistsError } from './errors/corporation-already-exists.error';
 
 /**
  * Service providing corporation business logic.
  * Handles create, read, update, and delete operations.
- * @param db PrismaService for database interactions
+ * @param prismaService PrismaService for database interactions
  */
 @Injectable()
 export class CorporationsService {
   private readonly logger = new Logger(CorporationsService.name);
 
-  constructor(private readonly db: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
   /**
    * Creates a new corporation.
@@ -30,7 +30,7 @@ export class CorporationsService {
     createCorporationDto: CreateCorporationDto,
   ): Promise<CorporationResponseDto> {
     try {
-      const corporation = await this.db.corporation.create({
+      const corporation = await this.prismaService.corporation.create({
         data: { ...createCorporationDto },
       });
       this.logger.log(`Corporation created: ${corporation.id}`);
@@ -40,7 +40,7 @@ export class CorporationsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED
       ) {
-        throw new CorporationAlreadyExistsError(createCorporationDto.name);
+        throw new CorporationExistsError(createCorporationDto.name);
       }
       throw error;
     }
@@ -54,22 +54,19 @@ export class CorporationsService {
   async findAll(
     paginationQuery?: PaginationQueryDto,
   ): Promise<CorporationResponseDto[]> {
-    const page = paginationQuery?.page ?? 1;
-    const limit = paginationQuery?.limit ?? 10;
+    const page = paginationQuery?.page ?? PAGINATION_DEFAULTS.PAGE;
+    const limit = paginationQuery?.limit ?? PAGINATION_DEFAULTS.LIMIT;
 
-    const take = Math.max(1, limit);
-    const skip = Math.max(0, (page - 1) * take);
-
-    const corporations = await this.db.corporation.findMany({
-      skip,
-      take,
+    const corporations = await this.prismaService.corporation.findMany({
+      skip: Math.max(0, (page - 1) * limit),
+      take: Math.max(1, limit),
     });
 
     return CorporationMapper.toResponseList(corporations);
   }
 
   async findOne(id: string): Promise<CorporationResponseDto> {
-    const corporation = await this.db.corporation.findUnique({
+    const corporation = await this.prismaService.corporation.findUnique({
       where: { id },
     });
 
@@ -91,7 +88,7 @@ export class CorporationsService {
     updateCorporationDto: UpdateCorporationDto,
   ): Promise<CorporationResponseDto> {
     try {
-      const corporation = await this.db.corporation.update({
+      const corporation = await this.prismaService.corporation.update({
         where: { id },
         data: { ...updateCorporationDto },
       });
@@ -99,17 +96,13 @@ export class CorporationsService {
       this.logger.log(`Corporation updated: ${id}`);
       return CorporationMapper.toResponse(corporation);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === PRISMA_ERROR_CODES.NOT_FOUND
-      ) {
-        throw new CorporationNotFoundError(id);
-      }
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED
-      ) {
-        throw new CorporationAlreadyExistsError(updateCorporationDto.name);
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        switch (error.code) {
+          case PRISMA_ERROR_CODES.NOT_FOUND:
+            throw new CorporationNotFoundError(id);
+          case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
+            throw new CorporationExistsError(updateCorporationDto.name);
+        }
       }
       throw error;
     }
@@ -122,7 +115,7 @@ export class CorporationsService {
    */
   async remove(id: string): Promise<CorporationResponseDto> {
     try {
-      const corporation = await this.db.corporation.delete({
+      const corporation = await this.prismaService.corporation.delete({
         where: { id },
       });
 

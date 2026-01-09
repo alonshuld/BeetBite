@@ -142,3 +142,5 @@ vite.config.ts.timestamp-*
 
 # pnpm files
 .pnpm-store
+# Generated files
+**/generated/

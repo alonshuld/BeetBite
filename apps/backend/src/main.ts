@@ -3,7 +3,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { EntityExceptionFilter } from './common/filters/filter-entity-exception.filter';
 
 async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
@@ -15,21 +15,18 @@ async function bootstrap(): Promise<void> {
   const port = configService.get<number>('PORT', 3000);
   const environment = configService.get<string>('NODE_ENV', 'development');
 
-  // Global prefix
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api/v1');
 
-  // CORS configuration
   app.enableCors({
     origin:
       environment === 'production'
         ? configService.get<string>('ALLOWED_ORIGINS', '').split(',')
         : true,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -42,10 +39,8 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // Global exception filter
-  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalFilters(new EntityExceptionFilter());
 
-  // Swagger documentation
   if (environment !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('BeetBite API')
@@ -56,7 +51,7 @@ async function bootstrap(): Promise<void> {
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api/docs', app, document, {
+    SwaggerModule.setup('/api/v1/docs', app, document, {
       swaggerOptions: {
         persistAuthorization: true,
       },
@@ -66,7 +61,6 @@ async function bootstrap(): Promise<void> {
     );
   }
 
-  // Graceful shutdown
   app.enableShutdownHooks();
 
   await app.listen(port);

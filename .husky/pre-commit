@@ -1,0 +1,5 @@
+cd apps/backend || exit 1
+
+pnpx run formatter
+pnpx run lint
+pnpx run test
