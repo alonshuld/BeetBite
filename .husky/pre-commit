@@ -1,5 +1,3 @@
-cd apps/backend || exit 1
-
-pnpx run formatter
-pnpx run lint
-pnpx run test
+npx pnpm --filter backend run formatter
+npx pnpm --filter backend run lint
+npx pnpm --filter backend run test
