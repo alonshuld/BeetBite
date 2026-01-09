@@ -1,4 +1,4 @@
-import { EntityError } from './base-entity.error';
+import { EntityError } from './entity.error';
 
 export class EntityExistsError extends EntityError {
   constructor(message: string) {

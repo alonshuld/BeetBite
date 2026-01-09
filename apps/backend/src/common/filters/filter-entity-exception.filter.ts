@@ -9,7 +9,7 @@ import {
 import { Request, Response } from 'express';
 import { EntityExistsError } from '../errors/entity-exists.error';
 import { EntityNotFoundError } from '../errors/entity-not-found.error';
-import { EntityError } from '../errors/base-entity.error';
+import { EntityError } from '../errors/entity.error';
 
 @Catch()
 export class EntityExceptionFilter implements ExceptionFilter {
