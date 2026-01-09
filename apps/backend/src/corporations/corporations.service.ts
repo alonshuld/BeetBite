@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CreateCorporationDto } from './dto/create-corporation.dto';
 import { UpdateCorporationDto } from './dto/update-corporation.dto';
 import { CorporationResponseDto } from './dto/corporation-response.dto';
@@ -12,6 +7,8 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from 'src/generated/client';
 import { CorporationMapper } from './entities/corporation.mapper';
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
+import { CorporationNotFoundError } from './errors/corporation-not-found.error';
+import { CorporationAlreadyExistsError } from './errors/corporation-already-exists.error';
 
 /**
  * Service providing corporation business logic.
@@ -43,14 +40,8 @@ export class CorporationsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED
       ) {
-        this.logger.warn(
-          `Attempted to create duplicate corporation: ${createCorporationDto.name}`,
-        );
-        throw new ConflictException('Corporation already exists');
+        throw new CorporationAlreadyExistsError(createCorporationDto.name);
       }
-      this.logger.error(
-        `Failed to create corporation: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
       throw error;
     }
   }
@@ -83,8 +74,7 @@ export class CorporationsService {
     });
 
     if (!corporation) {
-      this.logger.warn(`Corporation not found: ${id}`);
-      throw new NotFoundException('Corporation not found');
+      throw new CorporationNotFoundError(id);
     }
 
     return CorporationMapper.toResponse(corporation);
@@ -113,23 +103,14 @@ export class CorporationsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === PRISMA_ERROR_CODES.NOT_FOUND
       ) {
-        this.logger.warn(`Corporation not found for update: ${id}`);
-        throw new NotFoundException('Corporation not found');
+        throw new CorporationNotFoundError(id);
       }
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED
       ) {
-        this.logger.warn(
-          `Attempted to update corporation with duplicate name: ${id}`,
-        );
-        throw new ConflictException(
-          'Corporation with this name already exists',
-        );
+        throw new CorporationAlreadyExistsError(updateCorporationDto.name);
       }
-      this.logger.error(
-        `Failed to update corporation ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
       throw error;
     }
   }
@@ -152,12 +133,8 @@ export class CorporationsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === PRISMA_ERROR_CODES.NOT_FOUND
       ) {
-        this.logger.warn(`Corporation not found for deletion: ${id}`);
-        throw new NotFoundException('Corporation not found');
+        throw new CorporationNotFoundError(id);
       }
-      this.logger.error(
-        `Failed to delete corporation ${id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
       throw error;
     }
   }
