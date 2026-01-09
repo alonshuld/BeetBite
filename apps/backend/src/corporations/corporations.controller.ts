@@ -3,11 +3,12 @@ import {
   Get,
   Post,
   Body,
-  Patch,
+  Put,
   Param,
   Delete,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,12 +25,23 @@ import { CorporationsService } from './corporations.service';
 import { CreateCorporationDto } from './dto/create-corporation.dto';
 import { UpdateCorporationDto } from './dto/update-corporation.dto';
 import { CorporationResponseDto } from './dto/corporation-response.dto';
+import { PaginationQueryDto } from '../common/pagination-query.dto';
 
+/**
+ * Controller for corporation-related endpoints.
+ * Handles create, read, update (PUT), and delete operations.
+ * @param corporationsService Service providing corporation business logic
+ */
 @ApiTags('corporations')
 @Controller('corporations')
 export class CorporationsController {
   constructor(private readonly corporationsService: CorporationsService) {}
 
+  /**
+   * Create a new corporation.
+   * @param createCorporationDto Payload with corporation properties
+   * @returns The created `CorporationResponseDto`
+   */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new corporation' })
@@ -44,27 +56,40 @@ export class CorporationsController {
     description: 'The corporation has been successfully created.',
     type: CorporationResponseDto,
   })
-  create(
+  async create(
     @Body() createCorporationDto: CreateCorporationDto,
   ): Promise<CorporationResponseDto> {
-    return this.corporationsService.create(createCorporationDto);
+    return await this.corporationsService.create(createCorporationDto);
   }
 
+  /**
+   * Retrieve all corporations.
+   * @returns An array of `CorporationResponseDto`
+   */
   @Get()
   @ApiOperation({ summary: 'Get all corporations with pagination' })
   @ApiOkResponse({
     description: 'List of corporations',
     type: CorporationResponseDto,
+    isArray: true,
   })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'List of corporations',
     type: CorporationResponseDto,
+    isArray: true,
   })
-  findAll(): Promise<CorporationResponseDto[]> {
-    return this.corporationsService.findAll();
+  async findAll(
+    @Query() pagination?: PaginationQueryDto,
+  ): Promise<CorporationResponseDto[]> {
+    return await this.corporationsService.findAll(pagination);
   }
 
+  /**
+   * Retrieve a corporation by its ID.
+   * @param id The corporation identifier
+   * @returns The found `CorporationResponseDto`
+   */
   @Get(':id')
   @ApiOperation({ summary: 'Get a corporation by ID' })
   @ApiParam({ name: 'id', description: 'Corporation ID' })
@@ -72,11 +97,18 @@ export class CorporationsController {
     description: 'The corporation has been found.',
     type: CorporationResponseDto,
   })
-  findOne(@Param('id') id: string): Promise<CorporationResponseDto> {
-    return this.corporationsService.findOne(id);
+  async findOne(@Param('id') id: string): Promise<CorporationResponseDto> {
+    return await this.corporationsService.findOne(id);
   }
 
-  @Patch(':id')
+  /**
+   * Replace an existing corporation (PUT semantics).
+   * Expects a full `UpdateCorporationDto` payload to replace the resource.
+   * @param id The corporation identifier
+   * @param updateCorporationDto Full corporation DTO for replacement
+   * @returns The updated `CorporationResponseDto`
+   */
+  @Put(':id')
   @ApiOperation({ summary: 'Update a corporation' })
   @ApiParam({ name: 'id', description: 'Corporation ID' })
   @ApiOkResponse({
@@ -91,28 +123,30 @@ export class CorporationsController {
     description: 'The corporation has been successfully updated.',
     type: CorporationResponseDto,
   })
-  update(
+  async update(
     @Param('id') id: string,
     @Body() updateCorporationDto: UpdateCorporationDto,
   ): Promise<CorporationResponseDto> {
     return this.corporationsService.update(id, updateCorporationDto);
   }
 
+  /**
+   * Delete a corporation by ID.
+   * @param id The corporation identifier
+   */
   @Delete(':id')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a corporation' })
   @ApiParam({ name: 'id', description: 'Corporation ID' })
   @ApiOkResponse({
     description: 'The corporation has been successfully deleted.',
-    type: CorporationResponseDto,
   })
   @ApiResponse({
-    status: HttpStatus.OK,
+    status: HttpStatus.NO_CONTENT,
     description: 'The corporation has been successfully deleted.',
-    type: CorporationResponseDto,
   })
   @ApiNotFoundResponse({ description: 'Corporation not found' })
-  remove(@Param('id') id: string): Promise<CorporationResponseDto> {
-    return this.corporationsService.remove(id);
+  async remove(@Param('id') id: string): Promise<void> {
+    await this.corporationsService.remove(id);
   }
 }

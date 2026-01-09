@@ -6,6 +6,7 @@ import { CreateCorporationDto } from './dto/create-corporation.dto';
 import { UpdateCorporationDto } from './dto/update-corporation.dto';
 import { Prisma } from '../generated/client';
 import { PRISMA_ERROR_CODES } from '../common/constants';
+import { PaginationQueryDto } from 'src/common/pagination-query.dto';
 
 describe('CorporationsService', () => {
   let service: CorporationsService;
@@ -103,7 +104,36 @@ describe('CorporationsService', () => {
         { id: '1', name: 'Corp 1' },
         { id: '2', name: 'Corp 2' },
       ]);
-      expect(mockPrismaService.corporation.findMany).toHaveBeenCalledWith();
+      expect(mockPrismaService.corporation.findMany).toHaveBeenCalledWith({
+        skip: 0,
+        take: 10,
+      });
+    });
+
+    it('should apply pagination params when provided', async () => {
+      const mockCorporations = [
+        {
+          id: '3',
+          name: 'Corp 3',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      mockPrismaService.corporation.findMany.mockResolvedValue(
+        mockCorporations,
+      );
+
+      const result = await service.findAll({
+        page: 2,
+        limit: 1,
+      } as PaginationQueryDto);
+
+      expect(result).toEqual([{ id: '3', name: 'Corp 3' }]);
+      expect(mockPrismaService.corporation.findMany).toHaveBeenCalledWith({
+        skip: 1,
+        take: 1,
+      });
     });
   });
 

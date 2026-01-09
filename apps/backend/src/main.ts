@@ -4,7 +4,6 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
@@ -45,9 +44,6 @@ async function bootstrap(): Promise<void> {
 
   // Global exception filter
   app.useGlobalFilters(new HttpExceptionFilter());
-
-  // Global interceptors
-  app.useGlobalInterceptors(new TransformInterceptor());
 
   // Swagger documentation
   if (environment !== 'production') {

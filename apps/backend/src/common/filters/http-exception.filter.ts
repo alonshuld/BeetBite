@@ -38,7 +38,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
           : (message as { message: string | string[] }).message || message,
     };
 
-    if (status >= 500) {
+    if (status >= (HttpStatus.INTERNAL_SERVER_ERROR as number)) {
       this.logger.error(
         `${request.method} ${request.url}`,
         exception instanceof Error

@@ -7,6 +7,7 @@ import {
 import { CreateCorporationDto } from './dto/create-corporation.dto';
 import { UpdateCorporationDto } from './dto/update-corporation.dto';
 import { CorporationResponseDto } from './dto/corporation-response.dto';
+import { PaginationQueryDto } from '../common/pagination-query.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from 'src/generated/client';
 import { CorporationMapper } from './entities/corporation.mapper';
@@ -44,8 +45,19 @@ export class CorporationsService {
     }
   }
 
-  async findAll(): Promise<CorporationResponseDto[]> {
-    const corporations = await this.db.corporation.findMany();
+  async findAll(
+    paginationQuery?: PaginationQueryDto,
+  ): Promise<CorporationResponseDto[]> {
+    const page = paginationQuery?.page ?? 1;
+    const limit = paginationQuery?.limit ?? 10;
+
+    const take = Math.max(1, limit);
+    const skip = Math.max(0, (page - 1) * take);
+
+    const corporations = await this.db.corporation.findMany({
+      skip,
+      take,
+    });
 
     return CorporationMapper.toResponseList(corporations);
   }
