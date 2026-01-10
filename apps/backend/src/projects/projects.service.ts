@@ -15,6 +15,10 @@ import { PaginationQueryDto } from '../common/pagination-query.dto';
 import { Prisma } from 'src/generated/client';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
 
+/**
+ * Service providing projects business logic.
+ * @param prismaService PrismaService for database interactions
+ */
 @Injectable()
 export class ProjectsService {
   private readonly logger = new Logger(ProjectsService.name);
