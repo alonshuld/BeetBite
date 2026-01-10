@@ -3,7 +3,7 @@ import { SubcontractorsController } from './subcontractors.controller';
 import { SubcontractorsService } from './subcontractors.service';
 import { CreateSubcontractorDto } from './dto/create-subcontractor.dto';
 import { SubcontractorResponseDto } from './dto/subcontractor-repsonse.dto';
-import { SubcontractorExistsError } from './errors/subcontractor-exists.error';
+import { SubcontractorAlreadyExistsError } from './errors/subcontractor-already-exists.error';
 import { SubcontractorNotFoundError } from './errors/subcontractor-not-found';
 
 describe('SubcontractorsController', () => {
@@ -58,12 +58,12 @@ describe('SubcontractorsController', () => {
       };
 
       mockSubcontractorService.create.mockRejectedValue(
-        new SubcontractorExistsError(createDto.name),
+        new SubcontractorAlreadyExistsError(createDto.name),
       );
 
       await expect(
         controller.create({ name: 'Duplicate Subcontractor' }),
-      ).rejects.toThrow(SubcontractorExistsError);
+      ).rejects.toThrow(SubcontractorAlreadyExistsError);
     });
     it('should throw if subcontractor name is invalid', async () => {
       mockSubcontractorService.create.mockRejectedValue(
@@ -170,11 +170,11 @@ describe('SubcontractorsController', () => {
       const updateDto = { name: 'Existing Subcontractor' };
 
       mockSubcontractorService.update.mockRejectedValue(
-        new SubcontractorExistsError(updateDto.name),
+        new SubcontractorAlreadyExistsError(updateDto.name),
       );
 
       await expect(controller.update('1', updateDto)).rejects.toThrow(
-        SubcontractorExistsError,
+        SubcontractorAlreadyExistsError,
       );
     });
   });

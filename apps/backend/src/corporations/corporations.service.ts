@@ -8,7 +8,7 @@ import { Prisma } from 'src/generated/client';
 import { CorporationMapper } from './entities/corporation.mapper';
 import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { CorporationNotFoundError } from './errors/corporation-not-found.error';
-import { CorporationExistsError } from './errors/corporation-exists.error';
+import { CorporationAlreadyExistsError } from './errors/corporation-already-exists.error';
 
 /**
  * Service providing corporation business logic.
@@ -42,7 +42,7 @@ export class CorporationsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED
       ) {
-        throw new CorporationExistsError(createCorporationDto.name);
+        throw new CorporationAlreadyExistsError(createCorporationDto.name);
       }
       throw error;
     }
@@ -113,7 +113,7 @@ export class CorporationsService {
           case PRISMA_ERROR_CODES.NOT_FOUND:
             throw new CorporationNotFoundError(id);
           case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
-            throw new CorporationExistsError(updateCorporationDto.name);
+            throw new CorporationAlreadyExistsError(updateCorporationDto.name);
         }
       }
       throw error;

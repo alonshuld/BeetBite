@@ -3,7 +3,7 @@ import { SubcontractorsService } from './subcontractors.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
 import { Prisma } from '../generated/client';
-import { SubcontractorExistsError } from './errors/subcontractor-exists.error';
+import { SubcontractorAlreadyExistsError } from './errors/subcontractor-already-exists.error';
 import { CreateSubcontractorDto } from './dto/create-subcontractor.dto';
 import { PaginationQueryDto } from 'src/common/pagination-query.dto';
 import { SubcontractorNotFoundError } from './errors/subcontractor-not-found';
@@ -68,11 +68,11 @@ describe('SubcontractorsService', () => {
     it('should throw SubcontractorExistsError on duplicate name', async () => {
       mockPrismaService.subcontractor.create.mockResolvedValue(createDto);
 
-      const error = new SubcontractorExistsError(createDto.name);
+      const error = new SubcontractorAlreadyExistsError(createDto.name);
       mockPrismaService.subcontractor.create.mockRejectedValue(error);
 
       await expect(service.create(createDto)).rejects.toThrow(
-        SubcontractorExistsError,
+        SubcontractorAlreadyExistsError,
       );
     });
   });

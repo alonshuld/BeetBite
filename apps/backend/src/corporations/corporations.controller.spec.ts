@@ -5,7 +5,7 @@ import { CreateCorporationDto } from './dto/create-corporation.dto';
 import { UpdateCorporationDto } from './dto/update-corporation.dto';
 import { CorporationResponseDto } from './dto/corporation-response.dto';
 import { PaginationQueryDto } from '../common/pagination-query.dto';
-import { CorporationExistsError } from './errors/corporation-exists.error';
+import { CorporationAlreadyExistsError } from './errors/corporation-already-exists.error';
 import { CorporationNotFoundError } from './errors/corporation-not-found.error';
 
 describe('CorporationsController', () => {
@@ -59,12 +59,12 @@ describe('CorporationsController', () => {
       const createDto: CreateCorporationDto = { name: 'Duplicate Corp' };
 
       mockCorporationsService.create.mockRejectedValue(
-        new CorporationExistsError(createDto.name),
+        new CorporationAlreadyExistsError(createDto.name),
       );
 
       await expect(
         controller.create({ name: 'Duplicate Corp' }),
-      ).rejects.toThrow(CorporationExistsError);
+      ).rejects.toThrow(CorporationAlreadyExistsError);
     });
 
     it('should throw if corporation name is invalid', async () => {
@@ -165,11 +165,11 @@ describe('CorporationsController', () => {
       const updateDto: UpdateCorporationDto = { name: 'Existing Corp' };
 
       mockCorporationsService.update.mockRejectedValue(
-        new CorporationExistsError(updateDto.name),
+        new CorporationAlreadyExistsError(updateDto.name),
       );
 
       await expect(controller.update('1', updateDto)).rejects.toThrow(
-        CorporationExistsError,
+        CorporationAlreadyExistsError,
       );
     });
   });

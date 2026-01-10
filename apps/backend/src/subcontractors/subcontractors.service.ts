@@ -6,7 +6,7 @@ import { SubcontractorResponseDto } from './dto/subcontractor-repsonse.dto';
 import { SubcontractorMapper } from './entities/subcontractor.mapper';
 import { Prisma } from 'src/generated/client';
 import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
-import { SubcontractorExistsError } from './errors/subcontractor-exists.error';
+import { SubcontractorAlreadyExistsError } from './errors/subcontractor-already-exists.error';
 import { PaginationQueryDto } from 'src/common/pagination-query.dto';
 import { SubcontractorNotFoundError } from './errors/subcontractor-not-found';
 
@@ -42,7 +42,7 @@ export class SubcontractorsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED
       ) {
-        throw new SubcontractorExistsError(createSubcontractorDto.name);
+        throw new SubcontractorAlreadyExistsError(createSubcontractorDto.name);
       }
       throw error;
     }
@@ -113,7 +113,9 @@ export class SubcontractorsService {
           case PRISMA_ERROR_CODES.NOT_FOUND:
             throw new SubcontractorNotFoundError(id);
           case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
-            throw new SubcontractorExistsError(updateSubcontractorDto.name);
+            throw new SubcontractorAlreadyExistsError(
+              updateSubcontractorDto.name,
+            );
         }
       }
       throw error;

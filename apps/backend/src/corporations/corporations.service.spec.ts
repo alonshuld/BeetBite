@@ -5,7 +5,7 @@ import { UpdateCorporationDto } from './dto/update-corporation.dto';
 import { Prisma } from '../generated/client';
 import { PRISMA_ERROR_CODES } from '../common/constants';
 import { PaginationQueryDto } from 'src/common/pagination-query.dto';
-import { CorporationExistsError } from './errors/corporation-exists.error';
+import { CorporationAlreadyExistsError } from './errors/corporation-already-exists.error';
 import { CorporationNotFoundError } from './errors/corporation-not-found.error';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -73,7 +73,7 @@ describe('CorporationsService', () => {
       mockPrismaService.corporation.create.mockRejectedValue(error);
 
       await expect(service.create(createDto)).rejects.toThrow(
-        CorporationExistsError,
+        CorporationAlreadyExistsError,
       );
     });
   });
