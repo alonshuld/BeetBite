@@ -1,15 +1,23 @@
 import { Corporation } from 'src/generated/client';
 import { CorporationResponseDto } from '../dto/corporation-response.dto';
 
-export class CorporationMapper {
-  static toResponse(corporation: Corporation): CorporationResponseDto {
-    return {
-      id: corporation.id,
-      name: corporation.name,
-    };
-  }
+/**
+ * Converts the given corporation entity to a corporation response DTO.
+ * @param corporation The corporation entity to convert
+ * @returns The corporation response DTO.
+ */
+export const toCorporationResponse = (
+  corporation: Corporation,
+): CorporationResponseDto => ({
+  id: corporation.id,
+  name: corporation.name,
+});
 
-  static toResponseList(corporations: Corporation[]): CorporationResponseDto[] {
-    return corporations.map((corp) => CorporationMapper.toResponse(corp));
-  }
-}
+/**
+ * Converts the given array of corporation entities to an array of corporation response DTOs.
+ * @param corporations The array of corporation entities to convert.
+ * @returns An array of corporation response DTOs.
+ */
+export const toCorporationResponseList = (
+  corporations: Corporation[],
+): CorporationResponseDto[] => corporations.map(toCorporationResponse);

@@ -5,7 +5,7 @@ import { UpdateCorporationDto } from './dto/update-corporation.dto';
 import { Prisma } from '../generated/client';
 import { PRISMA_ERROR_CODES } from '../common/constants';
 import { PaginationQueryDto } from 'src/common/pagination-query.dto';
-import { CorporationExistsError } from './errors/corporation-already-exists.error';
+import { CorporationAlreadyExistsError } from './errors/corporation-already-exists.error';
 import { CorporationNotFoundError } from './errors/corporation-not-found.error';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -45,12 +45,13 @@ describe('CorporationsService', () => {
 
   describe('create', () => {
     const createDto: CreateCorporationDto = { name: 'Test Corp' };
-    const mockCorporation = {
-      id: '1',
-      name: 'Test Corp',
-    };
 
     it('should create a corporation', async () => {
+      const mockCorporation = {
+        id: '1',
+        name: 'Test Corp',
+      };
+
       mockPrismaService.corporation.create.mockResolvedValue(mockCorporation);
 
       const result = await service.create(createDto);
@@ -64,7 +65,7 @@ describe('CorporationsService', () => {
       });
     });
 
-    it('should throw CorporationAlreadyExistsError on duplicate name', async () => {
+    it('should throw CorporationExistsError on duplicate name', async () => {
       const error = new Prisma.PrismaClientKnownRequestError('', {
         code: PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED,
         clientVersion: '1.0.0',
@@ -72,7 +73,7 @@ describe('CorporationsService', () => {
       mockPrismaService.corporation.create.mockRejectedValue(error);
 
       await expect(service.create(createDto)).rejects.toThrow(
-        CorporationExistsError,
+        CorporationAlreadyExistsError,
       );
     });
   });
@@ -131,12 +132,12 @@ describe('CorporationsService', () => {
   });
 
   describe('findOne', () => {
-    const mockCorporation = {
-      id: '1',
-      name: 'Test Corp',
-    };
-
     it('should return a corporation', async () => {
+      const mockCorporation = {
+        id: '1',
+        name: 'Test Corp',
+      };
+
       mockPrismaService.corporation.findUnique.mockResolvedValue(
         mockCorporation,
       );
@@ -160,12 +161,13 @@ describe('CorporationsService', () => {
 
   describe('update', () => {
     const updateDto: UpdateCorporationDto = { name: 'Updated Corp' };
-    const mockCorporation = {
-      id: '1',
-      name: 'Updated Corp',
-    };
 
     it('should update a corporation', async () => {
+      const mockCorporation = {
+        id: '1',
+        name: 'Updated Corp',
+      };
+
       mockPrismaService.corporation.update.mockResolvedValue(mockCorporation);
 
       const result = await service.update('1', updateDto);
@@ -173,6 +175,10 @@ describe('CorporationsService', () => {
       expect(result).toEqual({
         id: mockCorporation.id,
         name: mockCorporation.name,
+      });
+      expect(mockPrismaService.corporation.update).toHaveBeenCalledWith({
+        where: { id: '1' },
+        data: updateDto,
       });
     });
 

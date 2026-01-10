@@ -1,8 +1,11 @@
-import { EntityExistsError } from '../../common/errors/entity-exists.error';
+import { EntityAlreadyExistsError } from '../../common/errors/entity-already-exists.error';
 
-export class CorporationExistsError extends EntityExistsError {
+/**
+ * Error thrown when attempting to create a corporation that already exists.
+ */
+export class CorporationAlreadyExistsError extends EntityAlreadyExistsError {
   constructor(corporationName: string) {
     super(`Corporation with name ${corporationName} already exists`);
-    this.name = 'CorporationExistsError';
+    this.name = 'CorporationAlreadyExistsError';
   }
 }
