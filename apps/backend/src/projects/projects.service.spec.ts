@@ -48,7 +48,7 @@ describe('ProjectsService', () => {
       clientId: 'client-1',
       name: 'Test Project',
       estimatedAmount: 100000,
-      finishDate: '2026-12-31',
+      finishDate: '2026-01-10T00:00:00.000Z',
     };
 
     const mockProject = {
@@ -68,8 +68,8 @@ describe('ProjectsService', () => {
         id: mockProject.id,
         clientId: mockProject.clientId,
         name: mockProject.name,
-        estimatedAmount: mockProject.estimatedAmount.toString(),
-        finishDate: mockProject.finishDate,
+        estimatedAmount: mockProject.estimatedAmount.toNumber(),
+        finishDate: mockProject.finishDate.toISOString(),
       });
 
       expect(mockPrismaService.project.create).toHaveBeenCalledWith({
@@ -116,14 +116,14 @@ describe('ProjectsService', () => {
         clientId: 'c1',
         name: 'Project 1',
         estimatedAmount: new Prisma.Decimal('5000'),
-        finishDate: null,
+        finishDate: new Date('2026-01-10T00:00:00.000Z'),
       },
       {
         id: 'p2',
         clientId: 'c2',
         name: 'Project 2',
         estimatedAmount: new Prisma.Decimal('10000'),
-        finishDate: null,
+        finishDate: new Date('2026-01-10T00:00:00.000Z'),
       },
     ];
 
@@ -163,7 +163,7 @@ describe('ProjectsService', () => {
       clientId: 'c1',
       name: 'Test Project',
       estimatedAmount: new Prisma.Decimal('1000'),
-      finishDate: null,
+      finishDate: new Date('2026-01-10T00:00:00.000Z'),
     };
 
     it('should return a project', async () => {
@@ -189,7 +189,7 @@ describe('ProjectsService', () => {
       clientId: 'client-2',
       name: 'Updated Project',
       estimatedAmount: 200000,
-      finishDate: '2027-01-01',
+      finishDate: '2026-01-10T00:00:00.000Z',
     };
 
     const mockUpdatedProject = {
