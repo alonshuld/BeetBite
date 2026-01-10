@@ -13,13 +13,13 @@ import {
 import {
   ApiTags,
   ApiOperation,
-  ApiResponse,
   ApiParam,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiNotFoundResponse,
   ApiConflictResponse,
   ApiBadRequestResponse,
+  ApiNoContentResponse,
 } from '@nestjs/swagger';
 import { CorporationsService } from './corporations.service';
 import { CreateCorporationDto } from './dto/create-corporation.dto';
@@ -51,11 +51,6 @@ export class CorporationsController {
   })
   @ApiBadRequestResponse({ description: 'Invalid input data' })
   @ApiConflictResponse({ description: 'Corporation already exists' })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'The corporation has been successfully created.',
-    type: CorporationResponseDto,
-  })
   async create(
     @Body() createCorporationDto: CreateCorporationDto,
   ): Promise<CorporationResponseDto> {
@@ -69,12 +64,6 @@ export class CorporationsController {
   @Get()
   @ApiOperation({ summary: 'Get all corporations with pagination' })
   @ApiOkResponse({
-    description: 'List of corporations',
-    type: CorporationResponseDto,
-    isArray: true,
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
     description: 'List of corporations',
     type: CorporationResponseDto,
     isArray: true,
@@ -118,11 +107,6 @@ export class CorporationsController {
   @ApiNotFoundResponse({ description: 'Corporation not found' })
   @ApiBadRequestResponse({ description: 'Invalid input data' })
   @ApiConflictResponse({ description: 'Corporation name already exists' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'The corporation has been successfully updated.',
-    type: CorporationResponseDto,
-  })
   async update(
     @Param('id') id: string,
     @Body() updateCorporationDto: UpdateCorporationDto,
@@ -138,11 +122,7 @@ export class CorporationsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a corporation' })
   @ApiParam({ name: 'id', description: 'Corporation ID' })
-  @ApiOkResponse({
-    description: 'The corporation has been successfully deleted.',
-  })
-  @ApiResponse({
-    status: HttpStatus.NO_CONTENT,
+  @ApiNoContentResponse({
     description: 'The corporation has been successfully deleted.',
   })
   @ApiNotFoundResponse({ description: 'Corporation not found' })

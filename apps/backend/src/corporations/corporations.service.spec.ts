@@ -200,10 +200,7 @@ describe('CorporationsService', () => {
 
       const result = await service.remove('1');
 
-      expect(result).toEqual({
-        id: mockCorporation.id,
-        name: mockCorporation.name,
-      });
+      expect(result).toBeUndefined();
     });
 
     it('should throw CorporationNotFoundError when corporation not found', async () => {

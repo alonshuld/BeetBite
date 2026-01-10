@@ -111,16 +111,15 @@ export class CorporationsService {
   /**
    * Removes a corporation by its ID.
    * @param id ID of the corporation to remove
-   * @returns The removed corporation.
+   * @returns void
    */
-  async remove(id: string): Promise<CorporationResponseDto> {
+  async remove(id: string): Promise<void> {
     try {
-      const corporation = await this.prismaService.corporation.delete({
+      await this.prismaService.corporation.delete({
         where: { id },
       });
 
       this.logger.log(`Corporation deleted: ${id}`);
-      return CorporationMapper.toResponse(corporation);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
