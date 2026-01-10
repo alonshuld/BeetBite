@@ -3,8 +3,8 @@ import {
   IsString,
   IsNotEmpty,
   IsNumber,
-  IsDateString,
   Min,
+  IsISO8601,
 } from 'class-validator';
 
 /**
@@ -38,12 +38,12 @@ export class CreateProjectDto {
   })
   estimatedAmount!: number;
 
-  @IsDateString()
+  @IsISO8601()
   @ApiProperty({
-    example: '2024-12-31',
-    description: 'Expected finish date of the project',
+    example: '2026-01-10T00:00:00.000Z',
+    description: 'Expected finish date of the project in the ISO-8601 format',
     type: 'string',
-    format: 'date',
+    format: 'ISO-8601',
   })
   finishDate!: string;
 }

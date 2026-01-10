@@ -8,8 +8,3 @@ export const PAGINATION_DEFAULTS = {
   LIMIT: 10,
   PAGE: 1,
 };
-
-export const DATE_FORMAT_CONSTANTS = {
-  ISO_DATE_TIME_SEPARATOR: 'T',
-  DATE_PART_INDEX: 0,
-};
