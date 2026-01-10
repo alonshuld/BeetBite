@@ -191,18 +191,6 @@ describe('ClientsService', () => {
         ClientAlreadyExistsError,
       );
     });
-
-    it('should not throw ClientAlreadyExistsError when name is not provided', async () => {
-      const error = new PrismaClientKnownRequestError('', {
-        code: PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED,
-        clientVersion: '1.0.0',
-      });
-      mockPrismaService.client.update.mockRejectedValue(error);
-
-      await expect(service.update('1', {} as UpdateClientDto)).rejects.toThrow(
-        PrismaClientKnownRequestError,
-      );
-    });
   });
 
   describe('remove', () => {

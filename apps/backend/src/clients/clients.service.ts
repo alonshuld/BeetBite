@@ -105,10 +105,7 @@ export class ClientsService {
           case PRISMA_ERROR_CODES.NOT_FOUND:
             throw new ClientNotFoundError(id);
           case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
-            if (updateClientDto.name) {
-              throw new ClientAlreadyExistsError(updateClientDto.name);
-            }
-            throw error;
+            throw new ClientAlreadyExistsError(updateClientDto.name);
         }
       }
       throw error;

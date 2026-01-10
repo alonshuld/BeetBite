@@ -1,14 +1,3 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional } from 'class-validator';
+import { CreateClientDto } from './create-client.dto';
 
-// Represents the parameters required to update a client.
-export class UpdateClientDto {
-  @IsString()
-  @IsOptional()
-  @ApiPropertyOptional({
-    example: 'John Doe',
-    description: 'Name of the client',
-    type: 'string',
-  })
-  name?: string;
-}
+export class UpdateClientDto extends CreateClientDto {}
