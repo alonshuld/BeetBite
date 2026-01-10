@@ -52,6 +52,7 @@ describe('SubcontractorsController', () => {
       expect(result).toEqual(expectedResult);
       expect(mockSubcontractorService.create).toHaveBeenCalledWith(createDto);
     });
+
     it('should throw if subcontractor name already exists', async () => {
       const createDto: CreateSubcontractorDto = {
         name: 'Duplicate Subcontractor',
@@ -65,6 +66,7 @@ describe('SubcontractorsController', () => {
         controller.create({ name: 'Duplicate Subcontractor' }),
       ).rejects.toThrow(SubcontractorAlreadyExistsError);
     });
+
     it('should throw if subcontractor name is invalid', async () => {
       mockSubcontractorService.create.mockRejectedValue(
         new Error('Invalid name'),
