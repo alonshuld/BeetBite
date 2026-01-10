@@ -5,7 +5,10 @@ import { CorporationResponseDto } from './dto/corporation-response.dto';
 import { PaginationQueryDto } from '../common/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from 'src/generated/client';
-import { CorporationMapper } from './entities/corporation.mapper';
+import {
+  toCorporationResponse,
+  toCorporationResponseList,
+} from './entities/corporation.mapper';
 import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { CorporationNotFoundError } from './errors/corporation-not-found.error';
 import { CorporationAlreadyExistsError } from './errors/corporation-already-exists.error';
@@ -36,7 +39,7 @@ export class CorporationsService {
 
       this.logger.log(`Corporation created: ${corporation.id}`);
 
-      return CorporationMapper.toResponse(corporation);
+      return toCorporationResponse(corporation);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -66,7 +69,7 @@ export class CorporationsService {
 
     this.logger.log(`Corporations retrieved: ${corporations.length} items`);
 
-    return CorporationMapper.toResponseList(corporations);
+    return toCorporationResponseList(corporations);
   }
 
   /**
@@ -85,7 +88,7 @@ export class CorporationsService {
 
     this.logger.log(`Corporation retrieved: ${id}`);
 
-    return CorporationMapper.toResponse(corporation);
+    return toCorporationResponse(corporation);
   }
 
   /**
@@ -106,7 +109,7 @@ export class CorporationsService {
 
       this.logger.log(`Corporation updated: ${id}`);
 
-      return CorporationMapper.toResponse(corporation);
+      return toCorporationResponse(corporation);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         switch (error.code) {

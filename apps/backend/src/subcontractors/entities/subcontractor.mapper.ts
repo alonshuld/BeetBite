@@ -14,9 +14,9 @@ export const toSubcontractorResponse = (
 });
 
 /**
- * Convert an array of subcontractor entities to a list of subcontractor response DTOs.
+ * Convert an array of subcontractor entities to a array of subcontractor response DTOs.
  * @param subcontractors The array of subcontractors entities to convert.
- * @returns A list of subcontractors response DTOs.
+ * @returns A array of subcontractors response DTOs.
  */
 export const toSubcontractorResponseList = (
   subcontractors: Subcontractor[],
