@@ -1,17 +1,23 @@
 import { Subcontractor } from 'src/generated/client';
 import { SubcontractorResponseDto } from '../dto/subcontractor-repsonse.dto';
 
-export class SubcontractorMapper {
-  static toResponse(subcontractor: Subcontractor): SubcontractorResponseDto {
-    return {
-      id: subcontractor.id,
-      name: subcontractor.name,
-    };
-  }
+/**
+ * Covert the given subcontractor entity to a subcontractor response DTO.
+ * @param subcontractor The subcontractor entity to convert.
+ * @returns The subcontractor response DTO.
+ */
+export const toSubcontractorResponse = (
+  subcontractor: Subcontractor,
+): SubcontractorResponseDto => ({
+  id: subcontractor.id,
+  name: subcontractor.name,
+});
 
-  static toResponseList(
-    subcontractors: Subcontractor[],
-  ): SubcontractorResponseDto[] {
-    return subcontractors.map((sc) => SubcontractorMapper.toResponse(sc));
-  }
-}
+/**
+ * Convert an array of subcontractor entities to a list of subcontractor response DTOs.
+ * @param subcontractors The array of subcontractors entities to convert.
+ * @returns A list of subcontractors response DTOs.
+ */
+export const toSubcontractorResponseList = (
+  subcontractors: Subcontractor[],
+): SubcontractorResponseDto[] => subcontractors.map(toSubcontractorResponse);

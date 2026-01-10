@@ -3,7 +3,10 @@ import { CreateSubcontractorDto } from './dto/create-subcontractor.dto';
 import { UpdateSubcontractorDto } from './dto/update-subcontractor.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SubcontractorResponseDto } from './dto/subcontractor-repsonse.dto';
-import { SubcontractorMapper } from './entities/subcontractor.mapper';
+import {
+  toSubcontractorResponse,
+  toSubcontractorResponseList,
+} from './entities/subcontractor.mapper';
 import { Prisma } from 'src/generated/client';
 import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { SubcontractorAlreadyExistsError } from './errors/subcontractor-already-exists.error';
@@ -36,7 +39,7 @@ export class SubcontractorsService {
 
       this.logger.log(`Subcontractor created: ${subcontractor.id}`);
 
-      return SubcontractorMapper.toResponse(subcontractor);
+      return toSubcontractorResponse(subcontractor);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -66,7 +69,7 @@ export class SubcontractorsService {
 
     this.logger.log(`Subcontractor retrieved: ${subcontractors.length} items`);
 
-    return SubcontractorMapper.toResponseList(subcontractors);
+    return toSubcontractorResponseList(subcontractors);
   }
 
   /**
@@ -85,7 +88,7 @@ export class SubcontractorsService {
 
     this.logger.log(`Subcontractor retrieved: ${id}`);
 
-    return SubcontractorMapper.toResponse(subcontractor);
+    return toSubcontractorResponse(subcontractor);
   }
 
   /**
@@ -106,7 +109,7 @@ export class SubcontractorsService {
 
       this.logger.log(`Subcontractor updated: ${id}`);
 
-      return SubcontractorMapper.toResponse(subcontractor);
+      return toSubcontractorResponse(subcontractor);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         switch (error.code) {
