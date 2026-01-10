@@ -13,3 +13,8 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model Corporation {
+  id   String @id @default(cuid())
+  name String @unique
+}

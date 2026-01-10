@@ -7,11 +7,15 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "pnpm -r dev",
     "build": "pnpm -r build",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.27.0",
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
 }
