@@ -62,6 +62,7 @@ export class CorporationsService {
       take: Math.max(1, limit),
     });
 
+    this.logger.log(`Corporations retrieved: ${corporations.length} items`);
     return CorporationMapper.toResponseList(corporations);
   }
 
@@ -74,6 +75,7 @@ export class CorporationsService {
       throw new CorporationNotFoundError(id);
     }
 
+    this.logger.log(`Corporation retrieved: ${id}`);
     return CorporationMapper.toResponse(corporation);
   }
 
