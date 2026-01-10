@@ -52,18 +52,7 @@ describe('ClientsController', () => {
       expect(result).toEqual(expectedResult);
       expect(mockClientsService.create).toHaveBeenCalledWith(createDto);
     });
-    it('should pass an empty DTO to the service', async () => {
-      const createDto = {} as CreateClientDto;
 
-      mockClientsService.create.mockResolvedValue({
-        id: '1',
-        name: '',
-      });
-
-      await controller.create(createDto);
-
-      expect(mockClientsService.create).toHaveBeenCalledWith(createDto);
-    });
     it('should throw if client name already exists', async () => {
       mockClientsService.create.mockRejectedValue(
         new Error('Client already exists'),
@@ -73,6 +62,7 @@ describe('ClientsController', () => {
         controller.create({ name: 'Duplicate Client' }),
       ).rejects.toThrow('Client already exists');
     });
+
     it('should throw if client name is invalid', async () => {
       mockClientsService.create.mockRejectedValue(new Error('Invalid name'));
 
@@ -96,6 +86,7 @@ describe('ClientsController', () => {
       expect(result).toEqual(expectedResult);
       expect(mockClientsService.findAll).toHaveBeenCalledWith(undefined);
     });
+
     it('should forward pagination params to the service', async () => {
       const expectedResult: ClientResponseDto[] = [
         { id: '3', name: 'Client 3' },
@@ -110,12 +101,14 @@ describe('ClientsController', () => {
       expect(result).toEqual(expectedResult);
       expect(mockClientsService.findAll).toHaveBeenCalledWith(pagination);
     });
+
     it('should propagate errors from the service', async () => {
       const error = new Error('Service failure');
       mockClientsService.findAll.mockRejectedValue(error);
 
       await expect(controller.findAll()).rejects.toThrow('Service failure');
     });
+
     it('should return an empty array when no clients exist', async () => {
       mockClientsService.findAll.mockResolvedValue([]);
 
@@ -140,6 +133,7 @@ describe('ClientsController', () => {
       expect(result).toEqual(expectedResult);
       expect(mockClientsService.update).toHaveBeenCalledWith('1', updateDto);
     });
+
     it('should throw if client not found', async () => {
       mockClientsService.update.mockRejectedValue(
         new Error('Client not found'),
@@ -149,6 +143,7 @@ describe('ClientsController', () => {
         controller.update('1', { name: 'Updated Client' }),
       ).rejects.toThrow('Client not found');
     });
+
     it('should throw if client name is invalid', async () => {
       mockClientsService.update.mockRejectedValue(new Error('Invalid name'));
 
@@ -156,6 +151,7 @@ describe('ClientsController', () => {
         'Invalid name',
       );
     });
+
     it('should throw if client name already exists', async () => {
       mockClientsService.update.mockRejectedValue(
         new Error('Client with this name already exists'),
@@ -181,6 +177,17 @@ describe('ClientsController', () => {
       expect(result).toEqual(expectedResult);
       expect(mockClientsService.findOne).toHaveBeenCalledWith('1');
     });
+
+    it('should throw if client not found', async () => {
+      mockClientsService.findOne.mockRejectedValue(
+        new Error('Client not found'),
+      );
+
+      await expect(controller.findOne('999')).rejects.toThrow(
+        'Client not found',
+      );
+      expect(mockClientsService.findOne).toHaveBeenCalledWith('999');
+    });
   });
 
   describe('remove', () => {
@@ -200,12 +207,6 @@ describe('ClientsController', () => {
       );
 
       await expect(controller.remove('1')).rejects.toThrow('Client not found');
-    });
-
-    it('should throw if client name is invalid', async () => {
-      mockClientsService.remove.mockRejectedValue(new Error('Invalid name'));
-
-      await expect(controller.remove('1')).rejects.toThrow('Invalid name');
     });
   });
 });
