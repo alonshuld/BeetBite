@@ -18,3 +18,8 @@ model Corporation {
   id   String @id @default(cuid())
   name String @unique
 }
+
+model Subcontractor {
+  id   String @id @default(cuid())
+  name String @unique
+}
