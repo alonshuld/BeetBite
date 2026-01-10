@@ -59,6 +59,7 @@ export class ClientsController {
 
   /**
    * Retrieve all clients.
+   * @param pagination Optional pagination query parameters (page and limit).
    * @returns An array of `ClientResponseDto`
    */
   @Get()
