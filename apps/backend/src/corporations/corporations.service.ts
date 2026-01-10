@@ -8,7 +8,7 @@ import { Prisma } from 'src/generated/client';
 import { CorporationMapper } from './entities/corporation.mapper';
 import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { CorporationNotFoundError } from './errors/corporation-not-found.error';
-import { CorporationExistsError } from './errors/corporation-already-exists.error';
+import { CorporationExistsError } from './errors/corporation-exists.error';
 
 /**
  * Service providing corporation business logic.
@@ -33,7 +33,9 @@ export class CorporationsService {
       const corporation = await this.prismaService.corporation.create({
         data: { ...createCorporationDto },
       });
+
       this.logger.log(`Corporation created: ${corporation.id}`);
+
       return CorporationMapper.toResponse(corporation);
     } catch (error) {
       if (
@@ -63,9 +65,15 @@ export class CorporationsService {
     });
 
     this.logger.log(`Corporations retrieved: ${corporations.length} items`);
+
     return CorporationMapper.toResponseList(corporations);
   }
 
+  /**
+   * Find corporation with matching ID
+   * @param id ID of the corporation to retrieve
+   * @returns The corporation with the corresponding ID
+   */
   async findOne(id: string): Promise<CorporationResponseDto> {
     const corporation = await this.prismaService.corporation.findUnique({
       where: { id },
@@ -76,6 +84,7 @@ export class CorporationsService {
     }
 
     this.logger.log(`Corporation retrieved: ${id}`);
+
     return CorporationMapper.toResponse(corporation);
   }
 
@@ -96,6 +105,7 @@ export class CorporationsService {
       });
 
       this.logger.log(`Corporation updated: ${id}`);
+
       return CorporationMapper.toResponse(corporation);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -113,7 +123,6 @@ export class CorporationsService {
   /**
    * Removes a corporation by its ID.
    * @param id ID of the corporation to remove
-   * @returns void
    */
   async remove(id: string): Promise<void> {
     try {

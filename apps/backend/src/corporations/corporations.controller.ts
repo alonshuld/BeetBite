@@ -29,7 +29,7 @@ import { PaginationQueryDto } from '../common/pagination-query.dto';
 
 /**
  * Controller for corporation-related endpoints.
- * Handles create, read, update (PUT), and delete operations.
+ * Handles create, read, update, and delete operations.
  * @param corporationsService Service providing corporation business logic
  */
 @ApiTags('corporations')
@@ -40,7 +40,7 @@ export class CorporationsController {
   /**
    * Create a new corporation.
    * @param createCorporationDto Payload with corporation properties
-   * @returns The created `CorporationResponseDto`
+   * @returns The created corporation
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -59,7 +59,8 @@ export class CorporationsController {
 
   /**
    * Retrieve all corporations.
-   * @returns An array of `CorporationResponseDto`
+   * @param pagination Pagination query parameters
+   * @returns List of corporation
    */
   @Get()
   @ApiOperation({ summary: 'Get all corporations with pagination' })
@@ -77,7 +78,7 @@ export class CorporationsController {
   /**
    * Retrieve a corporation by its ID.
    * @param id The corporation identifier
-   * @returns The found `CorporationResponseDto`
+   * @returns Corporation with matching ID
    */
   @Get(':id')
   @ApiOperation({ summary: 'Get a corporation by ID' })
@@ -92,10 +93,9 @@ export class CorporationsController {
 
   /**
    * Replace an existing corporation (PUT semantics).
-   * Expects a full `UpdateCorporationDto` payload to replace the resource.
    * @param id The corporation identifier
    * @param updateCorporationDto Full corporation DTO for replacement
-   * @returns The updated `CorporationResponseDto`
+   * @returns The updated corporation
    */
   @Put(':id')
   @ApiOperation({ summary: 'Update a corporation' })
