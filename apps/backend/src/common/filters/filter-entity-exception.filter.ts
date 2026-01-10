@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { EntityExistsError } from '../errors/entity-exists.error';
+import { EntityAlreadyExistsError } from '../errors/entity-already-exists.error';
 import { EntityNotFoundError } from '../errors/entity-not-found.error';
 import { EntityError } from '../errors/entity.error';
 
@@ -28,7 +28,7 @@ export class EntityExceptionFilter implements ExceptionFilter {
         case EntityNotFoundError:
           status = HttpStatus.NOT_FOUND;
           break;
-        case EntityExistsError:
+        case EntityAlreadyExistsError:
           status = HttpStatus.CONFLICT;
           break;
       }
