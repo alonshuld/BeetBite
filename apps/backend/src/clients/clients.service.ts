@@ -13,6 +13,11 @@ import { ClientAlreadyExistsError } from './errors/client-already-exists.excepti
 import { ClientNotFoundError } from './errors/client-not-found.exception';
 import { PaginationQueryDto } from '../common/pagination-query.dto';
 
+/**
+ * Service for managing clients.
+ * Provides methods to create, read, update, and delete clients.
+ * @param prismaService PrismaService for database interactions
+ */
 @Injectable()
 export class ClientsService {
   private readonly logger = new Logger(ClientsService.name);
