@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { IncomeResponseDto } from './dto/income-response.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
+import { projectReportsToIncome } from './mappers/project-reports-to-income.mapper';
 
 /**
  * Service providing income business logic.
@@ -25,7 +26,8 @@ export class IncomesService {
           project: true,
         },
       });
-      
+
+      return projectReportsToIncome(projectReports);
     } catch (error) {
       this.logger.error('Error getting total income', error);
       throw error;
