@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { CreateSubcontractorDto } from './dto/create-subcontractor.dto';
 import { UpdateSubcontractorDto } from './dto/update-subcontractor.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { SubcontractorResponseDto } from './dto/subcontractor-repsonse.dto';
+import { SubcontractorResponseDto } from './dto/subcontractor-response.dto';
 import {
   toSubcontractorResponse,
   toSubcontractorResponseList,
