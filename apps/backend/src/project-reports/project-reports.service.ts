@@ -108,54 +108,73 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
       await this.enrichCreateProjectReportDto(createProjectReportDto);
 
     try {
-      const createdProjectReport =
-        await this.prismaService.projectReport.create({
-          data: {
-            date: new Date(enrichedCreateProjectReportDto.date),
-            income: new Prisma.Decimal(enrichedCreateProjectReportDto.income),
-            incomeDate:
-              enrichedCreateProjectReportDto.incomeDate &&
-              new Date(enrichedCreateProjectReportDto.incomeDate),
-            profitMargin: new Prisma.Decimal(
-              enrichedCreateProjectReportDto.profitMargin,
-            ),
-            project: {
-              connect: {
-                id: enrichedCreateProjectReportDto.projectId,
+      const createdProjectReport = await this.prismaService.$transaction(
+        async (tx) => {
+          const createdProjectReport = await tx.projectReport.create({
+            data: {
+              date: new Date(enrichedCreateProjectReportDto.date),
+              income: new Prisma.Decimal(enrichedCreateProjectReportDto.income),
+              incomeDate:
+                enrichedCreateProjectReportDto.incomeDate &&
+                new Date(enrichedCreateProjectReportDto.incomeDate),
+              profitMargin: new Prisma.Decimal(
+                enrichedCreateProjectReportDto.profitMargin,
+              ),
+              project: {
+                connect: {
+                  id: enrichedCreateProjectReportDto.projectId,
+                },
+              },
+              subcontractor: {
+                connect: {
+                  id: enrichedCreateProjectReportDto.subcontractorId,
+                },
+              },
+              corporationPays: {
+                createMany: {
+                  data: enrichedCreateProjectReportDto.corporationPayments.map(
+                    (corporationPay) => ({
+                      corporationId: corporationPay.corporationId,
+                      amount: corporationPay.amount,
+                      date: corporationPay.date,
+                    }),
+                  ),
+                },
               },
             },
-            subcontractor: {
-              connect: {
-                id: enrichedCreateProjectReportDto.subcontractorId,
+            include: {
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+              subcontractor: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
-            corporationPays: {
-              createMany: {
-                data: enrichedCreateProjectReportDto.corporationPayments.map(
-                  (corporationPay) => ({
-                    corporationId: corporationPay.corporationId,
-                    amount: corporationPay.amount,
-                    date: corporationPay.date,
-                  }),
-                ),
+          });
+
+          await tx.subcontractorPayment.upsert({
+            where: {
+              subcontractorId_serviceDate: {
+                subcontractorId: createdProjectReport.subcontractorId,
+                serviceDate: createdProjectReport.date,
               },
             },
-          },
-          include: {
-            project: {
-              select: {
-                id: true,
-                name: true,
-              },
+            update: {},
+            create: {
+              subcontractorId: createdProjectReport.subcontractorId,
+              serviceDate: createdProjectReport.date,
             },
-            subcontractor: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        });
+          });
+
+          return createdProjectReport;
+        },
+      );
       this.logger.log(`Project report created: ${createdProjectReport.id}`);
 
       return toProjectReportListItem(createdProjectReport);
