@@ -24,7 +24,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { SubcontractorResponseDto } from './dto/subcontractor-repsonse.dto';
+import { SubcontractorResponseDto } from './dto/subcontractor-response.dto';
 import { PaginationQueryDto } from 'src/common/pagination-query.dto';
 
 /**

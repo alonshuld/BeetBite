@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SubcontractorsController } from './subcontractors.controller';
 import { SubcontractorsService } from './subcontractors.service';
 import { CreateSubcontractorDto } from './dto/create-subcontractor.dto';
-import { SubcontractorResponseDto } from './dto/subcontractor-repsonse.dto';
+import { SubcontractorResponseDto } from './dto/subcontractor-response.dto';
 import { SubcontractorAlreadyExistsError } from './errors/subcontractor-already-exists.error';
 import { SubcontractorNotFoundError } from './errors/subcontractor-not-found';
 
