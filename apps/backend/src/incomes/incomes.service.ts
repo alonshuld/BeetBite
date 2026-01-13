@@ -22,16 +22,24 @@ export class IncomesService {
   async getTotalIncome(date: MonthQueryDto): Promise<IncomeResponseDto> {
     const inputDate = new Date(date.month);
 
+    const monthStart = new Date(
+      inputDate.getUTCFullYear(),
+      inputDate.getUTCMonth(),
+      1,
+    );
+
     const projectReports = await this.prismaService.projectReport.findMany({
       where: {
-        date: inputDate,
+        date: monthStart,
       },
       include: {
         project: true,
       },
     });
 
-    this.logger.log(`Retrieved income for the date: ${date.month}`);
+    this.logger.log(
+      `Retrieved income for the date: ${monthStart.toLocaleDateString()}`,
+    );
 
     return projectReportsToIncome(projectReports);
   }

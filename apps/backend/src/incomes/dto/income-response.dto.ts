@@ -19,7 +19,7 @@ export class IncomeResponseDto {
   @ApiProperty({
     description: 'List of incomes grouped by project',
     isArray: true,
-    type: [ProjectIncomeDto],
+    type: () => ProjectIncomeDto,
   })
   projectIncomes!: ProjectIncomeDto[];
 }
