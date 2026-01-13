@@ -1,6 +1,7 @@
 import { Prisma } from 'src/generated/client';
 import { IncomeResponseDto } from '../dto/income-response.dto';
 import { ProjectIncomeDto } from '../dto/project-income.dto';
+import { projectReportToProjectIncome } from './project-report-to-project-income.mapper';
 
 type ProjectReportWithProject = Prisma.ProjectReportGetPayload<{
   include: { project: true };
@@ -28,13 +29,7 @@ export const projectReportsToIncome = (
     totalIncome += income;
     totalProfit += profit;
 
-    projectIncomes.push({
-      projectId: projectReport.projectId,
-      projectName: projectReport.project.name,
-      income: income,
-      profitMargin: projectReport.profitMargin.toNumber(),
-      profit: profit,
-    });
+    projectIncomes.push(projectReportToProjectIncome(projectReport));
   }
   return {
     totalIncome,

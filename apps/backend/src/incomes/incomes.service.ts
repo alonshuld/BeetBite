@@ -14,23 +14,25 @@ export class IncomesService {
 
   constructor(private readonly prismaService: PrismaService) {}
 
+  /**
+   * Get the total income, total profit, and project incomes
+   * @param date The date of the income report
+   * @returns The income response DTO
+   */
   async getTotalIncome(date: MonthQueryDto): Promise<IncomeResponseDto> {
-    try {
-      const inputDate = new Date(date.month);
+    const inputDate = new Date(date.month);
 
-      const projectReports = await this.prismaService.projectReport.findMany({
-        where: {
-          date: inputDate,
-        },
-        include: {
-          project: true,
-        },
-      });
+    const projectReports = await this.prismaService.projectReport.findMany({
+      where: {
+        date: inputDate,
+      },
+      include: {
+        project: true,
+      },
+    });
 
-      return projectReportsToIncome(projectReports);
-    } catch (error) {
-      this.logger.error('Error getting total income', error);
-      throw error;
-    }
+    this.logger.log(`Retrieved income for the date: ${date.month}`);
+
+    return projectReportsToIncome(projectReports);
   }
 }
