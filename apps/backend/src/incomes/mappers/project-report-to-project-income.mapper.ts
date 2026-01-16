@@ -1,5 +1,5 @@
 import { ProjectIncomeDto } from '../dto/project-income.dto';
-import { ProjectReportWithProject } from '../dto/project-report-with-project.dto';
+import { ProjectReport } from 'src/generated/client';
 
 /**
  * Converts a project report entity to a project income DTO.
@@ -7,7 +7,9 @@ import { ProjectReportWithProject } from '../dto/project-report-with-project.dto
  * @returns ProjectIncomeDto containing project income details
  */
 export const projectReportToProjectIncome = (
-  projectReport: ProjectReportWithProject,
+  projectReport: ProjectReport & {
+    project: { name: string };
+  },
 ): ProjectIncomeDto => ({
   projectId: projectReport.projectId,
   projectName: projectReport.project.name,

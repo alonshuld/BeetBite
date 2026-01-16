@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { IncomeResponseDto } from './dto/income-response.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
-import { projectReportsToIncome } from './mappers/project-reports-to-income.mapper';
+import { projectReportToProjectIncome } from './mappers/project-report-to-project-income.mapper';
 
 /**
  * Service providing income business logic.
@@ -24,25 +24,34 @@ export class IncomesService {
   ): Promise<IncomeResponseDto> {
     const month = new Date(monthQueryDto.month);
 
-    const projectReports = await this.prismaService.projectReport.findMany({
-      where: {
-        date: month,
-      },
-      include: {
-        project: {
-          select: {
-            name: true,
+    const projectIncomes = (
+      await this.prismaService.projectReport.findMany({
+        where: {
+          date: month,
+        },
+        include: {
+          project: {
+            select: {
+              name: true,
+            },
           },
         },
-      },
-    });
+      })
+    ).map((report) => projectReportToProjectIncome(report));
 
-    const incomeResponse = projectReportsToIncome(projectReports);
-
-    this.logger.log(
-      `Retrieved the income for: ${month.toLocaleDateString()}: ${incomeResponse.totalIncome}`,
+    const totalIncome = projectIncomes.reduce(
+      (sum, report) => sum + report.income,
+      0,
+    );
+    const totalProfit = projectIncomes.reduce(
+      (sum, report) => sum + report.profit,
+      0,
     );
 
-    return incomeResponse;
+    this.logger.log(
+      `Retrieved the income for ${month.toLocaleDateString()}: ${totalIncome}`,
+    );
+
+    return { totalIncome, totalProfit, projectIncomes };
   }
 }
