@@ -37,10 +37,12 @@ export class IncomesService {
       },
     });
 
+    const incomeResponse = projectReportsToIncome(projectReports);
+
     this.logger.log(
-      `Retrieved income for the date: ${month.toLocaleDateString()}`,
+      `Retrieved the income for: ${month.toLocaleDateString()}: ${incomeResponse.totalIncome}`,
     );
 
-    return projectReportsToIncome(projectReports);
+    return incomeResponse;
   }
 }
