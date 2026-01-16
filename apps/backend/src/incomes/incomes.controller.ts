@@ -35,6 +35,6 @@ export class IncomesController {
   async getMonthIncome(
     @Query() month: MonthQueryDto,
   ): Promise<IncomeResponseDto> {
-    return await this.incomesService.getTotalIncome(month);
+    return await this.incomesService.getMonthIncome(month);
   }
 }
