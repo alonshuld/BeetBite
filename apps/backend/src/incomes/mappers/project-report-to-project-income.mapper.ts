@@ -1,9 +1,5 @@
-import { Prisma } from 'src/generated/client';
 import { ProjectIncomeDto } from '../dto/project-income.dto';
-
-type ProjectReportWithProject = Prisma.ProjectReportGetPayload<{
-  include: { project: true };
-}>;
+import { ProjectReportWithProject } from '../dto/project-report-with-project.dto';
 
 /**
  * Converts a project report entity to a project income DTO.

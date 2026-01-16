@@ -29,7 +29,11 @@ export class IncomesService {
         date: month,
       },
       include: {
-        project: true,
+        project: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
