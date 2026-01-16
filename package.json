@@ -9,12 +9,12 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "prepare": "husky",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --schema ./apps/backend/prisma/schema.prisma"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.27.0",
+  "packageManager": "pnpm@10.28.0",
   "private": true,
   "devDependencies": {
     "husky": "^9.1.7"

@@ -75,6 +75,7 @@ export class ProjectsService {
     });
 
     this.logger.log(`Projects retrieved: ${projects.length} items`);
+
     return toProjectResponseList(projects);
   }
 
