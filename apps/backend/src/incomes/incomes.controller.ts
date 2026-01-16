@@ -11,7 +11,7 @@ import { IncomeResponseDto } from './dto/income-response.dto';
 
 /**
  * Controller for income-related endpoints.
- * Handles create, read, update (PUT), and delete operations.
+ * Handles read monthly income operation.
  * @param incomesService IncomesService for business logic
  */
 @ApiTags('incomes')
