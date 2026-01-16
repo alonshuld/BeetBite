@@ -1,6 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ProjectIncomeDto } from './project-income.dto';
 
+/**
+ * DTO representing the income response for a specific month.
+ */
 export class IncomeResponseDto {
   @ApiProperty({
     example: 1234567.89,
