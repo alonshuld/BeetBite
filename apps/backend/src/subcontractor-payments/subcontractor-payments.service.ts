@@ -3,11 +3,15 @@ import { CreateSubcontractorPaymentDto } from './dto/create-subcontractor-paymen
 import { UpdateSubcontractorPaymentDto } from './dto/update-subcontractor-payment.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SubcontractorPaymentResponseDto } from './dto/subcontractor-payments-repsonse.dto';
-import { toSubcontractorPaymentResponse } from './mappers/subcontractor-payment.mapper';
+import {
+  toSubcontractorPaymentResponse,
+  toSubcontractorPaymentResponseList,
+} from './mappers/subcontractor-payment.mapper';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
 import { SubcontractorPaymentAlreadyExistsError } from './errors/subcontractor-payment-already-exists.error';
+import { MonthQueryDto } from 'src/common/month-query.dto';
 
 @Injectable()
 export class SubcontractorPaymentsService {
@@ -52,8 +56,26 @@ export class SubcontractorPaymentsService {
     }
   }
 
-  findAll() {
-    return `This action returns all subcontractorPayments`;
+  /**
+   * Get all of the subcontractor payments from a service month
+   * @param monthQueryDto The service month of the payments that will be retrieved
+   * @returns List of all of the subcontractor payments from the matching service date
+   */
+  async findAll(
+    monthQueryDto: MonthQueryDto,
+  ): Promise<SubcontractorPaymentResponseDto[]> {
+    const month = new Date(monthQueryDto.month);
+
+    const subcontractorPayments =
+      await this.prismaService.subcontractorPayment.findMany({
+        where: { serviceDate: month },
+      });
+
+    this.logger.log(
+      `Retrieved ${subcontractorPayments.length} subcontractor payments from ${month.toLocaleDateString()}`,
+    );
+
+    return toSubcontractorPaymentResponseList(subcontractorPayments);
   }
 
   findOne(id: number) {
