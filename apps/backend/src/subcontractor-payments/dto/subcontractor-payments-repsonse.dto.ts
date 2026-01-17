@@ -1,5 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+/**
+ * DTO represents the response of subcontractor payment
+ */
 export class SubcontractorPaymentResponseDto {
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
