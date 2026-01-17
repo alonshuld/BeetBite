@@ -7,9 +7,7 @@ import { ProjectResponseDto } from '../dto/project-response.dto';
  * @returns The project response DTO.
  */
 export const toProjectResponse = (project: Project): ProjectResponseDto => ({
-  id: project.id,
-  clientId: project.clientId,
-  name: project.name,
+  ...project,
   estimatedAmount: project.estimatedAmount.toNumber(),
   finishDate: project.finishDate.toISOString(),
 });

@@ -8,7 +8,7 @@ import { Prisma } from 'src/generated/client';
 import {
   toCorporationResponse,
   toCorporationResponseList,
-} from './entities/corporation.mapper';
+} from './mappers/corporation.mapper';
 import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { CorporationNotFoundError } from './errors/corporation-not-found.error';
 import { CorporationAlreadyExistsError } from './errors/corporation-already-exists.error';

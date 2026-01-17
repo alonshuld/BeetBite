@@ -6,7 +6,7 @@ import { SubcontractorResponseDto } from './dto/subcontractor-repsonse.dto';
 import {
   toSubcontractorResponse,
   toSubcontractorResponseList,
-} from './entities/subcontractor.mapper';
+} from './mappers/subcontractor.mapper';
 import { Prisma } from 'src/generated/client';
 import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { SubcontractorAlreadyExistsError } from './errors/subcontractor-already-exists.error';
