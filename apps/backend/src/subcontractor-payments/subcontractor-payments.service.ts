@@ -1,11 +1,55 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CreateSubcontractorPaymentDto } from './dto/create-subcontractor-payment.dto';
 import { UpdateSubcontractorPaymentDto } from './dto/update-subcontractor-payment.dto';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { SubcontractorPaymentResponseDto } from './dto/subcontractor-payments-repsonse.dto';
+import { toSubcontractorPaymentResponse } from './mappers/subcontractor-payment.mapper';
+import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
+import { PRISMA_ERROR_CODES } from 'src/common/constants';
+import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
+import { SubcontractorPaymentAlreadyExistsError } from './errors/subcontractor-payment-already-exists.error';
 
 @Injectable()
 export class SubcontractorPaymentsService {
-  create(createSubcontractorPaymentDto: CreateSubcontractorPaymentDto) {
-    return 'This action adds a new subcontractorPayment';
+  private readonly logger = new Logger(SubcontractorPaymentsService.name);
+
+  constructor(private readonly prismaService: PrismaService) {}
+
+  /**
+   * Create a new subcontractor payment
+   * @param createSubcontractorPaymentDto Parameters for subcontractor payment creation
+   * @returns The created subcontractor payment response DTO
+   */
+  async create(
+    createSubcontractorPaymentDto: CreateSubcontractorPaymentDto,
+  ): Promise<SubcontractorPaymentResponseDto> {
+    try {
+      const subcontractorPayment =
+        await this.prismaService.subcontractorPayment.create({
+          data: { ...createSubcontractorPaymentDto },
+        });
+
+      this.logger.log(
+        `Subcontractor payment created: ${subcontractorPayment.id}`,
+      );
+
+      return toSubcontractorPaymentResponse(subcontractorPayment);
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        switch (error.code) {
+          case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
+            throw new SubcontractorNotFoundError(
+              createSubcontractorPaymentDto.subcontractorId,
+            );
+          case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
+            throw new SubcontractorPaymentAlreadyExistsError(
+              createSubcontractorPaymentDto.subcontractorId,
+              createSubcontractorPaymentDto.serviceDate,
+            );
+        }
+      }
+      throw error;
+    }
   }
 
   findAll() {
