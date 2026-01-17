@@ -82,9 +82,11 @@ model CorporationPayment {
 model SubcontractorPayment {
   id              String    @id @default(cuid())
   subcontractorId String
-  date            DateTime? @db.Date
+  serviceDate     DateTime  @db.Date
+  paymentDate     DateTime? @db.Date
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id])
 
+  @@unique([subcontractorId, serviceDate])
   @@map("subcontractor_payments")
 }
