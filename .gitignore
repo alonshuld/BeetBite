@@ -144,3 +144,5 @@ vite.config.ts.timestamp-*
 .pnpm-store
 # Generated files
 **/generated/
+
+.vscode/
