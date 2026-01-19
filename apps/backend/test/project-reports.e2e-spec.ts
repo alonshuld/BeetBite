@@ -15,6 +15,7 @@ import { UpdateProjectReportDto } from '../src/project-reports/dto/update-projec
 import { execSync } from 'child_process';
 import * as path from 'path';
 import { PrismaModule } from 'src/prisma/prisma.module';
+import { CorporationNotFoundError } from 'src/corporations/errors/corporation-not-found.error';
 
 /**
  * Integration tests for ProjectReportsService
@@ -313,6 +314,32 @@ describe('ProjectReportsService Integration Tests', () => {
 
       await expect(service.create(createDto)).rejects.toThrow(
         ProjectReportNotFoundError,
+      );
+    });
+
+    it('should throw error when corporation payment references non-existent corporation', async () => {
+      const createDto: CreateProjectReportDto = {
+        projectId,
+        subcontractorId,
+        date: testDateStr,
+        profitMargin: 18,
+        income: 80000,
+        corporationPayments: [
+          {
+            corporationId: corporationIds[0],
+            amount: 15000,
+            date: testDateStr,
+          },
+          {
+            corporationId: 'non-existent-corp',
+            amount: 12000,
+            date: testDateStr,
+          },
+        ],
+      };
+
+      await expect(service.create(createDto)).rejects.toThrow(
+        CorporationNotFoundError,
       );
     });
 

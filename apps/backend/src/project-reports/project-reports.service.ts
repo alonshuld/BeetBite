@@ -19,6 +19,7 @@ import { ProjectReportResponseDto } from './dto/project-report-response.dto';
 import { ProjectReportNotFoundError } from './errors/project-report-not-found.exception';
 import { UpdateProjectReportDto } from './dto/update-project-report.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
+import { CorporationNotFoundError } from 'src/corporations/errors/corporation-not-found.error';
 
 /**
  * Service that provides project report related business logic.
@@ -34,7 +35,7 @@ export class ProjectReportsService {
    * Enriches the given CreateProjectReportDto object with fields from the previous month's report if
    * it exists and the fields were not provided.
    * @param createProjectReportDto The DTO to enrich with the previous month report's fields.
-   * @returns An enriched DTO that contains all the neccessary values.
+   * @returns An enriched DTO that contains all the necessary values.
    */
   private async enrichCreateProjectReportDto(
     createProjectReportDto: CreateProjectReportDto,
@@ -43,8 +44,8 @@ export class ProjectReportsService {
       Required<Pick<CreateProjectReportDto, 'subcontractorId' | 'profitMargin'>>
   > {
     if (
-      createProjectReportDto.profitMargin &&
-      createProjectReportDto.subcontractorId
+      createProjectReportDto.profitMargin !== undefined &&
+      createProjectReportDto.subcontractorId !== undefined
     )
       return createProjectReportDto as CreateProjectReportDto &
         Required<
@@ -167,7 +168,11 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
             },
             update: {},
             create: {
-              subcontractorId: createdProjectReport.subcontractorId,
+              subcontractor: {
+                connect: {
+                  id: createdProjectReport.subcontractorId,
+                },
+              },
               serviceDate: createdProjectReport.date,
             },
           });
@@ -184,14 +189,16 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
       }
 
       switch (error.code) {
-        case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED: {
-          const fieldName = error.meta?.field_name as string;
+        case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
+          throw new CorporationNotFoundError('');
+        case PRISMA_ERROR_CODES.NOT_FOUND: {
+          const model = error.meta?.model as string;
 
-          if (fieldName.includes('projectId'))
+          if (model.toLowerCase().includes('project'))
             throw new ProjectNotFoundError(
               enrichedCreateProjectReportDto.projectId,
             );
-          if (fieldName.includes('subcontractorId'))
+          if (model.toLowerCase().includes('subcontractor'))
             throw new SubcontractorNotFoundError(
               enrichedCreateProjectReportDto.subcontractorId,
             );
@@ -453,16 +460,17 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
       }
 
       switch (error.code) {
-        case PRISMA_ERROR_CODES.NOT_FOUND:
-          throw new ProjectReportNotFoundError(id);
-        case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED: {
-          const fieldName = error.meta?.field_name as string;
+        case PRISMA_ERROR_CODES.NOT_FOUND: {
+          const model = error.meta?.model as string;
 
-          if (fieldName.includes('projectId'))
+          if (model.toLowerCase().includes('projectreport'))
+            throw new ProjectReportNotFoundError(id);
+
+          if (model.toLowerCase().includes('project'))
             throw new ProjectNotFoundError(
               enrichedCreateProjectReportDto.projectId,
             );
-          if (fieldName.includes('subcontractorId'))
+          if (model.toLowerCase().includes('subcontractor'))
             throw new SubcontractorNotFoundError(
               enrichedCreateProjectReportDto.subcontractorId,
             );
