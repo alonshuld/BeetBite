@@ -13,6 +13,11 @@ import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontrac
 import { SubcontractorPaymentAlreadyExistsError } from './errors/subcontractor-payment-already-exists.error';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 
+/**
+ * Service providing subcontractor payment business logic.
+ * Handles create, read, update, and delete operations.
+ * @param prismaService PrismaService for database interactions
+ */
 @Injectable()
 export class SubcontractorPaymentsService {
   private readonly logger = new Logger(SubcontractorPaymentsService.name);
@@ -78,18 +83,76 @@ export class SubcontractorPaymentsService {
     return toSubcontractorPaymentResponseList(subcontractorPayments);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} subcontractorPayment`;
+  /**
+   * Find subcontractor payment with matching ID
+   * @param id ID of the subcontractor payment to retrieve
+   * @returns The corresponding subcontractor payment
+   */
+  async findOne(id: string): Promise<SubcontractorPaymentResponseDto> {
+    const subcontractorPayment =
+      await this.prismaService.subcontractorPayment.findUnique({
+        where: { id },
+      });
+
+    if (!subcontractorPayment) {
+      throw new SubcontractorNotFoundError(id);
+    }
+
+    this.logger.log(`Subcontractor payment retrieved: ${id}`);
+
+    return toSubcontractorPaymentResponse(subcontractorPayment);
   }
 
-  update(
-    id: number,
+  /**
+   * Updates a subcontractor payment by its ID.
+   * @param id ID of the subcontractor payment to update
+   * @param updateSubcontractorPaymentDto The DTO containing updated subcontractor payment details.
+   * @returns The updated subcontractor payment.
+   */
+  async update(
+    id: string,
     updateSubcontractorPaymentDto: UpdateSubcontractorPaymentDto,
-  ) {
-    return `This action updates a #${id} subcontractorPayment`;
+  ): Promise<SubcontractorPaymentResponseDto> {
+    try {
+      const subcontractorPayment =
+        await this.prismaService.subcontractorPayment.update({
+          where: { id },
+          data: { ...updateSubcontractorPaymentDto },
+        });
+
+      this.logger.log(`Subcontractor payment updated: ${id}`);
+
+      return toSubcontractorPaymentResponse(subcontractorPayment);
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        switch (error.code) {
+          case PRISMA_ERROR_CODES.NOT_FOUND:
+            throw new SubcontractorNotFoundError(id);
+        }
+      }
+      throw error;
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} subcontractorPayment`;
+  /**
+   * Removes a subcontractor payment by its ID.
+   * @param id ID of the subcontractor payment to remove
+   */
+  async remove(id: string): Promise<void> {
+    try {
+      await this.prismaService.subcontractorPayment.delete({
+        where: { id },
+      });
+
+      this.logger.log(`Subcontractor payment deleted: ${id}`);
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        switch (error.code) {
+          case PRISMA_ERROR_CODES.NOT_FOUND:
+            throw new SubcontractorNotFoundError(id);
+        }
+      }
+      throw error;
+    }
   }
 }
