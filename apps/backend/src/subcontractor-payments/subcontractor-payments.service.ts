@@ -11,6 +11,7 @@ import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaName
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
 import { SubcontractorPaymentAlreadyExistsError } from './errors/subcontractor-payment-already-exists.error';
+import { SubcontractorPaymentNotFoundError } from './errors/subcontractor-payment-not-found.error';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 
 /**
@@ -95,7 +96,7 @@ export class SubcontractorPaymentsService {
       });
 
     if (!subcontractorPayment) {
-      throw new SubcontractorNotFoundError(id);
+      throw new SubcontractorPaymentNotFoundError(id);
     }
 
     this.logger.log(`Subcontractor payment retrieved: ${id}`);
@@ -127,7 +128,7 @@ export class SubcontractorPaymentsService {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
           case PRISMA_ERROR_CODES.NOT_FOUND:
-            throw new SubcontractorNotFoundError(id);
+            throw new SubcontractorPaymentNotFoundError(id);
         }
       }
       throw error;
@@ -149,7 +150,7 @@ export class SubcontractorPaymentsService {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
           case PRISMA_ERROR_CODES.NOT_FOUND:
-            throw new SubcontractorNotFoundError(id);
+            throw new SubcontractorPaymentNotFoundError(id);
         }
       }
       throw error;

@@ -18,7 +18,6 @@ describe('SubcontractorsService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
-      count: jest.fn(),
     },
   };
 

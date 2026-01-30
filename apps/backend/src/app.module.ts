@@ -20,10 +20,10 @@ import { SubcontractorPaymentsModule } from './subcontractor-payments/subcontrac
     PrismaModule,
     CorporationsModule,
     ClientsModule,
+    SubcontractorPaymentsModule,
     SubcontractorsModule,
     ProjectsModule,
     IncomesModule,
-    SubcontractorPaymentsModule,
   ],
 })
 export class AppModule {}
