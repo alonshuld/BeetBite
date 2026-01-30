@@ -41,12 +41,11 @@ export class CorporationsService {
 
       return toCorporationResponse(corporation);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED
-      ) {
-        throw new CorporationAlreadyExistsError(createCorporationDto.name);
-      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError)
+        switch (error.code) {
+          case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
+            throw new CorporationAlreadyExistsError(createCorporationDto.name);
+        }
       throw error;
     }
   }
