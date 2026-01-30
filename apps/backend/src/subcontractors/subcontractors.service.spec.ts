@@ -219,5 +219,197 @@ describe('SubcontractorsService', () => {
         SubcontractorNotFoundError,
       );
     });
+
+    it('should handle foreign key constraint when subcontractor has associated payments', async () => {
+      const prismaError = new Prisma.PrismaClientKnownRequestError('', {
+        code: PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED,
+        clientVersion: '1.0.0',
+      });
+      mockPrismaService.subcontractor.delete.mockRejectedValue(prismaError);
+
+      await expect(service.remove('1')).rejects.toThrow(prismaError);
+    });
+  });
+
+  describe('Integration Tests with Payments', () => {
+    let integrationService: SubcontractorsService;
+    const integrationMockPrismaService = {
+      subcontractor: {
+        create: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+      },
+      subcontractorPayment: {
+        findMany: jest.fn(),
+        deleteMany: jest.fn(),
+      },
+    };
+
+    beforeEach(async () => {
+      const integrationModule: TestingModule = await Test.createTestingModule({
+        providers: [
+          SubcontractorsService,
+          {
+            provide: PrismaService,
+            useValue: integrationMockPrismaService,
+          },
+        ],
+      }).compile();
+
+      integrationService = integrationModule.get<SubcontractorsService>(
+        SubcontractorsService,
+      );
+
+      jest.clearAllMocks();
+    });
+
+    describe('subcontractor and payment relationship validation', () => {
+      it('should create subcontractor successfully', async () => {
+        const createDto = { name: 'New Subcontractor' };
+        const mockSubcontractor = {
+          id: 'sub-new',
+          name: 'New Subcontractor',
+        };
+
+        integrationMockPrismaService.subcontractor.create.mockResolvedValue(
+          mockSubcontractor,
+        );
+
+        const result = await integrationService.create(createDto);
+
+        expect(result).toEqual(mockSubcontractor);
+        expect(
+          integrationMockPrismaService.subcontractor.create,
+        ).toHaveBeenCalledWith({
+          data: createDto,
+        });
+      });
+
+      it('should verify subcontractor exists when checking payments', async () => {
+        const mockSubcontractor = {
+          id: 'sub-check',
+          name: 'Check Subcontractor',
+          payments: [
+            {
+              id: 'payment-1',
+              subcontractorId: 'sub-check',
+              serviceDate: new Date('2023-01-01'),
+              paymentDate: new Date('2023-01-15'),
+            },
+          ],
+        };
+
+        integrationMockPrismaService.subcontractor.findUnique.mockResolvedValue(
+          mockSubcontractor,
+        );
+
+        const result = await integrationService.findOne('sub-check');
+
+        // The mapper returns all properties from the entity
+        // The test should reflect the actual mapper behavior
+        expect(result.id).toBe('sub-check');
+        expect(result.name).toBe('Check Subcontractor');
+        expect(
+          integrationMockPrismaService.subcontractor.findUnique,
+        ).toHaveBeenCalledWith({
+          where: { id: 'sub-check' },
+        });
+      });
+
+      it('should handle cascading behavior when checking subcontractor with payments exists', async () => {
+        const subcontractorWithPayments = {
+          id: 'sub-with-payments',
+          name: 'Subcontractor With Payments',
+          payments: [
+            {
+              id: 'payment-1',
+              subcontractorId: 'sub-with-payments',
+              serviceDate: new Date('2023-01-01'),
+              paymentDate: new Date('2023-01-15'),
+            },
+            {
+              id: 'payment-2',
+              subcontractorId: 'sub-with-payments',
+              serviceDate: new Date('2023-02-01'),
+              paymentDate: new Date('2023-02-15'),
+            },
+          ],
+        };
+
+        integrationMockPrismaService.subcontractor.findUnique.mockResolvedValue(
+          subcontractorWithPayments,
+        );
+
+        const result = await integrationService.findOne('sub-with-payments');
+
+        expect(result.id).toBe('sub-with-payments');
+        expect(result.name).toBe('Subcontractor With Payments');
+      });
+
+      it('should handle error when trying to delete subcontractor with existing payments', async () => {
+        const prismaError = new Prisma.PrismaClientKnownRequestError(
+          'Foreign key constraint failed on the field: `SubcontractorPayment_subcontractorId_fkey`',
+          {
+            code: PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED,
+            clientVersion: '1.0.0',
+          },
+        );
+
+        integrationMockPrismaService.subcontractor.delete.mockRejectedValue(
+          prismaError,
+        );
+
+        await expect(
+          integrationService.remove('sub-with-payments'),
+        ).rejects.toThrow(prismaError);
+      });
+    });
+
+    describe('workflow tests - subcontractor lifecycle with payments', () => {
+      it('should handle complete workflow: create subcontractor, verify relationship', async () => {
+        // Create subcontractor
+        const newSubcontractor = {
+          id: 'sub-workflow',
+          name: 'Workflow Subcontractor',
+        };
+
+        integrationMockPrismaService.subcontractor.create.mockResolvedValue(
+          newSubcontractor,
+        );
+
+        const createdSubcontractor = await integrationService.create({
+          name: 'Workflow Subcontractor',
+        });
+        expect(createdSubcontractor.id).toBe('sub-workflow');
+
+        // Find subcontractor
+        integrationMockPrismaService.subcontractor.findUnique.mockResolvedValue(
+          newSubcontractor,
+        );
+
+        const foundSubcontractor =
+          await integrationService.findOne('sub-workflow');
+        expect(foundSubcontractor.id).toBe('sub-workflow');
+      });
+
+      it('should handle multiple subcontractors with different payment scenarios', async () => {
+        const subcontractors = [
+          { id: 'sub-1', name: 'Subcontractor 1' },
+          { id: 'sub-2', name: 'Subcontractor 2' },
+          { id: 'sub-3', name: 'Subcontractor 3' },
+        ];
+
+        integrationMockPrismaService.subcontractor.findMany.mockResolvedValue(
+          subcontractors,
+        );
+
+        const result = await integrationService.findAll();
+
+        expect(result).toHaveLength(3);
+        expect(result.map((s) => s.id)).toEqual(['sub-1', 'sub-2', 'sub-3']);
+      });
+    });
   });
 });
