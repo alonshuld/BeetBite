@@ -407,6 +407,8 @@ describe('SubcontractorPaymentsService', () => {
         expect(
           integrationMockPrismaService.subcontractorPayment.findMany,
         ).toHaveBeenCalledWith({
+          skip: 0,
+          take: 10,
           where: { serviceDate: new Date('2023-01') },
         });
       });
