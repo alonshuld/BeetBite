@@ -1,5 +1,5 @@
 import { SubcontractorPayment } from 'src/generated/client';
-import { SubcontractorPaymentResponseDto } from '../dto/subcontractor-payments-repsonse.dto';
+import { SubcontractorPaymentResponseDto } from '../dto/subcontractor-payments-response.dto';
 
 /**
  * Converts the given subcontractor payment to a subcontractor payment response DTO

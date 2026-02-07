@@ -100,11 +100,13 @@ describe('SubcontractorPaymentsController', () => {
         expectedResult,
       );
 
-      const result = await controller.findAll({ month: '2024-06' });
+      const result = await controller.findAll({
+        monthQuery: { month: '2024-06' },
+      });
 
       expect(result).toEqual(expectedResult);
       expect(mockSubcontractorPaymentsService.findAll).toHaveBeenCalledWith({
-        month: '2024-06',
+        monthQuery: { month: '2024-06' },
       });
     });
   });
@@ -332,13 +334,13 @@ describe('SubcontractorPaymentsController', () => {
         );
 
         const result = await integrationController.findAll({
-          month: '2023-01',
+          monthQuery: { month: '2023-01' },
         });
 
         expect(result).toEqual(expectedPayments);
         expect(
           integrationMockSubcontractorPaymentsService.findAll,
-        ).toHaveBeenCalledWith({ month: '2023-01' });
+        ).toHaveBeenCalledWith({ monthQuery: { month: '2023-01' } });
       });
 
       it('should return empty array when no payments found for month', async () => {
@@ -347,7 +349,7 @@ describe('SubcontractorPaymentsController', () => {
         );
 
         const result = await integrationController.findAll({
-          month: '2023-12',
+          monthQuery: { month: '2023-12' },
         });
 
         expect(result).toEqual([]);

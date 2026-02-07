@@ -24,8 +24,8 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { SubcontractorPaymentResponseDto } from './dto/subcontractor-payments-repsonse.dto';
-import { MonthQueryDto } from 'src/common/month-query.dto';
+import { SubcontractorPaymentResponseDto } from './dto/subcontractor-payments-response.dto';
+import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
 
 /**
  * Controller for subcontractor payment-related endpoints.
@@ -70,9 +70,11 @@ export class SubcontractorPaymentsController {
     isArray: true,
   })
   async findAll(
-    @Query() monthQueryDto: MonthQueryDto,
+    @Query() paginatedMonthQueryDto: PaginatedMonthQueryDto,
   ): Promise<SubcontractorPaymentResponseDto[]> {
-    return await this.subcontractorPaymentsService.findAll(monthQueryDto);
+    return await this.subcontractorPaymentsService.findAll(
+      paginatedMonthQueryDto,
+    );
   }
 
   /**

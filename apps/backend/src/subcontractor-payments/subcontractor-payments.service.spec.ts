@@ -112,7 +112,7 @@ describe('SubcontractorPaymentsService', () => {
       );
 
       const result = await service.findAll({
-        month: '2023-01',
+        monthQuery: { month: '2023-01' },
       });
 
       expect(result).toEqual(
@@ -131,7 +131,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
       const result = await service.findAll({
-        month: '2023-03',
+        monthQuery: { month: '2023-03' },
       });
 
       expect(result).toEqual([]);
@@ -393,7 +393,9 @@ describe('SubcontractorPaymentsService', () => {
           mockPayments,
         );
 
-        const result = await integrationService.findAll({ month: '2023-01' });
+        const result = await integrationService.findAll({
+          monthQuery: { month: '2023-01' },
+        });
 
         expect(result).toHaveLength(2);
         expect(result[0]).toEqual({
@@ -414,7 +416,9 @@ describe('SubcontractorPaymentsService', () => {
           [],
         );
 
-        const result = await integrationService.findAll({ month: '2023-12' });
+        const result = await integrationService.findAll({
+          monthQuery: { month: '2023-12' },
+        });
 
         expect(result).toEqual([]);
       });
@@ -470,7 +474,9 @@ describe('SubcontractorPaymentsService', () => {
           payments,
         );
 
-        const result = await integrationService.findAll({ month: '2023-01' });
+        const result = await integrationService.findAll({
+          monthQuery: { month: '2023-01' },
+        });
 
         expect(result).toHaveLength(2);
         expect(result.map((p) => p.subcontractorId)).toEqual([

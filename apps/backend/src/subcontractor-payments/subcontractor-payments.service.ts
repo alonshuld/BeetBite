@@ -2,17 +2,17 @@ import { Injectable, Logger } from '@nestjs/common';
 import { CreateSubcontractorPaymentDto } from './dto/create-subcontractor-payment.dto';
 import { UpdateSubcontractorPaymentDto } from './dto/update-subcontractor-payment.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { SubcontractorPaymentResponseDto } from './dto/subcontractor-payments-repsonse.dto';
+import { SubcontractorPaymentResponseDto } from './dto/subcontractor-payments-response.dto';
 import {
   toSubcontractorPaymentResponse,
   toSubcontractorPaymentResponseList,
 } from './mappers/subcontractor-payment.mapper';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
-import { PRISMA_ERROR_CODES } from 'src/common/constants';
+import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
 import { SubcontractorPaymentAlreadyExistsError } from './errors/subcontractor-payment-already-exists.error';
 import { SubcontractorPaymentNotFoundError } from './errors/subcontractor-payment-not-found.error';
-import { MonthQueryDto } from 'src/common/month-query.dto';
+import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
 
 /**
  * Service providing subcontractor payment business logic.
@@ -64,17 +64,25 @@ export class SubcontractorPaymentsService {
 
   /**
    * Get all of the subcontractor payments from a service month
-   * @param monthQueryDto The service month of the payments that will be retrieved
+   * @param paginatedMonthQueryDto The service month of the payments that will be retrieved
    * @returns List of all of the subcontractor payments from the matching service date
    */
   async findAll(
-    monthQueryDto: MonthQueryDto,
+    paginatedMonthQueryDto: PaginatedMonthQueryDto,
   ): Promise<SubcontractorPaymentResponseDto[]> {
-    const month = new Date(monthQueryDto.month);
+    const month = new Date(paginatedMonthQueryDto.monthQuery.month);
+
+    const page =
+      paginatedMonthQueryDto.paginationQuery?.page ?? PAGINATION_DEFAULTS.PAGE;
+    const limit =
+      paginatedMonthQueryDto.paginationQuery?.limit ??
+      PAGINATION_DEFAULTS.LIMIT;
 
     const subcontractorPayments =
       await this.prismaService.subcontractorPayment.findMany({
         where: { serviceDate: month },
+        skip: Math.max(0, (page - 1) * limit),
+        take: Math.max(1, limit),
       });
 
     this.logger.log(
