@@ -18,6 +18,9 @@ describe('SubcontractorPaymentsService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    projectReport: {
+      findMany: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -49,6 +52,7 @@ describe('SubcontractorPaymentsService', () => {
       paymentDate: '2023-01',
     };
     const mockPayment = {
+      id: '1',
       subcontractorId: '1',
       serviceDate: new Date('2023-01'),
       paymentDate: new Date('2023-01'),
@@ -58,13 +62,16 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.subcontractorPayment.create.mockResolvedValue(
         mockPayment,
       );
+      mockPrismaService.projectReport.findMany.mockResolvedValue([]);
 
       const result = await service.create(createDto);
 
       expect(result).toEqual({
+        id: mockPayment.id,
         subcontractorId: mockPayment.subcontractorId,
         serviceDate: mockPayment.serviceDate.toISOString(),
         paymentDate: mockPayment.paymentDate.toISOString(),
+        amount: 0,
       });
       expect(
         mockPrismaService.subcontractorPayment.create,
@@ -96,11 +103,13 @@ describe('SubcontractorPaymentsService', () => {
     it('should return a list of subcontractor payments', async () => {
       const mockPayments = [
         {
+          id: '1',
           subcontractorId: '1',
           serviceDate: new Date('2023-01'),
           paymentDate: new Date('2023-01'),
         },
         {
+          id: '2',
           subcontractorId: '2',
           serviceDate: new Date('2023-02'),
           paymentDate: new Date('2023-02'),
@@ -117,14 +126,20 @@ describe('SubcontractorPaymentsService', () => {
 
       expect(result).toEqual(
         mockPayments.map((payment) => ({
+          id: payment.id,
           subcontractorId: payment.subcontractorId,
           serviceDate: payment.serviceDate.toISOString(),
           paymentDate: payment.paymentDate.toISOString(),
+          amount: 0,
         })),
       );
       expect(
         mockPrismaService.subcontractorPayment.findMany,
-      ).toHaveBeenCalled();
+      ).toHaveBeenCalledWith({
+        skip: 0,
+        take: 10,
+        where: { serviceDate: new Date('2023-01') },
+      });
     });
 
     it('should return an empty list if no payments found', async () => {
@@ -137,7 +152,11 @@ describe('SubcontractorPaymentsService', () => {
       expect(result).toEqual([]);
       expect(
         mockPrismaService.subcontractorPayment.findMany,
-      ).toHaveBeenCalled();
+      ).toHaveBeenCalledWith({
+        skip: 0,
+        take: 10,
+        where: { serviceDate: new Date('2023-03') },
+      });
     });
   });
 
@@ -153,6 +172,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.subcontractorPayment.findUnique.mockResolvedValue(
         mockPayment,
       );
+      mockPrismaService.projectReport.findMany.mockResolvedValue([]);
 
       const result = await service.findOne('1');
 
@@ -161,6 +181,7 @@ describe('SubcontractorPaymentsService', () => {
         subcontractorId: mockPayment.subcontractorId,
         serviceDate: mockPayment.serviceDate.toISOString(),
         paymentDate: mockPayment.paymentDate.toISOString(),
+        amount: 0,
       });
       expect(
         mockPrismaService.subcontractorPayment.findUnique,
@@ -196,6 +217,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.subcontractorPayment.update.mockResolvedValue(
         mockPayment,
       );
+      mockPrismaService.projectReport.findMany.mockResolvedValue([]);
 
       const result = await service.update('1', updateDto);
 
@@ -204,6 +226,7 @@ describe('SubcontractorPaymentsService', () => {
         subcontractorId: mockPayment.subcontractorId,
         serviceDate: mockPayment.serviceDate.toISOString(),
         paymentDate: mockPayment.paymentDate.toISOString(),
+        amount: 0,
       });
       expect(
         mockPrismaService.subcontractorPayment.update,
@@ -236,7 +259,7 @@ describe('SubcontractorPaymentsService', () => {
     it('should remove a subcontractor payment', async () => {
       mockPrismaService.subcontractorPayment.delete.mockResolvedValue({});
 
-      await service.remove('1');
+      await expect(service.remove('1')).resolves.toBeUndefined();
 
       expect(
         mockPrismaService.subcontractorPayment.delete,
@@ -281,6 +304,9 @@ describe('SubcontractorPaymentsService', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      projectReport: {
+        findMany: jest.fn(),
+      },
     };
 
     beforeEach(async () => {
@@ -319,6 +345,9 @@ describe('SubcontractorPaymentsService', () => {
         integrationMockPrismaService.subcontractorPayment.create.mockResolvedValue(
           mockPayment,
         );
+        integrationMockPrismaService.projectReport.findMany.mockResolvedValue(
+          [],
+        );
 
         const result = await integrationService.create(createDto);
 
@@ -327,6 +356,7 @@ describe('SubcontractorPaymentsService', () => {
           subcontractorId: mockPayment.subcontractorId,
           serviceDate: mockPayment.serviceDate.toISOString(),
           paymentDate: mockPayment.paymentDate.toISOString(),
+          amount: 0,
         });
         expect(
           integrationMockPrismaService.subcontractorPayment.create,
@@ -403,6 +433,7 @@ describe('SubcontractorPaymentsService', () => {
           subcontractorId: 'sub-1',
           serviceDate: '2023-01-01T00:00:00.000Z',
           paymentDate: '2023-01-15T00:00:00.000Z',
+          amount: 0,
         });
         expect(
           integrationMockPrismaService.subcontractorPayment.findMany,
@@ -445,10 +476,14 @@ describe('SubcontractorPaymentsService', () => {
         integrationMockPrismaService.subcontractorPayment.create.mockResolvedValue(
           mockPayment,
         );
+        integrationMockPrismaService.projectReport.findMany.mockResolvedValue(
+          [],
+        );
 
         const result = await integrationService.create(createDto);
 
         expect(result.subcontractorId).toBe(validSubcontractorId);
+        expect(result.amount).toBe(0);
         expect(
           integrationMockPrismaService.subcontractorPayment.create,
         ).toHaveBeenCalledWith({
@@ -485,6 +520,7 @@ describe('SubcontractorPaymentsService', () => {
           'sub-1',
           'sub-2',
         ]);
+        expect(result.every((p) => p.amount === 0)).toBe(true);
       });
     });
   });

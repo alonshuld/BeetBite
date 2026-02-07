@@ -8,10 +8,12 @@ import { SubcontractorPaymentResponseDto } from '../dto/subcontractor-payments-r
  */
 export const toSubcontractorPaymentResponse = (
   subcontractorPayment: SubcontractorPayment,
+  amount: number,
 ): SubcontractorPaymentResponseDto => ({
   ...subcontractorPayment,
   serviceDate: subcontractorPayment.serviceDate.toISOString(),
   paymentDate: subcontractorPayment.paymentDate?.toISOString(),
+  amount,
 });
 
 /**
@@ -20,6 +22,8 @@ export const toSubcontractorPaymentResponse = (
  * @returns List of subcontractor payment response DTOs
  */
 export const toSubcontractorPaymentResponseList = (
-  subcontractorPayments: SubcontractorPayment[],
+  subcontractorPayments: (SubcontractorPayment & { amount?: number })[],
 ): SubcontractorPaymentResponseDto[] =>
-  subcontractorPayments.map(toSubcontractorPaymentResponse);
+  subcontractorPayments.map((payment) =>
+    toSubcontractorPaymentResponse(payment, payment.amount || 0),
+  );

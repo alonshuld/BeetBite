@@ -31,4 +31,10 @@ export class SubcontractorPaymentResponseDto {
     format: 'ISO-8601',
   })
   paymentDate?: string;
+
+  @ApiProperty({
+    example: 156000.0,
+    description: 'The amount of the payment in cents',
+  })
+  amount!: number;
 }

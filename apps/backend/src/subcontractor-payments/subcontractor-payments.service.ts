@@ -26,6 +26,48 @@ export class SubcontractorPaymentsService {
   constructor(private readonly prismaService: PrismaService) {}
 
   /**
+   * Calculates the payment amount for a subcontractor based on their projects in a given service month.
+   * @param subcontractorId Subcontractor ID for which the payment amount will be calculated
+   * @param serviceDate Date representing the service month for which the payment amount will be calculated
+   * @returns The calculated payment amount for the subcontractor in the given service month
+   */
+  private async calculateSubcontractorPaymentAmount(
+    subcontractorId: string,
+    serviceDate: Date,
+  ): Promise<number> {
+    const subcontractorMonthlyProjects =
+      await this.prismaService.projectReport.findMany({
+        where: {
+          subcontractorId,
+          date: serviceDate,
+        },
+        select: {
+          income: true,
+          profitMargin: true,
+          corporationPayments: {
+            select: { amount: true },
+          },
+        },
+      });
+
+    return subcontractorMonthlyProjects.reduce((total, project) => {
+      const income = project.income.toNumber();
+      const profitMargin = project.profitMargin.toNumber();
+
+      const afterProfit = income - (profitMargin * income) / 100;
+
+      const corporationPaymentsTotal = project.corporationPayments.reduce(
+        (sum, payment) => sum + payment.amount.toNumber(),
+        0,
+      );
+
+      const subcontractorPayment = afterProfit - corporationPaymentsTotal;
+
+      return total + subcontractorPayment;
+    }, 0);
+  }
+
+  /**
    * Create a new subcontractor payment
    * @param createSubcontractorPaymentDto Parameters for subcontractor payment creation
    * @returns The created subcontractor payment response DTO
@@ -43,7 +85,12 @@ export class SubcontractorPaymentsService {
         `Subcontractor payment created: ${subcontractorPayment.id}`,
       );
 
-      return toSubcontractorPaymentResponse(subcontractorPayment);
+      const amount = await this.calculateSubcontractorPaymentAmount(
+        createSubcontractorPaymentDto.subcontractorId,
+        new Date(createSubcontractorPaymentDto.serviceDate),
+      );
+
+      return toSubcontractorPaymentResponse(subcontractorPayment, amount);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
@@ -109,7 +156,12 @@ export class SubcontractorPaymentsService {
 
     this.logger.log(`Subcontractor payment retrieved: ${id}`);
 
-    return toSubcontractorPaymentResponse(subcontractorPayment);
+    const amount = await this.calculateSubcontractorPaymentAmount(
+      subcontractorPayment.subcontractorId,
+      subcontractorPayment.serviceDate,
+    );
+
+    return toSubcontractorPaymentResponse(subcontractorPayment, amount);
   }
 
   /**
@@ -131,7 +183,12 @@ export class SubcontractorPaymentsService {
 
       this.logger.log(`Subcontractor payment updated: ${id}`);
 
-      return toSubcontractorPaymentResponse(subcontractorPayment);
+      const amount = await this.calculateSubcontractorPaymentAmount(
+        subcontractorPayment.subcontractorId,
+        subcontractorPayment.serviceDate,
+      );
+
+      return toSubcontractorPaymentResponse(subcontractorPayment, amount);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
