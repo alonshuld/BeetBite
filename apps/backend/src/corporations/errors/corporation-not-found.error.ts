@@ -13,9 +13,8 @@ export class CorporationNotFoundError extends EntityNotFoundError {
     super(
       corporationId
         ? `Corporation with ID ${corporationId} not found`
-        : 'Corporation not found'
+        : 'Corporation not found',
     );
     this.name = 'CorporationNotFoundError';
-  }
   }
 }

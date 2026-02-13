@@ -190,7 +190,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
 
       switch (error.code) {
         case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
-          throw new CorporationNotFoundError('');
+          throw new CorporationNotFoundError();
         case PRISMA_ERROR_CODES.NOT_FOUND: {
           const model = error.meta?.model as string;
 
