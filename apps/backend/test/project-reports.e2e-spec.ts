@@ -221,10 +221,10 @@ describe('ProjectReportsService Integration Tests', () => {
       const result = await service.create(createDto);
       const fullReport = await prismaService.projectReport.findUnique({
         where: { id: result.id },
-        include: { corporationPays: true },
+        include: { corporationPayments: true },
       });
 
-      expect(fullReport?.corporationPays || []).toHaveLength(2);
+      expect(fullReport?.corporationPayments || []).toHaveLength(2);
     });
 
     it('should throw ProjectReportAlreadyExistsError for duplicate project and date', async () => {

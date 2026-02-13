@@ -49,7 +49,7 @@ export const toProjectReportResponse = (
       name: string;
       payments: { paymentDate: Date | null }[];
     };
-    corporationPays: {
+    corporationPayments: {
       id: string;
       amount: Prisma.Decimal;
       corporation: { id: string; name: string };
@@ -70,8 +70,10 @@ export const toProjectReportResponse = (
     paymentDate:
       projectReport.subcontractor.payments[0].paymentDate?.toISOString(),
   },
-  corporationPayments: projectReport.corporationPays.map((corporationPay) => ({
-    ...corporationPay,
-    amount: corporationPay.amount.toNumber(),
-  })),
+  corporationPayments: projectReport.corporationPayments.map(
+    (corporationPay) => ({
+      ...corporationPay,
+      amount: corporationPay.amount.toNumber(),
+    }),
+  ),
 });
