@@ -80,11 +80,11 @@ model CorporationPayment {
 }
 
 model SubcontractorPayment {
-  id              String    @id @default(cuid())
+  id              String   @id @default(cuid())
   subcontractorId String
-  serviceDate     DateTime  @db.Date
-  paymentDate     DateTime? @db.Date
-  amount          Decimal   @db.Decimal(12, 2)
+  serviceDate     DateTime @db.Date
+  paymentDate     DateTime @db.Date
+  amount          Decimal  @db.Decimal(12, 2)
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id])
 
