@@ -84,6 +84,7 @@ model SubcontractorPayment {
   subcontractorId String
   serviceDate     DateTime  @db.Date
   paymentDate     DateTime? @db.Date
+  amount          Decimal   @db.Decimal(12, 2)
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id])
 
