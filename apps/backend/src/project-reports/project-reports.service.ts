@@ -56,7 +56,7 @@ export class ProjectReportsService {
     previousMonthDate.setUTCMonth(previousMonthDate.getUTCMonth() - 1);
 
     this.logger.debug(
-      `Checking project's ${createProjectReportDto.projectId} report from 
+      `Checking project's ${createProjectReportDto.projectId} report from
 ${previousMonthDate.toDateString()} to find the subcontractor ID and profit margins...`,
     );
 
@@ -82,8 +82,8 @@ ${previousMonthDate.toDateString()} to find the subcontractor ID and profit marg
     }
 
     this.logger
-      .debug(`Got the following fields from the project ${createProjectReportDto.projectId} report 
-made in ${previousMonthDate.toDateString()}: Subcontractor ID - ${previousMonthProjectReport.subcontractorId}, 
+      .debug(`Got the following fields from the project ${createProjectReportDto.projectId} report
+made in ${previousMonthDate.toDateString()}: Subcontractor ID - ${previousMonthProjectReport.subcontractorId},
 Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
 
     return {
@@ -131,7 +131,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
                   id: enrichedCreateProjectReportDto.subcontractorId,
                 },
               },
-              corporationPays: {
+              corporationPayments: {
                 createMany: {
                   data: enrichedCreateProjectReportDto.corporationPayments.map(
                     (corporationPay) => ({
@@ -334,7 +334,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
             name: true,
           },
         },
-        corporationPays: {
+        corporationPayments: {
           select: {
             id: true,
             amount: true,
@@ -370,7 +370,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
     const profit =
       projectReport.income.toNumber() *
       (projectReport.profitMargin.toNumber() / 100);
-    const corporationPaymentsTotal = projectReport.corporationPays.reduce(
+    const corporationPaymentsTotal = projectReport.corporationPayments.reduce(
       (sum, corporationPay) => sum + corporationPay.amount.toNumber(),
       0,
     );
@@ -424,7 +424,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
                 id: enrichedCreateProjectReportDto.subcontractorId,
               },
             },
-            corporationPays: {
+            corporationPayments: {
               createMany: {
                 data: enrichedCreateProjectReportDto.corporationPayments.map(
                   (corporationPay) => ({
