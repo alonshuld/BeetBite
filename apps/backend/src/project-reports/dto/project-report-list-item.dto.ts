@@ -32,13 +32,13 @@ export class ProjectReportListItemDto {
   date!: string;
 
   @ApiProperty({
-    example: '6',
+    example: 6,
     description: 'The profit margin for the project',
   })
   profitMargin!: number;
 
   @ApiProperty({
-    example: '100000',
+    example: 100000,
     description:
       'The amount of money the client paid for the project that month',
   })
