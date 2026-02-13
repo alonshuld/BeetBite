@@ -1,5 +1,5 @@
 import { Subcontractor } from 'src/generated/client';
-import { SubcontractorResponseDto } from '../dto/subcontractor-repsonse.dto';
+import { SubcontractorResponseDto } from '../dto/subcontractor-response.dto';
 
 /**
  * Covert the given subcontractor entity to a subcontractor response DTO.
