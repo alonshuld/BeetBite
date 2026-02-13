@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsISO8601, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsISO8601, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 /**
  * Represents the parameters required to create a new subcontractor payment
@@ -22,10 +22,18 @@ export class CreateSubcontractorPaymentDto {
   serviceDate!: string;
 
   @IsISO8601()
-  @IsOptional()
+  @IsNotEmpty()
   @ApiProperty({
     example: '2026-01-01',
     description: 'The date the payment was actually processed',
   })
-  paymentDate?: string;
+  paymentDate!: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  @ApiProperty({
+    example: 1000,
+    description: 'The amount of the payment',
+  })
+  amount!: number;
 }

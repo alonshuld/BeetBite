@@ -30,7 +30,7 @@ export class SubcontractorPaymentResponseDto {
     type: 'string',
     format: 'ISO-8601',
   })
-  paymentDate?: string;
+  paymentDate!: string;
 
   @ApiProperty({
     example: 156000.0,
