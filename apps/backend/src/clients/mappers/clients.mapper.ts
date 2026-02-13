@@ -7,8 +7,7 @@ import { ClientResponseDto } from '../dto/client-response.dto';
  * @returns The client response DTO.
  */
 export const toClientResponse = (client: Client): ClientResponseDto => ({
-  id: client.id,
-  name: client.name,
+  ...client,
 });
 
 /**

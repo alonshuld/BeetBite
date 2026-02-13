@@ -9,8 +9,7 @@ import { CorporationResponseDto } from '../dto/corporation-response.dto';
 export const toCorporationResponse = (
   corporation: Corporation,
 ): CorporationResponseDto => ({
-  id: corporation.id,
-  name: corporation.name,
+  ...corporation,
 });
 
 /**

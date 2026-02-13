@@ -58,9 +58,9 @@ model ProjectReport {
   income          Decimal   @db.Decimal(12, 2)
   incomeDate      DateTime? @db.Date
 
-  project         Project              @relation(fields: [projectId], references: [id])
-  subcontractor   Subcontractor        @relation(fields: [subcontractorId], references: [id])
-  corporationPays CorporationPayment[]
+  project             Project              @relation(fields: [projectId], references: [id])
+  subcontractor       Subcontractor        @relation(fields: [subcontractorId], references: [id])
+  corporationPayments CorporationPayment[]
 
   @@unique([projectId, date])
   @@map("project_reports")
@@ -82,9 +82,11 @@ model CorporationPayment {
 model SubcontractorPayment {
   id              String    @id @default(cuid())
   subcontractorId String
-  date            DateTime? @db.Date
+  serviceDate     DateTime  @db.Date
+  paymentDate     DateTime? @db.Date
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id])
 
+  @@unique([subcontractorId, serviceDate])
   @@map("subcontractor_payments")
 }

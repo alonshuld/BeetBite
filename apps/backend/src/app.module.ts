@@ -7,6 +7,7 @@ import { ClientsModule } from './clients/clients.module';
 import { SubcontractorsModule } from './subcontractors/subcontractors.module';
 import { ProjectsModule } from './projects/projects.module';
 import { IncomesModule } from './incomes/incomes.module';
+import { SubcontractorPaymentsModule } from './subcontractor-payments/subcontractor-payments.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { IncomesModule } from './incomes/incomes.module';
     PrismaModule,
     CorporationsModule,
     ClientsModule,
+    SubcontractorPaymentsModule,
     SubcontractorsModule,
     ProjectsModule,
     IncomesModule,
