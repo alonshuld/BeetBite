@@ -21,7 +21,7 @@ export const toSubcontractorPaymentResponse = (
  * @returns List of subcontractor payment response DTOs
  */
 export const toSubcontractorPaymentResponseList = (
-  subcontractorPayments: (SubcontractorPayment & { amount?: number })[],
+  subcontractorPayments: SubcontractorPayment[],
 ): SubcontractorPaymentResponseDto[] =>
   subcontractorPayments.map((payment) =>
     toSubcontractorPaymentResponse(payment),

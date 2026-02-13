@@ -85,12 +85,7 @@ export class SubcontractorPaymentsService {
         `Subcontractor payment created: ${subcontractorPayment.id}`,
       );
 
-      const amount = await this.calculateSubcontractorPaymentAmount(
-        createSubcontractorPaymentDto.subcontractorId,
-        new Date(createSubcontractorPaymentDto.serviceDate),
-      );
-
-      return toSubcontractorPaymentResponse(subcontractorPayment, amount);
+      return toSubcontractorPaymentResponse(subcontractorPayment);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
@@ -138,7 +133,7 @@ export class SubcontractorPaymentsService {
 
     return toSubcontractorPaymentResponseList(subcontractorPayments);
   }
-
+  // TODO: new endpoint that retrieves all subcontractor payments for a specific project in a specific month, along with the total target amount for those payments. This will be used to compare the actual payments against the target amount for the project.
   /**
    * Find subcontractor payment with matching ID
    * @param id ID of the subcontractor payment to retrieve
@@ -156,12 +151,7 @@ export class SubcontractorPaymentsService {
 
     this.logger.log(`Subcontractor payment retrieved: ${id}`);
 
-    const amount = await this.calculateSubcontractorPaymentAmount(
-      subcontractorPayment.subcontractorId,
-      subcontractorPayment.serviceDate,
-    );
-
-    return toSubcontractorPaymentResponse(subcontractorPayment, amount);
+    return toSubcontractorPaymentResponse(subcontractorPayment);
   }
 
   /**
