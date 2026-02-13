@@ -9,12 +9,13 @@ export class CorporationNotFoundError extends EntityNotFoundError {
    *
    * @param corporationId The ID of the corporation that was not found.
    */
-  constructor(corporationId: string);
-
-  constructor();
   constructor(corporationId?: string) {
-    if (corporationId === undefined) super(`Corporation not found`);
-    else super(`Corporation with ID ${corporationId} not found`);
+    super(
+      corporationId
+        ? `Corporation with ID ${corporationId} not found`
+        : 'Corporation not found'
+    );
     this.name = 'CorporationNotFoundError';
+  }
   }
 }
