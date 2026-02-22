@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCorporationPaymentDto } from './dto/create-corporation-payment.dto';
-import { CorporationPaymentResponseDto } from './dto/corporation-payment-response.dto';
+import { CorporationPaymentsResponseDto } from './dto/corporation-payments-response.dto';
 import { CorporationPaymentNotFoundError } from './errors/corporation-payment-not-found.dto';
+import { MonthQueryDto } from 'src/common/month-query.dto';
+import { CorporationPaymentResponseDto } from './dto/corporation-payment-response.dto';
 
 @Injectable()
 export class CorporationPaymentsService {
@@ -10,27 +12,39 @@ export class CorporationPaymentsService {
 
   constructor(private readonly prismaService: PrismaService) {}
 
-  private async getCorporationPaymentNestedFields(corporationPaymentId: string) {
+  private async getMonthlyCorporationPaymentsFields(corporationId: string, date: MonthQueryDto) {
+    const startOfMonth = new Date(date.month);
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(startOfMonth.getMonth() + 1);
+
+    return this.prismaService.corporation.findUnique({
+      where: { id: corporationId },
+      include: {
+        payments: {
+          where: {
+            date: {
+              gte: startOfMonth,
+              lt: endOfMonth,
+            },
+          },
+          include: {
+            projectReport: {
+              include: {
+                project: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  private getCorporationPaymentResponse(corporationPaymentId: string) {
     return this.prismaService.corporationPayment.findUnique({
       where: { id: corporationPaymentId },
       include: {
-        corporation: {
-          select: {
-            id: true,
-            name: true,
-          }
-        },
-        projectReport: {
-          select: {
-            id: true,
-            project: {
-              select: {
-                id: true,
-                name: true,
-              },
-            }
-          },
-        },
+        projectReport: true,
+        corporation: true,
       },
     });
   }
@@ -48,10 +62,6 @@ export class CorporationPaymentsService {
         `Created corporation payment with ID: ${corporationPayment.id}`,
       )
 
-      const fullCorporationPayment = await this.getCorporationPaymentNestedFields(corporationPayment.id);
-      if (!fullCorporationPayment) {
-        throw new CorporationPaymentNotFoundError(corporationPayment.id);
-      }
-    }
+
   }
 }

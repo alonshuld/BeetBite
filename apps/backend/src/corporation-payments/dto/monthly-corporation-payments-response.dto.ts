@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { CorporationPaymentResponseDto } from './corporation-payment-response.dto';
+import { CorporationPaymentsResponseDto } from './corporation-payments-response.dto';
 
 /**
  * Data Transfer Object representing the response for monthly corporation payments.
@@ -16,5 +16,5 @@ export class MonthlyCorporationPaymentsResponseDto {
   @ApiProperty({
     description: 'The list of corporation payments for this month',
   })
-  corporationPayments!: CorporationPaymentResponseDto[];
+  corporationPayments!: CorporationPaymentsResponseDto[];
 }

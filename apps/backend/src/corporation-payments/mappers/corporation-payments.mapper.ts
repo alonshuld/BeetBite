@@ -1,25 +1,45 @@
-import { CorporationPayment } from 'src/generated/client';
-import { CorporationPaymentResponseDto } from '../dto/corporation-payment-response.dto';
+import {
+  Corporation,
+  CorporationPayment,
+  Project,
+  ProjectReport,
+} from 'src/generated/client';
+import { CorporationPaymentsResponseDto } from '../dto/corporation-payments-response.dto';
 
+/**
+ * Maps a Corporation with its payments and related project reports to a CorporationPaymentsResponseDto.
+ * @param corporation Corporation entity with payments and related project reports
+ * @returns CorporationPaymentsResponseDto containing corporation details, project payments, and total amount
+ */
 export const toCorporationPaymentResponse = (
-  corporationPayment: CorporationPayment & {
-    corporation: { id: string; name: string };
-    projectReport: { id: string; project: { id: string; name: string } };
+  corporation: Corporation & {
+    payments: (CorporationPayment & {
+      projectReport: ProjectReport & {
+        project: Project;
+      };
+    })[];
   },
-): CorporationPaymentResponseDto => ({
-  id: corporationPayment.id,
-  corporation: {
-    id: corporationPayment.corporation.id,
-    name: corporationPayment.corporation.name,
-  },
-  projectPayment: {
-    id: corporationPayment.projectReport.id,
+): CorporationPaymentsResponseDto => {
+  const projectPayments = corporation.payments.map((payment) => ({
+    id: payment.id,
     projectReport: {
-      id: corporationPayment.projectReport.project.id,
-      projectId: corporationPayment.projectReport.project.name,
+      id: payment.projectReport.id,
+      projectId: payment.projectReport.project.id,
+      projectName: payment.projectReport.project.name,
     },
-    amount: corporationPayment.projectReport.amount.toNumber(),
-    date: corporationPayment.projectReport.date.toISOString(),
-  },
-  total:
-});
+    amount: payment.amount.toNumber(),
+    date: payment.date.toISOString(),
+  }));
+
+  const total = projectPayments.reduce((sum, p) => sum + p.amount, 0);
+
+  return {
+    id: corporation.id,
+    corporation: {
+      id: corporation.id,
+      name: corporation.name,
+    },
+    projectPayments: projectPayments,
+    total: total,
+  };
+};

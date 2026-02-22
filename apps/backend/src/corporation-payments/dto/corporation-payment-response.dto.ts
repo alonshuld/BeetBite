@@ -1,12 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { NestedCorporationDto } from './nested-corporation.dto';
-import { NestedProjectPaymentDto } from './nested-project-payment.dto';
 
 /**
  * Data Transfer Object representing the response for a corporation payment.
- * This DTO is used to structure the data returned when fetching corporation payment details,
+ * This DTO is used to structure the data returned when fetching corporation payments by month,
  * including information about the corporation, the associated project payment,
- * and the total amount paid.
  */
 export class CorporationPaymentResponseDto {
   @ApiProperty({
@@ -18,16 +15,29 @@ export class CorporationPaymentResponseDto {
   @ApiProperty({
     description: 'Information about the corporation receiving the payment',
   })
-  corporation!: NestedCorporationDto;
+  projectReport!: {
+    id: string;
+    projectId: string;
+    projectName: string;
+  };
 
   @ApiProperty({
-    description: 'The project payment associated with this corporation payment',
+    description: 'Information about the corporation receiving the payment',
   })
-  projectPayment!: NestedProjectPaymentDto;
+  corporation!: {
+    id: string;
+    name: string;
+  };
 
   @ApiProperty({
     example: 5000,
     description: 'The total amount paid to the corporation for this payment',
   })
-  total!: number;
+  amount!: number;
+
+  @ApiProperty({
+    example: '2024-06-01T00:00:00.000Z',
+    description: 'The date when the payment was made',
+  })
+  date!: string;
 }
