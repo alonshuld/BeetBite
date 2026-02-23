@@ -5,22 +5,36 @@ import {
   ProjectReport,
 } from 'src/generated/client';
 import { CorporationPaymentsResponseDto } from '../dto/corporation-payments-response.dto';
+import { CorporationsPaymentsResponseDto } from '../dto/corporations-payments-response.dto';
 
 /**
- * Maps a Corporation with its payments and related project reports to a CorporationPaymentsResponseDto.
- * @param corporation Corporation entity with payments and related project reports
- * @returns CorporationPaymentsResponseDto containing corporation details, project payments, and total amount
+ * Converts an array of CorporationPayment entities into a CorporationPaymentsResponseDto.
+ * @param payments List of CorporationPayment entities with related Corporation and ProjectReport data
+ * @returns CorporationPaymentsResponseDto containing the corporation's payments and related information
  */
-export const toCorporationPaymentResponse = (
-  corporation: Corporation & {
-    payments: (CorporationPayment & {
-      projectReport: ProjectReport & {
-        project: Project;
-      };
-    })[];
-  },
+export const toCorporationPaymentsResponse = (
+  payments: (CorporationPayment & {
+    corporation: Corporation;
+    projectReport: ProjectReport & {
+      project: Project;
+    };
+  })[],
 ): CorporationPaymentsResponseDto => {
-  const projectPayments = corporation.payments.map((payment) => ({
+  if (payments.length === 0) {
+    return {
+      id: '',
+      corporation: {
+        id: '',
+        name: '',
+      },
+      projectPayments: [],
+      total: 0,
+    };
+  }
+
+  const corporation = payments[0].corporation;
+
+  const projectPayments = payments.map((payment) => ({
     id: payment.id,
     projectReport: {
       id: payment.projectReport.id,
@@ -39,7 +53,43 @@ export const toCorporationPaymentResponse = (
       id: corporation.id,
       name: corporation.name,
     },
-    projectPayments: projectPayments,
-    total: total,
+    projectPayments,
+    total,
+  };
+};
+
+/**
+ * Converts an array of CorporationPayment entities into an array of CorporationPaymentsResponseDto, grouped by corporation.
+ * @param payments List of CorporationPayment entities with related Corporation and ProjectReport data
+ * @returns List of CorporationPaymentsResponseDto, each containing the corporation's payments and related information
+ */
+export const toCorporationsPaymentsResponse = (
+  payments: (CorporationPayment & {
+    corporation: Corporation;
+    projectReport: ProjectReport & {
+      project: Project;
+    };
+  })[],
+): CorporationsPaymentsResponseDto => {
+  const paymentsByCorporation = payments.reduce(
+    (acc, payment) => {
+      const corporationId = payment.corporation.id;
+      if (!acc[corporationId]) {
+        acc[corporationId] = [];
+      }
+      acc[corporationId].push(payment);
+      return acc;
+    },
+    {} as Record<string, typeof payments>,
+  );
+
+  return {
+    corporationsPayments: Object.values(paymentsByCorporation).map(
+      toCorporationPaymentsResponse,
+    ),
+    total: payments.reduce(
+      (sum, payment) => sum + payment.amount.toNumber(),
+      0,
+    ),
   };
 };
