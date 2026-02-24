@@ -9,6 +9,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { IncomesModule } from './incomes/incomes.module';
 import { SubcontractorPaymentsModule } from './subcontractor-payments/subcontractor-payments.module';
 import { ProjectReportsModule } from './project-reports/project-reports.module';
+import { CorporationPaymentsModule } from './corporation-payments/corporation-payments.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ProjectReportsModule } from './project-reports/project-reports.module';
     ProjectsModule,
     IncomesModule,
     ProjectReportsModule,
+    CorporationPaymentsModule,
   ],
 })
 export class AppModule {}
