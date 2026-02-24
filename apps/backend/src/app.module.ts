@@ -20,14 +20,14 @@ import { CorporationPaymentsModule } from './corporation-payments/corporation-pa
       cache: true,
     }),
     PrismaModule,
-    CorporationsModule,
     ClientsModule,
+    CorporationPaymentsModule,
+    CorporationsModule,
     SubcontractorPaymentsModule,
     SubcontractorsModule,
+    ProjectReportsModule,
     ProjectsModule,
     IncomesModule,
-    ProjectReportsModule,
-    CorporationPaymentsModule,
   ],
 })
 export class AppModule {}

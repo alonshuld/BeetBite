@@ -33,7 +33,7 @@ import { MonthQueryDto } from 'src/common/month-query.dto';
 /**
  * Controller for project report related endpoints.
  */
-@ApiTags('project-reports')
+@ApiTags('projects/reports')
 @Controller()
 export class ProjectReportsController {
   constructor(private readonly projectReportsService: ProjectReportsService) {}

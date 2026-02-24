@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { NestedCorporationDto } from './nested-corporation.dto';
 import { NestedProjectPaymentDto } from './nested-project-payment.dto';
+import { ValidateNested } from 'class-validator';
 
 /**
  * Data Transfer Object representing the response for a corporation payments.
@@ -18,12 +19,14 @@ export class CorporationPaymentsResponseDto {
   @ApiProperty({
     description: 'Information about the corporation receiving the payment',
   })
+  @ValidateNested()
   corporation!: NestedCorporationDto;
 
   @ApiProperty({
     description:
       'The project payments associated with this corporation payment',
   })
+  @ValidateNested({ each: true })
   projectPayments!: NestedProjectPaymentDto[];
 
   @ApiProperty({

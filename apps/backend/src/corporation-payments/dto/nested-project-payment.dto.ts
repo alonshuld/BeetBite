@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { NestedProjectReportDto } from './nested-project-report.dto';
+import { ValidateNested } from 'class-validator';
 
 /**
  * Data Transfer Object representing a nested project payment.
@@ -18,6 +19,7 @@ export class NestedProjectPaymentDto {
     description:
       'Information about the project report this payment is associated with',
   })
+  @ValidateNested()
   projectReport!: NestedProjectReportDto;
 
   @ApiProperty({

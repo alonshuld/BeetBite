@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsISO8601,
   IsNotEmpty,
@@ -6,8 +7,9 @@ import {
   IsString,
   Min,
 } from 'class-validator';
+import { normalizeToMonthStart } from 'src/common/utils/date.utils';
 
-/***
+/**
  * Represents the parameters required to register a new corporation payment.
  */
 export class CreateCorporationPaymentDto {
@@ -36,5 +38,6 @@ export class CreateCorporationPaymentDto {
     example: '2026-01-01',
     description: 'The exact date the payment was made to the corporation',
   })
+  @Transform(({ value }: { value: string }) => normalizeToMonthStart(value))
   date!: string;
 }

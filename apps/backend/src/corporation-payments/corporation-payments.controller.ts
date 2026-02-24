@@ -27,9 +27,10 @@ import { CreateCorporationPaymentDto } from './dto/create-corporation-payment.dt
 import { CorporationPaymentsResponseDto } from './dto/corporation-payments-response.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { CorporationsPaymentsResponseDto } from './dto/corporations-payments-response.dto';
+import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
 
 @ApiTags('corporations/payments')
-@Controller('corporations/payments')
+@Controller()
 export class CorporationPaymentsController {
   constructor(
     private readonly corporationPaymentsService: CorporationPaymentsService,
@@ -40,7 +41,7 @@ export class CorporationPaymentsController {
    * @param createCorporationPaymentDto Payload with corporation payment properties
    * @returns The created corporation payment
    */
-  @Post()
+  @Post('corporations/payments')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new corporation payment' })
   @ApiCreatedResponse({
@@ -59,7 +60,7 @@ export class CorporationPaymentsController {
    * @param monthQueryDto Month query DTO containing the month to filter payments by
    * @returns List of corporation payments for the specified month
    */
-  @Get()
+  @Get('corporations/payments')
   @ApiOperation({ summary: 'Get all corporation payments for a given month' })
   @ApiOkResponse({
     description: 'List of corporation payments for the specified month.',
@@ -76,7 +77,7 @@ export class CorporationPaymentsController {
    * @param monthQueryDto Month query DTO containing the month to filter payments by
    * @returns Corporation payments for the specified month
    */
-  @Get(':corporationId')
+  @Get('corporations/:corporationId/payments')
   @ApiOperation({ summary: "Get a corporation's payments for a given month" })
   @ApiParam({ name: 'corporationId', description: 'Corporation ID' })
   @ApiOkResponse({
@@ -95,13 +96,13 @@ export class CorporationPaymentsController {
 
   /**
    * Update a corporation's payment for a given month.
-   * @param corporationId Corporation ID
+   * @param id Corporation payment ID
    * @param updateCorporationPaymentDto Updated corporation payment DTO
    * @returns The updated corporation payment
    */
-  @Put(':corporationId')
+  @Put('corporations/payments/:id')
   @ApiOperation({ summary: "Update a corporation's payment for a given month" })
-  @ApiParam({ name: 'corporationId', description: 'Corporation ID' })
+  @ApiParam({ name: 'id', description: 'Corporation payment ID' })
   @ApiOkResponse({
     description: 'The updated corporation payment for the specified month.',
     type: CorporationPaymentResponseDto,
@@ -116,11 +117,11 @@ export class CorporationPaymentsController {
     description: 'Conflict occurred while updating corporation payment.',
   })
   async update(
-    @Param('corporationId') corporationId: string,
-    @Body() updateCorporationPaymentDto: CreateCorporationPaymentDto,
+    @Param('id') id: string,
+    @Body() updateCorporationPaymentDto: UpdateCorporationPaymentDto,
   ): Promise<CorporationPaymentResponseDto> {
     return await this.corporationPaymentsService.update(
-      corporationId,
+      id,
       updateCorporationPaymentDto,
     );
   }
@@ -130,7 +131,7 @@ export class CorporationPaymentsController {
    * @param id The corporation payment identifier
    * @returns No content if the deletion was successful
    */
-  @Delete(':id')
+  @Delete('/corporations/payments/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a corporation payment by ID' })
   @ApiParam({ name: 'id', description: 'Corporation payment ID' })

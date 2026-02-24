@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { CorporationPaymentsResponseDto } from './corporation-payments-response.dto';
+import { ValidateNested } from 'class-validator';
 
 /**
  * Data Transfer Object representing the response for monthly corporation payments.
@@ -16,5 +17,6 @@ export class MonthlyCorporationPaymentsResponseDto {
   @ApiProperty({
     description: 'The list of corporation payments for this month',
   })
+  @ValidateNested({ each: true })
   corporationPayments!: CorporationPaymentsResponseDto[];
 }
