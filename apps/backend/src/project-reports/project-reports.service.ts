@@ -231,7 +231,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
 
     const projectReports = await this.prismaService.projectReport.findMany({
       where: {
-        date: paginatedMonthQueryDto.month,
+        date: new Date(paginatedMonthQueryDto.month),
       },
       skip: Math.max(0, (page - 1) * limit),
       take: Math.max(1, limit),
