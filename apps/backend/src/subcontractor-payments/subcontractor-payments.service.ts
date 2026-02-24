@@ -117,20 +117,18 @@ export class SubcontractorPaymentsService {
   async findAll(
     paginatedMonthQueryDto: PaginatedMonthQueryDto,
   ): Promise<SubcontractorPaymentResponseDto[]> {
-    const month = new Date(paginatedMonthQueryDto.month);
-
     const page = paginatedMonthQueryDto.page ?? PAGINATION_DEFAULTS.PAGE;
     const limit = paginatedMonthQueryDto.limit ?? PAGINATION_DEFAULTS.LIMIT;
 
     const subcontractorPayments =
       await this.prismaService.subcontractorPayment.findMany({
-        where: { serviceDate: month },
+        where: { serviceDate: paginatedMonthQueryDto.month },
         skip: Math.max(0, (page - 1) * limit),
         take: Math.max(1, limit),
       });
 
     this.logger.log(
-      `Retrieved ${subcontractorPayments.length} subcontractor payments from ${month.toLocaleDateString()}`,
+      `Retrieved ${subcontractorPayments.length} subcontractor payments from ${paginatedMonthQueryDto.month}`,
     );
 
     return toSubcontractorPaymentResponseList(subcontractorPayments);

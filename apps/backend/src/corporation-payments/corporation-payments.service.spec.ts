@@ -3,8 +3,11 @@ import { CorporationPaymentsService } from './corporation-payments.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
-import { CorporationPaymentNotFoundError } from './errors/corporation-payment-not-found.dto';
-import { CorporationPaymentAlreadyExistsError } from './errors/corporation-payment-already-exists.dto';
+import { CorporationPaymentNotFoundError } from './errors/corporation-payment-not-found.error';
+import { CorporationPaymentAlreadyExistsError } from './errors/corporation-payment-already-exists.error';
+import { CreateCorporationPaymentDto } from './dto/create-corporation-payment.dto';
+import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
+import { MonthQueryDto } from 'src/common/month-query.dto';
 
 describe('CorporationPaymentsService', () => {
   let service: CorporationPaymentsService;
@@ -42,11 +45,11 @@ describe('CorporationPaymentsService', () => {
   });
 
   describe('create', () => {
-    const createDto = {
+    const createDto: CreateCorporationPaymentDto = {
       corporationId: 'corp-1',
       projectReportId: 'report-1',
       amount: 1000,
-      date: new Date('2023-01-01'),
+      date: '2023-01-01T00:00:00.000Z',
     };
 
     const mockPayment = {
@@ -74,7 +77,7 @@ describe('CorporationPaymentsService', () => {
         mockPayment,
       );
 
-      const result = await service.create(createDto as any);
+      const result = await service.create(createDto);
 
       expect(result).toEqual({
         id: mockPayment.id,
@@ -90,9 +93,7 @@ describe('CorporationPaymentsService', () => {
           name: mockPayment.corporation.name,
         },
       });
-      expect(
-        mockPrismaService.corporationPayment.create,
-      ).toHaveBeenCalledWith({
+      expect(mockPrismaService.corporationPayment.create).toHaveBeenCalledWith({
         data: createDto,
         include: {
           corporation: true,
@@ -118,7 +119,7 @@ describe('CorporationPaymentsService', () => {
         prismaError,
       );
 
-      await expect(service.create(createDto as any)).rejects.toThrow(
+      await expect(service.create(createDto)).rejects.toThrow(
         CorporationPaymentNotFoundError,
       );
     });
@@ -136,14 +137,14 @@ describe('CorporationPaymentsService', () => {
         prismaError,
       );
 
-      await expect(service.create(createDto as any)).rejects.toThrow(
+      await expect(service.create(createDto)).rejects.toThrow(
         CorporationPaymentAlreadyExistsError,
       );
     });
   });
 
   describe('findOne', () => {
-    const monthQueryDto = { month: '2023-01-01' };
+    const monthQueryDto: MonthQueryDto = { month: '2023-01-01T00:00:00.000Z' };
 
     it('should return corporation payments for a corporation and month', async () => {
       const payments = [
@@ -183,11 +184,9 @@ describe('CorporationPaymentsService', () => {
         },
       ];
 
-      mockPrismaService.corporationPayment.findMany.mockResolvedValue(
-        payments,
-      );
+      mockPrismaService.corporationPayment.findMany.mockResolvedValue(payments);
 
-      const result = await service.findOne('corp-1', monthQueryDto as any);
+      const result = await service.findOne('corp-1', monthQueryDto);
 
       expect(result).toEqual({
         id: 'corp-1',
@@ -224,7 +223,10 @@ describe('CorporationPaymentsService', () => {
       ).toHaveBeenCalledWith({
         where: {
           corporationId: 'corp-1',
-          date: expect.any(Object),
+          date: {
+            gte: new Date('2023-01-01T00:00:00.000Z'),
+            lte: new Date('2023-01-31T00:00:00.000Z'),
+          },
         },
         include: {
           corporation: true,
@@ -250,14 +252,14 @@ describe('CorporationPaymentsService', () => {
         prismaError,
       );
 
-      await expect(
-        service.findOne('corp-1', monthQueryDto as any),
-      ).rejects.toThrow(CorporationPaymentNotFoundError);
+      await expect(service.findOne('corp-1', monthQueryDto)).rejects.toThrow(
+        CorporationPaymentNotFoundError,
+      );
     });
   });
 
   describe('findAll', () => {
-    const monthQueryDto = { month: '2023-01-01' };
+    const monthQueryDto: MonthQueryDto = { month: '2023-01-01T00:00:00.000Z' };
 
     it('should return all corporations payments for a month', async () => {
       const payments = [
@@ -297,11 +299,9 @@ describe('CorporationPaymentsService', () => {
         },
       ];
 
-      mockPrismaService.corporationPayment.findMany.mockResolvedValue(
-        payments,
-      );
+      mockPrismaService.corporationPayment.findMany.mockResolvedValue(payments);
 
-      const result = await service.findAll(monthQueryDto as any);
+      const result = await service.findAll(monthQueryDto);
 
       expect(result.total).toBe(1500);
       expect(result.corporationsPayments).toHaveLength(2);
@@ -309,7 +309,10 @@ describe('CorporationPaymentsService', () => {
         mockPrismaService.corporationPayment.findMany,
       ).toHaveBeenCalledWith({
         where: {
-          date: expect.any(Object),
+          date: {
+            gte: new Date('2023-01-01T00:00:00.000Z'),
+            lte: new Date('2023-01-31T00:00:00.000Z'),
+          },
         },
         include: {
           corporation: true,
@@ -335,18 +338,18 @@ describe('CorporationPaymentsService', () => {
         prismaError,
       );
 
-      await expect(service.findAll(monthQueryDto as any)).rejects.toThrow(
+      await expect(service.findAll(monthQueryDto)).rejects.toThrow(
         CorporationPaymentNotFoundError,
       );
     });
   });
 
   describe('update', () => {
-    const updateDto = {
+    const updateDto: UpdateCorporationPaymentDto = {
       corporationId: 'corp-1',
       projectReportId: 'report-1',
       amount: 1500,
-      date: new Date('2023-01-15'),
+      date: '2023-01-15T00:00:00.000Z',
     };
 
     const mockUpdatedPayment = {
@@ -374,7 +377,7 @@ describe('CorporationPaymentsService', () => {
         mockUpdatedPayment,
       );
 
-      const result = await service.update('payment-1', updateDto as any);
+      const result = await service.update('payment-1', updateDto);
 
       expect(result).toEqual({
         id: mockUpdatedPayment.id,
@@ -390,9 +393,7 @@ describe('CorporationPaymentsService', () => {
           name: mockUpdatedPayment.corporation.name,
         },
       });
-      expect(
-        mockPrismaService.corporationPayment.update,
-      ).toHaveBeenCalledWith({
+      expect(mockPrismaService.corporationPayment.update).toHaveBeenCalledWith({
         where: { id: 'payment-1' },
         data: updateDto,
         include: {
@@ -419,9 +420,9 @@ describe('CorporationPaymentsService', () => {
         prismaError,
       );
 
-      await expect(
-        service.update('payment-1', updateDto as any),
-      ).rejects.toThrow(CorporationPaymentNotFoundError);
+      await expect(service.update('payment-1', updateDto)).rejects.toThrow(
+        CorporationPaymentNotFoundError,
+      );
     });
 
     it('should throw CorporationPaymentNotFoundError on foreign key error', async () => {
@@ -437,9 +438,9 @@ describe('CorporationPaymentsService', () => {
         prismaError,
       );
 
-      await expect(
-        service.update('payment-1', updateDto as any),
-      ).rejects.toThrow(CorporationPaymentNotFoundError);
+      await expect(service.update('payment-1', updateDto)).rejects.toThrow(
+        CorporationPaymentNotFoundError,
+      );
     });
 
     it('should throw CorporationPaymentAlreadyExistsError on unique constraint error', async () => {
@@ -455,9 +456,9 @@ describe('CorporationPaymentsService', () => {
         prismaError,
       );
 
-      await expect(
-        service.update('payment-1', updateDto as any),
-      ).rejects.toThrow(CorporationPaymentAlreadyExistsError);
+      await expect(service.update('payment-1', updateDto)).rejects.toThrow(
+        CorporationPaymentAlreadyExistsError,
+      );
     });
   });
 
@@ -467,9 +468,7 @@ describe('CorporationPaymentsService', () => {
 
       await expect(service.remove('payment-1')).resolves.toBeUndefined();
 
-      expect(
-        mockPrismaService.corporationPayment.delete,
-      ).toHaveBeenCalledWith({
+      expect(mockPrismaService.corporationPayment.delete).toHaveBeenCalledWith({
         where: { id: 'payment-1' },
       });
     });

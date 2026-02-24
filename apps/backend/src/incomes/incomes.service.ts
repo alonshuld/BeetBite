@@ -22,12 +22,10 @@ export class IncomesService {
   async getMonthIncome(
     monthQueryDto: MonthQueryDto,
   ): Promise<IncomeResponseDto> {
-    const month = new Date(monthQueryDto.month);
-
     const projectIncomes = (
       await this.prismaService.projectReport.findMany({
         where: {
-          date: month,
+          date: monthQueryDto.month,
         },
         include: {
           project: {
@@ -49,7 +47,7 @@ export class IncomesService {
     );
 
     this.logger.log(
-      `Retrieved the income for ${month.toLocaleDateString()}: ${totalIncome}`,
+      `Retrieved the income for ${monthQueryDto.month}: ${totalIncome}`,
     );
 
     return { totalIncome, totalProfit, projectIncomes };

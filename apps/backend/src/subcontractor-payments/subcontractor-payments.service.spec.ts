@@ -138,7 +138,7 @@ describe('SubcontractorPaymentsService', () => {
       ).toHaveBeenCalledWith({
         skip: 0,
         take: 10,
-        where: { serviceDate: new Date('2023-01') },
+        where: { serviceDate: '2023-01' },
       });
     });
 
@@ -155,7 +155,7 @@ describe('SubcontractorPaymentsService', () => {
       ).toHaveBeenCalledWith({
         skip: 0,
         take: 10,
-        where: { serviceDate: new Date('2023-03') },
+        where: { serviceDate: '2023-03' },
       });
     });
   });
@@ -440,7 +440,7 @@ describe('SubcontractorPaymentsService', () => {
         ).toHaveBeenCalledWith({
           skip: 0,
           take: 10,
-          where: { serviceDate: new Date('2023-01') },
+          where: { serviceDate: '2023-01' },
         });
       });
 

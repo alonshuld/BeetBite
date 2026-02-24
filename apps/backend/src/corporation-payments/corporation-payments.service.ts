@@ -2,17 +2,17 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCorporationPaymentDto } from './dto/create-corporation-payment.dto';
 import { CorporationPaymentsResponseDto } from './dto/corporation-payments-response.dto';
-import { CorporationPaymentNotFoundError } from './errors/corporation-payment-not-found.dto';
+import { CorporationPaymentNotFoundError } from './errors/corporation-payment-not-found.error';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { CorporationPaymentResponseDto } from './dto/corporation-payment-response.dto';
 import {
   toCorporationPaymentsResponse,
   toCorporationsPaymentsResponse,
 } from './mappers/corporation-payments.mapper';
-import { toCorporationPaymentResponseDto } from './mappers/corportaion-payment.mapper';
+import { toCorporationPaymentResponseDto } from './mappers/corporation-payment.mapper';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
-import { CorporationPaymentAlreadyExistsError } from './errors/corporation-payment-already-exists.dto';
+import { CorporationPaymentAlreadyExistsError } from './errors/corporation-payment-already-exists.error';
 import { CorporationsPaymentsResponseDto } from './dto/corporations-payments-response.dto';
 import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
 

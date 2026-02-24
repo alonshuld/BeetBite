@@ -1,8 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CorporationPaymentsController } from './corporation-payments.controller';
 import { CorporationPaymentsService } from './corporation-payments.service';
-import { CorporationPaymentNotFoundError } from './errors/corporation-payment-not-found.dto';
-import { CorporationPaymentAlreadyExistsError } from './errors/corporation-payment-already-exists.dto';
+import { CorporationPaymentNotFoundError } from './errors/corporation-payment-not-found.error';
+import { CorporationPaymentAlreadyExistsError } from './errors/corporation-payment-already-exists.error';
+import { CreateCorporationPaymentDto } from './dto/create-corporation-payment.dto';
+import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
+import { MonthQueryDto } from 'src/common/month-query.dto';
 
 describe('CorporationPaymentsController', () => {
   let controller: CorporationPaymentsController;
@@ -39,11 +42,11 @@ describe('CorporationPaymentsController', () => {
 
   describe('create', () => {
     it('should create a corporation payment', async () => {
-      const createDto = {
+      const createDto: CreateCorporationPaymentDto = {
         corporationId: 'corp-1',
         projectReportId: 'report-1',
         amount: 1000,
-        date: '2023-01-01',
+        date: '2023-01-01T00:00:00.000Z',
       };
       const expectedResult = {
         id: 'payment-1',
@@ -55,7 +58,7 @@ describe('CorporationPaymentsController', () => {
 
       mockCorporationPaymentsService.create.mockResolvedValue(expectedResult);
 
-      const result = await controller.create(createDto as any);
+      const result = await controller.create(createDto);
 
       expect(result).toEqual(expectedResult);
       expect(mockCorporationPaymentsService.create).toHaveBeenCalledWith(
@@ -64,18 +67,18 @@ describe('CorporationPaymentsController', () => {
     });
 
     it('should propagate errors from the service', async () => {
-      const createDto = {
+      const createDto: CreateCorporationPaymentDto = {
         corporationId: 'corp-1',
         projectReportId: 'report-1',
         amount: 1000,
-        date: '2023-01-01',
+        date: '2023-01-01T00:00:00.000Z',
       };
 
       mockCorporationPaymentsService.create.mockRejectedValue(
         new Error('Creation failed'),
       );
 
-      await expect(controller.create(createDto as any)).rejects.toThrow(
+      await expect(controller.create(createDto)).rejects.toThrow(
         'Creation failed',
       );
     });
@@ -83,7 +86,7 @@ describe('CorporationPaymentsController', () => {
 
   describe('findAll', () => {
     it('should return all corporations payments for a month', async () => {
-      const monthQuery = { month: '2023-01-01' };
+      const monthQuery: MonthQueryDto = { month: '2023-01-01T00:00:00.000Z' };
       const expectedResult = {
         total: 1500,
         corporationsPayments: [
@@ -100,7 +103,7 @@ describe('CorporationPaymentsController', () => {
 
       mockCorporationPaymentsService.findAll.mockResolvedValue(expectedResult);
 
-      const result = await controller.findAll(monthQuery as any);
+      const result = await controller.findAll(monthQuery);
 
       expect(result).toEqual(expectedResult);
       expect(mockCorporationPaymentsService.findAll).toHaveBeenCalledWith(
@@ -112,7 +115,7 @@ describe('CorporationPaymentsController', () => {
   describe('findOne', () => {
     it("should return a corporation's payments for a given month", async () => {
       const corporationId = 'corp-1';
-      const monthQuery = { month: '2023-01-01' };
+      const monthQuery: MonthQueryDto = { month: '2023-01-01T00:00:00.000Z' };
       const expectedResult = {
         id: corporationId,
         total: 1500,
@@ -121,10 +124,7 @@ describe('CorporationPaymentsController', () => {
 
       mockCorporationPaymentsService.findOne.mockResolvedValue(expectedResult);
 
-      const result = await controller.findOne(
-        corporationId,
-        monthQuery as any,
-      );
+      const result = await controller.findOne(corporationId, monthQuery);
 
       expect(result).toEqual(expectedResult);
       expect(mockCorporationPaymentsService.findOne).toHaveBeenCalledWith(
@@ -137,11 +137,11 @@ describe('CorporationPaymentsController', () => {
   describe('update', () => {
     it("should update a corporation's payment", async () => {
       const id = 'payment-1';
-      const updateDto = {
+      const updateDto: UpdateCorporationPaymentDto = {
         corporationId: 'corp-1',
         projectReportId: 'report-1',
         amount: 1500,
-        date: '2023-01-15',
+        date: '2023-01-15T00:00:00.000Z',
       };
       const expectedResult = {
         id,
@@ -150,7 +150,7 @@ describe('CorporationPaymentsController', () => {
 
       mockCorporationPaymentsService.update.mockResolvedValue(expectedResult);
 
-      const result = await controller.update(id, updateDto as any);
+      const result = await controller.update(id, updateDto);
 
       expect(result).toEqual(expectedResult);
       expect(mockCorporationPaymentsService.update).toHaveBeenCalledWith(
@@ -161,39 +161,39 @@ describe('CorporationPaymentsController', () => {
 
     it('should propagate CorporationPaymentNotFoundError', async () => {
       const id = 'payment-unknown';
-      const updateDto = {
+      const updateDto: UpdateCorporationPaymentDto = {
         corporationId: 'corp-1',
         projectReportId: 'report-1',
         amount: 1500,
-        date: '2023-01-15',
+        date: '2023-01-15T00:00:00.000Z',
       };
 
       mockCorporationPaymentsService.update.mockRejectedValue(
         new CorporationPaymentNotFoundError(id),
       );
 
-      await expect(controller.update(id, updateDto as any)).rejects.toThrow(
+      await expect(controller.update(id, updateDto)).rejects.toThrow(
         CorporationPaymentNotFoundError,
       );
     });
 
     it('should propagate CorporationPaymentAlreadyExistsError', async () => {
       const id = 'payment-1';
-      const updateDto = {
+      const updateDto: UpdateCorporationPaymentDto = {
         corporationId: 'corp-1',
         projectReportId: 'report-1',
         amount: 1500,
-        date: '2023-01-15',
+        date: '2023-01-15T00:00:00.000Z',
       };
 
       mockCorporationPaymentsService.update.mockRejectedValue(
         new CorporationPaymentAlreadyExistsError(
           updateDto.corporationId,
-          updateDto.date as any,
+          updateDto.date,
         ),
       );
 
-      await expect(controller.update(id, updateDto as any)).rejects.toThrow(
+      await expect(controller.update(id, updateDto)).rejects.toThrow(
         CorporationPaymentAlreadyExistsError,
       );
     });

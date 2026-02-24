@@ -41,7 +41,7 @@ export class CorporationPaymentsController {
    * @param createCorporationPaymentDto Payload with corporation payment properties
    * @returns The created corporation payment
    */
-  @Post('corporations/payments')
+  @Post('/corporations/payments')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new corporation payment' })
   @ApiCreatedResponse({
@@ -60,7 +60,7 @@ export class CorporationPaymentsController {
    * @param monthQueryDto Month query DTO containing the month to filter payments by
    * @returns List of corporation payments for the specified month
    */
-  @Get('corporations/payments')
+  @Get('/corporations/payments')
   @ApiOperation({ summary: 'Get all corporation payments for a given month' })
   @ApiOkResponse({
     description: 'List of corporation payments for the specified month.',
@@ -77,7 +77,7 @@ export class CorporationPaymentsController {
    * @param monthQueryDto Month query DTO containing the month to filter payments by
    * @returns Corporation payments for the specified month
    */
-  @Get('corporations/:corporationId/payments')
+  @Get('/corporations/:corporationId/payments')
   @ApiOperation({ summary: "Get a corporation's payments for a given month" })
   @ApiParam({ name: 'corporationId', description: 'Corporation ID' })
   @ApiOkResponse({
@@ -100,7 +100,7 @@ export class CorporationPaymentsController {
    * @param updateCorporationPaymentDto Updated corporation payment DTO
    * @returns The updated corporation payment
    */
-  @Put('corporations/payments/:id')
+  @Put('/corporations/payments/:id')
   @ApiOperation({ summary: "Update a corporation's payment for a given month" })
   @ApiParam({ name: 'id', description: 'Corporation payment ID' })
   @ApiOkResponse({
