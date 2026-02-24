@@ -114,7 +114,7 @@ export class CorporationPaymentsService {
   /**
    * Fetches all corporations' payments from a specific month
    * @param monthQueryDto Month query DTO containing the month to filter payments by
-   * @returns List
+   * @returns List of CorporationsPaymentsResponseDto containing all corporation payments for the specified month grouped by corporation
    */
   async findAll(
     monthQueryDto: MonthQueryDto,
