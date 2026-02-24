@@ -29,7 +29,7 @@ export const toCorporationPaymentsResponse = (
       },
       projectPayments: [],
       total: 0,
-    };
+    } as CorporationPaymentsResponseDto;
   }
 
   const corporation = payments[0].corporation;
