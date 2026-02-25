@@ -8,27 +8,26 @@ import { CorporationPaymentResponseDto } from '../dto/corporation-payment-respon
 
 /**
  * Converts a CorporationPayment entity with its related ProjectReport and Corporation to a CorporationPaymentResponseDto.
- * @param corporationPaymentFields corporation payment entity with related project report and corporation details
+ * @param corporationPayment corporation payment entity with related project report and corporation details
  * @returns CorporationPaymentResponseDto containing payment details, project report, and corporation information
  */
 export const toCorporationPaymentResponseDto = (
-  corporationPaymentFields: CorporationPayment & {
+  corporationPayment: CorporationPayment & {
     projectReport: ProjectReport & {
       project: Project;
     };
     corporation: Corporation;
   },
 ): CorporationPaymentResponseDto => ({
-  id: corporationPaymentFields.id,
-  amount: corporationPaymentFields.amount.toNumber(),
-  date: corporationPaymentFields.date.toISOString(),
+  id: corporationPayment.id,
+  amount: corporationPayment.amount.toNumber(),
+  date: corporationPayment.date.toISOString(),
   projectReport: {
-    id: corporationPaymentFields.projectReport.id,
-    projectId: corporationPaymentFields.projectReport.projectId,
-    projectName: corporationPaymentFields.projectReport.project.name,
+    id: corporationPayment.projectReport.id,
+    projectId: corporationPayment.projectReport.projectId,
+    projectName: corporationPayment.projectReport.project.name,
   },
   corporation: {
-    id: corporationPaymentFields.corporation.id,
-    name: corporationPaymentFields.corporation.name,
+    ...corporationPayment.corporation,
   },
 });
