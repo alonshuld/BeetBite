@@ -60,7 +60,7 @@ export const toCorporationPaymentsResponse = (
 
 /**
  * Converts an array of CorporationPayment entities into an array of CorporationPaymentsResponseDto, grouped by corporation.
- * @param payments List of CorporationPayment entities with related Corporation and ProjectReport data
+ * @param payments The payments made to a specific corporation in a month
  * @returns List of CorporationPaymentsResponseDto, each containing the corporation's payments and related information
  */
 export const toCorporationsPaymentsResponse = (
