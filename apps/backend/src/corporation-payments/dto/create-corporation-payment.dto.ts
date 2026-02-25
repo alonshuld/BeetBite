@@ -9,8 +9,6 @@ import {
 
 /**
  * Data Transfer Object for creating a corporation payment.
- * This DTO is used to validate and structure the data required to create a new corporation payment,
- * including the associated project report, corporation, payment amount, and service date.
  */
 export class CreateCorporationPaymentDto {
   @IsString()

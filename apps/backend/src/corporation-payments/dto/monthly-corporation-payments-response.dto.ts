@@ -5,9 +5,6 @@ import { ValidateNested } from 'class-validator';
 
 /**
  * Data Transfer Object representing the response for a corporation payments.
- * This DTO is used to structure the data returned when fetching corporation payments by month,
- * including information about the corporation, the associated project payment,
- * and the total amount paid.
  */
 export class MonthlyCorporationPaymentsResponseDto {
   @ApiProperty({

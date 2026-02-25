@@ -2,9 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * Data Transfer Object representing a nested project report.
- * This DTO is used to structure the data for a project report when it is included as part of a larger response,
- * such as when fetching corporation payment details. It includes information about the project report's unique identifier,
- * the associated project, and the name of the project.
  */
 export class NestedProjectReportDto {
   @ApiProperty({

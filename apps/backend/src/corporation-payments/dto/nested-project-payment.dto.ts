@@ -4,9 +4,6 @@ import { ValidateNested } from 'class-validator';
 
 /**
  * Data Transfer Object representing a nested project payment.
- * This DTO is used to structure the data for a project payment when it is included as part of a larger response,
- * such as when fetching corporation payment details. It includes information about the project report,
- * the amount paid, and the date of service.
  */
 export class NestedProjectPaymentDto {
   @ApiProperty({
@@ -30,7 +27,7 @@ export class NestedProjectPaymentDto {
 
   @ApiProperty({
     example: '2026-01-10T00:00:00.000Z',
-    description: 'The date the service was provided for this payment',
+    description: 'The date the payment to the corporation was made',
     format: 'ISO-8601',
   })
   date!: string;
