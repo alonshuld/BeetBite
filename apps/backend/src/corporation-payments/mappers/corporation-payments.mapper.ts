@@ -7,18 +7,20 @@ import {
 import { MonthlyCorporationPaymentsResponseDto } from '../dto/monthly-corporation-payments-response.dto';
 import { MultipleMonthlyCorporationPaymentsResponseDto } from '../dto/multiple-monthly-corporation-payments-response.dto';
 
+type CorporationPaymentWithMinimalRelations = CorporationPayment & {
+  corporation: Pick<Corporation, 'id' | 'name'>;
+  projectReport: Pick<ProjectReport, 'id'> & {
+    project: Pick<Project, 'id' | 'name'>;
+  };
+};
+
 /**
  * Converts an array of CorporationPayment entities into a CorporationPaymentsResponseDto.
  * @param payments List of CorporationPayment entities with related Corporation and ProjectReport data
  * @returns CorporationPaymentsResponseDto containing the corporation's payments and related information
  */
 export const toCorporationPaymentsResponse = (
-  payments: (CorporationPayment & {
-    corporation: Corporation;
-    projectReport: ProjectReport & {
-      project: Project;
-    };
-  })[],
+  payments: CorporationPaymentWithMinimalRelations[],
 ): MonthlyCorporationPaymentsResponseDto => {
   if (payments.length === 0) {
     return {
@@ -64,12 +66,7 @@ export const toCorporationPaymentsResponse = (
  * @returns List of CorporationPaymentsResponseDto, each containing the corporation's payments and related information
  */
 export const toCorporationsPaymentsResponse = (
-  payments: (CorporationPayment & {
-    corporation: Corporation;
-    projectReport: ProjectReport & {
-      project: Project;
-    };
-  })[],
+  payments: CorporationPaymentWithMinimalRelations[],
 ): MultipleMonthlyCorporationPaymentsResponseDto => {
   const paymentsByCorporation = payments.reduce(
     (acc, payment) => {

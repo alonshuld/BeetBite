@@ -59,6 +59,8 @@ describe('CorporationPaymentsService', () => {
         toNumber: () => 1000,
       },
       date: new Date('2023-01-01'),
+      projectReportId: 'report-1',
+      corporationId: 'corp-1',
       corporation: {
         id: 'corp-1',
         name: 'Corp 1',
@@ -96,11 +98,28 @@ describe('CorporationPaymentsService', () => {
       });
       expect(mockPrismaService.corporationPayment.create).toHaveBeenCalledWith({
         data: createDto,
-        include: {
-          corporation: true,
+        select: {
+          id: true,
+          amount: true,
+          date: true,
+          projectReportId: true,
+          corporationId: true,
           projectReport: {
-            include: {
-              project: true,
+            select: {
+              id: true,
+              projectId: true,
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          corporation: {
+            select: {
+              id: true,
+              name: true,
             },
           },
         },
@@ -153,6 +172,8 @@ describe('CorporationPaymentsService', () => {
           id: 'payment-1',
           amount: { toNumber: () => 1000 },
           date: new Date('2023-01-10'),
+          projectReportId: 'report-1',
+          corporationId: 'corp-1',
           corporation: {
             id: 'corp-1',
             name: 'Corp 1',
@@ -170,6 +191,8 @@ describe('CorporationPaymentsService', () => {
           id: 'payment-2',
           amount: { toNumber: () => 500 },
           date: new Date('2023-01-20'),
+          projectReportId: 'report-2',
+          corporationId: 'corp-1',
           corporation: {
             id: 'corp-1',
             name: 'Corp 1',
@@ -229,11 +252,27 @@ describe('CorporationPaymentsService', () => {
             lte: new Date('2023-01-31T00:00:00.000Z'),
           },
         },
-        include: {
-          corporation: true,
+        select: {
+          id: true,
+          amount: true,
+          date: true,
+          projectReportId: true,
+          corporationId: true,
           projectReport: {
-            include: {
-              project: true,
+            select: {
+              id: true,
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          corporation: {
+            select: {
+              id: true,
+              name: true,
             },
           },
         },
@@ -268,6 +307,8 @@ describe('CorporationPaymentsService', () => {
           id: 'payment-1',
           amount: { toNumber: () => 1000 },
           date: new Date('2023-01-10'),
+          projectReportId: 'report-1',
+          corporationId: 'corp-1',
           corporation: {
             id: 'corp-1',
             name: 'Corp 1',
@@ -285,6 +326,8 @@ describe('CorporationPaymentsService', () => {
           id: 'payment-2',
           amount: { toNumber: () => 500 },
           date: new Date('2023-01-20'),
+          projectReportId: 'report-2',
+          corporationId: 'corp-2',
           corporation: {
             id: 'corp-2',
             name: 'Corp 2',
@@ -315,11 +358,27 @@ describe('CorporationPaymentsService', () => {
             lte: new Date('2023-01-31T00:00:00.000Z'),
           },
         },
-        include: {
-          corporation: true,
+        select: {
+          id: true,
+          amount: true,
+          date: true,
+          projectReportId: true,
+          corporationId: true,
           projectReport: {
-            include: {
-              project: true,
+            select: {
+              id: true,
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          corporation: {
+            select: {
+              id: true,
+              name: true,
             },
           },
         },
@@ -359,6 +418,8 @@ describe('CorporationPaymentsService', () => {
         toNumber: () => 1500,
       },
       date: new Date('2023-01-15'),
+      projectReportId: 'report-1',
+      corporationId: 'corp-1',
       corporation: {
         id: 'corp-1',
         name: 'Corp 1',
@@ -397,11 +458,28 @@ describe('CorporationPaymentsService', () => {
       expect(mockPrismaService.corporationPayment.update).toHaveBeenCalledWith({
         where: { id: 'payment-1' },
         data: updateDto,
-        include: {
-          corporation: true,
+        select: {
+          id: true,
+          amount: true,
+          date: true,
+          projectReportId: true,
+          corporationId: true,
           projectReport: {
-            include: {
-              project: true,
+            select: {
+              id: true,
+              projectId: true,
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          corporation: {
+            select: {
+              id: true,
+              name: true,
             },
           },
         },

@@ -32,11 +32,28 @@ export class CorporationPaymentsService {
       const corporationPayment =
         await this.prismaService.corporationPayment.create({
           data: { ...createCorporationPaymentDto },
-          include: {
-            corporation: true,
+          select: {
+            id: true,
+            amount: true,
+            date: true,
+            projectReportId: true,
+            corporationId: true,
             projectReport: {
-              include: {
-                project: true,
+              select: {
+                id: true,
+                projectId: true,
+                project: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+            corporation: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
@@ -103,11 +120,27 @@ export class CorporationPaymentsService {
               lte: endDate,
             },
           },
-          include: {
-            corporation: true,
+          select: {
+            id: true,
+            amount: true,
+            date: true,
+            projectReportId: true,
+            corporationId: true,
             projectReport: {
-              include: {
-                project: true,
+              select: {
+                id: true,
+                project: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+            corporation: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
@@ -151,11 +184,27 @@ export class CorporationPaymentsService {
               lte: endDate,
             },
           },
-          include: {
-            corporation: true,
+          select: {
+            id: true,
+            amount: true,
+            date: true,
+            projectReportId: true,
+            corporationId: true,
             projectReport: {
-              include: {
-                project: true,
+              select: {
+                id: true,
+                project: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+            corporation: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
@@ -185,11 +234,28 @@ export class CorporationPaymentsService {
         await this.prismaService.corporationPayment.update({
           where: { id: corporationPaymentId },
           data: { ...updateCorporationPaymentDto },
-          include: {
-            corporation: true,
+          select: {
+            id: true,
+            amount: true,
+            date: true,
+            projectReportId: true,
+            corporationId: true,
             projectReport: {
-              include: {
-                project: true,
+              select: {
+                id: true,
+                projectId: true,
+                project: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+            corporation: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
