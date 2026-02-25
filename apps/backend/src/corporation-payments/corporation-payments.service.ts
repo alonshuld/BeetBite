@@ -11,20 +11,46 @@ import {
 } from './mappers/corporation-payments.mapper';
 import { toCorporationPaymentResponseDto } from './mappers/corporation-payment.mapper';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
-import { PRISMA_ERROR_CODES } from 'src/common/constants';
+import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { CorporationPaymentAlreadyExistsError } from './errors/corporation-payment-already-exists.error';
 import { MultipleMonthlyCorporationPaymentsResponseDto } from './dto/multiple-monthly-corporation-payments-response.dto';
 import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
 import { ProjectReportNotFoundError } from 'src/project-reports/errors/project-report-not-found.exception';
 import { CorporationNotFoundError } from 'src/corporations/errors/corporation-not-found.error';
 import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
+import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
 
+/**
+ * Service responsible for managing corporation payments, including creating, fetching, updating, and deleting payments. It interacts with the database through PrismaService and handles various error scenarios related to corporation payments.
+ */
 @Injectable()
 export class CorporationPaymentsService {
   private readonly logger = new Logger(CorporationPaymentsService.name);
 
   constructor(private readonly prismaService: PrismaService) {}
 
+  /**
+   * Calculates the start and end dates for a given month string in the format 'YYYY-MM'. The start date is set to the first day of the month, and the end date is set to the last day of the month.
+   * @param month Month string in the format 'YYYY-MM' for which to calculate the start and end dates
+   * @returns Start and end dates for the specified month
+   */
+  private calculateStartAndEndDates(month: string): {
+    startDate: Date;
+    endDate: Date;
+  } {
+    const startDate = new Date(month);
+    startDate.setDate(1);
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + 1);
+    endDate.setDate(0);
+    return { startDate, endDate };
+  }
+
+  /**
+   * Creates a new corporation payment based on the provided DTO and returns the created payment as a CorporationPaymentResponseDto. Handles potential errors such as foreign key constraints and unique constraint violations.
+   * @param createCorporationPaymentDto Corporation payment creation DTO containing the necessary information to create a corporation payment
+   * @returns CorporationPaymentResponseDto representing the created corporation payment
+   */
   async create(
     createCorporationPaymentDto: CreateCorporationPaymentDto,
   ): Promise<CorporationPaymentResponseDto> {
@@ -104,11 +130,9 @@ export class CorporationPaymentsService {
     corporationId: string,
     monthQueryDto: MonthQueryDto,
   ): Promise<MonthlyCorporationPaymentsResponseDto> {
-    const startDate = new Date(monthQueryDto.month);
-    startDate.setDate(1);
-    const endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + 1);
-    endDate.setDate(0);
+    const { startDate, endDate } = this.calculateStartAndEndDates(
+      monthQueryDto.month,
+    );
 
     try {
       const corporationPayment =
@@ -152,10 +176,11 @@ export class CorporationPaymentsService {
 
       return toCorporationPaymentsResponse(corporationPayment);
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        if (error.code === PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED) {
-          throw new CorporationPaymentNotFoundError(corporationId);
-        }
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_ERROR_CODES.NOT_FOUND
+      ) {
+        throw new CorporationPaymentNotFoundError(corporationId);
       }
       throw error;
     }
@@ -166,18 +191,20 @@ export class CorporationPaymentsService {
    * @param monthQueryDto Month query DTO containing the month to filter payments by
    * @returns List of MultipleMonthlyCorporationPaymentsResponseDto containing all corporation payments for the specified month grouped by corporation
    */
-  async findAll(
-    monthQueryDto: MonthQueryDto,
+  async findCorporationPaymentsInMonth(
+    paginatedMonthQueryDto: PaginatedMonthQueryDto,
   ): Promise<MultipleMonthlyCorporationPaymentsResponseDto> {
-    const startDate = new Date(monthQueryDto.month);
-    startDate.setDate(1);
-    const endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + 1);
-    endDate.setDate(0);
+    const page = paginatedMonthQueryDto.page ?? PAGINATION_DEFAULTS.PAGE;
+    const limit = paginatedMonthQueryDto.limit ?? PAGINATION_DEFAULTS.LIMIT;
+    const { startDate, endDate } = this.calculateStartAndEndDates(
+      paginatedMonthQueryDto.month,
+    );
 
     try {
       const corporationPayments =
         await this.prismaService.corporationPayment.findMany({
+          skip: Math.max(0, (page - 1) * limit),
+          take: Math.max(1, limit),
           where: {
             date: {
               gte: startDate,
@@ -211,20 +238,27 @@ export class CorporationPaymentsService {
         });
 
       this.logger.log(
-        `Fetched ${corporationPayments.length} payments for month: ${monthQueryDto.month}`,
+        `Fetched ${corporationPayments.length} payments for month: ${paginatedMonthQueryDto.month}`,
       );
 
       return toCorporationsPaymentsResponse(corporationPayments);
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        if (error.code === PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED) {
-          throw new CorporationPaymentNotFoundError('');
-        }
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED
+      ) {
+        throw new CorporationPaymentNotFoundError('');
       }
       throw error;
     }
   }
 
+  /**
+   * Updates an existing corporation payment with the provided ID using the data from the UpdateCorporationPaymentDto. Handles potential errors such as not found, foreign key constraints, and unique constraint violations.
+   * @param corporationPaymentId Corporation payment ID of the payment to be updated
+   * @param updateCorporationPaymentDto Corporation payment update DTO containing the new data for the corporation payment
+   * @returns CorporationPaymentResponseDto representing the updated corporation payment
+   */
   async update(
     corporationPaymentId: string,
     updateCorporationPaymentDto: UpdateCorporationPaymentDto,
@@ -310,10 +344,11 @@ export class CorporationPaymentsService {
 
       this.logger.log(`Deleted corporation payment with ID: ${id}`);
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        if (error.code === PRISMA_ERROR_CODES.NOT_FOUND) {
-          throw new CorporationPaymentNotFoundError(id);
-        }
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_ERROR_CODES.NOT_FOUND
+      ) {
+        throw new CorporationPaymentNotFoundError(id);
       }
       throw error;
     }

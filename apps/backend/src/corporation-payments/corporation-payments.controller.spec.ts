@@ -5,14 +5,14 @@ import { CorporationPaymentNotFoundError } from './errors/corporation-payment-no
 import { CorporationPaymentAlreadyExistsError } from './errors/corporation-payment-already-exists.error';
 import { CreateCorporationPaymentDto } from './dto/create-corporation-payment.dto';
 import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
-import { MonthQueryDto } from 'src/common/month-query.dto';
+import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
 
 describe('CorporationPaymentsController', () => {
   let controller: CorporationPaymentsController;
 
   const mockCorporationPaymentsService = {
     create: jest.fn(),
-    findAll: jest.fn(),
+    findCorporationPaymentsInMonth: jest.fn(),
     findOne: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
@@ -86,7 +86,11 @@ describe('CorporationPaymentsController', () => {
 
   describe('findAll', () => {
     it('should return all corporations payments for a month', async () => {
-      const monthQuery: MonthQueryDto = { month: '2023-01-01T00:00:00.000Z' };
+      const monthQuery: PaginatedMonthQueryDto = {
+        month: '2023-01-01T00:00:00.000Z',
+        page: 1,
+        limit: 10,
+      };
       const expectedResult = {
         total: 1500,
         corporationsPayments: [
@@ -101,21 +105,27 @@ describe('CorporationPaymentsController', () => {
         ],
       };
 
-      mockCorporationPaymentsService.findAll.mockResolvedValue(expectedResult);
+      mockCorporationPaymentsService.findCorporationPaymentsInMonth.mockResolvedValue(
+        expectedResult,
+      );
 
       const result = await controller.findAll(monthQuery);
 
       expect(result).toEqual(expectedResult);
-      expect(mockCorporationPaymentsService.findAll).toHaveBeenCalledWith(
-        monthQuery,
-      );
+      expect(
+        mockCorporationPaymentsService.findCorporationPaymentsInMonth,
+      ).toHaveBeenCalledWith(monthQuery);
     });
   });
 
   describe('findOne', () => {
     it("should return a corporation's payments for a given month", async () => {
       const corporationId = 'corp-1';
-      const monthQuery: MonthQueryDto = { month: '2023-01-01T00:00:00.000Z' };
+      const monthQuery: PaginatedMonthQueryDto = {
+        month: '2023-01-01T00:00:00.000Z',
+        page: 1,
+        limit: 10,
+      };
       const expectedResult = {
         id: corporationId,
         total: 1500,

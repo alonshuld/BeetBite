@@ -9,6 +9,7 @@ import { CreateCorporationPaymentDto } from './dto/create-corporation-payment.dt
 import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
+import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
 
 describe('CorporationPaymentsService', () => {
   let service: CorporationPaymentsService;
@@ -280,26 +281,22 @@ describe('CorporationPaymentsService', () => {
     });
 
     it('should throw CorporationPaymentNotFoundError on foreign key error', async () => {
-      const prismaError = new PrismaClientKnownRequestError(
-        'Foreign key constraint failed',
-        {
-          code: PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED,
-          clientVersion: '4.0.0',
-        },
-      );
+      const error = new CorporationPaymentNotFoundError('corp-1');
 
-      mockPrismaService.corporationPayment.findMany.mockRejectedValue(
-        prismaError,
-      );
+      mockPrismaService.corporationPayment.findMany.mockRejectedValue(error);
 
       await expect(service.findOne('corp-1', monthQueryDto)).rejects.toThrow(
-        CorporationPaymentNotFoundError,
+        error,
       );
     });
   });
 
   describe('findAll', () => {
-    const monthQueryDto: MonthQueryDto = { month: '2023-01-01T00:00:00.000Z' };
+    const paginatedMonthQueryDto: PaginatedMonthQueryDto = {
+      month: '2023-01-01T00:00:00.000Z',
+      page: 1,
+      limit: 10,
+    };
 
     it('should return all corporations payments for a month', async () => {
       const payments = [
@@ -345,13 +342,17 @@ describe('CorporationPaymentsService', () => {
 
       mockPrismaService.corporationPayment.findMany.mockResolvedValue(payments);
 
-      const result = await service.findAll(monthQueryDto);
+      const result = await service.findCorporationPaymentsInMonth(
+        paginatedMonthQueryDto,
+      );
 
       expect(result.total).toBe(1500);
       expect(result.corporationsPayments).toHaveLength(2);
       expect(
         mockPrismaService.corporationPayment.findMany,
       ).toHaveBeenCalledWith({
+        skip: 0,
+        take: 10,
         where: {
           date: {
             gte: new Date('2023-01-01T00:00:00.000Z'),
@@ -398,9 +399,9 @@ describe('CorporationPaymentsService', () => {
         prismaError,
       );
 
-      await expect(service.findAll(monthQueryDto)).rejects.toThrow(
-        CorporationPaymentNotFoundError,
-      );
+      await expect(
+        service.findCorporationPaymentsInMonth(paginatedMonthQueryDto),
+      ).rejects.toThrow(CorporationPaymentNotFoundError);
     });
   });
 

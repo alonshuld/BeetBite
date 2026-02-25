@@ -28,6 +28,7 @@ import { MonthlyCorporationPaymentsResponseDto } from './dto/monthly-corporation
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { MultipleMonthlyCorporationPaymentsResponseDto } from './dto/multiple-monthly-corporation-payments-response.dto';
 import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
+import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
 
 @ApiTags('corporations/payments')
 @Controller()
@@ -66,9 +67,11 @@ export class CorporationPaymentsController {
     description: 'List of corporation payments for the specified month.',
   })
   async findAll(
-    @Query() monthQueryDto: MonthQueryDto,
+    @Query() paginatedMonthQueryDto: PaginatedMonthQueryDto,
   ): Promise<MultipleMonthlyCorporationPaymentsResponseDto> {
-    return await this.corporationPaymentsService.findAll(monthQueryDto);
+    return await this.corporationPaymentsService.findCorporationPaymentsInMonth(
+      paginatedMonthQueryDto,
+    );
   }
 
   /**
