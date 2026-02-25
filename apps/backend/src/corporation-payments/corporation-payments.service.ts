@@ -15,6 +15,9 @@ import { PRISMA_ERROR_CODES } from 'src/common/constants';
 import { CorporationPaymentAlreadyExistsError } from './errors/corporation-payment-already-exists.error';
 import { CorporationsPaymentsResponseDto } from './dto/corporations-payments-response.dto';
 import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
+import { ProjectReportNotFoundError } from 'src/project-reports/errors/project-report-not-found.exception';
+import { CorporationNotFoundError } from 'src/corporations/errors/corporation-not-found.error';
+import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
 
 @Injectable()
 export class CorporationPaymentsService {
@@ -47,8 +50,22 @@ export class CorporationPaymentsService {
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
-          case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
-            throw new CorporationPaymentNotFoundError('');
+          case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED: {
+            const fieldName = (error.meta?.field_name as string) ?? '';
+
+            if (fieldName.toLowerCase().includes('projectreportid'))
+              throw new ProjectReportNotFoundError(
+                createCorporationPaymentDto.projectReportId,
+              );
+            if (fieldName.toLowerCase().includes('corporationid'))
+              throw new CorporationNotFoundError(
+                createCorporationPaymentDto.corporationId,
+              );
+
+            throw new EntityNotFoundError(
+              'Could not find either the existing project report or corporation for the given corporation payment',
+            );
+          }
           case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
             throw new CorporationPaymentAlreadyExistsError(
               createCorporationPaymentDto.corporationId,
@@ -188,8 +205,22 @@ export class CorporationPaymentsService {
         switch (error.code) {
           case PRISMA_ERROR_CODES.NOT_FOUND:
             throw new CorporationPaymentNotFoundError(corporationPaymentId);
-          case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
-            throw new CorporationPaymentNotFoundError('');
+          case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED: {
+            const fieldName = (error.meta?.field_name as string) ?? '';
+
+            if (fieldName.toLowerCase().includes('projectreportid'))
+              throw new ProjectReportNotFoundError(
+                updateCorporationPaymentDto.projectReportId,
+              );
+            if (fieldName.toLowerCase().includes('corporationid'))
+              throw new CorporationNotFoundError(
+                updateCorporationPaymentDto.corporationId,
+              );
+
+            throw new EntityNotFoundError(
+              'Could not find either the existing project report or corporation for the given corporation payment',
+            );
+          }
           case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
             throw new CorporationPaymentAlreadyExistsError(
               updateCorporationPaymentDto.corporationId,

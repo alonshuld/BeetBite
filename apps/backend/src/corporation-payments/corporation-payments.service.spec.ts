@@ -8,6 +8,7 @@ import { CorporationPaymentAlreadyExistsError } from './errors/corporation-payme
 import { CreateCorporationPaymentDto } from './dto/create-corporation-payment.dto';
 import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
+import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
 
 describe('CorporationPaymentsService', () => {
   let service: CorporationPaymentsService;
@@ -120,7 +121,7 @@ describe('CorporationPaymentsService', () => {
       );
 
       await expect(service.create(createDto)).rejects.toThrow(
-        CorporationPaymentNotFoundError,
+        EntityNotFoundError,
       );
     });
 
@@ -439,7 +440,7 @@ describe('CorporationPaymentsService', () => {
       );
 
       await expect(service.update('payment-1', updateDto)).rejects.toThrow(
-        CorporationPaymentNotFoundError,
+        EntityNotFoundError,
       );
     });
 
