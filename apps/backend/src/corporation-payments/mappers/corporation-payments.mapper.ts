@@ -4,8 +4,8 @@ import {
   Project,
   ProjectReport,
 } from 'src/generated/client';
-import { CorporationPaymentsResponseDto } from '../dto/corporation-payments-response.dto';
-import { CorporationsPaymentsResponseDto } from '../dto/corporations-payments-response.dto';
+import { MonthlyCorporationPaymentsResponseDto } from '../dto/monthly-corporation-payments-response.dto';
+import { MultipleMonthlyCorporationPaymentsResponseDto } from '../dto/multiple-monthly-corporation-payments-response.dto';
 
 /**
  * Converts an array of CorporationPayment entities into a CorporationPaymentsResponseDto.
@@ -19,7 +19,7 @@ export const toCorporationPaymentsResponse = (
       project: Project;
     };
   })[],
-): CorporationPaymentsResponseDto => {
+): MonthlyCorporationPaymentsResponseDto => {
   if (payments.length === 0) {
     return {
       id: '',
@@ -29,7 +29,7 @@ export const toCorporationPaymentsResponse = (
       },
       projectPayments: [],
       total: 0,
-    } as CorporationPaymentsResponseDto;
+    } as MonthlyCorporationPaymentsResponseDto;
   }
 
   const corporation = payments[0].corporation;
@@ -70,7 +70,7 @@ export const toCorporationsPaymentsResponse = (
       project: Project;
     };
   })[],
-): CorporationsPaymentsResponseDto => {
+): MultipleMonthlyCorporationPaymentsResponseDto => {
   const paymentsByCorporation = payments.reduce(
     (acc, payment) => {
       const corporationId = payment.corporation.id;

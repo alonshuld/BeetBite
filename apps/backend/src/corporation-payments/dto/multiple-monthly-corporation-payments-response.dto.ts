@@ -1,16 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { CorporationPaymentsResponseDto } from './corporation-payments-response.dto';
+import { MonthlyCorporationPaymentsResponseDto } from './monthly-corporation-payments-response.dto';
 import { ValidateNested } from 'class-validator';
 
 /**
  * Data Transfer Object representing the response for multiple corporation payments.
  */
-export class CorporationsPaymentsResponseDto {
+export class MultipleMonthlyCorporationPaymentsResponseDto {
   @ApiProperty({
     description: 'List of corporation payments for the specified month',
   })
   @ValidateNested({ each: true })
-  corporationsPayments!: CorporationPaymentsResponseDto[];
+  corporationsPayments!: MonthlyCorporationPaymentsResponseDto[];
 
   @ApiProperty({
     example: 15000,

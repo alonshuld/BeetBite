@@ -24,9 +24,9 @@ import {
 import { CorporationPaymentsService } from './corporation-payments.service';
 import { CorporationPaymentResponseDto } from './dto/corporation-payment-response.dto';
 import { CreateCorporationPaymentDto } from './dto/create-corporation-payment.dto';
-import { CorporationPaymentsResponseDto } from './dto/corporation-payments-response.dto';
+import { MonthlyCorporationPaymentsResponseDto } from './dto/monthly-corporation-payments-response.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
-import { CorporationsPaymentsResponseDto } from './dto/corporations-payments-response.dto';
+import { MultipleMonthlyCorporationPaymentsResponseDto } from './dto/multiple-monthly-corporation-payments-response.dto';
 import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
 
 @ApiTags('corporations/payments')
@@ -67,7 +67,7 @@ export class CorporationPaymentsController {
   })
   async findAll(
     @Query() monthQueryDto: MonthQueryDto,
-  ): Promise<CorporationsPaymentsResponseDto> {
+  ): Promise<MultipleMonthlyCorporationPaymentsResponseDto> {
     return await this.corporationPaymentsService.findAll(monthQueryDto);
   }
 
@@ -82,12 +82,12 @@ export class CorporationPaymentsController {
   @ApiParam({ name: 'corporationId', description: 'Corporation ID' })
   @ApiOkResponse({
     description: "Corporation's payments for the specified month.",
-    type: CorporationPaymentsResponseDto,
+    type: MonthlyCorporationPaymentsResponseDto,
   })
   async findOne(
     @Param('corporationId') corporationId: string,
     @Query() monthQueryDto: MonthQueryDto,
-  ): Promise<CorporationPaymentsResponseDto> {
+  ): Promise<MonthlyCorporationPaymentsResponseDto> {
     return await this.corporationPaymentsService.findOne(
       corporationId,
       monthQueryDto,

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCorporationPaymentDto } from './dto/create-corporation-payment.dto';
-import { CorporationPaymentsResponseDto } from './dto/corporation-payments-response.dto';
+import { MonthlyCorporationPaymentsResponseDto } from './dto/monthly-corporation-payments-response.dto';
 import { CorporationPaymentNotFoundError } from './errors/corporation-payment-not-found.error';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { CorporationPaymentResponseDto } from './dto/corporation-payment-response.dto';
@@ -13,7 +13,7 @@ import { toCorporationPaymentResponseDto } from './mappers/corporation-payment.m
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
 import { CorporationPaymentAlreadyExistsError } from './errors/corporation-payment-already-exists.error';
-import { CorporationsPaymentsResponseDto } from './dto/corporations-payments-response.dto';
+import { MultipleMonthlyCorporationPaymentsResponseDto } from './dto/multiple-monthly-corporation-payments-response.dto';
 import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
 import { ProjectReportNotFoundError } from 'src/project-reports/errors/project-report-not-found.exception';
 import { CorporationNotFoundError } from 'src/corporations/errors/corporation-not-found.error';
@@ -86,7 +86,7 @@ export class CorporationPaymentsService {
   async findOne(
     corporationId: string,
     monthQueryDto: MonthQueryDto,
-  ): Promise<CorporationPaymentsResponseDto> {
+  ): Promise<MonthlyCorporationPaymentsResponseDto> {
     const startDate = new Date(monthQueryDto.month);
     startDate.setDate(1);
     const endDate = new Date(startDate);
@@ -131,11 +131,11 @@ export class CorporationPaymentsService {
   /**
    * Fetches all corporations' payments from a specific month
    * @param monthQueryDto Month query DTO containing the month to filter payments by
-   * @returns List of CorporationsPaymentsResponseDto containing all corporation payments for the specified month grouped by corporation
+   * @returns List of MultipleMonthlyCorporationPaymentsResponseDto containing all corporation payments for the specified month grouped by corporation
    */
   async findAll(
     monthQueryDto: MonthQueryDto,
-  ): Promise<CorporationsPaymentsResponseDto> {
+  ): Promise<MultipleMonthlyCorporationPaymentsResponseDto> {
     const startDate = new Date(monthQueryDto.month);
     startDate.setDate(1);
     const endDate = new Date(startDate);
