@@ -173,8 +173,6 @@ describe('CorporationPaymentsService', () => {
           id: 'payment-1',
           amount: { toNumber: () => 1000 },
           date: new Date('2023-01-10'),
-          projectReportId: 'report-1',
-          corporationId: 'corp-1',
           corporation: {
             id: 'corp-1',
             name: 'Corp 1',
@@ -214,7 +212,6 @@ describe('CorporationPaymentsService', () => {
       const result = await service.findOne('corp-1', monthQueryDto);
 
       expect(result).toEqual({
-        id: 'corp-1',
         corporation: {
           id: 'corp-1',
           name: 'Corp 1',
@@ -257,8 +254,6 @@ describe('CorporationPaymentsService', () => {
           id: true,
           amount: true,
           date: true,
-          projectReportId: true,
-          corporationId: true,
           projectReport: {
             select: {
               id: true,
@@ -363,8 +358,6 @@ describe('CorporationPaymentsService', () => {
           id: true,
           amount: true,
           date: true,
-          projectReportId: true,
-          corporationId: true,
           projectReport: {
             select: {
               id: true,
@@ -401,7 +394,7 @@ describe('CorporationPaymentsService', () => {
 
       await expect(
         service.findCorporationPaymentsInMonth(paginatedMonthQueryDto),
-      ).rejects.toThrow(CorporationPaymentNotFoundError);
+      ).rejects.toThrow(EntityNotFoundError);
     });
   });
 

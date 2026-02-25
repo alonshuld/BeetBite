@@ -47,6 +47,13 @@ export class CorporationPaymentsController {
   @ApiOperation({ summary: 'Create a new corporation payment' })
   @ApiCreatedResponse({
     description: 'The corporation payment has been successfully created.',
+    type: CorporationPaymentResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid input data for creating corporation payment.',
+  })
+  @ApiConflictResponse({
+    description: 'Conflict occurred while creating corporation payment.',
   })
   async create(
     @Body() createCorporationPaymentDto: CreateCorporationPaymentDto,
@@ -65,6 +72,10 @@ export class CorporationPaymentsController {
   @ApiOperation({ summary: 'Get all corporation payments for a given month' })
   @ApiOkResponse({
     description: 'List of corporation payments for the specified month.',
+    type: MultipleMonthlyCorporationPaymentsResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid input data for pagination or date filtering.',
   })
   async findAll(
     @Query() paginatedMonthQueryDto: PaginatedMonthQueryDto,
@@ -87,10 +98,17 @@ export class CorporationPaymentsController {
     description: "Corporation's payments for the specified month.",
     type: MonthlyCorporationPaymentsResponseDto,
   })
+  @ApiBadRequestResponse({
+    description: 'Invalid input data for date filtering.',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'Corporation not found or no payments for the specified month.',
+  })
   async findOne(
     @Param('corporationId') corporationId: string,
     @Query() monthQueryDto: MonthQueryDto,
-  ): Promise<MonthlyCorporationPaymentsResponseDto> {
+  ): Promise<MonthlyCorporationPaymentsResponseDto | null> {
     return await this.corporationPaymentsService.findOne(
       corporationId,
       monthQueryDto,

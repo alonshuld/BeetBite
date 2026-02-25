@@ -68,6 +68,7 @@ export class ProjectsController {
     type: ProjectResponseDto,
     isArray: true,
   })
+  @ApiBadRequestResponse({ description: 'Invalid pagination parameters' })
   async findAll(
     @Query() pagination?: PaginationQueryDto,
   ): Promise<ProjectResponseDto[]> {

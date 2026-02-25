@@ -129,7 +129,7 @@ export class CorporationPaymentsService {
   async findOne(
     corporationId: string,
     monthQueryDto: MonthQueryDto,
-  ): Promise<MonthlyCorporationPaymentsResponseDto> {
+  ): Promise<MonthlyCorporationPaymentsResponseDto | null> {
     const { startDate, endDate } = this.calculateStartAndEndDates(
       monthQueryDto.month,
     );
@@ -148,8 +148,6 @@ export class CorporationPaymentsService {
             id: true,
             amount: true,
             date: true,
-            projectReportId: true,
-            corporationId: true,
             projectReport: {
               select: {
                 id: true,
@@ -215,8 +213,6 @@ export class CorporationPaymentsService {
             id: true,
             amount: true,
             date: true,
-            projectReportId: true,
-            corporationId: true,
             projectReport: {
               select: {
                 id: true,
@@ -247,7 +243,16 @@ export class CorporationPaymentsService {
         error instanceof PrismaClientKnownRequestError &&
         error.code === PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED
       ) {
-        throw new CorporationPaymentNotFoundError('');
+        const fieldName = (error.meta?.field_name as string) ?? '';
+
+        if (fieldName.toLowerCase().includes('projectreportid'))
+          throw new ProjectReportNotFoundError('');
+        if (fieldName.toLowerCase().includes('corporationid'))
+          throw new CorporationNotFoundError('');
+
+        throw new EntityNotFoundError(
+          'Could not find either the existing project report or corporation for the given corporation payment',
+        );
       }
       throw error;
     }

@@ -50,10 +50,17 @@ describe('CorporationPaymentsController', () => {
       };
       const expectedResult = {
         id: 'payment-1',
-        corporationId: 'corp-1',
-        projectReportId: 'report-1',
         amount: 1000,
-        date: '2023-01-01',
+        date: '2023-01-01T00:00:00.000Z',
+        projectReport: {
+          id: 'report-1',
+          projectId: 'project-1',
+          projectName: 'Project 1',
+        },
+        corporation: {
+          id: 'corp-1',
+          name: 'Corp 1',
+        },
       };
 
       mockCorporationPaymentsService.create.mockResolvedValue(expectedResult);
@@ -95,11 +102,19 @@ describe('CorporationPaymentsController', () => {
         total: 1500,
         corporationsPayments: [
           {
-            id: 'corp-1',
+            corporation: {
+              id: 'corp-1',
+              name: 'Corp 1',
+            },
+            projectPayments: [],
             total: 1000,
           },
           {
-            id: 'corp-2',
+            corporation: {
+              id: 'corp-2',
+              name: 'Corp 2',
+            },
+            projectPayments: [],
             total: 500,
           },
         ],
@@ -121,13 +136,14 @@ describe('CorporationPaymentsController', () => {
   describe('findOne', () => {
     it("should return a corporation's payments for a given month", async () => {
       const corporationId = 'corp-1';
-      const monthQuery: PaginatedMonthQueryDto = {
+      const monthQuery: { month: string } = {
         month: '2023-01-01T00:00:00.000Z',
-        page: 1,
-        limit: 10,
       };
       const expectedResult = {
-        id: corporationId,
+        corporation: {
+          id: corporationId,
+          name: 'Corp 1',
+        },
         total: 1500,
         projectPayments: [],
       };

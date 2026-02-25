@@ -72,6 +72,9 @@ export class ProjectReportsController {
     type: ProjectReportListItemDto,
     isArray: true,
   })
+  @ApiBadRequestResponse({
+    description: 'Invalid pagination or month query parameters',
+  })
   async findProjectReportsInMonth(
     @Query() paginatedMonthQueryDto: PaginatedMonthQueryDto,
   ): Promise<ProjectReportListItemDto[]> {
@@ -117,6 +120,7 @@ export class ProjectReportsController {
     type: ProjectReportListItemDto,
   })
   @ApiNotFoundResponse({ description: 'Project report not found' })
+  @ApiBadRequestResponse({ description: 'Invalid month query' })
   async findProjectReportForPreviousMonth(
     @Param('id') projectId: string,
     @Query() monthQueryDto: MonthQueryDto,

@@ -69,6 +69,7 @@ export class CorporationsController {
     type: CorporationResponseDto,
     isArray: true,
   })
+  @ApiBadRequestResponse({ description: 'Invalid pagination parameters' })
   async findAll(
     @Query() pagination?: PaginationQueryDto,
   ): Promise<CorporationResponseDto[]> {
@@ -87,6 +88,7 @@ export class CorporationsController {
     description: 'The corporation has been found.',
     type: CorporationResponseDto,
   })
+  @ApiNotFoundResponse({ description: 'Corporation not found' })
   async findOne(@Param('id') id: string): Promise<CorporationResponseDto> {
     return await this.corporationsService.findOne(id);
   }
@@ -105,7 +107,6 @@ export class CorporationsController {
     type: CorporationResponseDto,
   })
   @ApiNotFoundResponse({ description: 'Corporation not found' })
-  @ApiBadRequestResponse({ description: 'Invalid input data' })
   @ApiConflictResponse({ description: 'Corporation name already exists' })
   async update(
     @Param('id') id: string,

@@ -6,7 +6,10 @@ import {
 } from 'src/generated/client';
 import { CorporationPaymentResponseDto } from '../dto/corporation-payment-response.dto';
 
-type CorporationPaymentWithMinimalRelations = CorporationPayment & {
+type CorporationPaymentWithMinimalRelations = Pick<
+  CorporationPayment,
+  'id' | 'amount' | 'date'
+> & {
   projectReport: Pick<ProjectReport, 'id' | 'projectId'> & {
     project: Pick<Project, 'id' | 'name'>;
   };

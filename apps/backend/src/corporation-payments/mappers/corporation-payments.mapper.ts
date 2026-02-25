@@ -7,11 +7,14 @@ import {
 import { MonthlyCorporationPaymentsResponseDto } from '../dto/monthly-corporation-payments-response.dto';
 import { MultipleMonthlyCorporationPaymentsResponseDto } from '../dto/multiple-monthly-corporation-payments-response.dto';
 
-type CorporationPaymentWithMinimalRelations = CorporationPayment & {
-  corporation: Pick<Corporation, 'id' | 'name'>;
+type CorporationPaymentWithMinimalRelations = Pick<
+  CorporationPayment,
+  'id' | 'amount' | 'date'
+> & {
   projectReport: Pick<ProjectReport, 'id'> & {
     project: Pick<Project, 'id' | 'name'>;
   };
+  corporation: Pick<Corporation, 'id' | 'name'>;
 };
 
 /**
@@ -21,17 +24,9 @@ type CorporationPaymentWithMinimalRelations = CorporationPayment & {
  */
 export const toCorporationPaymentsResponse = (
   payments: CorporationPaymentWithMinimalRelations[],
-): MonthlyCorporationPaymentsResponseDto => {
+): MonthlyCorporationPaymentsResponseDto | null => {
   if (payments.length === 0) {
-    return {
-      id: '',
-      corporation: {
-        id: '',
-        name: '',
-      },
-      projectPayments: [],
-      total: 0,
-    } as MonthlyCorporationPaymentsResponseDto;
+    return null;
   }
 
   const corporation = payments[0].corporation;
@@ -50,7 +45,6 @@ export const toCorporationPaymentsResponse = (
   const total = projectPayments.reduce((sum, p) => sum + p.amount, 0);
 
   return {
-    id: corporation.id,
     corporation: {
       id: corporation.id,
       name: corporation.name,
@@ -68,25 +62,26 @@ export const toCorporationPaymentsResponse = (
 export const toCorporationsPaymentsResponse = (
   payments: CorporationPaymentWithMinimalRelations[],
 ): MultipleMonthlyCorporationPaymentsResponseDto => {
-  const paymentsByCorporation = payments.reduce(
-    (acc, payment) => {
-      const corporationId = payment.corporation.id;
-      if (!acc[corporationId]) {
-        acc[corporationId] = [];
-      }
-      acc[corporationId].push(payment);
-      return acc;
-    },
-    {} as Record<string, typeof payments>,
-  );
+  const grouped = payments.reduce((map, payment) => {
+    const key = payment.corporation.id;
+
+    if (!map.has(key)) {
+      map.set(key, []);
+    }
+
+    map.get(key)!.push(payment);
+    return map;
+  }, new Map<string, CorporationPaymentWithMinimalRelations[]>());
+
+  const corporationsPayments = [...grouped.values()]
+    .map(toCorporationPaymentsResponse)
+    .filter(
+      (response): response is MonthlyCorporationPaymentsResponseDto =>
+        response !== null,
+    );
 
   return {
-    corporationsPayments: Object.values(paymentsByCorporation).map(
-      toCorporationPaymentsResponse,
-    ),
-    total: payments.reduce(
-      (sum, payment) => sum + payment.amount.toNumber(),
-      0,
-    ),
+    corporationsPayments,
+    total: corporationsPayments.reduce((sum, corp) => sum + corp.total, 0),
   };
 };
