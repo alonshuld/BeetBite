@@ -3,9 +3,11 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectResponseDto } from './dto/project-response.dto';
+import { ProjectBasicResponseDto } from './dto/project-basic-response.dto';
 import {
   toProjectResponse,
   toProjectResponseList,
+  toProjectBasicResponse,
 } from './mappers/projects.mapper';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
 import { PRISMA_ERROR_CODES, PAGINATION_DEFAULTS } from 'src/common/constants';
@@ -32,19 +34,18 @@ export class ProjectsService {
    */
   async create(
     createProjectDto: CreateProjectDto,
-  ): Promise<ProjectResponseDto> {
+  ): Promise<ProjectBasicResponseDto> {
     try {
       const createdProject = await this.prismaService.project.create({
         data: {
-          clientId: createProjectDto.clientId,
-          name: createProjectDto.name,
+          ...createProjectDto,
           estimatedAmount: new Prisma.Decimal(createProjectDto.estimatedAmount),
           finishDate: new Date(createProjectDto.finishDate),
         },
       });
       this.logger.log(`Project created: ${createdProject.id}`);
 
-      return toProjectResponse(createdProject);
+      return toProjectBasicResponse(createdProject);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
@@ -69,14 +70,38 @@ export class ProjectsService {
     const page = paginationQuery?.page ?? PAGINATION_DEFAULTS.PAGE;
     const limit = paginationQuery?.limit ?? PAGINATION_DEFAULTS.LIMIT;
 
-    const projects = await this.prismaService.project.findMany({
-      skip: Math.max(0, (page - 1) * limit),
-      take: Math.max(1, limit),
-    });
+    const [projects, incomesSums] = await this.prismaService.$transaction(
+      async (tx) => {
+        const projects = await tx.project.findMany({
+          skip: Math.max(0, (page - 1) * limit),
+          take: Math.max(1, limit),
+        });
+
+        const incomeSums = await tx.projectReport.groupBy({
+          by: ['projectId'],
+          _sum: { income: true },
+          where: {
+            incomeDate: { not: null },
+            projectId: { in: projects.map((project) => project.id) },
+          },
+        });
+
+        return [projects, incomeSums];
+      },
+    );
+
+    const projectIdToIncomesSumMap = new Map<string, number>();
+
+    for (const incomesSum of incomesSums) {
+      projectIdToIncomesSumMap.set(
+        incomesSum.projectId,
+        Number(incomesSum._sum.income ?? 0),
+      );
+    }
 
     this.logger.log(`Projects retrieved: ${projects.length} items`);
 
-    return toProjectResponseList(projects);
+    return toProjectResponseList(projects, projectIdToIncomesSumMap);
   }
 
   /**
@@ -85,16 +110,27 @@ export class ProjectsService {
    * @returns The found project.
    */
   async findOne(id: string): Promise<ProjectResponseDto> {
-    const project = await this.prismaService.project.findUnique({
-      where: { id },
-    });
+    const [project, incomesSum] = await this.prismaService.$transaction([
+      this.prismaService.project.findUnique({
+        where: { id },
+      }),
+      this.prismaService.projectReport.aggregate({
+        where: {
+          projectId: id,
+          incomeDate: { not: null },
+        },
+        _sum: {
+          income: true,
+        },
+      }),
+    ]);
 
     if (!project) {
       throw new ProjectNotFoundError(id);
     }
 
     this.logger.log(`Project retrieved: ${id}`);
-    return toProjectResponse(project);
+    return toProjectResponse(project, Number(incomesSum._sum.income ?? 0));
   }
 
   /**
@@ -106,7 +142,7 @@ export class ProjectsService {
   async update(
     id: string,
     updateProjectDto: UpdateProjectDto,
-  ): Promise<ProjectResponseDto> {
+  ): Promise<ProjectBasicResponseDto> {
     try {
       const project = await this.prismaService.project.update({
         where: { id },
@@ -119,7 +155,7 @@ export class ProjectsService {
       });
 
       this.logger.log(`Project updated: ${id}`);
-      return toProjectResponse(project);
+      return toProjectBasicResponse(project);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {

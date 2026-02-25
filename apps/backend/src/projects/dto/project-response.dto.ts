@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { ProjectPaymentProgressDto } from './project-payment-progress.dto';
 
 /**
- * Represents the parameters of a project as returned by the API.
+ * Represents the parameters of a project as returned by the API (with payment progress aggregation).
  */
 export class ProjectResponseDto {
   @ApiProperty({
@@ -36,4 +37,16 @@ export class ProjectResponseDto {
     format: 'ISO-8601',
   })
   finishDate!: string;
+
+  @ApiProperty({
+    example: 'Renovation of the office building located at 123 Main St.',
+    description: 'A description of the project',
+    type: 'string',
+  })
+  description!: string;
+
+  @ApiProperty({
+    description: 'The payment progress the client has made on the project',
+  })
+  paymentProgress!: ProjectPaymentProgressDto;
 }

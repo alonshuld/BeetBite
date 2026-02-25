@@ -46,4 +46,11 @@ export class CreateProjectDto {
     format: 'ISO-8601',
   })
   finishDate!: string;
+
+  @ApiProperty({
+    example: 'Renovation of the office building located at 123 Main St.',
+    description: 'A description of the project',
+    type: 'string',
+  })
+  description!: string;
 }
