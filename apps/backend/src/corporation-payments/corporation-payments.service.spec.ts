@@ -22,6 +22,9 @@ describe('CorporationPaymentsService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    corporation: {
+      findUnique: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -207,6 +210,10 @@ describe('CorporationPaymentsService', () => {
         },
       ];
 
+      mockPrismaService.corporation.findUnique.mockResolvedValue({
+        id: 'corp-1',
+        name: 'Corp 1',
+      });
       mockPrismaService.corporationPayment.findMany.mockResolvedValue(payments);
 
       const result = await service.findOne('corp-1', monthQueryDto);
@@ -275,8 +282,13 @@ describe('CorporationPaymentsService', () => {
       });
     });
 
-    it('should throw CorporationPaymentNotFoundError on foreign key error', async () => {
+    it('should throw CorporationPaymentNotFoundError when underlying query fails', async () => {
       const error = new CorporationPaymentNotFoundError('corp-1');
+
+      mockPrismaService.corporation.findUnique.mockResolvedValue({
+        id: 'corp-1',
+        name: 'Corp 1',
+      });
 
       mockPrismaService.corporationPayment.findMany.mockRejectedValue(error);
 
@@ -346,8 +358,6 @@ describe('CorporationPaymentsService', () => {
       expect(
         mockPrismaService.corporationPayment.findMany,
       ).toHaveBeenCalledWith({
-        skip: 0,
-        take: 10,
         where: {
           date: {
             gte: new Date('2023-01-01T00:00:00.000Z'),

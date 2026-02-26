@@ -11,14 +11,13 @@ import {
 } from './mappers/corporation-payments.mapper';
 import { toCorporationPaymentResponseDto } from './mappers/corporation-payment.mapper';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
-import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
+import { PRISMA_ERROR_CODES } from 'src/common/constants';
 import { CorporationPaymentAlreadyExistsError } from './errors/corporation-payment-already-exists.error';
 import { MultipleMonthlyCorporationPaymentsResponseDto } from './dto/multiple-monthly-corporation-payments-response.dto';
 import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
 import { ProjectReportNotFoundError } from 'src/project-reports/errors/project-report-not-found.exception';
 import { CorporationNotFoundError } from 'src/corporations/errors/corporation-not-found.error';
 import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
-import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
 
 /**
  * Service responsible for managing corporation payments, including creating, fetching, updating, and deleting payments. It interacts with the database through PrismaService and handles various error scenarios related to corporation payments.
@@ -129,12 +128,22 @@ export class CorporationPaymentsService {
   async findOne(
     corporationId: string,
     monthQueryDto: MonthQueryDto,
-  ): Promise<MonthlyCorporationPaymentsResponseDto | null> {
+  ): Promise<MonthlyCorporationPaymentsResponseDto> {
     const { startDate, endDate } = this.calculateStartAndEndDates(
       monthQueryDto.month,
     );
 
     try {
+      const retrievedCorporation =
+        await this.prismaService.corporation.findUnique({
+          where: { id: corporationId },
+          select: { id: true, name: true },
+        });
+
+      if (!retrievedCorporation) {
+        throw new CorporationNotFoundError(corporationId);
+      }
+
       const corporationPayment =
         await this.prismaService.corporationPayment.findMany({
           where: {
@@ -172,7 +181,10 @@ export class CorporationPaymentsService {
         `Fetched ${corporationPayment.length} payments for corporation ID: ${corporationId} and month: ${monthQueryDto.month}`,
       );
 
-      return toCorporationPaymentsResponse(corporationPayment);
+      return toCorporationPaymentsResponse(
+        corporationPayment,
+        retrievedCorporation,
+      );
     } catch (error) {
       if (
         error instanceof PrismaClientKnownRequestError &&
@@ -190,19 +202,15 @@ export class CorporationPaymentsService {
    * @returns List of MultipleMonthlyCorporationPaymentsResponseDto containing all corporation payments for the specified month grouped by corporation
    */
   async findCorporationPaymentsInMonth(
-    paginatedMonthQueryDto: PaginatedMonthQueryDto,
+    monthQueryDto: MonthQueryDto,
   ): Promise<MultipleMonthlyCorporationPaymentsResponseDto> {
-    const page = paginatedMonthQueryDto.page ?? PAGINATION_DEFAULTS.PAGE;
-    const limit = paginatedMonthQueryDto.limit ?? PAGINATION_DEFAULTS.LIMIT;
     const { startDate, endDate } = this.calculateStartAndEndDates(
-      paginatedMonthQueryDto.month,
+      monthQueryDto.month,
     );
 
     try {
       const corporationPayments =
         await this.prismaService.corporationPayment.findMany({
-          skip: Math.max(0, (page - 1) * limit),
-          take: Math.max(1, limit),
           where: {
             date: {
               gte: startDate,
@@ -234,10 +242,11 @@ export class CorporationPaymentsService {
         });
 
       this.logger.log(
-        `Fetched ${corporationPayments.length} payments for month: ${paginatedMonthQueryDto.month}`,
+        `Fetched ${corporationPayments.length} payments for month: ${monthQueryDto.month}`,
       );
 
-      return toCorporationsPaymentsResponse(corporationPayments);
+      const response = toCorporationsPaymentsResponse(corporationPayments);
+      return response;
     } catch (error) {
       if (
         error instanceof PrismaClientKnownRequestError &&

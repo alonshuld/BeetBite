@@ -24,13 +24,10 @@ export class EntityExceptionFilter implements ExceptionFilter {
     let message: unknown = 'Internal server error';
 
     if (exception instanceof EntityError) {
-      switch (exception.constructor) {
-        case EntityNotFoundError:
-          status = HttpStatus.NOT_FOUND;
-          break;
-        case EntityAlreadyExistsError:
-          status = HttpStatus.CONFLICT;
-          break;
+      if (exception instanceof EntityNotFoundError) {
+        status = HttpStatus.NOT_FOUND;
+      } else if (exception instanceof EntityAlreadyExistsError) {
+        status = HttpStatus.CONFLICT;
       }
 
       message = exception.message;

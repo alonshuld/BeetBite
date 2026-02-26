@@ -28,7 +28,6 @@ import { MonthlyCorporationPaymentsResponseDto } from './dto/monthly-corporation
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { MultipleMonthlyCorporationPaymentsResponseDto } from './dto/multiple-monthly-corporation-payments-response.dto';
 import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dto';
-import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
 
 @ApiTags('corporations/payments')
 @Controller()
@@ -78,10 +77,10 @@ export class CorporationPaymentsController {
     description: 'Invalid input data for pagination or date filtering.',
   })
   async findAll(
-    @Query() paginatedMonthQueryDto: PaginatedMonthQueryDto,
+    @Query() monthQueryDto: MonthQueryDto,
   ): Promise<MultipleMonthlyCorporationPaymentsResponseDto> {
     return await this.corporationPaymentsService.findCorporationPaymentsInMonth(
-      paginatedMonthQueryDto,
+      monthQueryDto,
     );
   }
 
@@ -108,7 +107,7 @@ export class CorporationPaymentsController {
   async findOne(
     @Param('corporationId') corporationId: string,
     @Query() monthQueryDto: MonthQueryDto,
-  ): Promise<MonthlyCorporationPaymentsResponseDto | null> {
+  ): Promise<MonthlyCorporationPaymentsResponseDto> {
     return await this.corporationPaymentsService.findOne(
       corporationId,
       monthQueryDto,

@@ -24,12 +24,17 @@ type CorporationPaymentWithMinimalRelations = Pick<
  */
 export const toCorporationPaymentsResponse = (
   payments: CorporationPaymentWithMinimalRelations[],
-): MonthlyCorporationPaymentsResponseDto | null => {
+  corporation: Pick<Corporation, 'id' | 'name'>,
+): MonthlyCorporationPaymentsResponseDto => {
   if (payments.length === 0) {
-    return null;
+    return {
+      corporation: {
+        ...corporation,
+      },
+      projectPayments: [],
+      total: 0,
+    };
   }
-
-  const corporation = payments[0].corporation;
 
   const projectPayments = payments.map((payment) => ({
     id: payment.id,
@@ -73,12 +78,9 @@ export const toCorporationsPaymentsResponse = (
     return map;
   }, new Map<string, CorporationPaymentWithMinimalRelations[]>());
 
-  const corporationsPayments = [...grouped.values()]
-    .map(toCorporationPaymentsResponse)
-    .filter(
-      (response): response is MonthlyCorporationPaymentsResponseDto =>
-        response !== null,
-    );
+  const corporationsPayments = [...grouped.values()].map((payments) =>
+    toCorporationPaymentsResponse(payments, payments[0].corporation),
+  );
 
   return {
     corporationsPayments,
