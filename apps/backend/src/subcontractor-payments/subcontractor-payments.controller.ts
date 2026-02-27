@@ -72,6 +72,7 @@ export class SubcontractorPaymentsController {
     description: 'List of subcontractor payments.',
     type: [MonthlySubcontractorPaymentsDto],
   })
+  @ApiBadRequestResponse({ description: 'Invalid query parameters' })
   async findAll(
     @Query() monthQueryDto: MonthQueryDto,
   ): Promise<MonthlySubcontractorPaymentsDto[]> {
@@ -93,6 +94,7 @@ export class SubcontractorPaymentsController {
     description: 'The subcontractor payment with the matching ID.',
     type: MonthlySubcontractorPaymentsDto,
   })
+  @ApiNotFoundResponse({ description: 'Subcontractor payment not found' })
   async findOne(
     @Param('subcontractorId') subcontractorId: string,
     @Query() monthQueryDto: MonthQueryDto,

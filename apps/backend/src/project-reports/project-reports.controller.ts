@@ -33,7 +33,7 @@ import { MonthQueryDto } from 'src/common/month-query.dto';
 /**
  * Controller for project report related endpoints.
  */
-@ApiTags('project-reports')
+@ApiTags('projects/reports')
 @Controller()
 export class ProjectReportsController {
   constructor(private readonly projectReportsService: ProjectReportsService) {}
@@ -71,6 +71,9 @@ export class ProjectReportsController {
     description: 'List of project reports in the given month',
     type: ProjectReportListItemDto,
     isArray: true,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid pagination or month query parameters',
   })
   async findProjectReportsInMonth(
     @Query() paginatedMonthQueryDto: PaginatedMonthQueryDto,
@@ -117,6 +120,7 @@ export class ProjectReportsController {
     type: ProjectReportListItemDto,
   })
   @ApiNotFoundResponse({ description: 'Project report not found' })
+  @ApiBadRequestResponse({ description: 'Invalid month query' })
   async findProjectReportForPreviousMonth(
     @Param('id') projectId: string,
     @Query() monthQueryDto: MonthQueryDto,

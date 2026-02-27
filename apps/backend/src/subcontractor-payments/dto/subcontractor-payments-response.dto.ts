@@ -20,7 +20,6 @@ export class SubcontractorPaymentResponseDto {
   @ApiProperty({
     example: '2026-01-10T00:00:00.000Z',
     description: 'The date identifying the service month',
-    type: 'string',
     format: 'ISO-8601',
   })
   serviceDate!: string;
@@ -28,7 +27,6 @@ export class SubcontractorPaymentResponseDto {
   @ApiProperty({
     example: '2026-01-10T00:00:00.000Z',
     description: 'The date the payment was actually processed',
-    type: 'string',
     format: 'ISO-8601',
   })
   paymentDate!: string;

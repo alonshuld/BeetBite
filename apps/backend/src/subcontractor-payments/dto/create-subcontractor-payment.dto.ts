@@ -16,7 +16,6 @@ export class CreateSubcontractorPaymentDto {
   subcontractorId!: string;
 
   @IsISO8601()
-  @IsNotEmpty()
   @ApiProperty({
     example: '2026-01-01',
     description: 'The date identifying the service month',

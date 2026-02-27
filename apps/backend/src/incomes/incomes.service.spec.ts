@@ -93,7 +93,7 @@ describe('IncomesService', () => {
       });
 
       expect(mockPrismaService.projectReport.findMany).toHaveBeenCalledWith({
-        where: { date: new Date('2024-05-01T00:00:00.000Z') },
+        where: { date: '2024-05-01T00:00:00.000Z' },
         include: { project: { select: { name: true } } },
       });
     });
@@ -111,7 +111,7 @@ describe('IncomesService', () => {
       });
 
       expect(mockPrismaService.projectReport.findMany).toHaveBeenCalledWith({
-        where: { date: new Date('2024-05-01T00:00:00.000Z') },
+        where: { date: '2024-05-01T00:00:00.000Z' },
         include: { project: { select: { name: true } } },
       });
     });
