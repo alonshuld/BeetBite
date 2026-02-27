@@ -226,15 +226,12 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
   async findProjectReportsInMonth(
     paginatedMonthQueryDto: PaginatedMonthQueryDto,
   ): Promise<ProjectReportListItemDto[]> {
-    const page =
-      paginatedMonthQueryDto.paginationQuery?.page ?? PAGINATION_DEFAULTS.PAGE;
-    const limit =
-      paginatedMonthQueryDto.paginationQuery?.limit ??
-      PAGINATION_DEFAULTS.LIMIT;
+    const page = paginatedMonthQueryDto.page ?? PAGINATION_DEFAULTS.PAGE;
+    const limit = paginatedMonthQueryDto.limit ?? PAGINATION_DEFAULTS.LIMIT;
 
     const projectReports = await this.prismaService.projectReport.findMany({
       where: {
-        date: new Date(paginatedMonthQueryDto.monthQuery.month),
+        date: paginatedMonthQueryDto.month,
       },
       skip: Math.max(0, (page - 1) * limit),
       take: Math.max(1, limit),
@@ -253,6 +250,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
         },
       },
     });
+
     this.logger.log(`Retrieved ${projectReports.length} project reports`);
 
     return toProjectReportList(projectReports);

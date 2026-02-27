@@ -15,6 +15,7 @@ export class ProjectReportResponseDto {
 
   @ApiProperty({
     description: "Information on the report's project",
+    type: NestedProjectDto,
   })
   project!: NestedProjectDto;
 
@@ -48,7 +49,6 @@ export class ProjectReportResponseDto {
     example: '2026-01-10T00:00:00.000Z',
     description:
       'The exact date the client actually made the payment (if at all)',
-    type: 'string',
     format: 'ISO-8601',
   })
   incomeDate?: string;
@@ -56,12 +56,14 @@ export class ProjectReportResponseDto {
   @ApiProperty({
     description:
       'The payments made to corporations for their work on the project that month',
+    type: [NestedCorporationPaymentDto],
   })
   corporationPayments!: NestedCorporationPaymentDto[];
 
   @ApiProperty({
     description:
       "Subcontractor information for the given month's project report",
+    type: NestedSubcontractorWithPaymentDto,
   })
   subcontractor!: NestedSubcontractorWithPaymentDto;
 }

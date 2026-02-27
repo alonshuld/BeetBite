@@ -121,7 +121,9 @@ describe('SubcontractorPaymentsService', () => {
       );
 
       const result = await service.findAll({
-        monthQuery: { month: '2023-01' },
+        month: '2023-01',
+        page: 1,
+        limit: 10,
       });
 
       expect(result).toEqual(
@@ -138,7 +140,7 @@ describe('SubcontractorPaymentsService', () => {
       ).toHaveBeenCalledWith({
         skip: 0,
         take: 10,
-        where: { serviceDate: new Date('2023-01') },
+        where: { serviceDate: '2023-01' },
       });
     });
 
@@ -146,7 +148,9 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
       const result = await service.findAll({
-        monthQuery: { month: '2023-03' },
+        month: '2023-03',
+        page: 1,
+        limit: 10,
       });
 
       expect(result).toEqual([]);
@@ -155,7 +159,7 @@ describe('SubcontractorPaymentsService', () => {
       ).toHaveBeenCalledWith({
         skip: 0,
         take: 10,
-        where: { serviceDate: new Date('2023-03') },
+        where: { serviceDate: '2023-03' },
       });
     });
   });
@@ -424,7 +428,9 @@ describe('SubcontractorPaymentsService', () => {
         );
 
         const result = await integrationService.findAll({
-          monthQuery: { month: '2023-01' },
+          month: '2023-01',
+          page: 1,
+          limit: 10,
         });
 
         expect(result).toHaveLength(2);
@@ -440,7 +446,7 @@ describe('SubcontractorPaymentsService', () => {
         ).toHaveBeenCalledWith({
           skip: 0,
           take: 10,
-          where: { serviceDate: new Date('2023-01') },
+          where: { serviceDate: '2023-01' },
         });
       });
 
@@ -450,7 +456,9 @@ describe('SubcontractorPaymentsService', () => {
         );
 
         const result = await integrationService.findAll({
-          monthQuery: { month: '2023-12' },
+          month: '2023-12',
+          page: 1,
+          limit: 10,
         });
 
         expect(result).toEqual([]);
@@ -512,7 +520,7 @@ describe('SubcontractorPaymentsService', () => {
         );
 
         const result = await integrationService.findAll({
-          monthQuery: { month: '2023-01' },
+          month: '2023-01',
         });
 
         expect(result).toHaveLength(2);

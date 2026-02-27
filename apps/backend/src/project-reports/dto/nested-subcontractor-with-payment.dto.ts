@@ -14,6 +14,7 @@ export class NestedSubcontractorWithPaymentDto extends NestedSubcontractorDto {
   payment!: number;
 
   @ApiPropertyOptional({
+    example: '2024-06-30',
     description: 'The exact date the payment has been made (if at all)',
   })
   paymentDate?: string;

@@ -50,6 +50,12 @@ export class SubcontractorPaymentsController {
   @ApiCreatedResponse({
     description: 'The subcontractor payment has been successfully created.',
   })
+  @ApiBadRequestResponse({
+    description: 'Invalid input data for creating subcontractor payment.',
+  })
+  @ApiConflictResponse({
+    description: 'Conflict occurred while creating subcontractor payment.',
+  })
   async create(
     @Body() createSubcontractorPaymentDto: CreateSubcontractorPaymentDto,
   ): Promise<SubcontractorPaymentResponseDto> {
@@ -69,6 +75,7 @@ export class SubcontractorPaymentsController {
     type: SubcontractorPaymentResponseDto,
     isArray: true,
   })
+  @ApiBadRequestResponse({ description: 'Invalid query parameters' })
   async findAll(
     @Query() paginatedMonthQueryDto: PaginatedMonthQueryDto,
   ): Promise<SubcontractorPaymentResponseDto[]> {
@@ -89,6 +96,7 @@ export class SubcontractorPaymentsController {
     description: 'The subcontractor payment with the matching ID.',
     type: SubcontractorPaymentResponseDto,
   })
+  @ApiNotFoundResponse({ description: 'Subcontractor payment not found' })
   async findOne(
     @Param('id') id: string,
   ): Promise<SubcontractorPaymentResponseDto> {
