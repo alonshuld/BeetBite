@@ -120,12 +120,12 @@ export class CorporationPaymentsService {
   }
 
   /**
-   * Fetches corporation's payments from a specific month
-   * @param corporationId Corporation ID
+   * Fetches all payments for a specific corporation within a given month. The month is specified in the MonthQueryDto, and the corporation is identified by its ID. Returns a MonthlyCorporationPaymentsResponseDto containing the corporation's details and its payments for the specified month. Handles potential errors such as corporation not found.
+   * @param corporationId Corporation ID for which to fetch the monthly payments
    * @param monthQueryDto Month query DTO containing the month to filter payments by
-   * @returns CorporationPaymentsResponseDto containing the corporation's payments for the specified month
+   * @returns MonthlyCorporationPaymentsResponseDto containing the corporation's details and its payments for the specified month
    */
-  async findOne(
+  async findCorporationMonthlyPayments(
     corporationId: string,
     monthQueryDto: MonthQueryDto,
   ): Promise<MonthlyCorporationPaymentsResponseDto> {
@@ -174,11 +174,11 @@ export class CorporationPaymentsService {
   }
 
   /**
-   * Fetches all corporations' payments from a specific month
+   * Fetches payments for all corporations within a given month. The month is specified in the MonthQueryDto. Returns a MultipleMonthlyCorporationPaymentsResponseDto containing a list of corporations, each with their details and payments for the specified month. Handles potential errors such as no corporations found with payments in the specified month.
    * @param monthQueryDto Month query DTO containing the month to filter payments by
-   * @returns List of MultipleMonthlyCorporationPaymentsResponseDto containing all corporation payments for the specified month grouped by corporation
+   * @returns MultipleMonthlyCorporationPaymentsResponseDto containing all corporation payments for the specified month grouped by corporation
    */
-  async findCorporationPaymentsInMonth(
+  async findCorporationsPaymentsInMonth(
     monthQueryDto: MonthQueryDto,
   ): Promise<MultipleMonthlyCorporationPaymentsResponseDto> {
     const { startDate, endDate } = this.calculateStartAndEndDates(

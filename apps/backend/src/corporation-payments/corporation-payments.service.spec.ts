@@ -17,8 +17,8 @@ describe('CorporationPaymentsService', () => {
   const mockPrismaService = {
     corporationPayment: {
       create: jest.fn(),
-      findMany: jest.fn(),
-      findOne: jest.fn(),
+      findCorporationsPaymentsInMonth: jest.fn(),
+      findCorporationMonthlyPayments: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     },
@@ -217,7 +217,10 @@ describe('CorporationPaymentsService', () => {
         payments: payments,
       });
 
-      const result = await service.findOne('corp-1', monthQueryDto);
+      const result = await service.findCorporationMonthlyPayments(
+        'corp-1',
+        monthQueryDto,
+      );
 
       expect(result).toEqual({
         corporation: {
@@ -284,9 +287,9 @@ describe('CorporationPaymentsService', () => {
     it('should throw error when corporation not found', async () => {
       mockPrismaService.corporation.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('corp-1', monthQueryDto)).rejects.toThrow(
-        'Corporation with ID corp-1 not found',
-      );
+      await expect(
+        service.findCorporationMonthlyPayments('corp-1', monthQueryDto),
+      ).rejects.toThrow('Corporation with ID corp-1 not found');
     });
   });
 
@@ -343,7 +346,7 @@ describe('CorporationPaymentsService', () => {
 
       mockPrismaService.corporation.findMany.mockResolvedValue(corporations);
 
-      const result = await service.findCorporationPaymentsInMonth(
+      const result = await service.findCorporationsPaymentsInMonth(
         paginatedMonthQueryDto,
       );
 
@@ -403,7 +406,7 @@ describe('CorporationPaymentsService', () => {
       mockPrismaService.corporation.findMany.mockRejectedValue(prismaError);
 
       await expect(
-        service.findCorporationPaymentsInMonth(paginatedMonthQueryDto),
+        service.findCorporationsPaymentsInMonth(paginatedMonthQueryDto),
       ).rejects.toThrow(PrismaClientKnownRequestError);
     });
   });

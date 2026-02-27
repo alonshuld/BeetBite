@@ -28,9 +28,9 @@ type CorporationWithPayments = Prisma.CorporationGetPayload<{
 }>;
 
 /**
- * Converts an array of CorporationPayment entities into a CorporationPaymentsResponseDto.
- * @param payments List of CorporationPayment entities with related Corporation and ProjectReport data
- * @returns CorporationPaymentsResponseDto containing the corporation's payments and related information
+ * Converts a CorporationPayment entity into a MonthlyCorporationPaymentsResponseDto.
+ * @param corporation Corporation with its related payments and project report data
+ * @returns MonthlyCorporationPaymentsResponseDto containing the payments and related information for a single corporation, along with the total amount for that corporation
  */
 export const toMonthlyCorporationPaymentsResponse = (
   corporation: CorporationWithPayments,
@@ -57,9 +57,9 @@ export const toMonthlyCorporationPaymentsResponse = (
 };
 
 /**
- * Converts an array of CorporationPayment entities into an array of CorporationPaymentsResponseDto, grouped by corporation.
- * @param payments The payments made to a specific corporation in a month
- * @returns List of CorporationPaymentsResponseDto, each containing the corporation's payments and related information
+ * Converts an array of CorporationPayment entities into a MultipleCorporationPaymentsResponseDto.
+ * @param corporations Corporations with their related payments and project report data
+ * @returns MultipleCorporationPaymentsResponseDto containing the payments and related information for multiple corporations, along with the total amount across all corporations
  */
 export const toMultipleMonthlyCorporationsPaymentsResponse = (
   corporations: CorporationWithPayments[],

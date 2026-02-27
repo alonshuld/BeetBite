@@ -12,8 +12,8 @@ describe('CorporationPaymentsController', () => {
 
   const mockCorporationPaymentsService = {
     create: jest.fn(),
-    findCorporationPaymentsInMonth: jest.fn(),
-    findOne: jest.fn(),
+    findCorporationsPaymentsInMonth: jest.fn(),
+    findCorporationMonthlyPayments: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
   };
@@ -120,7 +120,7 @@ describe('CorporationPaymentsController', () => {
         ],
       };
 
-      mockCorporationPaymentsService.findCorporationPaymentsInMonth.mockResolvedValue(
+      mockCorporationPaymentsService.findCorporationsPaymentsInMonth.mockResolvedValue(
         expectedResult,
       );
 
@@ -128,7 +128,7 @@ describe('CorporationPaymentsController', () => {
 
       expect(result).toEqual(expectedResult);
       expect(
-        mockCorporationPaymentsService.findCorporationPaymentsInMonth,
+        mockCorporationPaymentsService.findCorporationsPaymentsInMonth,
       ).toHaveBeenCalledWith(monthQuery);
     });
   });
@@ -148,15 +148,16 @@ describe('CorporationPaymentsController', () => {
         projectPayments: [],
       };
 
-      mockCorporationPaymentsService.findOne.mockResolvedValue(expectedResult);
+      mockCorporationPaymentsService.findCorporationMonthlyPayments.mockResolvedValue(
+        expectedResult,
+      );
 
       const result = await controller.findOne(corporationId, monthQuery);
 
       expect(result).toEqual(expectedResult);
-      expect(mockCorporationPaymentsService.findOne).toHaveBeenCalledWith(
-        corporationId,
-        monthQuery,
-      );
+      expect(
+        mockCorporationPaymentsService.findCorporationMonthlyPayments,
+      ).toHaveBeenCalledWith(corporationId, monthQuery);
     });
   });
 

@@ -79,7 +79,7 @@ export class CorporationPaymentsController {
   async findAll(
     @Query() monthQueryDto: MonthQueryDto,
   ): Promise<MultipleMonthlyCorporationPaymentsResponseDto> {
-    return await this.corporationPaymentsService.findCorporationPaymentsInMonth(
+    return await this.corporationPaymentsService.findCorporationsPaymentsInMonth(
       monthQueryDto,
     );
   }
@@ -108,7 +108,7 @@ export class CorporationPaymentsController {
     @Param('corporationId') corporationId: string,
     @Query() monthQueryDto: MonthQueryDto,
   ): Promise<MonthlyCorporationPaymentsResponseDto> {
-    return await this.corporationPaymentsService.findOne(
+    return await this.corporationPaymentsService.findCorporationMonthlyPayments(
       corporationId,
       monthQueryDto,
     );
