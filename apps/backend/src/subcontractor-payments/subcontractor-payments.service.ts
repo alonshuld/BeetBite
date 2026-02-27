@@ -245,10 +245,13 @@ export class SubcontractorPaymentsService {
       }),
     );
 
+<<<<<<< HEAD
     this.logger.log(
       `Retrieved payments of ${subcontractorsWithPayments.length} subcontractors from ${serviceDate.toLocaleDateString()}`,
     );
 
+=======
+>>>>>>> 68b5d53 (updated subcontractor payments to the new format requested)
     return toMonthlySubcontractorPaymentsResponseList(
       subcontractorsWithPaymentsAndTotal,
     );
