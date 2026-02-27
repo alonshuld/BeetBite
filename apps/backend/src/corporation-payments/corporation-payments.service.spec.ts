@@ -24,6 +24,7 @@ describe('CorporationPaymentsService', () => {
     },
     corporation: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
     },
   };
 
@@ -213,8 +214,8 @@ describe('CorporationPaymentsService', () => {
       mockPrismaService.corporation.findUnique.mockResolvedValue({
         id: 'corp-1',
         name: 'Corp 1',
+        payments: payments,
       });
-      mockPrismaService.corporationPayment.findMany.mockResolvedValue(payments);
 
       const result = await service.findOne('corp-1', monthQueryDto);
 
@@ -247,53 +248,44 @@ describe('CorporationPaymentsService', () => {
         ],
         total: 1500,
       });
-      expect(
-        mockPrismaService.corporationPayment.findMany,
-      ).toHaveBeenCalledWith({
-        where: {
-          corporationId: 'corp-1',
-          date: {
-            gte: new Date('2023-01-01T00:00:00.000Z'),
-            lte: new Date('2023-01-31T00:00:00.000Z'),
-          },
-        },
+      expect(mockPrismaService.corporation.findUnique).toHaveBeenCalledWith({
+        where: { id: 'corp-1' },
         select: {
           id: true,
-          amount: true,
-          date: true,
-          projectReport: {
-            select: {
-              id: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                },
+          name: true,
+          payments: {
+            where: {
+              date: {
+                gte: new Date('2023-01-01T00:00:00.000Z'),
+                lte: new Date('2023-01-31T00:00:00.000Z'),
               },
             },
-          },
-          corporation: {
             select: {
               id: true,
-              name: true,
+              amount: true,
+              date: true,
+              projectReport: {
+                select: {
+                  id: true,
+                  project: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
       });
     });
 
-    it('should throw CorporationPaymentNotFoundError when underlying query fails', async () => {
-      const error = new CorporationPaymentNotFoundError('corp-1');
-
-      mockPrismaService.corporation.findUnique.mockResolvedValue({
-        id: 'corp-1',
-        name: 'Corp 1',
-      });
-
-      mockPrismaService.corporationPayment.findMany.mockRejectedValue(error);
+    it('should throw error when corporation not found', async () => {
+      mockPrismaService.corporation.findUnique.mockResolvedValue(null);
 
       await expect(service.findOne('corp-1', monthQueryDto)).rejects.toThrow(
-        error,
+        'Corporation with ID corp-1 not found',
       );
     });
   });
@@ -306,48 +298,50 @@ describe('CorporationPaymentsService', () => {
     };
 
     it('should return all corporations payments for a month', async () => {
-      const payments = [
+      const corporations = [
         {
-          id: 'payment-1',
-          amount: { toNumber: () => 1000 },
-          date: new Date('2023-01-10'),
-          projectReportId: 'report-1',
-          corporationId: 'corp-1',
-          corporation: {
-            id: 'corp-1',
-            name: 'Corp 1',
-          },
-          projectReport: {
-            id: 'report-1',
-            projectId: 'project-1',
-            project: {
-              id: 'project-1',
-              name: 'Project 1',
+          id: 'corp-1',
+          name: 'Corp 1',
+          payments: [
+            {
+              id: 'payment-1',
+              amount: { toNumber: (): number => 1000 },
+              date: new Date('2023-01-10'),
+              projectReportId: 'report-1',
+              projectReport: {
+                id: 'report-1',
+                projectId: 'project-1',
+                project: {
+                  id: 'project-1',
+                  name: 'Project 1',
+                },
+              },
             },
-          },
+          ],
         },
         {
-          id: 'payment-2',
-          amount: { toNumber: () => 500 },
-          date: new Date('2023-01-20'),
-          projectReportId: 'report-2',
-          corporationId: 'corp-2',
-          corporation: {
-            id: 'corp-2',
-            name: 'Corp 2',
-          },
-          projectReport: {
-            id: 'report-2',
-            projectId: 'project-2',
-            project: {
-              id: 'project-2',
-              name: 'Project 2',
+          id: 'corp-2',
+          name: 'Corp 2',
+          payments: [
+            {
+              id: 'payment-2',
+              amount: { toNumber: (): number => 500 },
+              date: new Date('2023-01-20'),
+              projectReportId: 'report-2',
+              projectReport: {
+                id: 'report-2',
+                projectId: 'project-2',
+                project: {
+                  id: 'project-2',
+                  name: 'Project 2',
+                },
+              },
             },
-          },
+          ],
         },
       ];
 
-      mockPrismaService.corporationPayment.findMany.mockResolvedValue(payments);
+      mockPrismaService.corporation.findMany.mockResolvedValue(corporations);
 
       const result = await service.findCorporationPaymentsInMonth(
         paginatedMonthQueryDto,
@@ -355,34 +349,42 @@ describe('CorporationPaymentsService', () => {
 
       expect(result.total).toBe(1500);
       expect(result.corporationsPayments).toHaveLength(2);
-      expect(
-        mockPrismaService.corporationPayment.findMany,
-      ).toHaveBeenCalledWith({
+      expect(mockPrismaService.corporation.findMany).toHaveBeenCalledWith({
         where: {
-          date: {
-            gte: new Date('2023-01-01T00:00:00.000Z'),
-            lte: new Date('2023-01-31T00:00:00.000Z'),
+          payments: {
+            some: {
+              date: {
+                gte: new Date('2023-01-01T00:00:00.000Z'),
+                lte: new Date('2023-01-31T00:00:00.000Z'),
+              },
+            },
           },
         },
         select: {
           id: true,
-          amount: true,
-          date: true,
-          projectReport: {
-            select: {
-              id: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                },
+          name: true,
+          payments: {
+            where: {
+              date: {
+                gte: new Date('2023-01-01T00:00:00.000Z'),
+                lte: new Date('2023-01-31T00:00:00.000Z'),
               },
             },
-          },
-          corporation: {
             select: {
               id: true,
-              name: true,
+              amount: true,
+              date: true,
+              projectReport: {
+                select: {
+                  id: true,
+                  project: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -398,13 +400,11 @@ describe('CorporationPaymentsService', () => {
         },
       );
 
-      mockPrismaService.corporationPayment.findMany.mockRejectedValue(
-        prismaError,
-      );
+      mockPrismaService.corporation.findMany.mockRejectedValue(prismaError);
 
       await expect(
         service.findCorporationPaymentsInMonth(paginatedMonthQueryDto),
-      ).rejects.toThrow(EntityNotFoundError);
+      ).rejects.toThrow(PrismaClientKnownRequestError);
     });
   });
 

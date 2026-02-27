@@ -1,32 +1,41 @@
-import {
-  Corporation,
-  CorporationPayment,
-  Project,
-  ProjectReport,
-} from 'src/generated/client';
+import { Prisma } from 'src/generated/client';
 import { MonthlyCorporationPaymentsResponseDto } from '../dto/monthly-corporation-payments-response.dto';
 import { MultipleMonthlyCorporationPaymentsResponseDto } from '../dto/multiple-monthly-corporation-payments-response.dto';
 
-type CorporationPaymentWithMinimalRelations = Pick<
-  CorporationPayment,
-  'id' | 'amount' | 'date'
-> & {
-  projectReport: Pick<ProjectReport, 'id'> & {
-    project: Pick<Project, 'id' | 'name'>;
+type CorporationWithPayments = Prisma.CorporationGetPayload<{
+  select: {
+    id: true;
+    name: true;
+    payments: {
+      select: {
+        id: true;
+        amount: true;
+        date: true;
+        projectReport: {
+          select: {
+            id: true;
+            project: {
+              select: {
+                id: true;
+                name: true;
+              };
+            };
+          };
+        };
+      };
+    };
   };
-  corporation: Pick<Corporation, 'id' | 'name'>;
-};
+}>;
 
 /**
  * Converts an array of CorporationPayment entities into a CorporationPaymentsResponseDto.
  * @param payments List of CorporationPayment entities with related Corporation and ProjectReport data
  * @returns CorporationPaymentsResponseDto containing the corporation's payments and related information
  */
-export const toCorporationPaymentsResponse = (
-  payments: CorporationPaymentWithMinimalRelations[],
-  corporation: Pick<Corporation, 'id' | 'name'>,
+export const toMonthlyCorporationPaymentsResponse = (
+  corporation: CorporationWithPayments,
 ): MonthlyCorporationPaymentsResponseDto => {
-  const projectPayments = payments.map((payment) => ({
+  const projectPayments = corporation.payments.map((payment) => ({
     id: payment.id,
     projectReport: {
       id: payment.projectReport.id,
@@ -37,14 +46,13 @@ export const toCorporationPaymentsResponse = (
     date: payment.date.toISOString(),
   }));
 
-  const total = projectPayments.reduce((sum, p) => sum + p.amount, 0);
-
   return {
     corporation: {
-      ...corporation,
+      id: corporation.id,
+      name: corporation.name,
     },
     projectPayments,
-    total,
+    total: projectPayments.reduce((sum, p) => sum + p.amount, 0),
   };
 };
 
@@ -53,22 +61,11 @@ export const toCorporationPaymentsResponse = (
  * @param payments The payments made to a specific corporation in a month
  * @returns List of CorporationPaymentsResponseDto, each containing the corporation's payments and related information
  */
-export const toCorporationsPaymentsResponse = (
-  payments: CorporationPaymentWithMinimalRelations[],
+export const toMultipleMonthlyCorporationsPaymentsResponse = (
+  corporations: CorporationWithPayments[],
 ): MultipleMonthlyCorporationPaymentsResponseDto => {
-  const grouped = payments.reduce((map, payment) => {
-    const key = payment.corporation.id;
-
-    if (!map.has(key)) {
-      map.set(key, []);
-    }
-
-    map.get(key)!.push(payment);
-    return map;
-  }, new Map<string, CorporationPaymentWithMinimalRelations[]>());
-
-  const corporationsPayments = [...grouped.values()].map((payments) =>
-    toCorporationPaymentsResponse(payments, payments[0].corporation),
+  const corporationsPayments = corporations.map(
+    toMonthlyCorporationPaymentsResponse,
   );
 
   return {

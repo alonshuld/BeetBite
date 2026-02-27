@@ -6,8 +6,8 @@ import { CorporationPaymentNotFoundError } from './errors/corporation-payment-no
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { CorporationPaymentResponseDto } from './dto/corporation-payment-response.dto';
 import {
-  toCorporationPaymentsResponse,
-  toCorporationsPaymentsResponse,
+  toMonthlyCorporationPaymentsResponse,
+  toMultipleMonthlyCorporationsPaymentsResponse,
 } from './mappers/monthly-corporation-payments.mapper';
 import { toCorporationPaymentResponseDto } from './mappers/corporation-payment.mapper';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
@@ -133,25 +133,14 @@ export class CorporationPaymentsService {
       monthQueryDto.month,
     );
 
-    try {
-      const retrievedCorporation =
-        await this.prismaService.corporation.findUnique({
-          where: { id: corporationId },
-          select: { id: true, name: true },
-        });
-
-      if (!retrievedCorporation) {
-        throw new CorporationNotFoundError(corporationId);
-      }
-
-      const corporationPayment =
-        await this.prismaService.corporationPayment.findMany({
+    const corporation = await this.prismaService.corporation.findUnique({
+      where: { id: corporationId },
+      select: {
+        id: true,
+        name: true,
+        payments: {
           where: {
-            corporationId: corporationId,
-            date: {
-              gte: startDate,
-              lte: endDate,
-            },
+            date: { gte: startDate, lte: endDate },
           },
           select: {
             id: true,
@@ -168,32 +157,20 @@ export class CorporationPaymentsService {
                 },
               },
             },
-            corporation: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
           },
-        });
+        },
+      },
+    });
 
-      this.logger.log(
-        `Fetched ${corporationPayment.length} payments for corporation ID: ${corporationId} and month: ${monthQueryDto.month}`,
-      );
-
-      return toCorporationPaymentsResponse(
-        corporationPayment,
-        retrievedCorporation,
-      );
-    } catch (error) {
-      if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code === PRISMA_ERROR_CODES.NOT_FOUND
-      ) {
-        throw new CorporationPaymentNotFoundError(corporationId);
-      }
-      throw error;
+    if (!corporation) {
+      throw new CorporationNotFoundError(corporationId);
     }
+
+    this.logger.log(
+      `Fetched ${corporation.payments.length} payments for corporation ID: ${corporationId} and month: ${monthQueryDto.month}`,
+    );
+
+    return toMonthlyCorporationPaymentsResponse(corporation);
   }
 
   /**
@@ -208,14 +185,20 @@ export class CorporationPaymentsService {
       monthQueryDto.month,
     );
 
-    try {
-      const corporationPayments =
-        await this.prismaService.corporationPayment.findMany({
+    const corporations = await this.prismaService.corporation.findMany({
+      where: {
+        payments: {
+          some: {
+            date: { gte: startDate, lte: endDate },
+          },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        payments: {
           where: {
-            date: {
-              gte: startDate,
-              lte: endDate,
-            },
+            date: { gte: startDate, lte: endDate },
           },
           select: {
             id: true,
@@ -232,39 +215,16 @@ export class CorporationPaymentsService {
                 },
               },
             },
-            corporation: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
           },
-        });
+        },
+      },
+    });
 
-      this.logger.log(
-        `Fetched ${corporationPayments.length} payments for month: ${monthQueryDto.month}`,
-      );
+    this.logger.log(
+      `Fetched payments for ${corporations.length} corporations for month: ${monthQueryDto.month}`,
+    );
 
-      const response = toCorporationsPaymentsResponse(corporationPayments);
-      return response;
-    } catch (error) {
-      if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code === PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED
-      ) {
-        const fieldName = (error.meta?.field_name as string) ?? '';
-
-        if (fieldName.toLowerCase().includes('projectreportid'))
-          throw new ProjectReportNotFoundError('');
-        if (fieldName.toLowerCase().includes('corporationid'))
-          throw new CorporationNotFoundError('');
-
-        throw new EntityNotFoundError(
-          'Could not find either the existing project report or corporation for the given corporation payment',
-        );
-      }
-      throw error;
-    }
+    return toMultipleMonthlyCorporationsPaymentsResponse(corporations);
   }
 
   /**
