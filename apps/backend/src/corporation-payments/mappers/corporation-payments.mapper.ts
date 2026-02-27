@@ -26,16 +26,6 @@ export const toCorporationPaymentsResponse = (
   payments: CorporationPaymentWithMinimalRelations[],
   corporation: Pick<Corporation, 'id' | 'name'>,
 ): MonthlyCorporationPaymentsResponseDto => {
-  if (payments.length === 0) {
-    return {
-      corporation: {
-        ...corporation,
-      },
-      projectPayments: [],
-      total: 0,
-    };
-  }
-
   const projectPayments = payments.map((payment) => ({
     id: payment.id,
     projectReport: {
@@ -51,8 +41,7 @@ export const toCorporationPaymentsResponse = (
 
   return {
     corporation: {
-      id: corporation.id,
-      name: corporation.name,
+      ...corporation,
     },
     projectPayments,
     total,
