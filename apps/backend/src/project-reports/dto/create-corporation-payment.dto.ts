@@ -22,7 +22,7 @@ export class CreateCorporationPaymentDto {
   @IsNumber()
   @Min(0)
   @ApiProperty({
-    example: '12000',
+    example: 12000,
     description:
       'The amount of money paid to the corporation for the project that month',
   })
