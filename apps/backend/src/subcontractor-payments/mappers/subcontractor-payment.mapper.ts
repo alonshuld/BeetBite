@@ -1,28 +1,26 @@
 import { SubcontractorPayment } from 'src/generated/client';
 import { SubcontractorPaymentResponseDto } from '../dto/subcontractor-payments-response.dto';
 
+type SubcontractorPaymentWithSubcontractor = Omit<
+  SubcontractorPayment,
+  'subcontractorId'
+> & {
+  subcontractor: {
+    id: string;
+    name: string;
+  };
+};
+
 /**
- * Converts the given subcontractor payment to a subcontractor payment response DTO
- * @param subcontractorPayment The subcontractor payment from the database
- * @returns Subcontractor payment response DTO
+ * Converts a SubcontractorPayment entity to a SubcontractorPaymentResponseDto
+ * @param subcontractorPayment SubcontractorPayment entity with related subcontractor data
+ * @returns SubcontractorPaymentResponseDto with formatted dates and amount as number
  */
 export const toSubcontractorPaymentResponse = (
-  subcontractorPayment: SubcontractorPayment,
+  subcontractorPayment: SubcontractorPaymentWithSubcontractor,
 ): SubcontractorPaymentResponseDto => ({
   ...subcontractorPayment,
   serviceDate: subcontractorPayment.serviceDate.toISOString(),
   paymentDate: subcontractorPayment.paymentDate.toISOString(),
   amount: subcontractorPayment.amount.toNumber(),
 });
-
-/**
- * Converts list of given subcontractor payments to list of subcontractor payment response DTOs
- * @param subcontractorPayments List of subcontractor payments from the database
- * @returns List of subcontractor payment response DTOs
- */
-export const toSubcontractorPaymentResponseList = (
-  subcontractorPayments: SubcontractorPayment[],
-): SubcontractorPaymentResponseDto[] =>
-  subcontractorPayments.map((payment) =>
-    toSubcontractorPaymentResponse(payment),
-  );

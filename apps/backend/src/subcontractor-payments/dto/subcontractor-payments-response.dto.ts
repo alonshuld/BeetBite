@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { NestedSubcontractorDto } from './nested-subcontractor.dto';
 
 /**
  * DTO represents the response of subcontractor payment
@@ -11,10 +12,10 @@ export class SubcontractorPaymentResponseDto {
   id!: string;
 
   @ApiProperty({
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'ID of the subcontractor that the payment belongs to',
+    description: 'The subcontractor associated with the payment',
+    type: NestedSubcontractorDto,
   })
-  subcontractorId!: string;
+  subcontractor!: NestedSubcontractorDto;
 
   @ApiProperty({
     example: '2026-01-10T00:00:00.000Z',

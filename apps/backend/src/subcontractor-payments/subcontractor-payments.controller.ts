@@ -25,7 +25,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { SubcontractorPaymentResponseDto } from './dto/subcontractor-payments-response.dto';
-import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
+import { MonthlySubcontractorPaymentsDto } from './dto/monthly-subcontractor-payments.dto';
+import { MonthQueryDto } from 'src/common/month-query.dto';
 
 /**
  * Controller for subcontractor payment-related endpoints.
@@ -33,7 +34,7 @@ import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
  * @param subcontractorPaymentsService Service providing subcontractor payment business logic
  */
 @ApiTags('subcontractors/payments')
-@Controller('subcontractors/payments')
+@Controller()
 export class SubcontractorPaymentsController {
   constructor(
     private readonly subcontractorPaymentsService: SubcontractorPaymentsService,
@@ -41,15 +42,17 @@ export class SubcontractorPaymentsController {
 
   /**
    * Create a new subcontractor payment.
-   * @param createSubcontractorPaymentDto Payload with subcontractor payment properties
-   * @returns The created subcontractor payment
+   * @param createSubcontractorPaymentDto CreateSubcontractorPaymentDto containing properties for the new subcontractor payment
+   * @returns The created subcontractor payment with its assigned ID and properties
    */
-  @Post()
+  @Post('/subcontractors/payments')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new subcontractor payment' })
   @ApiCreatedResponse({
     description: 'The subcontractor payment has been successfully created.',
+    type: SubcontractorPaymentResponseDto,
   })
+  @ApiBadRequestResponse({ description: 'Invalid input data' })
   async create(
     @Body() createSubcontractorPaymentDto: CreateSubcontractorPaymentDto,
   ): Promise<SubcontractorPaymentResponseDto> {
@@ -59,40 +62,45 @@ export class SubcontractorPaymentsController {
   }
 
   /**
-   * Find all subcontractor payments.
-   * @returns A list of subcontractor payments
+   * find all subcontractor payments for a given month.
+   * @param monthQueryDto MonthQueryDto containing the month to filter payments by (format: YYYY-MM)
+   * @returns List of subcontractor payments for the specified month
    */
-  @Get()
+  @Get('/subcontractors/payments')
   @ApiOperation({ summary: 'Get all subcontractor payments' })
   @ApiOkResponse({
     description: 'List of subcontractor payments.',
-    type: SubcontractorPaymentResponseDto,
-    isArray: true,
+    type: [MonthlySubcontractorPaymentsDto],
   })
   async findAll(
-    @Query() paginatedMonthQueryDto: PaginatedMonthQueryDto,
-  ): Promise<SubcontractorPaymentResponseDto[]> {
-    return await this.subcontractorPaymentsService.findAll(
-      paginatedMonthQueryDto,
+    @Query() monthQueryDto: MonthQueryDto,
+  ): Promise<MonthlySubcontractorPaymentsDto[]> {
+    return await this.subcontractorPaymentsService.findSubcontractorPaymentsInMonth(
+      monthQueryDto,
     );
   }
 
   /**
-   * Retrieve a subcontractor payment by ID.
-   * @param id The subcontractor payment identifier
-   * @returns Subcontractor payment with the matching ID
+   * Retrieve all payments for a specific subcontractor in a given month.
+   * @param subcontractorId Subcontractor ID to filter payments by
+   * @param monthQueryDto MonthQueryDto containing the month to filter payments by (format: YYYY-MM)
+   * @returns The subcontractor payments for the specified subcontractor and month
    */
-  @Get(':id')
+  @Get('/subcontractors/:subcontractorId/payments')
   @ApiOperation({ summary: 'Get a subcontractor payment by ID' })
-  @ApiParam({ name: 'id', description: 'Subcontractor payment ID' })
+  @ApiParam({ name: 'subcontractorId', description: 'Subcontractor ID' })
   @ApiOkResponse({
     description: 'The subcontractor payment with the matching ID.',
-    type: SubcontractorPaymentResponseDto,
+    type: MonthlySubcontractorPaymentsDto,
   })
   async findOne(
-    @Param('id') id: string,
-  ): Promise<SubcontractorPaymentResponseDto> {
-    return await this.subcontractorPaymentsService.findOne(id);
+    @Param('subcontractorId') subcontractorId: string,
+    @Query() monthQueryDto: MonthQueryDto,
+  ): Promise<MonthlySubcontractorPaymentsDto> {
+    return await this.subcontractorPaymentsService.findSubcontractorMonthlyPayments(
+      subcontractorId,
+      monthQueryDto,
+    );
   }
 
   /**
