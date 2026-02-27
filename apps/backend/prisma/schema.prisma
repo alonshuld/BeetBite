@@ -88,6 +88,5 @@ model SubcontractorPayment {
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id])
 
-  @@unique([subcontractorId, serviceDate])
   @@map("subcontractor_payments")
 }
