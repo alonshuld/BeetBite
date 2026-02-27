@@ -159,24 +159,6 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
             },
           });
 
-          await tx.subcontractorPayment.upsert({
-            where: {
-              subcontractorId_serviceDate: {
-                subcontractorId: createdProjectReport.subcontractorId,
-                serviceDate: createdProjectReport.date,
-              },
-            },
-            update: {},
-            create: {
-              subcontractor: {
-                connect: {
-                  id: createdProjectReport.subcontractorId,
-                },
-              },
-              serviceDate: createdProjectReport.date,
-            },
-          });
-
           return createdProjectReport;
         },
       );
