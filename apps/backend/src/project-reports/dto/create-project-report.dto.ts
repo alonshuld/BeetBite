@@ -11,7 +11,8 @@ import {
   IsArray,
 } from 'class-validator';
 import { CreateCorporationPaymentDto } from './create-corporation-payment.dto';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+import { normalizeToMonthStart } from 'src/common/utils/date.utils';
 
 /**
  * Represents the parameters required to create a new project report.
@@ -32,7 +33,7 @@ export class CreateProjectReportDto {
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
     description: `
-ID of the subcontractor for this report. If none is given and there is an existing report for the 
+ID of the subcontractor for this report. If none is given and there is an existing report for the
 project, its subcontractor will be used
 `,
     type: 'string',
@@ -46,6 +47,7 @@ project, its subcontractor will be used
     type: 'string',
     format: 'ISO-8601',
   })
+  @Transform(({ value }: { value: string }) => normalizeToMonthStart(value))
   date!: string;
 
   @IsNumber()
