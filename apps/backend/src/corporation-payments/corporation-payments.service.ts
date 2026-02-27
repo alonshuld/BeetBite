@@ -8,7 +8,7 @@ import { CorporationPaymentResponseDto } from './dto/corporation-payment-respons
 import {
   toCorporationPaymentsResponse,
   toCorporationsPaymentsResponse,
-} from './mappers/corporation-payments.mapper';
+} from './mappers/monthly-corporation-payments.mapper';
 import { toCorporationPaymentResponseDto } from './mappers/corporation-payment.mapper';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
