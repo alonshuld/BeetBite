@@ -29,7 +29,6 @@ export class CreateCorporationPaymentDto {
   amount!: number;
 
   @IsISO8601()
-  @IsNotEmpty()
   @ApiProperty({
     example: '2026-01-01',
     description: 'The exact date the payment was made to the corporation',

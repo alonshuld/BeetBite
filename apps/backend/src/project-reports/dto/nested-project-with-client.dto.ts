@@ -8,6 +8,7 @@ import { NestedProjectDto } from './nested-project.dto';
 export class NestedProjectWithClientDto extends NestedProjectDto {
   @ApiProperty({
     description: "Basic information on the project's client",
+    type: NestedClientDto,
   })
   client!: NestedClientDto;
 }

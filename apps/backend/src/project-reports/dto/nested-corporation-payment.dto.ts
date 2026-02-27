@@ -13,6 +13,7 @@ export class NestedCorporationPaymentDto {
 
   @ApiProperty({
     description: 'Information on the corporation',
+    type: NestedCorporationDto,
   })
   corporation!: NestedCorporationDto;
 
