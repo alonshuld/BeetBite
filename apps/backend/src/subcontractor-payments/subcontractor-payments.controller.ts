@@ -62,8 +62,8 @@ export class SubcontractorPaymentsController {
   }
 
   /**
-   * find all subcontractor payments for a given month.
-   * @param monthQueryDto MonthQueryDto containing the month to filter payments by (format: YYYY-MM)
+   * Find all subcontractor payments for a given month.
+   * @param monthQueryDto MonthQueryDto containing the month to filter payments by
    * @returns List of subcontractor payments for the specified month
    */
   @Get('/subcontractors/payments')
@@ -84,7 +84,7 @@ export class SubcontractorPaymentsController {
   /**
    * Retrieve all payments for a specific subcontractor in a given month.
    * @param subcontractorId Subcontractor ID to filter payments by
-   * @param monthQueryDto MonthQueryDto containing the month to filter payments by (format: YYYY-MM)
+   * @param monthQueryDto MonthQueryDto containing the month to filter payments by
    * @returns The subcontractor payments for the specified subcontractor and month
    */
   @Get('/subcontractors/:subcontractorId/payments')
@@ -111,7 +111,7 @@ export class SubcontractorPaymentsController {
    * @param updateSubcontractorPaymentDto Payload with updated subcontractor payment properties
    * @returns The updated subcontractor payment
    */
-  @Put(':id')
+  @Put('/subcontractors/payments/:id')
   @ApiOperation({ summary: 'Update a subcontractor payment' })
   @ApiParam({ name: 'id', description: 'Subcontractor payment ID' })
   @ApiOkResponse({
@@ -133,9 +133,9 @@ export class SubcontractorPaymentsController {
 
   /**
    * Delete a subcontractor payment by ID.
-   * @param id
+   * @param id The subcontractor payment identifier
    */
-  @Delete(':id')
+  @Delete('/subcontractors/payments/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a subcontractor payment by ID' })
   @ApiParam({ name: 'id', description: 'Subcontractor payment ID' })

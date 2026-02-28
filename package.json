@@ -8,7 +8,7 @@
     "dev": "pnpm -r dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
-    "prepare": "pnpm husky",
+    "prepare": "pnpm exec husky",
     "postinstall": "pnpm --filter backend exec prisma generate"
   },
   "keywords": [],

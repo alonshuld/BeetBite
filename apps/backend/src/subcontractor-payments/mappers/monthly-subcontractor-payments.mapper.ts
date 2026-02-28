@@ -26,7 +26,8 @@ export const toMonthlySubcontractorPaymentsResponse = (
 ): MonthlySubcontractorPaymentsDto => {
   return {
     subcontractor: {
-      ...subcontractorWithPayments,
+      id: subcontractorWithPayments.id,
+      name: subcontractorWithPayments.name,
     },
     payments: subcontractorWithPayments.payments.map((payment) => ({
       id: payment.id,

@@ -57,7 +57,6 @@ describe('SubcontractorPaymentsService', () => {
     };
     const mockPayment = {
       id: '1',
-      subcontractorId: '1',
       serviceDate: new Date('2023-01-01'),
       paymentDate: new Date('2023-01-15'),
       amount: { toNumber: () => 1000 },
@@ -77,7 +76,6 @@ describe('SubcontractorPaymentsService', () => {
       expect(result).toEqual({
         id: mockPayment.id,
         subcontractor: mockPayment.subcontractor,
-        subcontractorId: mockPayment.subcontractorId,
         serviceDate: mockPayment.serviceDate.toISOString(),
         paymentDate: mockPayment.paymentDate.toISOString(),
         amount: 1000,
@@ -266,7 +264,6 @@ describe('SubcontractorPaymentsService', () => {
     it('should update a subcontractor payment', async () => {
       const mockPayment = {
         id: '1',
-        subcontractorId: '1',
         serviceDate: new Date('2023-01-01'),
         paymentDate: new Date('2023-02-01'),
         amount: { toNumber: () => 1500 },
@@ -285,7 +282,6 @@ describe('SubcontractorPaymentsService', () => {
       expect(result).toEqual({
         id: mockPayment.id,
         subcontractor: mockPayment.subcontractor,
-        subcontractorId: mockPayment.subcontractorId,
         serviceDate: mockPayment.serviceDate.toISOString(),
         paymentDate: mockPayment.paymentDate.toISOString(),
         amount: 1500,

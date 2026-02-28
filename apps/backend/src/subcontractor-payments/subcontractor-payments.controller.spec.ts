@@ -530,10 +530,9 @@ describe('SubcontractorPaymentsController', () => {
         integrationMockSubcontractorPaymentsService.findSubcontractorMonthlyPayments.mockResolvedValue(
           monthlyPayment,
         );
-        const findResult = await integrationController.findOne(
-          'payment-workflow',
-          { month: '2023-01' },
-        );
+        const findResult = await integrationController.findOne('sub-workflow', {
+          month: '2023-01',
+        });
         expect(findResult).toEqual(monthlyPayment);
 
         integrationMockSubcontractorPaymentsService.update.mockResolvedValue(
@@ -561,7 +560,7 @@ describe('SubcontractorPaymentsController', () => {
         ).toHaveBeenCalledWith(createDto);
         expect(
           integrationMockSubcontractorPaymentsService.findSubcontractorMonthlyPayments,
-        ).toHaveBeenCalledWith('payment-workflow', { month: '2023-01' });
+        ).toHaveBeenCalledWith('sub-workflow', { month: '2023-01' });
         expect(
           integrationMockSubcontractorPaymentsService.update,
         ).toHaveBeenCalledWith('payment-workflow', updateDto);

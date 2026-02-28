@@ -26,7 +26,7 @@ export class NestedSubcontractorPaymentDto {
 
   @ApiProperty({
     example: 156000.0,
-    description: 'The amount of the payment in cents',
+    description: 'The amount of the payment',
   })
   amount!: number;
 }
