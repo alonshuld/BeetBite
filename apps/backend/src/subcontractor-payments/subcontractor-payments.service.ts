@@ -8,6 +8,7 @@ import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaName
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
 import { SubcontractorPaymentNotFoundError } from './errors/subcontractor-payment-not-found.error';
+import { SubcontractorPaymentAlreadyExistsError } from './errors/subcontractor-payment-already-exists.error';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import {
   toMonthlySubcontractorPaymentsResponse,
@@ -15,23 +16,12 @@ import {
 } from './mappers/monthly-subcontractor-payments.mapper';
 import { MonthlySubcontractorPaymentsDto } from './dto/monthly-subcontractor-payments.dto';
 
-/**
- * Service providing subcontractor payment business logic.
- * Handles create, read, update, and delete operations.
- * @param prismaService PrismaService for database interactions
- */
 @Injectable()
 export class SubcontractorPaymentsService {
   private readonly logger = new Logger(SubcontractorPaymentsService.name);
 
   constructor(private readonly prismaService: PrismaService) {}
 
-  /**
-   * Calculates the payment amount for a subcontractor based on their projects in a given service month.
-   * @param subcontractorId Subcontractor ID for which the payment amount will be calculated
-   * @param serviceDate Date representing the service month for which the payment amount will be calculated
-   * @returns The calculated payment amount for the subcontractor in the given service month
-   */
   private async calculateSubcontractorExpectedTotal(
     subcontractorId: string,
     serviceDate: Date,
@@ -107,11 +97,6 @@ export class SubcontractorPaymentsService {
     return expectedTotalBySubcontractor;
   }
 
-  /**
-   * Create a new subcontractor payment
-   * @param createSubcontractorPaymentDto Parameters for subcontractor payment creation
-   * @returns The created subcontractor payment response DTO
-   */
   async create(
     createSubcontractorPaymentDto: CreateSubcontractorPaymentDto,
   ): Promise<SubcontractorPaymentResponseDto> {
@@ -145,19 +130,16 @@ export class SubcontractorPaymentsService {
             throw new SubcontractorNotFoundError(
               createSubcontractorPaymentDto.subcontractorId,
             );
+          case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
+            throw new SubcontractorPaymentAlreadyExistsError(
+              createSubcontractorPaymentDto.subcontractorId,
+            );
         }
       }
       throw error;
     }
   }
 
-  /**
-   * Find all of the subcontractor payments for a given subcontractor in a given service month,
-   * along with the expected total payment amount for that month
-   * @param subcontractorId ID of the subcontractor for which payments will be retrieved
-   * @param monthQuery The service month for which payments will be retrieved
-   * @returns List of the subcontractor payments for the given subcontractor and service month, along with the expected total payment amount for that month
-   */
   async findSubcontractorMonthlyPayments(
     subcontractorId: string,
     monthQuery: MonthQueryDto,
@@ -199,11 +181,6 @@ export class SubcontractorPaymentsService {
     });
   }
 
-  /**
-   * Get all of the subcontractor payments from a service month
-   * @param paginatedMonthQueryDto The service month of the payments that will be retrieved
-   * @returns List of all of the subcontractor payments from the matching service date
-   */
   async findSubcontractorPaymentsInMonth(
     monthQuery: MonthQueryDto,
   ): Promise<MonthlySubcontractorPaymentsDto[]> {
@@ -245,24 +222,15 @@ export class SubcontractorPaymentsService {
       }),
     );
 
-<<<<<<< HEAD
     this.logger.log(
       `Retrieved payments of ${subcontractorsWithPayments.length} subcontractors from ${serviceDate.toLocaleDateString()}`,
     );
 
-=======
->>>>>>> 68b5d53 (updated subcontractor payments to the new format requested)
     return toMonthlySubcontractorPaymentsResponseList(
       subcontractorsWithPaymentsAndTotal,
     );
   }
 
-  /**
-   * Updates a subcontractor payment by its ID.
-   * @param id ID of the subcontractor payment to update
-   * @param updateSubcontractorPaymentDto The DTO containing updated subcontractor payment details.
-   * @returns The updated subcontractor payment.
-   */
   async update(
     id: string,
     updateSubcontractorPaymentDto: UpdateSubcontractorPaymentDto,
@@ -300,10 +268,6 @@ export class SubcontractorPaymentsService {
     }
   }
 
-  /**
-   * Removes a subcontractor payment by its ID.
-   * @param id ID of the subcontractor payment to remove
-   */
   async remove(id: string): Promise<void> {
     try {
       await this.prismaService.subcontractorPayment.delete({
