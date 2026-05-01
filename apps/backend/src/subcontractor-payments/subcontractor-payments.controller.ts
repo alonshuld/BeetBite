@@ -62,13 +62,8 @@ export class SubcontractorPaymentsController {
   }
 
   /**
-<<<<<<< HEAD
    * Find all subcontractor payments for a given month.
    * @param monthQueryDto MonthQueryDto containing the month to filter payments by
-=======
-   * find all subcontractor payments for a given month.
-   * @param monthQueryDto MonthQueryDto containing the month to filter payments by (format: YYYY-MM)
->>>>>>> 68b5d53 (updated subcontractor payments to the new format requested)
    * @returns List of subcontractor payments for the specified month
    */
   @Get('/subcontractors/payments')

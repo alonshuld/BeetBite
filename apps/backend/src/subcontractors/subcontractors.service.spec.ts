@@ -118,7 +118,7 @@ describe('SubcontractorsService', () => {
       const result = await service.findAll({
         page: 2,
         limit: 1,
-      } as PaginationQueryDto);
+      });
 
       expect(result).toEqual([{ id: '3', name: 'Subcontractor 3' }]);
       expect(mockPrismaService.subcontractor.findMany).toHaveBeenCalledWith({

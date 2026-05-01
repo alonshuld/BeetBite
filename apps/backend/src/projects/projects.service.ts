@@ -84,14 +84,13 @@ export class ProjectsService {
     });
 
     const projectIdToIncomesSumMap = new Map<string, number>();
-    for (const { id, reports } of projectsWithReports) {
+    const projects = projectsWithReports.map(({ reports, ...project }) => {
       projectIdToIncomesSumMap.set(
-        id,
+        project.id,
         reports.reduce((sum, r) => sum + Number(r.income), 0),
       );
-    }
-
-    const projects = projectsWithReports.map(({ reports: _, ...project }) => project);
+      return project;
+    });
 
     this.logger.log(`Projects retrieved: ${projects.length} items`);
 

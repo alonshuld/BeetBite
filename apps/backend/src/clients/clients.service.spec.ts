@@ -4,7 +4,6 @@ import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
-import { PaginationQueryDto } from 'src/common/pagination-query.dto';
 import { ClientAlreadyExistsError } from './errors/client-already-exists.exception';
 import { ClientNotFoundError } from './errors/client-not-found.exception';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -116,7 +115,7 @@ describe('ClientsService', () => {
       const result = await service.findAll({
         page: 2,
         limit: 1,
-      } as PaginationQueryDto);
+      });
 
       expect(result).toEqual([{ id: '3', name: 'Client 3' }]);
       expect(mockPrismaService.client.findMany).toHaveBeenCalledWith({

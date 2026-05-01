@@ -114,7 +114,13 @@ describe('ProjectsService', () => {
   });
 
   describe('findAll', () => {
-    const baseProject = (id: string, clientId: string, name: string, estimatedAmount: string, description: string) => ({
+    const baseProject = (
+      id: string,
+      clientId: string,
+      name: string,
+      estimatedAmount: string,
+      description: string,
+    ) => ({
       id,
       clientId,
       name,
@@ -125,8 +131,14 @@ describe('ProjectsService', () => {
 
     it('should return a list of projects with default pagination and correct payment progress', async () => {
       const projects = [
-        { ...baseProject('p1', 'c1', 'Project 1', '5000', 'Description 1'), reports: [{ income: new Prisma.Decimal('2000') }] },
-        { ...baseProject('p2', 'c2', 'Project 2', '10000', 'Description 2'), reports: [{ income: new Prisma.Decimal('5000') }] },
+        {
+          ...baseProject('p1', 'c1', 'Project 1', '5000', 'Description 1'),
+          reports: [{ income: new Prisma.Decimal('2000') }],
+        },
+        {
+          ...baseProject('p2', 'c2', 'Project 2', '10000', 'Description 2'),
+          reports: [{ income: new Prisma.Decimal('5000') }],
+        },
       ];
       mockPrismaService.project.findMany.mockResolvedValue(projects);
 
@@ -137,11 +149,12 @@ describe('ProjectsService', () => {
         expect.objectContaining({
           skip: 0,
           take: PAGINATION_DEFAULTS.LIMIT,
-          include: expect.objectContaining({
-            reports: expect.objectContaining({
+          include: {
+            reports: {
               where: { incomeDate: { not: null } },
-            }),
-          }),
+              select: { income: true },
+            },
+          },
         }),
       );
       expect(result[0].paymentProgress).toEqual({ totalPaid: 2000 });
@@ -150,7 +163,10 @@ describe('ProjectsService', () => {
 
     it('should apply pagination params and correctly filter paid incomes', async () => {
       const projects = [
-        { ...baseProject('p1', 'c1', 'Project 1', '5000', 'Description 1'), reports: [{ income: new Prisma.Decimal('5000') }] },
+        {
+          ...baseProject('p1', 'c1', 'Project 1', '5000', 'Description 1'),
+          reports: [{ income: new Prisma.Decimal('5000') }],
+        },
       ];
       mockPrismaService.project.findMany.mockResolvedValue(projects);
 
@@ -163,11 +179,12 @@ describe('ProjectsService', () => {
         expect.objectContaining({
           skip: 1,
           take: 1,
-          include: expect.objectContaining({
-            reports: expect.objectContaining({
+          include: {
+            reports: {
               where: { incomeDate: { not: null } },
-            }),
-          }),
+              select: { income: true },
+            },
+          },
         }),
       );
       expect(result[0].paymentProgress).toEqual({ totalPaid: 5000 });
@@ -185,13 +202,19 @@ describe('ProjectsService', () => {
     };
 
     it('should return a project', async () => {
-      mockPrismaService.project.findUnique.mockResolvedValue({ ...baseProject, reports: [] });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...baseProject,
+        reports: [],
+      });
       const result = await service.findOne('p1');
       expect(result.id).toBe(baseProject.id);
     });
 
     it('should return totalPaid 0 when no project reports', async () => {
-      mockPrismaService.project.findUnique.mockResolvedValue({ ...baseProject, reports: [] });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...baseProject,
+        reports: [],
+      });
       const result = await service.findOne('p1');
       expect(result.paymentProgress).toEqual({ totalPaid: 0 });
     });

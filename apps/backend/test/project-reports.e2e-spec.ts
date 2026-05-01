@@ -927,7 +927,7 @@ describe('ProjectReportsService Integration Tests', () => {
           date: testDateStr,
           income: 60000 + i * 5000,
           corporationPayments: [],
-        } as CreateProjectReportDto);
+        });
       }
     });
 
