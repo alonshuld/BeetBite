@@ -84,7 +84,7 @@ export class SubcontractorsController {
   @ApiOperation({ summary: 'Get a subcontractor by ID' })
   @ApiParam({ name: 'id', description: 'Subcontractor ID' })
   @ApiOkResponse({
-    description: 'The subcontractor has beed found.',
+    description: 'The subcontractor has been found.',
     type: SubcontractorResponseDto,
   })
   async findOne(@Param('id') id: string): Promise<SubcontractorResponseDto> {
