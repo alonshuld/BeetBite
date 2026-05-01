@@ -119,7 +119,7 @@ When creating or updating a `ProjectReport`, `subcontractorId` and `profitMargin
 
 ### Project payment progress
 
-`ProjectResponseDto` includes a `paymentProgress` field computed against `project.estimatedAmount`. `totalPaid` = sum of `ProjectReport.income` where `incomeDate IS NOT NULL`. Fields: `totalPaid`, `remainingAmount` (clamped ≥ 0), `percentagePaid` (0–100, rounded, clamped).
+`ProjectResponseDto` includes a `paymentProgress` field with a single field: `totalPaid` = sum of `ProjectReport.income` where `incomeDate IS NOT NULL`. The frontend derives `remainingAmount` and `percentagePaid` from `totalPaid` and the project's `estimatedAmount`.
 
 ### Testing approach
 

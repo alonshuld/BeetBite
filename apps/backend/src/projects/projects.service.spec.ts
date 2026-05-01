@@ -4,7 +4,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
-import { PRISMA_ERROR_CODES } from 'src/common/constants';
+import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { ProjectNotFoundError } from './errors/project-not-found.exception';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
 import { ClientNotFoundError } from '../clients/errors/client-not-found.exception';
@@ -22,11 +22,6 @@ describe('ProjectsService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
-    projectReport: {
-      aggregate: jest.fn(),
-      groupBy: jest.fn(),
-    },
-    $transaction: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -119,91 +114,68 @@ describe('ProjectsService', () => {
   });
 
   describe('findAll', () => {
-    const mockProjects = [
-      {
-        id: 'p1',
-        clientId: 'c1',
-        name: 'Project 1',
-        estimatedAmount: new Prisma.Decimal('5000'),
-        finishDate: new Date('2026-01-10T00:00:00.000Z'),
-        description: 'Description 1',
-      },
-      {
-        id: 'p2',
-        clientId: 'c2',
-        name: 'Project 2',
-        estimatedAmount: new Prisma.Decimal('10000'),
-        finishDate: new Date('2026-01-10T00:00:00.000Z'),
-        description: 'Description 2',
-      },
-    ];
+    const baseProject = (id: string, clientId: string, name: string, estimatedAmount: string, description: string) => ({
+      id,
+      clientId,
+      name,
+      estimatedAmount: new Prisma.Decimal(estimatedAmount),
+      finishDate: new Date('2026-01-10T00:00:00.000Z'),
+      description,
+    });
 
     it('should return a list of projects with default pagination and correct payment progress', async () => {
-      const projects = mockProjects;
-      const incomesSums = [
-        { projectId: 'p1', _sum: { income: 2000 } },
-        { projectId: 'p2', _sum: { income: 5000 } },
+      const projects = [
+        { ...baseProject('p1', 'c1', 'Project 1', '5000', 'Description 1'), reports: [{ income: new Prisma.Decimal('2000') }] },
+        { ...baseProject('p2', 'c2', 'Project 2', '10000', 'Description 2'), reports: [{ income: new Prisma.Decimal('5000') }] },
       ];
-      mockPrismaService.$transaction.mockImplementation((callbackOrArray) => {
-        if (typeof callbackOrArray === 'function') {
-          // Simulate callback transaction (findAll)
-          return callbackOrArray({
-            project: { findMany: () => projects },
-            projectReport: { groupBy: () => incomesSums },
-          });
-        }
-        return [];
-      });
+      mockPrismaService.project.findMany.mockResolvedValue(projects);
 
       const result = await service.findAll();
 
       expect(result).toHaveLength(2);
-      // Project 1: estimatedAmount 5000, paid 2000
-      expect(result[0].paymentProgress).toEqual({
-        totalPaid: 2000,
-        remainingAmount: 3000,
-        percentagePaid: 40,
-      });
-      // Project 2: estimatedAmount 10000, paid 5000
-      expect(result[1].paymentProgress).toEqual({
-        totalPaid: 5000,
-        remainingAmount: 5000,
-        percentagePaid: 50,
-      });
+      expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 0,
+          take: PAGINATION_DEFAULTS.LIMIT,
+          include: expect.objectContaining({
+            reports: expect.objectContaining({
+              where: { incomeDate: { not: null } },
+            }),
+          }),
+        }),
+      );
+      expect(result[0].paymentProgress).toEqual({ totalPaid: 2000 });
+      expect(result[1].paymentProgress).toEqual({ totalPaid: 5000 });
     });
 
-    it('should apply pagination params and return correct payment progress', async () => {
-      const projects = [mockProjects[0]];
-      const incomesSums = [{ projectId: 'p1', _sum: { income: 5000 } }];
-      mockPrismaService.$transaction.mockImplementation((callbackOrArray) => {
-        if (typeof callbackOrArray === 'function') {
-          // Simulate callback transaction (findAll)
-          return callbackOrArray({
-            project: { findMany: () => projects },
-            projectReport: { groupBy: () => incomesSums },
-          });
-        }
-        return [];
-      });
+    it('should apply pagination params and correctly filter paid incomes', async () => {
+      const projects = [
+        { ...baseProject('p1', 'c1', 'Project 1', '5000', 'Description 1'), reports: [{ income: new Prisma.Decimal('5000') }] },
+      ];
+      mockPrismaService.project.findMany.mockResolvedValue(projects);
 
-      const pagination: PaginationQueryDto = {
-        page: 2,
-        limit: 1,
-      };
+      const pagination: PaginationQueryDto = { page: 2, limit: 1 };
 
       const result = await service.findAll(pagination);
 
       expect(result).toHaveLength(1);
-      expect(result[0].paymentProgress).toEqual({
-        totalPaid: 5000,
-        remainingAmount: 0,
-        percentagePaid: 100,
-      });
+      expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 1,
+          take: 1,
+          include: expect.objectContaining({
+            reports: expect.objectContaining({
+              where: { incomeDate: { not: null } },
+            }),
+          }),
+        }),
+      );
+      expect(result[0].paymentProgress).toEqual({ totalPaid: 5000 });
     });
   });
 
   describe('findOne', () => {
-    const mockProject = {
+    const baseProject = {
       id: 'p1',
       clientId: 'c1',
       name: 'Test Project',
@@ -213,54 +185,40 @@ describe('ProjectsService', () => {
     };
 
     it('should return a project', async () => {
-      const project = mockProject;
-      const incomesSum = { _sum: { income: 0 } };
-      mockPrismaService.$transaction.mockResolvedValue([project, incomesSum]);
+      mockPrismaService.project.findUnique.mockResolvedValue({ ...baseProject, reports: [] });
       const result = await service.findOne('p1');
-      expect(result.id).toBe(mockProject.id);
+      expect(result.id).toBe(baseProject.id);
     });
 
-    it('should return payment progress 0 when no project reports', async () => {
-      const project = mockProject;
-      const incomesSum = { _sum: { income: 0 } };
-      mockPrismaService.$transaction.mockResolvedValue([project, incomesSum]);
+    it('should return totalPaid 0 when no project reports', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({ ...baseProject, reports: [] });
       const result = await service.findOne('p1');
-      expect(result.paymentProgress).toEqual({
-        totalPaid: 0,
-        remainingAmount: 1000,
-        percentagePaid: 0,
-      });
+      expect(result.paymentProgress).toEqual({ totalPaid: 0 });
     });
 
-    it('should return partial payment progress when project reports exist but not complete', async () => {
-      const project = mockProject;
-      const incomesSum = { _sum: { income: 500 } };
-      mockPrismaService.$transaction.mockResolvedValue([project, incomesSum]);
-      const result = await service.findOne('p1');
-      expect(result.paymentProgress).toEqual({
-        totalPaid: 500,
-        remainingAmount: 500,
-        percentagePaid: 50,
+    it('should return correct totalPaid when project reports exist', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...baseProject,
+        reports: [{ income: new Prisma.Decimal('500') }],
       });
+      const result = await service.findOne('p1');
+      expect(result.paymentProgress).toEqual({ totalPaid: 500 });
     });
 
-    it('should return complete payment progress when project reports sum equals estimatedAmount', async () => {
-      const project = mockProject;
-      const incomesSum = { _sum: { income: 1000 } };
-      mockPrismaService.$transaction.mockResolvedValue([project, incomesSum]);
-      const result = await service.findOne('p1');
-      expect(result.paymentProgress).toEqual({
-        totalPaid: 1000,
-        remainingAmount: 0,
-        percentagePaid: 100,
+    it('should sum multiple reports for totalPaid', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...baseProject,
+        reports: [
+          { income: new Prisma.Decimal('400') },
+          { income: new Prisma.Decimal('600') },
+        ],
       });
+      const result = await service.findOne('p1');
+      expect(result.paymentProgress).toEqual({ totalPaid: 1000 });
     });
 
     it('should throw ProjectNotFoundError when project not found', async () => {
-      mockPrismaService.$transaction.mockResolvedValue([
-        null,
-        { _sum: { income: 0 } },
-      ]);
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
       await expect(service.findOne('p1')).rejects.toThrow(ProjectNotFoundError);
     });
   });

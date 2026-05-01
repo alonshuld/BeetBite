@@ -47,6 +47,7 @@ export class ProjectResponseDto {
 
   @ApiProperty({
     description: 'The payment progress the client has made on the project',
+    type: () => ProjectPaymentProgressDto,
   })
   paymentProgress!: ProjectPaymentProgressDto;
 }

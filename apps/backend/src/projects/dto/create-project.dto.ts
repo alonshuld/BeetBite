@@ -3,8 +3,8 @@ import {
   IsString,
   IsNotEmpty,
   IsNumber,
-  Min,
   IsISO8601,
+  IsPositive,
 } from 'class-validator';
 
 /**
@@ -30,7 +30,7 @@ export class CreateProjectDto {
   name!: string;
 
   @IsNumber()
-  @Min(0)
+  @IsPositive()
   @ApiProperty({
     example: 150000.5,
     description: 'Estimated amount for the project',
@@ -47,6 +47,8 @@ export class CreateProjectDto {
   })
   finishDate!: string;
 
+  @IsNotEmpty()
+  @IsString()
   @ApiProperty({
     example: 'Renovation of the office building located at 123 Main St.',
     description: 'A description of the project',

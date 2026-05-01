@@ -17,6 +17,13 @@ import { PaginationQueryDto } from '../common/pagination-query.dto';
 import { Prisma } from 'src/generated/client';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
 
+const PAID_REPORTS_INCLUDE = {
+  reports: {
+    where: { incomeDate: { not: null } },
+    select: { income: true },
+  },
+} as const;
+
 /**
  * Service providing projects business logic.
  * @param prismaService PrismaService for database interactions
@@ -70,34 +77,21 @@ export class ProjectsService {
     const page = paginationQuery?.page ?? PAGINATION_DEFAULTS.PAGE;
     const limit = paginationQuery?.limit ?? PAGINATION_DEFAULTS.LIMIT;
 
-    const [projects, incomesSums] = await this.prismaService.$transaction(
-      async (tx) => {
-        const projects = await tx.project.findMany({
-          skip: Math.max(0, (page - 1) * limit),
-          take: Math.max(1, limit),
-        });
-
-        const incomeSums = await tx.projectReport.groupBy({
-          by: ['projectId'],
-          _sum: { income: true },
-          where: {
-            incomeDate: { not: null },
-            projectId: { in: projects.map((project) => project.id) },
-          },
-        });
-
-        return [projects, incomeSums];
-      },
-    );
+    const projectsWithReports = await this.prismaService.project.findMany({
+      skip: Math.max(0, (page - 1) * limit),
+      take: Math.max(1, limit),
+      include: PAID_REPORTS_INCLUDE,
+    });
 
     const projectIdToIncomesSumMap = new Map<string, number>();
-
-    for (const incomesSum of incomesSums) {
+    for (const { id, reports } of projectsWithReports) {
       projectIdToIncomesSumMap.set(
-        incomesSum.projectId,
-        Number(incomesSum._sum.income ?? 0),
+        id,
+        reports.reduce((sum, r) => sum + Number(r.income), 0),
       );
     }
+
+    const projects = projectsWithReports.map(({ reports: _, ...project }) => project);
 
     this.logger.log(`Projects retrieved: ${projects.length} items`);
 
@@ -110,27 +104,20 @@ export class ProjectsService {
    * @returns The found project.
    */
   async findOne(id: string): Promise<ProjectResponseDto> {
-    const [project, incomesSum] = await this.prismaService.$transaction([
-      this.prismaService.project.findUnique({
-        where: { id },
-      }),
-      this.prismaService.projectReport.aggregate({
-        where: {
-          projectId: id,
-          incomeDate: { not: null },
-        },
-        _sum: {
-          income: true,
-        },
-      }),
-    ]);
+    const projectWithReports = await this.prismaService.project.findUnique({
+      where: { id },
+      include: PAID_REPORTS_INCLUDE,
+    });
 
-    if (!project) {
+    if (!projectWithReports) {
       throw new ProjectNotFoundError(id);
     }
 
+    const { reports, ...project } = projectWithReports;
+    const incomesSum = reports.reduce((sum, r) => sum + Number(r.income), 0);
+
     this.logger.log(`Project retrieved: ${id}`);
-    return toProjectResponse(project, Number(incomesSum._sum.income ?? 0));
+    return toProjectResponse(project, incomesSum);
   }
 
   /**
@@ -147,8 +134,7 @@ export class ProjectsService {
       const project = await this.prismaService.project.update({
         where: { id },
         data: {
-          clientId: updateProjectDto.clientId,
-          name: updateProjectDto.name,
+          ...updateProjectDto,
           estimatedAmount: new Prisma.Decimal(updateProjectDto.estimatedAmount),
           finishDate: new Date(updateProjectDto.finishDate),
         },

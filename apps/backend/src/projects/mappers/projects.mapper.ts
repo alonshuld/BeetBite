@@ -23,21 +23,13 @@ export const toProjectBasicResponse = (
  */
 export const toProjectResponse = (
   project: Project,
-  incomesSum: number = 0,
+  incomesSum: number,
 ): ProjectResponseDto => ({
-  id: project.id,
-  clientId: project.clientId,
-  name: project.name,
+  ...project,
   estimatedAmount: project.estimatedAmount.toNumber(),
   finishDate: project.finishDate.toISOString(),
-  description: project.description,
   paymentProgress: {
     totalPaid: Number(incomesSum ?? 0),
-    remainingAmount: Number(project.estimatedAmount) - Number(incomesSum),
-    percentagePaid:
-      Number(project.estimatedAmount) === 0
-        ? 0
-        : (Number(incomesSum) / Number(project.estimatedAmount)) * 100,
   },
 });
 
