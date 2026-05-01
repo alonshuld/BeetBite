@@ -3,9 +3,11 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectResponseDto } from './dto/project-response.dto';
+import { ProjectBasicResponseDto } from './dto/project-basic-response.dto';
 import {
   toProjectResponse,
   toProjectResponseList,
+  toProjectBasicResponse,
 } from './mappers/projects.mapper';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
 import { PRISMA_ERROR_CODES, PAGINATION_DEFAULTS } from 'src/common/constants';
@@ -14,6 +16,13 @@ import { ClientNotFoundError } from '../clients/errors/client-not-found.exceptio
 import { PaginationQueryDto } from '../common/pagination-query.dto';
 import { Prisma } from 'src/generated/client';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
+
+const PAID_REPORTS_INCLUDE = {
+  reports: {
+    where: { incomeDate: { not: null } },
+    select: { income: true },
+  },
+} as const;
 
 /**
  * Service providing projects business logic.
@@ -32,19 +41,18 @@ export class ProjectsService {
    */
   async create(
     createProjectDto: CreateProjectDto,
-  ): Promise<ProjectResponseDto> {
+  ): Promise<ProjectBasicResponseDto> {
     try {
       const createdProject = await this.prismaService.project.create({
         data: {
-          clientId: createProjectDto.clientId,
-          name: createProjectDto.name,
+          ...createProjectDto,
           estimatedAmount: new Prisma.Decimal(createProjectDto.estimatedAmount),
           finishDate: new Date(createProjectDto.finishDate),
         },
       });
       this.logger.log(`Project created: ${createdProject.id}`);
 
-      return toProjectResponse(createdProject);
+      return toProjectBasicResponse(createdProject);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
@@ -69,14 +77,25 @@ export class ProjectsService {
     const page = paginationQuery?.page ?? PAGINATION_DEFAULTS.PAGE;
     const limit = paginationQuery?.limit ?? PAGINATION_DEFAULTS.LIMIT;
 
-    const projects = await this.prismaService.project.findMany({
+    const projectsWithReports = await this.prismaService.project.findMany({
       skip: Math.max(0, (page - 1) * limit),
       take: Math.max(1, limit),
+      include: PAID_REPORTS_INCLUDE,
     });
+
+    const projectIdToIncomesSumMap = new Map<string, number>();
+    for (const { id, reports } of projectsWithReports) {
+      projectIdToIncomesSumMap.set(
+        id,
+        reports.reduce((sum, r) => sum + Number(r.income), 0),
+      );
+    }
+
+    const projects = projectsWithReports.map(({ reports: _, ...project }) => project);
 
     this.logger.log(`Projects retrieved: ${projects.length} items`);
 
-    return toProjectResponseList(projects);
+    return toProjectResponseList(projects, projectIdToIncomesSumMap);
   }
 
   /**
@@ -85,16 +104,20 @@ export class ProjectsService {
    * @returns The found project.
    */
   async findOne(id: string): Promise<ProjectResponseDto> {
-    const project = await this.prismaService.project.findUnique({
+    const projectWithReports = await this.prismaService.project.findUnique({
       where: { id },
+      include: PAID_REPORTS_INCLUDE,
     });
 
-    if (!project) {
+    if (!projectWithReports) {
       throw new ProjectNotFoundError(id);
     }
 
+    const { reports, ...project } = projectWithReports;
+    const incomesSum = reports.reduce((sum, r) => sum + Number(r.income), 0);
+
     this.logger.log(`Project retrieved: ${id}`);
-    return toProjectResponse(project);
+    return toProjectResponse(project, incomesSum);
   }
 
   /**
@@ -106,20 +129,19 @@ export class ProjectsService {
   async update(
     id: string,
     updateProjectDto: UpdateProjectDto,
-  ): Promise<ProjectResponseDto> {
+  ): Promise<ProjectBasicResponseDto> {
     try {
       const project = await this.prismaService.project.update({
         where: { id },
         data: {
-          clientId: updateProjectDto.clientId,
-          name: updateProjectDto.name,
+          ...updateProjectDto,
           estimatedAmount: new Prisma.Decimal(updateProjectDto.estimatedAmount),
           finishDate: new Date(updateProjectDto.finishDate),
         },
       });
 
       this.logger.log(`Project updated: ${id}`);
-      return toProjectResponse(project);
+      return toProjectBasicResponse(project);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {

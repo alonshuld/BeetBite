@@ -26,6 +26,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectResponseDto } from './dto/project-response.dto';
 import { PaginationQueryDto } from '../common/pagination-query.dto';
+import { ProjectBasicResponseDto } from './dto/project-basic-response.dto';
 
 /**
  * Controller for project-related endpoints.
@@ -46,13 +47,13 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Create a new project' })
   @ApiCreatedResponse({
     description: 'The project has been successfully created.',
-    type: ProjectResponseDto,
+    type: ProjectBasicResponseDto,
   })
   @ApiBadRequestResponse({ description: 'Invalid input data' })
   @ApiConflictResponse({ description: 'Project already exists' })
   async create(
     @Body() createProjectDto: CreateProjectDto,
-  ): Promise<ProjectResponseDto> {
+  ): Promise<ProjectBasicResponseDto> {
     return await this.projectsService.create(createProjectDto);
   }
 
@@ -104,7 +105,7 @@ export class ProjectsController {
   @ApiParam({ name: 'id', description: 'Project ID' })
   @ApiOkResponse({
     description: 'The project has been successfully updated.',
-    type: ProjectResponseDto,
+    type: ProjectBasicResponseDto,
   })
   @ApiNotFoundResponse({ description: 'Project not found' })
   @ApiBadRequestResponse({ description: 'Invalid input data' })
@@ -112,7 +113,7 @@ export class ProjectsController {
   async update(
     @Param('id') id: string,
     @Body() updateProjectDto: UpdateProjectDto,
-  ): Promise<ProjectResponseDto> {
+  ): Promise<ProjectBasicResponseDto> {
     return await this.projectsService.update(id, updateProjectDto);
   }
 
