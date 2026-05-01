@@ -4,6 +4,7 @@ import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectResponseDto } from './dto/project-response.dto';
+import { ProjectBasicResponseDto } from './dto/project-basic-response.dto';
 import { PaginationQueryDto } from '../common/pagination-query.dto';
 
 describe('ProjectsController', () => {
@@ -43,14 +44,16 @@ describe('ProjectsController', () => {
         name: 'Test Project',
         estimatedAmount: 100000,
         finishDate: '2026-12-31',
+        description: 'Test project description',
       };
 
-      const expectedResult: ProjectResponseDto = {
+      const expectedResult: ProjectBasicResponseDto = {
         id: 'project-1',
         clientId: 'client-1',
         name: 'Test Project',
         estimatedAmount: 100000,
         finishDate: '2026-12-31',
+        description: 'Test project description',
       };
 
       mockProjectsService.create.mockResolvedValue(expectedResult);
@@ -72,6 +75,7 @@ describe('ProjectsController', () => {
           name: 'Duplicate Project',
           estimatedAmount: 1000,
           finishDate: '2026-01-01',
+          description: 'A description',
         }),
       ).rejects.toThrow('Project already exists');
     });
@@ -86,6 +90,8 @@ describe('ProjectsController', () => {
           name: 'Project 1',
           estimatedAmount: 5000,
           finishDate: '',
+          description: 'Description 1',
+          paymentProgress: { totalPaid: 2000 },
         },
         {
           id: 'p2',
@@ -93,6 +99,8 @@ describe('ProjectsController', () => {
           name: 'Project 2',
           estimatedAmount: 10000,
           finishDate: '',
+          description: 'Description 2',
+          paymentProgress: { totalPaid: 5000 },
         },
       ];
 
@@ -114,6 +122,8 @@ describe('ProjectsController', () => {
           name: 'Project 3',
           estimatedAmount: 7500,
           finishDate: '',
+          description: 'Description 3',
+          paymentProgress: { totalPaid: 0 },
         },
       ];
 
@@ -142,6 +152,8 @@ describe('ProjectsController', () => {
         name: 'Project 1',
         estimatedAmount: 5000,
         finishDate: '',
+        description: 'Description 1',
+        paymentProgress: { totalPaid: 2000 },
       };
 
       mockProjectsService.findOne.mockResolvedValue(expectedResult);
@@ -171,14 +183,16 @@ describe('ProjectsController', () => {
         name: 'Updated Project',
         estimatedAmount: 200000,
         finishDate: '2027-01-01',
+        description: 'Updated description',
       };
 
-      const expectedResult: ProjectResponseDto = {
+      const expectedResult: ProjectBasicResponseDto = {
         id: 'p1',
         clientId: 'client-2',
         name: 'Updated Project',
         estimatedAmount: 200000,
         finishDate: '2027-01-01',
+        description: 'Updated description',
       };
 
       mockProjectsService.update.mockResolvedValue(expectedResult);
