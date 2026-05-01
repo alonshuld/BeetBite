@@ -3,35 +3,26 @@ import { CreateSubcontractorPaymentDto } from './dto/create-subcontractor-paymen
 import { UpdateSubcontractorPaymentDto } from './dto/update-subcontractor-payment.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SubcontractorPaymentResponseDto } from './dto/subcontractor-payments-response.dto';
-import {
-  toSubcontractorPaymentResponse,
-  toSubcontractorPaymentResponseList,
-} from './mappers/subcontractor-payment.mapper';
+import { toSubcontractorPaymentResponse } from './mappers/subcontractor-payment.mapper';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
-import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
+import { PRISMA_ERROR_CODES } from 'src/common/constants';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
-import { SubcontractorPaymentAlreadyExistsError } from './errors/subcontractor-payment-already-exists.error';
 import { SubcontractorPaymentNotFoundError } from './errors/subcontractor-payment-not-found.error';
-import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
+import { SubcontractorPaymentAlreadyExistsError } from './errors/subcontractor-payment-already-exists.error';
+import { MonthQueryDto } from 'src/common/month-query.dto';
+import {
+  toMonthlySubcontractorPaymentsResponse,
+  toMonthlySubcontractorPaymentsResponseList,
+} from './mappers/monthly-subcontractor-payments.mapper';
+import { MonthlySubcontractorPaymentsDto } from './dto/monthly-subcontractor-payments.dto';
 
-/**
- * Service providing subcontractor payment business logic.
- * Handles create, read, update, and delete operations.
- * @param prismaService PrismaService for database interactions
- */
 @Injectable()
 export class SubcontractorPaymentsService {
   private readonly logger = new Logger(SubcontractorPaymentsService.name);
 
   constructor(private readonly prismaService: PrismaService) {}
 
-  /**
-   * Calculates the payment amount for a subcontractor based on their projects in a given service month.
-   * @param subcontractorId Subcontractor ID for which the payment amount will be calculated
-   * @param serviceDate Date representing the service month for which the payment amount will be calculated
-   * @returns The calculated payment amount for the subcontractor in the given service month
-   */
-  private async calculateSubcontractorPaymentAmount(
+  private async calculateSubcontractorExpectedTotal(
     subcontractorId: string,
     serviceDate: Date,
   ): Promise<number> {
@@ -67,11 +58,45 @@ export class SubcontractorPaymentsService {
     }, 0);
   }
 
-  /**
-   * Create a new subcontractor payment
-   * @param createSubcontractorPaymentDto Parameters for subcontractor payment creation
-   * @returns The created subcontractor payment response DTO
-   */
+  private async calculateAllSubcontractorsExpectedTotal(
+    serviceDate: Date,
+  ): Promise<Record<string, number>> {
+    const subcontractorsMonthlyProjects =
+      await this.prismaService.projectReport.findMany({
+        where: {
+          date: serviceDate,
+        },
+        select: {
+          subcontractorId: true,
+          income: true,
+          profitMargin: true,
+          corporationPayments: {
+            select: { amount: true },
+          },
+        },
+      });
+
+    const expectedTotalBySubcontractor = subcontractorsMonthlyProjects.reduce(
+      (acc, project) => {
+        const income = project.income.toNumber();
+        const profitMargin = project.profitMargin.toNumber();
+        const afterProfit = income - (profitMargin * income) / 100;
+        const corporationPaymentsTotal = project.corporationPayments.reduce(
+          (sum, payment) => sum + payment.amount.toNumber(),
+          0,
+        );
+        const subcontractorPayment = afterProfit - corporationPaymentsTotal;
+
+        acc[project.subcontractorId] =
+          (acc[project.subcontractorId] ?? 0) + subcontractorPayment;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    return expectedTotalBySubcontractor;
+  }
+
   async create(
     createSubcontractorPaymentDto: CreateSubcontractorPaymentDto,
   ): Promise<SubcontractorPaymentResponseDto> {
@@ -79,18 +104,25 @@ export class SubcontractorPaymentsService {
       const subcontractorPayment =
         await this.prismaService.subcontractorPayment.create({
           data: { ...createSubcontractorPaymentDto },
+          select: {
+            id: true,
+            serviceDate: true,
+            paymentDate: true,
+            amount: true,
+            subcontractor: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
         });
 
       this.logger.log(
         `Subcontractor payment created: ${subcontractorPayment.id}`,
       );
 
-      const amount = await this.calculateSubcontractorPaymentAmount(
-        createSubcontractorPaymentDto.subcontractorId,
-        new Date(createSubcontractorPaymentDto.serviceDate),
-      );
-
-      return toSubcontractorPaymentResponse(subcontractorPayment, amount);
+      return toSubcontractorPaymentResponse(subcontractorPayment);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
@@ -101,7 +133,6 @@ export class SubcontractorPaymentsService {
           case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
             throw new SubcontractorPaymentAlreadyExistsError(
               createSubcontractorPaymentDto.subcontractorId,
-              createSubcontractorPaymentDto.serviceDate,
             );
         }
       }
@@ -109,62 +140,97 @@ export class SubcontractorPaymentsService {
     }
   }
 
-  /**
-   * Get all of the subcontractor payments from a service month
-   * @param paginatedMonthQueryDto The service month of the payments that will be retrieved
-   * @returns List of all of the subcontractor payments from the matching service date
-   */
-  async findAll(
-    paginatedMonthQueryDto: PaginatedMonthQueryDto,
-  ): Promise<SubcontractorPaymentResponseDto[]> {
-    const page = paginatedMonthQueryDto.page ?? PAGINATION_DEFAULTS.PAGE;
-    const limit = paginatedMonthQueryDto.limit ?? PAGINATION_DEFAULTS.LIMIT;
+  async findSubcontractorMonthlyPayments(
+    subcontractorId: string,
+    monthQuery: MonthQueryDto,
+  ): Promise<MonthlySubcontractorPaymentsDto> {
+    const [subcontractorWithPayments, expectedTotal] = await Promise.all([
+      this.prismaService.subcontractor.findUnique({
+        where: { id: subcontractorId },
+        select: {
+          id: true,
+          name: true,
+          payments: {
+            where: { serviceDate: new Date(monthQuery.month) },
+            select: {
+              id: true,
+              serviceDate: true,
+              paymentDate: true,
+              amount: true,
+            },
+          },
+        },
+      }),
+      this.calculateSubcontractorExpectedTotal(
+        subcontractorId,
+        new Date(monthQuery.month),
+      ),
+    ]);
 
-    const subcontractorPayments =
-      await this.prismaService.subcontractorPayment.findMany({
-        where: { serviceDate: paginatedMonthQueryDto.month },
-        skip: Math.max(0, (page - 1) * limit),
-        take: Math.max(1, limit),
-      });
-
-    this.logger.log(
-      `Retrieved ${subcontractorPayments.length} subcontractor payments from ${paginatedMonthQueryDto.month}`,
-    );
-
-    return toSubcontractorPaymentResponseList(subcontractorPayments);
-  }
-
-  /**
-   * Find subcontractor payment with matching ID
-   * @param id ID of the subcontractor payment to retrieve
-   * @returns The corresponding subcontractor payment
-   */
-  async findOne(id: string): Promise<SubcontractorPaymentResponseDto> {
-    const subcontractorPayment =
-      await this.prismaService.subcontractorPayment.findUnique({
-        where: { id },
-      });
-
-    if (!subcontractorPayment) {
-      throw new SubcontractorPaymentNotFoundError(id);
+    if (!subcontractorWithPayments) {
+      throw new SubcontractorNotFoundError(subcontractorId);
     }
 
-    this.logger.log(`Subcontractor payment retrieved: ${id}`);
-
-    const amount = await this.calculateSubcontractorPaymentAmount(
-      subcontractorPayment.subcontractorId,
-      subcontractorPayment.serviceDate,
+    this.logger.log(
+      `Retrieved ${subcontractorWithPayments.payments.length} subcontractor payments for ID: ${subcontractorId}`,
     );
 
-    return toSubcontractorPaymentResponse(subcontractorPayment, amount);
+    return toMonthlySubcontractorPaymentsResponse({
+      ...subcontractorWithPayments,
+      expectedTotal,
+    });
   }
 
-  /**
-   * Updates a subcontractor payment by its ID.
-   * @param id ID of the subcontractor payment to update
-   * @param updateSubcontractorPaymentDto The DTO containing updated subcontractor payment details.
-   * @returns The updated subcontractor payment.
-   */
+  async findSubcontractorPaymentsInMonth(
+    monthQuery: MonthQueryDto,
+  ): Promise<MonthlySubcontractorPaymentsDto[]> {
+    const serviceDate = new Date(monthQuery.month);
+
+    const [subcontractorsWithPayments, expectedTotalBySubcontractor] =
+      await Promise.all([
+        this.prismaService.subcontractor.findMany({
+          where: {
+            payments: {
+              some: {
+                serviceDate: serviceDate,
+              },
+            },
+          },
+          select: {
+            id: true,
+            name: true,
+            payments: {
+              where: {
+                serviceDate: serviceDate,
+              },
+              select: {
+                id: true,
+                serviceDate: true,
+                paymentDate: true,
+                amount: true,
+              },
+            },
+          },
+        }),
+        this.calculateAllSubcontractorsExpectedTotal(serviceDate),
+      ]);
+
+    const subcontractorsWithPaymentsAndTotal = subcontractorsWithPayments.map(
+      (subcontractor) => ({
+        ...subcontractor,
+        expectedTotal: expectedTotalBySubcontractor[subcontractor.id] ?? 0,
+      }),
+    );
+
+    this.logger.log(
+      `Retrieved payments of ${subcontractorsWithPayments.length} subcontractors from ${serviceDate.toLocaleDateString()}`,
+    );
+
+    return toMonthlySubcontractorPaymentsResponseList(
+      subcontractorsWithPaymentsAndTotal,
+    );
+  }
+
   async update(
     id: string,
     updateSubcontractorPaymentDto: UpdateSubcontractorPaymentDto,
@@ -174,16 +240,23 @@ export class SubcontractorPaymentsService {
         await this.prismaService.subcontractorPayment.update({
           where: { id },
           data: { ...updateSubcontractorPaymentDto },
+          select: {
+            id: true,
+            serviceDate: true,
+            paymentDate: true,
+            amount: true,
+            subcontractor: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
         });
 
       this.logger.log(`Subcontractor payment updated: ${id}`);
 
-      const amount = await this.calculateSubcontractorPaymentAmount(
-        subcontractorPayment.subcontractorId,
-        subcontractorPayment.serviceDate,
-      );
-
-      return toSubcontractorPaymentResponse(subcontractorPayment, amount);
+      return toSubcontractorPaymentResponse(subcontractorPayment);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
@@ -195,10 +268,6 @@ export class SubcontractorPaymentsService {
     }
   }
 
-  /**
-   * Removes a subcontractor payment by its ID.
-   * @param id ID of the subcontractor payment to remove
-   */
   async remove(id: string): Promise<void> {
     try {
       await this.prismaService.subcontractorPayment.delete({

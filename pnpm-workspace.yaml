@@ -6,4 +6,7 @@ onlyBuiltDependencies:
   - '@prisma/engines'
   - '@scarf/scarf'
   - '@swc/core'
+  - cpu-features
   - prisma
+  - protobufjs
+  - ssh2

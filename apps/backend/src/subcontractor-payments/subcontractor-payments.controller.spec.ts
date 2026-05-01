@@ -3,15 +3,14 @@ import { SubcontractorPaymentsController } from './subcontractor-payments.contro
 import { SubcontractorPaymentsService } from './subcontractor-payments.service';
 import { SubcontractorPaymentNotFoundError } from './errors/subcontractor-payment-not-found.error';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
-import { SubcontractorPaymentAlreadyExistsError } from './errors/subcontractor-payment-already-exists.error';
 
 describe('SubcontractorPaymentsController', () => {
   let controller: SubcontractorPaymentsController;
 
   const mockSubcontractorPaymentsService = {
     create: jest.fn(),
-    findAll: jest.fn(),
-    findOne: jest.fn(),
+    findSubcontractorPaymentsInMonth: jest.fn(),
+    findSubcontractorMonthlyPayments: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
   };
@@ -42,14 +41,16 @@ describe('SubcontractorPaymentsController', () => {
     it('should create a subcontractor payment', async () => {
       const createDto = {
         subcontractorId: '1',
-        serviceDate: '2024-06',
-        paymentDate: '2024-06-01',
+        serviceDate: '2024-06-01',
+        paymentDate: '2024-06-15',
+        amount: 1000,
       };
       const expectedResult = {
         id: '1',
-        subcontractorId: 'sub1',
-        serviceDate: '2024-06',
-        paymentDate: '2024-06-01',
+        subcontractor: { id: 'sub1', name: 'Test Sub' },
+        serviceDate: '2024-06-01T00:00:00.000Z',
+        paymentDate: '2024-06-15T00:00:00.000Z',
+        amount: 1000,
       };
 
       mockSubcontractorPaymentsService.create.mockResolvedValue(expectedResult);
@@ -65,8 +66,9 @@ describe('SubcontractorPaymentsController', () => {
     it('should throw if subcontractor payment creation fails', async () => {
       const createDto = {
         subcontractorId: '1',
-        serviceDate: '2024-06',
-        paymentDate: '2024-06-01',
+        serviceDate: '2024-06-01',
+        paymentDate: '2024-06-15',
+        amount: 1000,
       };
 
       mockSubcontractorPaymentsService.create.mockRejectedValue(
@@ -80,56 +82,62 @@ describe('SubcontractorPaymentsController', () => {
   });
 
   describe('findAll', () => {
-    it('should return all subcontractor payments', async () => {
+    it('should return all subcontractor payments for a month', async () => {
       const expectedResult = [
         {
-          id: '1',
-          subcontractorId: 'sub1',
-          serviceDate: '2024-06',
-          paymentDate: '2024-06-01',
-        },
-        {
-          id: '2',
-          subcontractorId: 'sub2',
-          serviceDate: '2024-05',
-          paymentDate: '2024-05-01',
+          subcontractor: { id: '1', name: 'Sub 1' },
+          payments: [
+            {
+              id: 'p1',
+              serviceDate: '2024-06-01T00:00:00.000Z',
+              paymentDate: '2024-06-15T00:00:00.000Z',
+              amount: 1000,
+            },
+          ],
+          total: 1000,
+          expectedTotal: 1500,
         },
       ];
 
-      mockSubcontractorPaymentsService.findAll.mockResolvedValue(
+      mockSubcontractorPaymentsService.findSubcontractorPaymentsInMonth.mockResolvedValue(
         expectedResult,
       );
 
-      const result = await controller.findAll({
-        month: '2024-06',
-      });
+      const result = await controller.findAll({ month: '2024-06' });
 
       expect(result).toEqual(expectedResult);
-      expect(mockSubcontractorPaymentsService.findAll).toHaveBeenCalledWith({
-        month: '2024-06',
-      });
+      expect(
+        mockSubcontractorPaymentsService.findSubcontractorPaymentsInMonth,
+      ).toHaveBeenCalledWith({ month: '2024-06' });
     });
   });
 
   describe('findOne', () => {
     it('should return a subcontractor payment by id', async () => {
       const expectedResult = {
-        id: '1',
-        subcontractorId: 'sub1',
-        serviceDate: '2024-06',
-        paymentDate: '2024-06-01',
+        subcontractor: { id: '1', name: 'Sub 1' },
+        payments: [
+          {
+            id: 'p1',
+            serviceDate: '2024-06-01T00:00:00.000Z',
+            paymentDate: '2024-06-15T00:00:00.000Z',
+            amount: 1000,
+          },
+        ],
+        total: 1000,
+        expectedTotal: 1500,
       };
 
-      mockSubcontractorPaymentsService.findOne.mockResolvedValue(
+      mockSubcontractorPaymentsService.findSubcontractorMonthlyPayments.mockResolvedValue(
         expectedResult,
       );
 
-      const result = await controller.findOne('1');
+      const result = await controller.findOne('1', { month: '2024-06' });
 
       expect(result).toEqual(expectedResult);
-      expect(mockSubcontractorPaymentsService.findOne).toHaveBeenCalledWith(
-        '1',
-      );
+      expect(
+        mockSubcontractorPaymentsService.findSubcontractorMonthlyPayments,
+      ).toHaveBeenCalledWith('1', { month: '2024-06' });
     });
   });
 
@@ -137,14 +145,16 @@ describe('SubcontractorPaymentsController', () => {
     it('should update a subcontractor payment', async () => {
       const updateDto = {
         subcontractorId: '1',
-        serviceDate: '2024-06',
+        serviceDate: '2024-06-01',
         paymentDate: '2024-06-15',
+        amount: 1500,
       };
       const expectedResult = {
         id: '1',
-        subcontractorId: 'sub1',
-        serviceDate: '2024-06',
-        paymentDate: '2024-06-15',
+        subcontractor: { id: 'sub1', name: 'Test Sub' },
+        serviceDate: '2024-06-01T00:00:00.000Z',
+        paymentDate: '2024-06-15T00:00:00.000Z',
+        amount: 1500,
       };
 
       mockSubcontractorPaymentsService.update.mockResolvedValue(expectedResult);
@@ -158,11 +168,12 @@ describe('SubcontractorPaymentsController', () => {
       );
     });
 
-    it('should throw SubcontractorPaymentNotFoundException if update fails', async () => {
+    it('should throw SubcontractorPaymentNotFoundError if update fails', async () => {
       const updateDto = {
         subcontractorId: '1',
-        serviceDate: '2024-06',
+        serviceDate: '2024-06-01',
         paymentDate: '2024-06-15',
+        amount: 1500,
       };
 
       mockSubcontractorPaymentsService.update.mockRejectedValue(
@@ -185,7 +196,7 @@ describe('SubcontractorPaymentsController', () => {
       expect(mockSubcontractorPaymentsService.remove).toHaveBeenCalledWith('1');
     });
 
-    it('should throw SubcontractorPaymentNotFoundException if removal fails', async () => {
+    it('should throw SubcontractorPaymentNotFoundError if removal fails', async () => {
       mockSubcontractorPaymentsService.remove.mockRejectedValue(
         new SubcontractorPaymentNotFoundError('1'),
       );
@@ -200,8 +211,8 @@ describe('SubcontractorPaymentsController', () => {
     let integrationController: SubcontractorPaymentsController;
     const integrationMockSubcontractorPaymentsService = {
       create: jest.fn(),
-      findAll: jest.fn(),
-      findOne: jest.fn(),
+      findSubcontractorPaymentsInMonth: jest.fn(),
+      findSubcontractorMonthlyPayments: jest.fn(),
       update: jest.fn(),
       remove: jest.fn(),
     };
@@ -230,14 +241,16 @@ describe('SubcontractorPaymentsController', () => {
         subcontractorId: 'sub-123',
         serviceDate: '2023-01-01',
         paymentDate: '2023-01-15',
+        amount: 1000,
       };
 
       it('should successfully create a payment for existing subcontractor', async () => {
         const expectedPayment = {
           id: 'payment-123',
-          subcontractorId: 'sub-123',
-          serviceDate: '2023-01-01',
-          paymentDate: '2023-01-15',
+          subcontractor: { id: 'sub-123', name: 'Test Sub' },
+          serviceDate: '2023-01-01T00:00:00.000Z',
+          paymentDate: '2023-01-15T00:00:00.000Z',
+          amount: 1000,
         };
 
         integrationMockSubcontractorPaymentsService.create.mockResolvedValue(
@@ -262,38 +275,36 @@ describe('SubcontractorPaymentsController', () => {
         );
       });
 
-      it('should handle SubcontractorPaymentAlreadyExistsError when creating duplicate payment', async () => {
-        integrationMockSubcontractorPaymentsService.create.mockRejectedValue(
-          new SubcontractorPaymentAlreadyExistsError('sub-123', '2023-01-01'),
-        );
-
-        await expect(integrationController.create(createDto)).rejects.toThrow(
-          SubcontractorPaymentAlreadyExistsError,
-        );
-      });
-
       it('should handle payment creation for multiple subcontractors', async () => {
         const createDtos = [
           {
             subcontractorId: 'sub-1',
             serviceDate: '2023-01-01',
             paymentDate: '2023-01-15',
+            amount: 1000,
           },
           {
             subcontractorId: 'sub-2',
             serviceDate: '2023-01-01',
             paymentDate: '2023-01-20',
+            amount: 2000,
           },
         ];
 
         const expectedPayments = [
           {
             id: 'payment-1',
-            ...createDtos[0],
+            subcontractor: { id: 'sub-1', name: 'Sub 1' },
+            serviceDate: '2023-01-01T00:00:00.000Z',
+            paymentDate: '2023-01-15T00:00:00.000Z',
+            amount: 1000,
           },
           {
             id: 'payment-2',
-            ...createDtos[1],
+            subcontractor: { id: 'sub-2', name: 'Sub 2' },
+            serviceDate: '2023-01-01T00:00:00.000Z',
+            paymentDate: '2023-01-20T00:00:00.000Z',
+            amount: 2000,
           },
         ];
 
@@ -316,20 +327,21 @@ describe('SubcontractorPaymentsController', () => {
       it('should retrieve all payments for a specific month', async () => {
         const expectedPayments = [
           {
-            id: 'payment-1',
-            subcontractorId: 'sub-1',
-            serviceDate: '2023-01-01',
-            paymentDate: '2023-01-15',
-          },
-          {
-            id: 'payment-2',
-            subcontractorId: 'sub-2',
-            serviceDate: '2023-01-01',
-            paymentDate: '2023-01-20',
+            subcontractor: { id: 'sub-1', name: 'Sub 1' },
+            payments: [
+              {
+                id: 'payment-1',
+                serviceDate: '2023-01-01T00:00:00.000Z',
+                paymentDate: '2023-01-15T00:00:00.000Z',
+                amount: 1000,
+              },
+            ],
+            total: 1000,
+            expectedTotal: 1500,
           },
         ];
 
-        integrationMockSubcontractorPaymentsService.findAll.mockResolvedValue(
+        integrationMockSubcontractorPaymentsService.findSubcontractorPaymentsInMonth.mockResolvedValue(
           expectedPayments,
         );
 
@@ -339,12 +351,12 @@ describe('SubcontractorPaymentsController', () => {
 
         expect(result).toEqual(expectedPayments);
         expect(
-          integrationMockSubcontractorPaymentsService.findAll,
+          integrationMockSubcontractorPaymentsService.findSubcontractorPaymentsInMonth,
         ).toHaveBeenCalledWith({ month: '2023-01' });
       });
 
       it('should return empty array when no payments found for month', async () => {
-        integrationMockSubcontractorPaymentsService.findAll.mockResolvedValue(
+        integrationMockSubcontractorPaymentsService.findSubcontractorPaymentsInMonth.mockResolvedValue(
           [],
         );
 
@@ -357,32 +369,41 @@ describe('SubcontractorPaymentsController', () => {
 
       it('should retrieve specific payment by ID', async () => {
         const expectedPayment = {
-          id: 'payment-123',
-          subcontractorId: 'sub-123',
-          serviceDate: '2023-01-01',
-          paymentDate: '2023-01-15',
+          subcontractor: { id: 'sub-123', name: 'Test Sub' },
+          payments: [
+            {
+              id: 'payment-123',
+              serviceDate: '2023-01-01T00:00:00.000Z',
+              paymentDate: '2023-01-15T00:00:00.000Z',
+              amount: 1000,
+            },
+          ],
+          total: 1000,
+          expectedTotal: 1500,
         };
 
-        integrationMockSubcontractorPaymentsService.findOne.mockResolvedValue(
+        integrationMockSubcontractorPaymentsService.findSubcontractorMonthlyPayments.mockResolvedValue(
           expectedPayment,
         );
 
-        const result = await integrationController.findOne('payment-123');
+        const result = await integrationController.findOne('sub-123', {
+          month: '2023-01',
+        });
 
         expect(result).toEqual(expectedPayment);
         expect(
-          integrationMockSubcontractorPaymentsService.findOne,
-        ).toHaveBeenCalledWith('payment-123');
+          integrationMockSubcontractorPaymentsService.findSubcontractorMonthlyPayments,
+        ).toHaveBeenCalledWith('sub-123', { month: '2023-01' });
       });
 
-      it('should handle SubcontractorPaymentNotFoundError when payment not found', async () => {
-        integrationMockSubcontractorPaymentsService.findOne.mockRejectedValue(
-          new SubcontractorPaymentNotFoundError('payment-999'),
+      it('should handle SubcontractorNotFoundError when subcontractor not found', async () => {
+        integrationMockSubcontractorPaymentsService.findSubcontractorMonthlyPayments.mockRejectedValue(
+          new SubcontractorNotFoundError('sub-999'),
         );
 
         await expect(
-          integrationController.findOne('payment-999'),
-        ).rejects.toThrow(SubcontractorPaymentNotFoundError);
+          integrationController.findOne('sub-999', { month: '2023-01' }),
+        ).rejects.toThrow(SubcontractorNotFoundError);
       });
     });
 
@@ -391,12 +412,16 @@ describe('SubcontractorPaymentsController', () => {
         subcontractorId: 'sub-123',
         serviceDate: '2023-01-01',
         paymentDate: '2023-01-20',
+        amount: 1500,
       };
 
       it('should successfully update an existing payment', async () => {
         const expectedUpdatedPayment = {
           id: 'payment-123',
-          ...updateDto,
+          subcontractor: { id: 'sub-123', name: 'Test Sub' },
+          serviceDate: '2023-01-01T00:00:00.000Z',
+          paymentDate: '2023-01-20T00:00:00.000Z',
+          amount: 1500,
         };
 
         integrationMockSubcontractorPaymentsService.update.mockResolvedValue(
@@ -465,34 +490,51 @@ describe('SubcontractorPaymentsController', () => {
           subcontractorId: 'sub-workflow',
           serviceDate: '2023-01-01',
           paymentDate: '2023-01-15',
+          amount: 1000,
         };
 
         const createdPayment = {
           id: 'payment-workflow',
-          ...createDto,
+          subcontractor: { id: 'sub-workflow', name: 'Workflow Sub' },
+          serviceDate: '2023-01-01T00:00:00.000Z',
+          paymentDate: '2023-01-15T00:00:00.000Z',
+          amount: 1000,
         };
 
         const updatedPayment = {
           ...createdPayment,
-          paymentDate: '2023-01-20',
+          paymentDate: '2023-01-20T00:00:00.000Z',
+          amount: 1500,
         };
 
-        // Create
+        const monthlyPayment = {
+          subcontractor: { id: 'sub-workflow', name: 'Workflow Sub' },
+          payments: [
+            {
+              id: 'payment-workflow',
+              serviceDate: '2023-01-01T00:00:00.000Z',
+              paymentDate: '2023-01-15T00:00:00.000Z',
+              amount: 1000,
+            },
+          ],
+          total: 1000,
+          expectedTotal: 1500,
+        };
+
         integrationMockSubcontractorPaymentsService.create.mockResolvedValue(
           createdPayment,
         );
         const createResult = await integrationController.create(createDto);
         expect(createResult).toEqual(createdPayment);
 
-        // Find one
-        integrationMockSubcontractorPaymentsService.findOne.mockResolvedValue(
-          createdPayment,
+        integrationMockSubcontractorPaymentsService.findSubcontractorMonthlyPayments.mockResolvedValue(
+          monthlyPayment,
         );
-        const findResult =
-          await integrationController.findOne('payment-workflow');
-        expect(findResult).toEqual(createdPayment);
+        const findResult = await integrationController.findOne('sub-workflow', {
+          month: '2023-01',
+        });
+        expect(findResult).toEqual(monthlyPayment);
 
-        // Update
         integrationMockSubcontractorPaymentsService.update.mockResolvedValue(
           updatedPayment,
         );
@@ -500,6 +542,7 @@ describe('SubcontractorPaymentsController', () => {
           subcontractorId: 'sub-workflow',
           serviceDate: '2023-01-01',
           paymentDate: '2023-01-20',
+          amount: 1500,
         };
         const updateResult = await integrationController.update(
           'payment-workflow',
@@ -507,19 +550,17 @@ describe('SubcontractorPaymentsController', () => {
         );
         expect(updateResult).toEqual(updatedPayment);
 
-        // Delete
         integrationMockSubcontractorPaymentsService.remove.mockResolvedValue(
           undefined,
         );
         await integrationController.remove('payment-workflow');
 
-        // Verify all methods were called correctly
         expect(
           integrationMockSubcontractorPaymentsService.create,
         ).toHaveBeenCalledWith(createDto);
         expect(
-          integrationMockSubcontractorPaymentsService.findOne,
-        ).toHaveBeenCalledWith('payment-workflow');
+          integrationMockSubcontractorPaymentsService.findSubcontractorMonthlyPayments,
+        ).toHaveBeenCalledWith('sub-workflow', { month: '2023-01' });
         expect(
           integrationMockSubcontractorPaymentsService.update,
         ).toHaveBeenCalledWith('payment-workflow', updateDto);
