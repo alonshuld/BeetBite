@@ -20,6 +20,7 @@ import {
   ApiConflictResponse,
   ApiBadRequestResponse,
   ApiNoContentResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -32,6 +33,7 @@ import { PaginationQueryDto } from '../common/pagination-query.dto';
  * Handles create, read, update (PUT), and delete operations.
  * @param clientsService Service providing client business logic
  */
+@ApiBearerAuth()
 @ApiTags('clients')
 @Controller('clients')
 export class ClientsController {

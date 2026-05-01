@@ -4,6 +4,7 @@ import {
   ApiOperation,
   ApiOkResponse,
   ApiBadRequestResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { IncomesService } from './incomes.service';
 import { MonthQueryDto } from 'src/common/month-query.dto';
@@ -14,6 +15,7 @@ import { IncomeResponseDto } from './dto/income-response.dto';
  * Handles read monthly income operation.
  * @param incomesService IncomesService for business logic
  */
+@ApiBearerAuth()
 @ApiTags('incomes')
 @Controller('incomes')
 export class IncomesController {

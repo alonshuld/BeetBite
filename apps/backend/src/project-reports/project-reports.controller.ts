@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -33,6 +34,7 @@ import { MonthQueryDto } from 'src/common/month-query.dto';
 /**
  * Controller for project report related endpoints.
  */
+@ApiBearerAuth()
 @ApiTags('projects/reports')
 @Controller()
 export class ProjectReportsController {

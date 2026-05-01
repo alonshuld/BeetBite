@@ -15,6 +15,7 @@ import { CreateSubcontractorPaymentDto } from './dto/create-subcontractor-paymen
 import { UpdateSubcontractorPaymentDto } from './dto/update-subcontractor-payment.dto';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -33,6 +34,7 @@ import { MonthQueryDto } from 'src/common/month-query.dto';
  * Handles create, read, update, and delete operations.
  * @param subcontractorPaymentsService Service providing subcontractor payment business logic
  */
+@ApiBearerAuth()
 @ApiTags('subcontractors/payments')
 @Controller()
 export class SubcontractorPaymentsController {
