@@ -14,7 +14,7 @@ The contractor does not do the physical work itself. Instead it hires:
 
 Each month, the contractor keeps a **profit margin** percentage of the income, then pays the corporations their agreed amounts, and the subcontractor receives whatever is left. These values are derived at read time, not stored (see *Financial calculations* below).
 
-**SubcontractorPayments** track whether a subcontractor has actually been paid for a given service month across all their projects. The payment amount is aggregated at read time from that subcontractor's project reports for the month.
+**SubcontractorPayments** track partial payments made to a subcontractor for a given service month. Multiple partial payments per month are allowed. The amount owed is computed from project reports at read time; the service rejects any payment that would cause the total paid to exceed that amount.
 
 Users manually enter clients, projects, corporations, and subcontractors once, then create a project report each month per project. The system derives all financial insights (profits, payments, income totals, project payment progress) from these reports.
 
@@ -71,7 +71,7 @@ Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` →
 | `project-reports` | Monthly financial reports per project, including corporation payments |
 | `corporations` | Corporations that receive payments from project reports |
 | `subcontractors` | Workers assigned to project reports |
-| `subcontractor-payments` | Track subcontractor payment status per service month; `amount` is computed dynamically |
+| `subcontractor-payments` | Track partial payments made to subcontractors per service month; enforces overpayment guard against computed amount owed |
 | `incomes` | Income-related queries |
 | `prisma` | Singleton `PrismaService` extending `PrismaClient` with `@prisma/adapter-pg` |
 
@@ -84,7 +84,7 @@ Key entity fields (see `prisma/schema.prisma` for the full schema):
 | `Project` | `estimatedAmount` (Decimal), `finishDate` (Date), `description` (required String) |
 | `ProjectReport` | `incomeDate?` (nullable — null means income not yet received); unique on `(projectId, date)` |
 | `CorporationPayment` | `date?` (nullable payment date) |
-| `SubcontractorPayment` | `serviceDate` (Date — the service month's start date, required); `paymentDate?` (nullable — null means unpaid); unique on `(subcontractorId, serviceDate)` |
+| `SubcontractorPayment` | `serviceDate` (Date — the service month's start date, required); `paymentDate` (Date, required — date payment was processed); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, serviceDate)` allowed |
 
 ### Prisma client
 
@@ -115,7 +115,7 @@ When creating or updating a `ProjectReport`, `subcontractorId` and `profitMargin
 - `profit = income × profitMargin / 100`
 - `subcontractorPayment = income − profit − Σ(corporationPayments)`
 
-**SubcontractorPayment** — `amount` is not stored; it is computed by summing `subcontractorPayment` across all `ProjectReport` rows matching `(subcontractorId, serviceDate)`.
+**SubcontractorPayment** — `amount` is stored (provided by the caller). Multiple partial payments per `(subcontractorId, serviceDate)` are allowed. On `create`, the service computes `amountOwed` by summing `subcontractorPayment` across all `ProjectReport` rows for that month and rejects the payment if `Σ(existing payments) + newAmount > amountOwed`.
 
 ### Project payment progress
 

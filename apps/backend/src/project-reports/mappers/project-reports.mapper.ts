@@ -68,7 +68,7 @@ export const toProjectReportResponse = (
     ...projectReport.subcontractor,
     payment: subcontractorPayment,
     paymentDate:
-      projectReport.subcontractor.payments[0].paymentDate?.toISOString(),
+      projectReport.subcontractor.payments[0]?.paymentDate?.toISOString(),
   },
   corporationPayments: projectReport.corporationPayments.map(
     (corporationPay) => ({

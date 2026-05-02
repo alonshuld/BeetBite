@@ -72,7 +72,7 @@ model CorporationPayment {
   projectReportId String
   corporationId   String
   amount          Decimal  @db.Decimal(12, 2)
-  date            DateTime @db.Date
+  date            DateTime? @db.Date
 
   projectReport ProjectReport @relation(fields: [projectReportId], references: [id])
   corporation   Corporation   @relation(fields: [corporationId], references: [id])
@@ -84,7 +84,7 @@ model SubcontractorPayment {
   id              String   @id @default(cuid())
   subcontractorId String
   serviceDate     DateTime @db.Date
-  paymentDate     DateTime @db.Date
+  paymentDate     DateTime? @db.Date
   amount          Decimal  @db.Decimal(12, 2)
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id])

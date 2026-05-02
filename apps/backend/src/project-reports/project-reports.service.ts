@@ -89,7 +89,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
     return {
       ...createProjectReportDto,
       profitMargin:
-        createProjectReportDto.profitMargin ||
+        createProjectReportDto.profitMargin ??
         previousMonthProjectReport.profitMargin.toNumber(),
       subcontractorId:
         createProjectReportDto.subcontractorId ||
@@ -279,7 +279,10 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
     });
 
     if (!projectReport)
-      throw new ProjectReportNotFoundError(projectId, monthQueryDto.month);
+      throw new ProjectReportNotFoundError(
+        projectId,
+        previousMonthDate.toISOString(),
+      );
 
     this.logger.log(`Project report retrieved: ${projectReport.id}`);
 
@@ -405,6 +408,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
               },
             },
             corporationPayments: {
+              deleteMany: {},
               createMany: {
                 data: enrichedCreateProjectReportDto.corporationPayments.map(
                   (corporationPay) => ({

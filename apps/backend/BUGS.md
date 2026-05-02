@@ -87,25 +87,11 @@ According to the domain model (`CLAUDE.md`): `paymentDate?` is nullable — `nul
 ```prisma
 paymentDate DateTime? @db.Date
 ```
-Then add migration and update the mapper (see BUG-07).
+Then add migration.
 
 ---
 
-## BUG-05 — Missing unique constraint on `SubcontractorPayment(subcontractorId, serviceDate)`
-
-**Severity:** Medium (data integrity)
-**File:** `prisma/schema.prisma`
-
-`CLAUDE.md` documents a unique constraint on `(subcontractorId, serviceDate)` for `SubcontractorPayment`. The schema has no such constraint, allowing duplicate payment records per subcontractor per month. The service code throws `SubcontractorPaymentAlreadyExistsError` on `P2002`, but that error can never fire without the DB-level constraint.
-
-**Fix:**
-```prisma
-@@unique([subcontractorId, serviceDate])
-```
-
----
-
-## BUG-06 — `CorporationPayment.date` not nullable in schema
+## BUG-05 — `CorporationPayment.date` not nullable in schema
 
 **Severity:** Medium (schema / domain mismatch)
 **File:** `prisma/schema.prisma`
@@ -124,25 +110,7 @@ date DateTime? @db.Date
 
 ---
 
-## BUG-07 — `paymentDate` called without null guard in subcontractor-payments mapper
-
-**Severity:** Medium (latent crash once BUG-04 is fixed)
-**File:** `src/subcontractor-payments/mappers/monthly-subcontractor-payments.mapper.ts:35`
-
-```typescript
-paymentDate: payment.paymentDate.toISOString(),
-```
-
-Once `paymentDate` is made nullable (BUG-04 fix), this crashes on unpaid records. The `NestedSubcontractorPaymentDto` presumably already allows `paymentDate` to be optional.
-
-**Fix:**
-```typescript
-paymentDate: payment.paymentDate?.toISOString(),
-```
-
----
-
-## BUG-08 — `calculateStartAndEndDates` uses local-time methods (timezone bug)
+## BUG-06 — `calculateStartAndEndDates` uses local-time methods (timezone bug)
 
 **Severity:** Medium (wrong query results in non-UTC environments)
 **File:** `src/corporation-payments/corporation-payments.service.ts:40–45`
@@ -169,31 +137,7 @@ private calculateStartAndEndDates(month: string): { startDate: Date; endDate: Da
 
 ---
 
-## BUG-09 — Update enrichment looks at previous month, not the existing record
-
-**Severity:** Medium (wrong default values on update)
-**File:** `src/project-reports/project-reports.service.ts:379–380`
-
-`update()` calls `enrichCreateProjectReportDto(updateProjectReportDto)` which, when `subcontractorId` or `profitMargin` is omitted, fetches the **previous month's** report to fill them in — not the current record being updated. This means a partial update (e.g. changing only `income`) will silently overwrite `subcontractorId` and `profitMargin` from the previous month instead of keeping the values already on the record.
-
-**Fix:** For updates, look up the existing record by `id` and use its `subcontractorId`/`profitMargin` as the fallback, rather than the previous month's report.
-
----
-
-## BUG-10 — `SubcontractorPayment.amount` is stored but should be computed
-
-**Severity:** Low (design / staleness risk)
-**File:** `prisma/schema.prisma`, `src/subcontractor-payments/dto/create-subcontractor-payment.dto.ts`
-
-`CLAUDE.md` states: *"`amount` is not stored; it is computed by summing `subcontractorPayment` across all `ProjectReport` rows matching `(subcontractorId, serviceDate)`."* However, the schema stores `amount` as a DB column and `CreateSubcontractorPaymentDto` requires the caller to supply it. This creates a staleness risk: if project reports are updated after a subcontractor payment is created, the stored `amount` becomes incorrect and diverges from the computed value.
-
-**Fix options:**
-1. Remove `amount` from the schema (breaking change) and always compute it at read time, or
-2. Keep it stored but recompute and overwrite it on every `create`/`update` in the service (not just accept the caller's value).
-
----
-
-## BUG-11 — `findProjectReportForPreviousMonth` error reports wrong date
+## BUG-07 — `findProjectReportForPreviousMonth` error reports wrong date
 
 **Severity:** Low (misleading error message)
 **File:** `src/project-reports/project-reports.service.ts:282`
