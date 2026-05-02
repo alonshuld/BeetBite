@@ -142,8 +142,9 @@ vite.config.ts.timestamp-*
 
 # pnpm files
 .pnpm-store
-# Generated files
+# Generated files (Prisma client etc.) — keep frontend API schema
 **/generated/
+!apps/frontend/src/api/generated/
 
 .vscode/
 

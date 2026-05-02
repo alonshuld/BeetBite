@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "codegen": "openapi-typescript http://localhost:3000/api/v1/docs-json -o src/api/schema.d.ts"
+    "codegen": "node scripts/codegen.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
