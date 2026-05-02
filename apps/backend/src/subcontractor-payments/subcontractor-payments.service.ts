@@ -260,6 +260,36 @@ export class SubcontractorPaymentsService {
     id: string,
     updateSubcontractorPaymentDto: UpdateSubcontractorPaymentDto,
   ): Promise<SubcontractorPaymentResponseDto> {
+    const serviceDate = new Date(updateSubcontractorPaymentDto.serviceDate);
+
+    const [amountOwed, existingPayments] = await Promise.all([
+      this.calculateSubcontractorExpectedTotal(
+        updateSubcontractorPaymentDto.subcontractorId,
+        serviceDate,
+      ),
+      this.prismaService.subcontractorPayment.findMany({
+        where: {
+          subcontractorId: updateSubcontractorPaymentDto.subcontractorId,
+          serviceDate,
+          NOT: { id },
+        },
+        select: { amount: true },
+      }),
+    ]);
+
+    const amountPaid = existingPayments.reduce(
+      (sum, p) => sum + p.amount.toNumber(),
+      0,
+    );
+
+    if (amountPaid + updateSubcontractorPaymentDto.amount > amountOwed) {
+      throw new SubcontractorPaymentOverpaymentError(
+        amountOwed,
+        amountPaid,
+        updateSubcontractorPaymentDto.amount,
+      );
+    }
+
     try {
       const subcontractorPayment =
         await this.prismaService.subcontractorPayment.update({

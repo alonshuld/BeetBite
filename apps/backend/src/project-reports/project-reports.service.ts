@@ -92,7 +92,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
         createProjectReportDto.profitMargin ??
         previousMonthProjectReport.profitMargin.toNumber(),
       subcontractorId:
-        createProjectReportDto.subcontractorId ||
+        createProjectReportDto.subcontractorId ??
         previousMonthProjectReport.subcontractorId,
     };
   }
@@ -174,7 +174,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
         case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
           throw new CorporationNotFoundError();
         case PRISMA_ERROR_CODES.NOT_FOUND: {
-          const model = error.meta?.model as string;
+          const model = (error.meta?.model as string) ?? '';
 
           if (model.toLowerCase().includes('project'))
             throw new ProjectNotFoundError(
@@ -445,7 +445,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
 
       switch (error.code) {
         case PRISMA_ERROR_CODES.NOT_FOUND: {
-          const model = error.meta?.model as string;
+          const model = (error.meta?.model as string) ?? '';
 
           if (model.toLowerCase().includes('projectreport'))
             throw new ProjectReportNotFoundError(id);

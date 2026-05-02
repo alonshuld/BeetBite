@@ -295,6 +295,50 @@ describe('SubcontractorPaymentsService', () => {
       amount: 1500,
     };
 
+    it('should throw SubcontractorPaymentOverpaymentError when updated amount exceeds amount owed', async () => {
+      // amountOwed = 1000 - 100 = 900. Other payments = 600. New amount = 400 → total 1000 > 900
+      mockPrismaService.projectReport.findMany.mockResolvedValue([
+        {
+          income: { toNumber: () => 1000 },
+          profitMargin: { toNumber: () => 10 },
+          corporationPayments: [],
+        },
+      ]);
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([
+        { amount: { toNumber: () => 600 } },
+      ]);
+
+      await expect(
+        service.update('1', { ...updateDto, amount: 400 }),
+      ).rejects.toThrow(SubcontractorPaymentOverpaymentError);
+    });
+
+    it('should allow updating a payment when new amount is within owed limit', async () => {
+      // amountOwed = 900. Other payments = 0. New amount = 900 → exactly at limit
+      mockPrismaService.projectReport.findMany.mockResolvedValue([
+        {
+          income: { toNumber: () => 1000 },
+          profitMargin: { toNumber: () => 10 },
+          corporationPayments: [],
+        },
+      ]);
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+
+      const mockPayment = {
+        id: '1',
+        serviceDate: new Date('2023-01-01'),
+        paymentDate: new Date('2023-02-01'),
+        amount: { toNumber: () => 900 },
+        subcontractor: { id: '1', name: 'Test Subcontractor' },
+      };
+      mockPrismaService.subcontractorPayment.update.mockResolvedValue(
+        mockPayment,
+      );
+
+      const result = await service.update('1', { ...updateDto, amount: 900 });
+      expect(result.amount).toBe(900);
+    });
+
     it('should update a subcontractor payment', async () => {
       const mockPayment = {
         id: '1',
@@ -307,6 +351,15 @@ describe('SubcontractorPaymentsService', () => {
         },
       };
 
+      // amountOwed = 2000 - 200 = 1800, existing other payments = 0, new amount = 1500 → ok
+      mockPrismaService.projectReport.findMany.mockResolvedValue([
+        {
+          income: { toNumber: () => 2000 },
+          profitMargin: { toNumber: () => 10 },
+          corporationPayments: [],
+        },
+      ]);
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
       mockPrismaService.subcontractorPayment.update.mockResolvedValue(
         mockPayment,
       );
@@ -341,6 +394,16 @@ describe('SubcontractorPaymentsService', () => {
     });
 
     it('should throw SubcontractorPaymentNotFoundError if payment not found', async () => {
+      // amountOwed = 1800, new amount = 1500 → passes overpayment guard
+      mockPrismaService.projectReport.findMany.mockResolvedValue([
+        {
+          income: { toNumber: () => 2000 },
+          profitMargin: { toNumber: () => 10 },
+          corporationPayments: [],
+        },
+      ]);
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+
       const prismaError = new PrismaClientKnownRequestError(
         'Record to update does not exist.',
         {
