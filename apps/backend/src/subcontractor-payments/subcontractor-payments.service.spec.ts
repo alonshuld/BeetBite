@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SubcontractorPaymentsService } from './subcontractor-payments.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SubcontractorPaymentNotFoundError } from './errors/subcontractor-payment-not-found.error';
-import { SubcontractorPaymentAlreadyExistsError } from './errors/subcontractor-payment-already-exists.error';
+import { SubcontractorPaymentOverpaymentError } from './errors/subcontractor-payment-overpayment.error';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
@@ -68,6 +68,14 @@ describe('SubcontractorPaymentsService', () => {
     };
 
     it('should create a subcontractor payment', async () => {
+      mockPrismaService.projectReport.findMany.mockResolvedValue([
+        {
+          income: { toNumber: () => 5000 },
+          profitMargin: { toNumber: () => 10 },
+          corporationPayments: [],
+        },
+      ]);
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
       mockPrismaService.subcontractorPayment.create.mockResolvedValue(
         mockPayment,
       );
@@ -100,7 +108,34 @@ describe('SubcontractorPaymentsService', () => {
       });
     });
 
+    it('should throw SubcontractorPaymentOverpaymentError when payment exceeds amount owed', async () => {
+      mockPrismaService.projectReport.findMany.mockResolvedValue([
+        {
+          income: { toNumber: () => 1000 },
+          profitMargin: { toNumber: () => 10 },
+          corporationPayments: [],
+        },
+      ]);
+      // amountOwed = 1000 - 100 = 900, already paid = 500, new amount = 1000 → overpayment
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([
+        { amount: { toNumber: () => 500 } },
+      ]);
+
+      await expect(
+        service.create({ ...createDto, amount: 1000 }),
+      ).rejects.toThrow(SubcontractorPaymentOverpaymentError);
+    });
+
     it('should throw SubcontractorNotFoundError when subcontractor does not exist', async () => {
+      mockPrismaService.projectReport.findMany.mockResolvedValue([
+        {
+          income: { toNumber: () => 5000 },
+          profitMargin: { toNumber: () => 10 },
+          corporationPayments: [],
+        },
+      ]);
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+
       const prismaError = new PrismaClientKnownRequestError(
         'Foreign key constraint failed on the field: `subcontractorId`',
         {
@@ -115,24 +150,6 @@ describe('SubcontractorPaymentsService', () => {
 
       await expect(service.create(createDto)).rejects.toThrow(
         SubcontractorNotFoundError,
-      );
-    });
-
-    it('should throw SubcontractorPaymentAlreadyExistsError when duplicate payment exists', async () => {
-      const prismaError = new PrismaClientKnownRequestError(
-        'Unique constraint failed on the fields: (`subcontractorId`,`serviceDate`)',
-        {
-          code: PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED,
-          clientVersion: '4.0.0',
-        },
-      );
-
-      mockPrismaService.subcontractorPayment.create.mockRejectedValue(
-        prismaError,
-      );
-
-      await expect(service.create(createDto)).rejects.toThrow(
-        SubcontractorPaymentAlreadyExistsError,
       );
     });
   });
@@ -178,29 +195,29 @@ describe('SubcontractorPaymentsService', () => {
       expect(result).toHaveLength(2);
       expect(result[0]).toMatchObject({
         subcontractor: { id: '1', name: 'Subcontractor 1' },
+        serviceDate: new Date('2023-01-01').toISOString(),
+        amountOwed: 0,
+        amountPaid: 1000,
         payments: [
           {
             id: 'payment-1',
-            serviceDate: '2023-01-01T00:00:00.000Z',
             paymentDate: '2023-01-15T00:00:00.000Z',
             amount: 1000,
           },
         ],
-        total: 1000,
-        expectedTotal: 0,
       });
       expect(result[1]).toMatchObject({
         subcontractor: { id: '2', name: 'Subcontractor 2' },
+        serviceDate: new Date('2023-01-01').toISOString(),
+        amountOwed: 0,
+        amountPaid: 2000,
         payments: [
           {
             id: 'payment-2',
-            serviceDate: '2023-01-01T00:00:00.000Z',
             paymentDate: '2023-01-20T00:00:00.000Z',
             amount: 2000,
           },
         ],
-        total: 2000,
-        expectedTotal: 0,
       });
     });
 
@@ -245,21 +262,22 @@ describe('SubcontractorPaymentsService', () => {
           id: '1',
           name: 'Test Subcontractor',
         },
+        serviceDate: new Date('2023-01-01').toISOString(),
+        amountOwed: 0,
+        amountPaid: 1000,
         payments: [
           {
             id: 'payment-1',
-            serviceDate: '2023-01-01T00:00:00.000Z',
             paymentDate: '2023-01-15T00:00:00.000Z',
             amount: 1000,
           },
         ],
-        total: 1000,
-        expectedTotal: 0,
       });
     });
 
     it('should throw SubcontractorNotFoundError if subcontractor not found', async () => {
       mockPrismaService.subcontractor.findUnique.mockResolvedValue(null);
+      mockPrismaService.projectReport.findMany.mockResolvedValue([]);
 
       await expect(
         service.findSubcontractorMonthlyPayments('999', {

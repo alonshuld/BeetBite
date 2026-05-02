@@ -2,10 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { NestedSubcontractorPaymentDto } from './nested-subcontractor-payment.dto';
 import { NestedSubcontractorDto } from './nested-subcontractor.dto';
 
-/**
- * DTO represents the monthly payments for a subcontractor,
- * including the subcontractor details and a list of payments made in that month.
- */
 export class MonthlySubcontractorPaymentsDto {
   @ApiProperty({
     description: 'The subcontractor associated with the payments',
@@ -14,21 +10,26 @@ export class MonthlySubcontractorPaymentsDto {
   subcontractor!: NestedSubcontractorDto;
 
   @ApiProperty({
-    description: 'List of subcontractor payments for the month',
-    type: [NestedSubcontractorPaymentDto],
+    description: 'The service month start date',
+    example: '2026-01-01T00:00:00.000Z',
   })
-  payments!: NestedSubcontractorPaymentDto[];
+  serviceDate!: string;
+
+  @ApiProperty({
+    description: 'The total amount owed to the subcontractor for the month',
+    example: 5000,
+  })
+  amountOwed!: number;
 
   @ApiProperty({
     description: 'The total amount paid to the subcontractor for the month',
-    example: 5000,
+    example: 3000,
   })
-  total!: number;
+  amountPaid!: number;
 
   @ApiProperty({
-    description:
-      'The expected total amount to be paid to the subcontractor for the month',
-    example: 5000,
+    description: 'List of payments made to the subcontractor for the month',
+    type: [NestedSubcontractorPaymentDto],
   })
-  expectedTotal!: number;
+  payments!: NestedSubcontractorPaymentDto[];
 }

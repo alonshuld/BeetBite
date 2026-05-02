@@ -8,7 +8,7 @@ import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaName
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
 import { SubcontractorPaymentNotFoundError } from './errors/subcontractor-payment-not-found.error';
-import { SubcontractorPaymentAlreadyExistsError } from './errors/subcontractor-payment-already-exists.error';
+import { SubcontractorPaymentOverpaymentError } from './errors/subcontractor-payment-overpayment.error';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import {
   toMonthlySubcontractorPaymentsResponse,
@@ -100,6 +100,35 @@ export class SubcontractorPaymentsService {
   async create(
     createSubcontractorPaymentDto: CreateSubcontractorPaymentDto,
   ): Promise<SubcontractorPaymentResponseDto> {
+    const serviceDate = new Date(createSubcontractorPaymentDto.serviceDate);
+
+    const [amountOwed, existingPayments] = await Promise.all([
+      this.calculateSubcontractorExpectedTotal(
+        createSubcontractorPaymentDto.subcontractorId,
+        serviceDate,
+      ),
+      this.prismaService.subcontractorPayment.findMany({
+        where: {
+          subcontractorId: createSubcontractorPaymentDto.subcontractorId,
+          serviceDate,
+        },
+        select: { amount: true },
+      }),
+    ]);
+
+    const amountPaid = existingPayments.reduce(
+      (sum, p) => sum + p.amount.toNumber(),
+      0,
+    );
+
+    if (amountPaid + createSubcontractorPaymentDto.amount > amountOwed) {
+      throw new SubcontractorPaymentOverpaymentError(
+        amountOwed,
+        amountPaid,
+        createSubcontractorPaymentDto.amount,
+      );
+    }
+
     try {
       const subcontractorPayment =
         await this.prismaService.subcontractorPayment.create({
@@ -125,15 +154,10 @@ export class SubcontractorPaymentsService {
       return toSubcontractorPaymentResponse(subcontractorPayment);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
-        switch (error.code) {
-          case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
-            throw new SubcontractorNotFoundError(
-              createSubcontractorPaymentDto.subcontractorId,
-            );
-          case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
-            throw new SubcontractorPaymentAlreadyExistsError(
-              createSubcontractorPaymentDto.subcontractorId,
-            );
+        if (error.code === PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED) {
+          throw new SubcontractorNotFoundError(
+            createSubcontractorPaymentDto.subcontractorId,
+          );
         }
       }
       throw error;
@@ -144,6 +168,8 @@ export class SubcontractorPaymentsService {
     subcontractorId: string,
     monthQuery: MonthQueryDto,
   ): Promise<MonthlySubcontractorPaymentsDto> {
+    const serviceDate = new Date(monthQuery.month);
+
     const [subcontractorWithPayments, expectedTotal] = await Promise.all([
       this.prismaService.subcontractor.findUnique({
         where: { id: subcontractorId },
@@ -151,7 +177,7 @@ export class SubcontractorPaymentsService {
           id: true,
           name: true,
           payments: {
-            where: { serviceDate: new Date(monthQuery.month) },
+            where: { serviceDate },
             select: {
               id: true,
               serviceDate: true,
@@ -161,10 +187,7 @@ export class SubcontractorPaymentsService {
           },
         },
       }),
-      this.calculateSubcontractorExpectedTotal(
-        subcontractorId,
-        new Date(monthQuery.month),
-      ),
+      this.calculateSubcontractorExpectedTotal(subcontractorId, serviceDate),
     ]);
 
     if (!subcontractorWithPayments) {
@@ -178,6 +201,7 @@ export class SubcontractorPaymentsService {
     return toMonthlySubcontractorPaymentsResponse({
       ...subcontractorWithPayments,
       expectedTotal,
+      serviceDate,
     });
   }
 
@@ -219,6 +243,7 @@ export class SubcontractorPaymentsService {
       (subcontractor) => ({
         ...subcontractor,
         expectedTotal: expectedTotalBySubcontractor[subcontractor.id] ?? 0,
+        serviceDate,
       }),
     );
 
@@ -259,9 +284,8 @@ export class SubcontractorPaymentsService {
       return toSubcontractorPaymentResponse(subcontractorPayment);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
-        switch (error.code) {
-          case PRISMA_ERROR_CODES.NOT_FOUND:
-            throw new SubcontractorPaymentNotFoundError(id);
+        if (error.code === PRISMA_ERROR_CODES.NOT_FOUND) {
+          throw new SubcontractorPaymentNotFoundError(id);
         }
       }
       throw error;
@@ -277,9 +301,8 @@ export class SubcontractorPaymentsService {
       this.logger.log(`Subcontractor payment deleted: ${id}`);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
-        switch (error.code) {
-          case PRISMA_ERROR_CODES.NOT_FOUND:
-            throw new SubcontractorPaymentNotFoundError(id);
+        if (error.code === PRISMA_ERROR_CODES.NOT_FOUND) {
+          throw new SubcontractorPaymentNotFoundError(id);
         }
       }
       throw error;
