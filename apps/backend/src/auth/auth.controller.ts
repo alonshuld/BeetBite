@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import type { Request as ExpressRequest } from 'express';
 import {
   ApiOperation,
   ApiOkResponse,
@@ -21,13 +22,13 @@ import { LoginDto } from './dto/login.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { User } from '../generated/client';
 
-export interface RequestWithUser extends Request {
+export interface RequestWithUser extends ExpressRequest {
   user: User;
 }
 
 /**
  * Controller for authentication endpoints.
- * All routes here are public — no Bearer token is required.
+ * Only routes decorated with @Public() bypass the global JWT guard.
  * @param authService Service that validates credentials and issues JWT tokens
  */
 @ApiTags('auth')
