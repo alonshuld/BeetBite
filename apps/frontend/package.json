@@ -13,8 +13,10 @@
     "codegen": "openapi-typescript http://localhost:3000/api/v1/docs-json -o src/api/schema.d.ts"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.8.2",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-redux": "^9.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
