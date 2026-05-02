@@ -84,7 +84,7 @@ Key entity fields (see `prisma/schema.prisma` for the full schema):
 | `Project` | `estimatedAmount` (Decimal), `finishDate` (Date), `description` (required String) |
 | `ProjectReport` | `incomeDate?` (nullable — null means income not yet received); unique on `(projectId, date)` |
 | `CorporationPayment` | `date?` (nullable payment date) |
-| `SubcontractorPayment` | `serviceDate` (Date — the service month's start date, required); `paymentDate` (Date, required — date payment was processed); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, serviceDate)` allowed |
+| `SubcontractorPayment` | `serviceDate` (Date — the service month's start date, required); `paymentDate?` (nullable — null means the partial payment has not yet been processed/recorded with a payment date); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, serviceDate)` allowed |
 
 ### Prisma client
 
