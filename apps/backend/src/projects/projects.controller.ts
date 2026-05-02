@@ -20,6 +20,7 @@ import {
   ApiConflictResponse,
   ApiBadRequestResponse,
   ApiNoContentResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -32,6 +33,7 @@ import { ProjectBasicResponseDto } from './dto/project-basic-response.dto';
  * Controller for project-related endpoints.
  * Handles create, read, update (PUT), and delete operations.
  */
+@ApiBearerAuth()
 @ApiTags('projects')
 @Controller('projects')
 export class ProjectsController {

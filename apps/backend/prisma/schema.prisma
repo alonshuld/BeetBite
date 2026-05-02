@@ -91,3 +91,13 @@ model SubcontractorPayment {
 
   @@map("subcontractor_payments")
 }
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}

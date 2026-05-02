@@ -15,6 +15,7 @@ import { CreateSubcontractorDto } from './dto/create-subcontractor.dto';
 import { UpdateSubcontractorDto } from './dto/update-subcontractor.dto';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -32,6 +33,7 @@ import { PaginationQueryDto } from 'src/common/pagination-query.dto';
  * Handles create, read, update, and delete operations.
  * @param subcontractorsService Service providing subcontractor business logic
  */
+@ApiBearerAuth()
 @ApiTags('subcontractors')
 @Controller('subcontractors')
 export class SubcontractorsController {

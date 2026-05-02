@@ -20,6 +20,7 @@ import {
   ApiConflictResponse,
   ApiBadRequestResponse,
   ApiNoContentResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CorporationsService } from './corporations.service';
 import { CreateCorporationDto } from './dto/create-corporation.dto';
@@ -32,6 +33,7 @@ import { PaginationQueryDto } from '../common/pagination-query.dto';
  * Handles create, read, update, and delete operations.
  * @param corporationsService Service providing corporation business logic
  */
+@ApiBearerAuth()
 @ApiTags('corporations')
 @Controller('corporations')
 export class CorporationsController {
