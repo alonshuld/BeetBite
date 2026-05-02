@@ -21,6 +21,6 @@ export const toSubcontractorPaymentResponse = (
 ): SubcontractorPaymentResponseDto => ({
   ...subcontractorPayment,
   serviceDate: subcontractorPayment.serviceDate.toISOString(),
-  paymentDate: subcontractorPayment.paymentDate.toISOString(),
+  paymentDate: subcontractorPayment.paymentDate?.toISOString() ?? null,
   amount: subcontractorPayment.amount.toNumber(),
 });

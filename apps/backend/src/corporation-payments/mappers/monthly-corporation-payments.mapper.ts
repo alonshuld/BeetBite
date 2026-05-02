@@ -43,7 +43,7 @@ export const toMonthlyCorporationPaymentsResponse = (
       projectName: payment.projectReport.project.name,
     },
     amount: payment.amount.toNumber(),
-    date: payment.date.toISOString(),
+    date: payment.date?.toISOString() ?? null,
   }));
 
   return {

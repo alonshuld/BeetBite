@@ -26,7 +26,7 @@ export const toCorporationPaymentResponseDto = (
 ): CorporationPaymentResponseDto => ({
   id: corporationPayment.id,
   amount: corporationPayment.amount.toNumber(),
-  date: corporationPayment.date.toISOString(),
+  date: corporationPayment.date?.toISOString() ?? null,
   projectReport: {
     id: corporationPayment.projectReport.id,
     projectId: corporationPayment.projectReport.projectId,

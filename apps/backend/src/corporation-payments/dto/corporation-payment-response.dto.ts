@@ -34,6 +34,7 @@ export class CorporationPaymentResponseDto {
   @ApiProperty({
     example: '2024-06-01T00:00:00.000Z',
     description: 'The date when the payment was made',
+    nullable: true,
   })
-  date!: string;
+  date!: string | null;
 }
