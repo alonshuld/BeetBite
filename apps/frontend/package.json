@@ -13,13 +13,16 @@
     "codegen": "openapi-typescript http://localhost:3000/api/v1/docs-json -o src/api/schema.d.ts"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.8.2",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
-    "@types/react": "^18.3.23",
-    "@types/react-dom": "^18.3.7",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.5.2",
     "eslint": "^9.39.3",
     "eslint-plugin-prettier": "^5.5.5",
