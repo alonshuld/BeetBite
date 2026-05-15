@@ -22,7 +22,7 @@ describe('project-reports mapper', () => {
     subcontractor: {
       id: 'sub-1',
       name: 'Sub 1',
-      payments: [] as { paymentDate: Date | null }[],
+      payments: [] as { id: string }[],
     },
     corporationPayments: [] as {
       id: string;
@@ -81,7 +81,6 @@ describe('project-reports mapper', () => {
           id: 'sub-1',
           name: 'Sub 1',
           payment: 8000,
-          paymentDate: undefined,
         },
         corporationPayments: [],
       });

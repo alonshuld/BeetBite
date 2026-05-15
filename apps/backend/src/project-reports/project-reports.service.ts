@@ -338,7 +338,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
                 serviceDate: projectReportDate.date,
               },
               select: {
-                paymentDate: true,
+                id: true,
               },
             },
           },

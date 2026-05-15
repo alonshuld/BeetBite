@@ -25,8 +25,9 @@ model Project {
   finishDate      DateTime @db.Date
   description     String
 
-  client  Client          @relation(fields: [clientId], references: [id])
-  reports ProjectReport[]
+  client               Client                 @relation(fields: [clientId], references: [id])
+  reports              ProjectReport[]
+  subcontractorPayments SubcontractorPayment[]
 
   @@map("projects")
 }
@@ -81,13 +82,14 @@ model CorporationPayment {
 }
 
 model SubcontractorPayment {
-  id              String    @id @default(cuid())
+  id              String   @id @default(cuid())
   subcontractorId String
-  serviceDate     DateTime  @db.Date
-  paymentDate     DateTime? @db.Date
-  amount          Decimal   @db.Decimal(12, 2)
+  projectId       String
+  serviceDate     DateTime @db.Date
+  amount          Decimal  @db.Decimal(12, 2)
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id])
+  project       Project       @relation(fields: [projectId], references: [id])
 
   @@map("subcontractor_payments")
 }

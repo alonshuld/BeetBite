@@ -49,7 +49,7 @@ export const toProjectReportResponse = (
     subcontractor: {
       id: string;
       name: string;
-      payments: { paymentDate: Date | null }[];
+      payments: { id: string }[];
     };
     corporationPayments: {
       id: string;
@@ -71,11 +71,6 @@ export const toProjectReportResponse = (
     id: projectReport.subcontractor.id,
     name: projectReport.subcontractor.name,
     payment: subcontractorPayment,
-    paymentDate: projectReport.subcontractor.payments
-      .map((p) => p.paymentDate)
-      .filter((d): d is Date => d !== null)
-      .sort((a, b) => b.getTime() - a.getTime())[0]
-      ?.toISOString(),
   },
   corporationPayments: projectReport.corporationPayments.map(
     (corporationPay) => ({
