@@ -89,10 +89,10 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
     return {
       ...createProjectReportDto,
       profitMargin:
-        createProjectReportDto.profitMargin ||
+        createProjectReportDto.profitMargin ??
         previousMonthProjectReport.profitMargin.toNumber(),
       subcontractorId:
-        createProjectReportDto.subcontractorId ||
+        createProjectReportDto.subcontractorId ??
         previousMonthProjectReport.subcontractorId,
     };
   }
@@ -174,7 +174,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
         case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
           throw new CorporationNotFoundError();
         case PRISMA_ERROR_CODES.NOT_FOUND: {
-          const model = error.meta?.model as string;
+          const model = (error.meta?.model as string) ?? '';
 
           if (model.toLowerCase().includes('project'))
             throw new ProjectNotFoundError(
@@ -279,7 +279,10 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
     });
 
     if (!projectReport)
-      throw new ProjectReportNotFoundError(projectId, monthQueryDto.month);
+      throw new ProjectReportNotFoundError(
+        projectId,
+        previousMonthDate.toISOString(),
+      );
 
     this.logger.log(`Project report retrieved: ${projectReport.id}`);
 
@@ -405,6 +408,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
               },
             },
             corporationPayments: {
+              deleteMany: {},
               createMany: {
                 data: enrichedCreateProjectReportDto.corporationPayments.map(
                   (corporationPay) => ({
@@ -441,7 +445,7 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
 
       switch (error.code) {
         case PRISMA_ERROR_CODES.NOT_FOUND: {
-          const model = error.meta?.model as string;
+          const model = (error.meta?.model as string) ?? '';
 
           if (model.toLowerCase().includes('projectreport'))
             throw new ProjectReportNotFoundError(id);

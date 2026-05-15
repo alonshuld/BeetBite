@@ -37,11 +37,13 @@ export class CorporationPaymentsService {
     startDate: Date;
     endDate: Date;
   } {
-    const startDate = new Date(month);
-    startDate.setDate(1);
-    const endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + 1);
-    endDate.setDate(0);
+    const ref = new Date(month);
+    const startDate = new Date(
+      Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 1),
+    );
+    const endDate = new Date(
+      Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() + 1, 0),
+    );
     return { startDate, endDate };
   }
 

@@ -9,12 +9,13 @@ BeetBite is a back-office tool for a single contractor company that manages cons
 **Clients** are people or companies that commission construction work. They agree on an estimated total cost for each **project** upfront (stored as `estimatedAmount`), then pay the contractor a monthly **income** as the work progresses. The income for a given month is recorded in a **ProjectReport**; the exact date the client wires the money is `incomeDate` (null until payment arrives).
 
 The contractor does not do the physical work itself. Instead it hires:
+
 - **Subcontractors** — individual workers assigned to a project for a given month. Each project report has exactly one subcontractor.
 - **Corporations** — specialist firms (flooring, plumbing, etc.) paid fixed amounts per month per project, stored as **CorporationPayments** attached to the report.
 
 Each month, the contractor keeps a **profit margin** percentage of the income, then pays the corporations their agreed amounts, and the subcontractor receives whatever is left. These values are derived at read time, not stored (see *Financial calculations* below).
 
-**SubcontractorPayments** track whether a subcontractor has actually been paid for a given service month across all their projects. The payment amount is aggregated at read time from that subcontractor's project reports for the month.
+**SubcontractorPayments** track partial payments made to a subcontractor for a given service month. Multiple partial payments per month are allowed. The amount owed is computed from project reports at read time; the service rejects any payment that would cause the total paid to exceed that amount.
 
 Users manually enter clients, projects, corporations, and subcontractors once, then create a project report each month per project. The system derives all financial insights (profits, payments, income totals, project payment progress) from these reports.
 
@@ -50,7 +51,7 @@ pnpx prisma generate           # Regenerate client without migrating
 Set in `.env` or `.env.local`:
 
 | Variable | Description |
-|---|---|
+| --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string |
 | `PORT` | HTTP port (default: 3000) |
 | `NODE_ENV` | `development` / `production` |
@@ -65,13 +66,13 @@ NestJS REST API backed by PostgreSQL via Prisma ORM. All routes are prefixed `ap
 Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` → Prisma (no separate repository layer).
 
 | Module | Responsibility |
-|---|---|
+| --- | --- |
 | `clients` | Manage clients (companies that own projects) |
 | `projects` | Manage projects; expose payment progress aggregates |
 | `project-reports` | Monthly financial reports per project, including corporation payments |
 | `corporations` | Corporations that receive payments from project reports |
 | `subcontractors` | Workers assigned to project reports |
-| `subcontractor-payments` | Track subcontractor payment status per service month; `amount` is computed dynamically |
+| `subcontractor-payments` | Track partial payments made to subcontractors per service month; enforces overpayment guard against computed amount owed per project; exposes `GET /by-client?month=` aggregation endpoint |
 | `incomes` | Income-related queries |
 | `prisma` | Singleton `PrismaService` extending `PrismaClient` with `@prisma/adapter-pg` |
 
@@ -80,11 +81,11 @@ Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` →
 Key entity fields (see `prisma/schema.prisma` for the full schema):
 
 | Entity | Notable fields |
-|---|---|
-| `Project` | `estimatedAmount` (Decimal), `finishDate` (Date), `description` (required String) |
+| --- | --- |
+| `Project` | `estimatedAmount` (Decimal), `finishDate` (Date), `description` (required String), `isDone` (Boolean, default false — marks project as closed) |
 | `ProjectReport` | `incomeDate?` (nullable — null means income not yet received); unique on `(projectId, date)` |
-| `CorporationPayment` | `date?` (nullable payment date) |
-| `SubcontractorPayment` | `serviceDate` (Date — the service month's start date, required); `paymentDate?` (nullable — null means unpaid); unique on `(subcontractorId, serviceDate)` |
+| `CorporationPayment` | `date?` (nullable payment date); `description?` (optional String); `isFuture` (Boolean, default false — true means not yet invoiced); `vatPercentage?` (Decimal — only applicable when `isFuture` is false, defaults to 18%) |
+| `SubcontractorPayment` | `projectId` (String — required, payment must be assigned to a project); `serviceDate` (Date — the service month's start date, required); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, projectId, serviceDate)` allowed; no `paymentDate` — all payments are always considered paid |
 
 ### Prisma client
 
@@ -93,17 +94,22 @@ The generated Prisma client lives in `src/generated/` (not `node_modules`). Impo
 ### Error handling
 
 Domain errors extend the base hierarchy in `src/common/errors/`:
+
 - `EntityError` → base
-  - `EntityNotFoundError` → maps to HTTP 404
-  - `EntityAlreadyExistsError` → maps to HTTP 409
+- `EntityNotFoundError` → maps to HTTP 404
+- `EntityAlreadyExistsError` → maps to HTTP 409
 
 Each module defines its own typed errors (e.g. `ProjectNotFoundError`, `ClientNotFoundError`) that extend these bases. `EntityExceptionFilter` (registered globally in `main.ts`) intercepts all exceptions and converts them to structured JSON responses.
 
 Services catch `PrismaClientKnownRequestError` and re-throw the appropriate domain error using the codes in `src/common/constants.ts` (`P2002` unique, `P2003` FK, `P2025` not found).
 
+`SubcontractorPaymentOverpaymentError` (extends `BadRequestException`) accepts an optional `paymentId` fourth argument — pass it on `update` so the error message identifies which payment triggered the violation.
+
 ### Mappers
 
 Each module with a non-trivial response shape has a `mappers/` subdirectory containing pure functions that convert Prisma entities to DTOs. Mappers handle `Decimal → number` and `Date → ISO string` conversions. The mapper is the only place these conversions happen — services pass raw Prisma types to mappers.
+
+**Important:** Always use explicit field picks in mapper return objects — never spread a Prisma model directly (e.g. `...projectReport`). Prisma models contain internal FK fields (`projectId`, `subcontractorId`) and nested relation arrays that are not part of the DTO shape and will leak into responses if spread. Pick only the fields declared in the target DTO.
 
 ### ProjectReport enrichment
 
@@ -112,14 +118,30 @@ When creating or updating a `ProjectReport`, `subcontractorId` and `profitMargin
 ### Financial calculations
 
 **ProjectReport** (computed at read time in `project-reports.service.ts:findOne`, not stored):
+
 - `profit = income × profitMargin / 100`
 - `subcontractorPayment = income − profit − Σ(corporationPayments)`
 
-**SubcontractorPayment** — `amount` is not stored; it is computed by summing `subcontractorPayment` across all `ProjectReport` rows matching `(subcontractorId, serviceDate)`.
+**SubcontractorPayment** — `amount` is stored (provided by the caller). Multiple partial payments per `(subcontractorId, projectId, serviceDate)` are allowed. On `create` and `update`, the service computes `amountOwed` for the specific project (not across all projects for the month) and rejects the payment if `Σ(existing payments for that project) + newAmount > amountOwed`. The overpayment check and the DB write are executed inside a single `$transaction` to prevent race conditions — do not split them into separate steps.
 
 ### Project payment progress
 
 `ProjectResponseDto` includes a `paymentProgress` field with a single field: `totalPaid` = sum of `ProjectReport.income` where `incomeDate IS NOT NULL`. The frontend derives `remainingAmount` and `percentagePaid` from `totalPaid` and the project's `estimatedAmount`.
+
+### Project filters
+
+`GET /projects` accepts optional boolean query params `active` (default true), `future`, and `closed`, plus an optional `clientId` string:
+
+- `active` — `isDone = false` AND has at least one project report
+- `future` — no project reports yet
+- `closed` — `isDone = true`
+- `clientId` — filter to a specific client's projects
+
+Filters are independent and combinable. Default view (no params) returns active projects only.
+
+### Income Per Month
+
+`GET /incomes/all-months` returns all project reports grouped by month. Each entry includes `income`, `incomeStatus` (`pending` when `incomeDate` is null, `paid` otherwise), and `completionPercent` (`totalPaidIncome / estimatedAmount × 100`).
 
 ### Testing approach
 

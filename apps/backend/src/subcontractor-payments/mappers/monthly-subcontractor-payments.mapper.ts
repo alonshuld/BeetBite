@@ -14,40 +14,34 @@ type SubcontractorWithPayments = Prisma.SubcontractorGetPayload<{
       };
     };
   };
-}> & { expectedTotal: number };
+}> & { expectedTotal: number; serviceDate: Date };
 
-/**
- * Converts a Subcontractor with its associated payments into a MonthlySubcontractorPaymentsDto for API response.
- * @param subcontractorWithPayments Subcontractor data including its payments retrieved from the database
- * @returns MonthlySubcontractorPaymentsDto formatted for API response, containing subcontractor details and a list of payments
- */
 export const toMonthlySubcontractorPaymentsResponse = (
   subcontractorWithPayments: SubcontractorWithPayments,
 ): MonthlySubcontractorPaymentsDto => {
+  const amountPaid = subcontractorWithPayments.payments.reduce(
+    (sum, payment) => sum + payment.amount.toNumber(),
+    0,
+  );
+
   return {
     subcontractor: {
       id: subcontractorWithPayments.id,
       name: subcontractorWithPayments.name,
     },
+    serviceDate: subcontractorWithPayments.serviceDate.toISOString(),
+    amountOwed: subcontractorWithPayments.expectedTotal,
+    amountPaid,
     payments: subcontractorWithPayments.payments.map((payment) => ({
       id: payment.id,
-      serviceDate: payment.serviceDate.toISOString(),
-      paymentDate: payment.paymentDate.toISOString(),
       amount: payment.amount.toNumber(),
+      paymentDate: payment.paymentDate
+        ? payment.paymentDate.toISOString()
+        : null,
     })),
-    total: subcontractorWithPayments.payments.reduce(
-      (sum, payment) => sum + payment.amount.toNumber(),
-      0,
-    ),
-    expectedTotal: subcontractorWithPayments.expectedTotal,
   };
 };
 
-/**
- * Converts a list of Subcontractors with their associated payments into a list of MonthlySubcontractorPaymentsDto for API response.
- * @param subcontractorsWithPayments Subcontractor data including their payments retrieved from the database
- * @returns List of MonthlySubcontractorPaymentsDto formatted for API response, containing subcontractor details and a list of payments for each subcontractor
- */
 export const toMonthlySubcontractorPaymentsResponseList = (
   subcontractorsWithPayments: SubcontractorWithPayments[],
 ): MonthlySubcontractorPaymentsDto[] => {
