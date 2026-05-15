@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SubcontractorPaymentsController } from './subcontractor-payments.controller';
 import { SubcontractorPaymentsService } from './subcontractor-payments.service';
 import { SubcontractorPaymentNotFoundError } from './errors/subcontractor-payment-not-found.error';
+import { SubcontractorPaymentOverpaymentError } from './errors/subcontractor-payment-overpayment.error';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
 
 describe('SubcontractorPaymentsController', () => {
@@ -77,6 +78,23 @@ describe('SubcontractorPaymentsController', () => {
 
       await expect(controller.create(createDto)).rejects.toThrow(
         'Creation failed',
+      );
+    });
+
+    it('should propagate SubcontractorPaymentOverpaymentError when payment would exceed amount owed', async () => {
+      const createDto = {
+        subcontractorId: '1',
+        serviceDate: '2024-06-01',
+        paymentDate: '2024-06-15',
+        amount: 1000,
+      };
+
+      mockSubcontractorPaymentsService.create.mockRejectedValue(
+        new SubcontractorPaymentOverpaymentError(900, 500, 1000),
+      );
+
+      await expect(controller.create(createDto)).rejects.toThrow(
+        SubcontractorPaymentOverpaymentError,
       );
     });
   });
@@ -182,6 +200,23 @@ describe('SubcontractorPaymentsController', () => {
 
       await expect(controller.update('1', updateDto)).rejects.toThrow(
         SubcontractorPaymentNotFoundError,
+      );
+    });
+
+    it('should propagate SubcontractorPaymentOverpaymentError when updated amount would exceed amount owed', async () => {
+      const updateDto = {
+        subcontractorId: '1',
+        serviceDate: '2024-06-01',
+        paymentDate: '2024-06-15',
+        amount: 1500,
+      };
+
+      mockSubcontractorPaymentsService.update.mockRejectedValue(
+        new SubcontractorPaymentOverpaymentError(900, 500, 1500, '1'),
+      );
+
+      await expect(controller.update('1', updateDto)).rejects.toThrow(
+        SubcontractorPaymentOverpaymentError,
       );
     });
   });

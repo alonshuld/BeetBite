@@ -237,6 +237,48 @@ describe('SubcontractorPaymentsService', () => {
 
       expect(result).toEqual([]);
     });
+
+    it('should accumulate amountPaid across multiple partial payments for the same subcontractor', async () => {
+      const mockSubcontractors = [
+        {
+          id: '1',
+          name: 'Subcontractor 1',
+          payments: [
+            {
+              id: 'payment-a',
+              serviceDate: new Date('2023-01-01'),
+              paymentDate: new Date('2023-01-10'),
+              amount: { toNumber: () => 300 },
+            },
+            {
+              id: 'payment-b',
+              serviceDate: new Date('2023-01-01'),
+              paymentDate: new Date('2023-01-20'),
+              amount: { toNumber: () => 200 },
+            },
+            {
+              id: 'payment-c',
+              serviceDate: new Date('2023-01-01'),
+              paymentDate: null,
+              amount: { toNumber: () => 400 },
+            },
+          ],
+        },
+      ];
+
+      mockPrismaService.subcontractor.findMany.mockResolvedValue(
+        mockSubcontractors,
+      );
+      mockPrismaService.projectReport.findMany.mockResolvedValue([]);
+
+      const result = await service.findSubcontractorPaymentsInMonth({
+        month: '2023-01-01',
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].amountPaid).toBe(900);
+      expect(result[0].payments).toHaveLength(3);
+    });
   });
 
   describe('findSubcontractorMonthlyPayments', () => {
