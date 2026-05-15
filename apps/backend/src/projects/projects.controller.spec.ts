@@ -5,7 +5,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectResponseDto } from './dto/project-response.dto';
 import { ProjectBasicResponseDto } from './dto/project-basic-response.dto';
-import { PaginationQueryDto } from '../common/pagination-query.dto';
+import { ProjectsQueryDto } from './dto/projects-query.dto';
 
 describe('ProjectsController', () => {
   let controller: ProjectsController;
@@ -54,6 +54,7 @@ describe('ProjectsController', () => {
         estimatedAmount: 100000,
         finishDate: '2026-12-31',
         description: 'Test project description',
+        isDone: false,
       };
 
       mockProjectsService.create.mockResolvedValue(expectedResult);
@@ -91,6 +92,7 @@ describe('ProjectsController', () => {
           estimatedAmount: 5000,
           finishDate: '',
           description: 'Description 1',
+          isDone: false,
           paymentProgress: { totalPaid: 2000 },
         },
         {
@@ -100,6 +102,7 @@ describe('ProjectsController', () => {
           estimatedAmount: 10000,
           finishDate: '',
           description: 'Description 2',
+          isDone: false,
           paymentProgress: { totalPaid: 5000 },
         },
       ];
@@ -113,7 +116,7 @@ describe('ProjectsController', () => {
     });
 
     it('should forward pagination params to the service', async () => {
-      const pagination = { page: 2, limit: 1 } as PaginationQueryDto;
+      const pagination = { page: 2, limit: 1 } as ProjectsQueryDto;
 
       const expectedResult: ProjectResponseDto[] = [
         {
@@ -123,6 +126,7 @@ describe('ProjectsController', () => {
           estimatedAmount: 7500,
           finishDate: '',
           description: 'Description 3',
+          isDone: false,
           paymentProgress: { totalPaid: 0 },
         },
       ];
@@ -153,6 +157,7 @@ describe('ProjectsController', () => {
         estimatedAmount: 5000,
         finishDate: '',
         description: 'Description 1',
+        isDone: false,
         paymentProgress: { totalPaid: 2000 },
       };
 
@@ -193,6 +198,7 @@ describe('ProjectsController', () => {
         estimatedAmount: 200000,
         finishDate: '2027-01-01',
         description: 'Updated description',
+        isDone: false,
       };
 
       mockProjectsService.update.mockResolvedValue(expectedResult);

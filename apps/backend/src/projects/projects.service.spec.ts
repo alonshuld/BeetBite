@@ -8,7 +8,7 @@ import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { ProjectNotFoundError } from './errors/project-not-found.exception';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
 import { ClientNotFoundError } from '../clients/errors/client-not-found.exception';
-import { PaginationQueryDto } from '../common/pagination-query.dto';
+import { ProjectsQueryDto } from './dto/projects-query.dto';
 import { Prisma } from 'src/generated/client';
 
 describe('ProjectsService', () => {
@@ -170,7 +170,7 @@ describe('ProjectsService', () => {
       ];
       mockPrismaService.project.findMany.mockResolvedValue(projects);
 
-      const pagination: PaginationQueryDto = { page: 2, limit: 1 };
+      const pagination: ProjectsQueryDto = { page: 2, limit: 1 };
 
       const result = await service.findAll(pagination);
 

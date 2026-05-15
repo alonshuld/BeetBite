@@ -43,4 +43,11 @@ export class ProjectBasicResponseDto {
     type: 'string',
   })
   description!: string;
+
+  @ApiProperty({
+    example: false,
+    description: 'Whether the project is closed/done',
+    type: 'boolean',
+  })
+  isDone!: boolean;
 }

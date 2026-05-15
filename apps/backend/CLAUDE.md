@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+This project uses `pnpm` as package manager
+
 ## Business domain
 
 BeetBite is a back-office tool for a single contractor company that manages construction projects on behalf of clients. Each deployment of the application represents one such contractor.
