@@ -9,6 +9,7 @@ import {
 import { IncomesService } from './incomes.service';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { IncomeResponseDto } from './dto/income-response.dto';
+import { MonthlyIncomeDto } from './dto/monthly-income.dto';
 
 /**
  * Controller for income-related endpoints.
@@ -20,6 +21,19 @@ import { IncomeResponseDto } from './dto/income-response.dto';
 @Controller('incomes')
 export class IncomesController {
   constructor(private readonly incomesService: IncomesService) {}
+
+  @Get('all-months')
+  @ApiOperation({
+    summary: 'Get all projects grouped by month with income details',
+  })
+  @ApiOkResponse({
+    description: 'All months income summary',
+    type: MonthlyIncomeDto,
+    isArray: true,
+  })
+  async getAllMonthsIncome(): Promise<MonthlyIncomeDto[]> {
+    return this.incomesService.getAllMonthsIncome();
+  }
 
   /**
    * Get total income for a given month.
