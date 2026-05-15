@@ -338,38 +338,6 @@ describe('ProjectReportsService', () => {
       expect(result.subcontractor.payment).toBeCloseTo(6500);
     });
 
-    it('should include paymentDate from subcontractor payments when present', async () => {
-      const paymentDate = new Date('2024-05-15T00:00:00.000Z');
-      const fullReport = makeFullReport({
-        subcontractor: {
-          id: 'sub-1',
-          name: 'Sub 1',
-          payments: [{ paymentDate }],
-        },
-      });
-      mockPrismaService.projectReport.findUnique
-        .mockResolvedValueOnce({ date: new Date('2024-05-01T00:00:00.000Z') })
-        .mockResolvedValueOnce(fullReport);
-
-      const result = await service.findOne('report-1');
-
-      expect(result.subcontractor.paymentDate).toBe(paymentDate.toISOString());
-    });
-
-    it('should return undefined paymentDate when no subcontractor payments exist', async () => {
-      mockPrismaService.projectReport.findUnique
-        .mockResolvedValueOnce({ date: new Date('2024-05-01T00:00:00.000Z') })
-        .mockResolvedValueOnce(
-          makeFullReport({
-            subcontractor: { id: 'sub-1', name: 'Sub 1', payments: [] },
-          }),
-        );
-
-      const result = await service.findOne('report-1');
-
-      expect(result.subcontractor.paymentDate).toBeUndefined();
-    });
-
     it('should throw ProjectReportNotFoundError when first findUnique returns null', async () => {
       mockPrismaService.projectReport.findUnique.mockResolvedValue(null);
 

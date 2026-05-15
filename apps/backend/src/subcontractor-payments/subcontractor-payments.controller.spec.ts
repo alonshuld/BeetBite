@@ -12,6 +12,7 @@ describe('SubcontractorPaymentsController', () => {
     create: jest.fn(),
     findSubcontractorPaymentsInMonth: jest.fn(),
     findSubcontractorMonthlyPayments: jest.fn(),
+    findByClient: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
   };
@@ -42,15 +43,15 @@ describe('SubcontractorPaymentsController', () => {
     it('should create a subcontractor payment', async () => {
       const createDto = {
         subcontractorId: '1',
+        projectId: 'project-1',
         serviceDate: '2024-06-01',
-        paymentDate: '2024-06-15',
         amount: 1000,
       };
       const expectedResult = {
         id: '1',
+        projectId: 'project-1',
         subcontractor: { id: 'sub1', name: 'Test Sub' },
         serviceDate: '2024-06-01T00:00:00.000Z',
-        paymentDate: '2024-06-15T00:00:00.000Z',
         amount: 1000,
       };
 
@@ -67,8 +68,8 @@ describe('SubcontractorPaymentsController', () => {
     it('should throw if subcontractor payment creation fails', async () => {
       const createDto = {
         subcontractorId: '1',
+        projectId: 'project-1',
         serviceDate: '2024-06-01',
-        paymentDate: '2024-06-15',
         amount: 1000,
       };
 
@@ -84,8 +85,8 @@ describe('SubcontractorPaymentsController', () => {
     it('should propagate SubcontractorPaymentOverpaymentError when payment would exceed amount owed', async () => {
       const createDto = {
         subcontractorId: '1',
+        projectId: 'project-1',
         serviceDate: '2024-06-01',
-        paymentDate: '2024-06-15',
         amount: 1000,
       };
 
@@ -105,12 +106,7 @@ describe('SubcontractorPaymentsController', () => {
         {
           subcontractor: { id: '1', name: 'Sub 1' },
           payments: [
-            {
-              id: 'p1',
-              serviceDate: '2024-06-01T00:00:00.000Z',
-              paymentDate: '2024-06-15T00:00:00.000Z',
-              amount: 1000,
-            },
+            { id: 'p1', serviceDate: '2024-06-01T00:00:00.000Z', amount: 1000 },
           ],
           total: 1000,
           expectedTotal: 1500,
@@ -135,12 +131,7 @@ describe('SubcontractorPaymentsController', () => {
       const expectedResult = {
         subcontractor: { id: '1', name: 'Sub 1' },
         payments: [
-          {
-            id: 'p1',
-            serviceDate: '2024-06-01T00:00:00.000Z',
-            paymentDate: '2024-06-15T00:00:00.000Z',
-            amount: 1000,
-          },
+          { id: 'p1', serviceDate: '2024-06-01T00:00:00.000Z', amount: 1000 },
         ],
         total: 1000,
         expectedTotal: 1500,
@@ -159,19 +150,47 @@ describe('SubcontractorPaymentsController', () => {
     });
   });
 
+  describe('findByClient', () => {
+    it('should return aggregated payments per client', async () => {
+      const expectedResult = [
+        {
+          clientId: 'client-1',
+          clientName: 'Client A',
+          totalSubcontractorPayments: 3000,
+        },
+        {
+          clientId: 'client-2',
+          clientName: 'Client B',
+          totalSubcontractorPayments: 500,
+        },
+      ];
+
+      mockSubcontractorPaymentsService.findByClient.mockResolvedValue(
+        expectedResult,
+      );
+
+      const result = await controller.findByClient({ month: '2024-06' });
+
+      expect(result).toEqual(expectedResult);
+      expect(
+        mockSubcontractorPaymentsService.findByClient,
+      ).toHaveBeenCalledWith({ month: '2024-06' });
+    });
+  });
+
   describe('update', () => {
     it('should update a subcontractor payment', async () => {
       const updateDto = {
         subcontractorId: '1',
+        projectId: 'project-1',
         serviceDate: '2024-06-01',
-        paymentDate: '2024-06-15',
         amount: 1500,
       };
       const expectedResult = {
         id: '1',
+        projectId: 'project-1',
         subcontractor: { id: 'sub1', name: 'Test Sub' },
         serviceDate: '2024-06-01T00:00:00.000Z',
-        paymentDate: '2024-06-15T00:00:00.000Z',
         amount: 1500,
       };
 
@@ -189,8 +208,8 @@ describe('SubcontractorPaymentsController', () => {
     it('should throw SubcontractorPaymentNotFoundError if update fails', async () => {
       const updateDto = {
         subcontractorId: '1',
+        projectId: 'project-1',
         serviceDate: '2024-06-01',
-        paymentDate: '2024-06-15',
         amount: 1500,
       };
 
@@ -206,8 +225,8 @@ describe('SubcontractorPaymentsController', () => {
     it('should propagate SubcontractorPaymentOverpaymentError when updated amount would exceed amount owed', async () => {
       const updateDto = {
         subcontractorId: '1',
+        projectId: 'project-1',
         serviceDate: '2024-06-01',
-        paymentDate: '2024-06-15',
         amount: 1500,
       };
 
@@ -248,6 +267,7 @@ describe('SubcontractorPaymentsController', () => {
       create: jest.fn(),
       findSubcontractorPaymentsInMonth: jest.fn(),
       findSubcontractorMonthlyPayments: jest.fn(),
+      findByClient: jest.fn(),
       update: jest.fn(),
       remove: jest.fn(),
     };
@@ -274,17 +294,17 @@ describe('SubcontractorPaymentsController', () => {
     describe('subcontractor payment creation workflows', () => {
       const createDto = {
         subcontractorId: 'sub-123',
+        projectId: 'project-123',
         serviceDate: '2023-01-01',
-        paymentDate: '2023-01-15',
         amount: 1000,
       };
 
       it('should successfully create a payment for existing subcontractor', async () => {
         const expectedPayment = {
           id: 'payment-123',
+          projectId: 'project-123',
           subcontractor: { id: 'sub-123', name: 'Test Sub' },
           serviceDate: '2023-01-01T00:00:00.000Z',
-          paymentDate: '2023-01-15T00:00:00.000Z',
           amount: 1000,
         };
 
@@ -314,14 +334,14 @@ describe('SubcontractorPaymentsController', () => {
         const createDtos = [
           {
             subcontractorId: 'sub-1',
+            projectId: 'project-1',
             serviceDate: '2023-01-01',
-            paymentDate: '2023-01-15',
             amount: 1000,
           },
           {
             subcontractorId: 'sub-2',
+            projectId: 'project-2',
             serviceDate: '2023-01-01',
-            paymentDate: '2023-01-20',
             amount: 2000,
           },
         ];
@@ -329,16 +349,16 @@ describe('SubcontractorPaymentsController', () => {
         const expectedPayments = [
           {
             id: 'payment-1',
+            projectId: 'project-1',
             subcontractor: { id: 'sub-1', name: 'Sub 1' },
             serviceDate: '2023-01-01T00:00:00.000Z',
-            paymentDate: '2023-01-15T00:00:00.000Z',
             amount: 1000,
           },
           {
             id: 'payment-2',
+            projectId: 'project-2',
             subcontractor: { id: 'sub-2', name: 'Sub 2' },
             serviceDate: '2023-01-01T00:00:00.000Z',
-            paymentDate: '2023-01-20T00:00:00.000Z',
             amount: 2000,
           },
         ];
@@ -367,7 +387,6 @@ describe('SubcontractorPaymentsController', () => {
               {
                 id: 'payment-1',
                 serviceDate: '2023-01-01T00:00:00.000Z',
-                paymentDate: '2023-01-15T00:00:00.000Z',
                 amount: 1000,
               },
             ],
@@ -409,7 +428,6 @@ describe('SubcontractorPaymentsController', () => {
             {
               id: 'payment-123',
               serviceDate: '2023-01-01T00:00:00.000Z',
-              paymentDate: '2023-01-15T00:00:00.000Z',
               amount: 1000,
             },
           ],
@@ -445,17 +463,17 @@ describe('SubcontractorPaymentsController', () => {
     describe('subcontractor payment update workflows', () => {
       const updateDto = {
         subcontractorId: 'sub-123',
+        projectId: 'project-123',
         serviceDate: '2023-01-01',
-        paymentDate: '2023-01-20',
         amount: 1500,
       };
 
       it('should successfully update an existing payment', async () => {
         const expectedUpdatedPayment = {
           id: 'payment-123',
+          projectId: 'project-123',
           subcontractor: { id: 'sub-123', name: 'Test Sub' },
           serviceDate: '2023-01-01T00:00:00.000Z',
-          paymentDate: '2023-01-20T00:00:00.000Z',
           amount: 1500,
         };
 
@@ -523,24 +541,20 @@ describe('SubcontractorPaymentsController', () => {
       it('should handle complete workflow: create, retrieve, update, delete payment', async () => {
         const createDto = {
           subcontractorId: 'sub-workflow',
+          projectId: 'project-workflow',
           serviceDate: '2023-01-01',
-          paymentDate: '2023-01-15',
           amount: 1000,
         };
 
         const createdPayment = {
           id: 'payment-workflow',
+          projectId: 'project-workflow',
           subcontractor: { id: 'sub-workflow', name: 'Workflow Sub' },
           serviceDate: '2023-01-01T00:00:00.000Z',
-          paymentDate: '2023-01-15T00:00:00.000Z',
           amount: 1000,
         };
 
-        const updatedPayment = {
-          ...createdPayment,
-          paymentDate: '2023-01-20T00:00:00.000Z',
-          amount: 1500,
-        };
+        const updatedPayment = { ...createdPayment, amount: 1500 };
 
         const monthlyPayment = {
           subcontractor: { id: 'sub-workflow', name: 'Workflow Sub' },
@@ -548,7 +562,6 @@ describe('SubcontractorPaymentsController', () => {
             {
               id: 'payment-workflow',
               serviceDate: '2023-01-01T00:00:00.000Z',
-              paymentDate: '2023-01-15T00:00:00.000Z',
               amount: 1000,
             },
           ],
@@ -575,8 +588,8 @@ describe('SubcontractorPaymentsController', () => {
         );
         const updateDto = {
           subcontractorId: 'sub-workflow',
+          projectId: 'project-workflow',
           serviceDate: '2023-01-01',
-          paymentDate: '2023-01-20',
           amount: 1500,
         };
         const updateResult = await integrationController.update(

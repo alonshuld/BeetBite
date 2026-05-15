@@ -3,9 +3,6 @@ import { Transform } from 'class-transformer';
 import { IsISO8601, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 import { normalizeToMonthStart } from 'src/common/utils/date.utils';
 
-/**
- * Represents the parameters required to create a new subcontractor payment
- */
 export class CreateSubcontractorPaymentDto {
   @IsString()
   @IsNotEmpty()
@@ -15,6 +12,14 @@ export class CreateSubcontractorPaymentDto {
   })
   subcontractorId!: string;
 
+  @IsString()
+  @IsNotEmpty()
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'ID of the project that the payment belongs to',
+  })
+  projectId!: string;
+
   @IsISO8601()
   @ApiProperty({
     example: '2026-01-01',
@@ -22,14 +27,6 @@ export class CreateSubcontractorPaymentDto {
   })
   @Transform(({ value }: { value: string }) => normalizeToMonthStart(value))
   serviceDate!: string;
-
-  @IsISO8601()
-  @IsNotEmpty()
-  @ApiProperty({
-    example: '2026-01-01',
-    description: 'The date the payment was actually processed',
-  })
-  paymentDate!: string;
 
   @IsNumber()
   @IsNotEmpty()

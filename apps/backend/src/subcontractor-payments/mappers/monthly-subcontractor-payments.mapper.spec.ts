@@ -7,13 +7,9 @@ import {
 describe('monthly-subcontractor-payments mapper', () => {
   const serviceDate = new Date('2024-05-01T00:00:00.000Z');
 
-  const makePayment = (
-    amount: number,
-    paymentDate: Date | null = new Date('2024-05-10T00:00:00.000Z'),
-  ) => ({
+  const makePayment = (amount: number) => ({
     id: `payment-${amount}`,
     serviceDate,
-    paymentDate,
     amount: new Prisma.Decimal(String(amount)),
   });
 
@@ -49,26 +45,16 @@ describe('monthly-subcontractor-payments mapper', () => {
       expect(result.amountOwed).toBe(1200);
     });
 
-    it('should serialize null paymentDate in partial payments as null', () => {
-      const input = makeInput([makePayment(500, null)]);
-
-      const result = toMonthlySubcontractorPaymentsResponse(input);
-
-      expect(result.payments[0].paymentDate).toBeNull();
-    });
-
-    it('should serialize non-null paymentDate in partial payments as ISO string', () => {
-      const paymentDate = new Date('2024-05-15T00:00:00.000Z');
-      const input = makeInput([makePayment(500, paymentDate)]);
-
-      const result = toMonthlySubcontractorPaymentsResponse(input);
-
-      expect(result.payments[0].paymentDate).toBe(paymentDate.toISOString());
-    });
-
     it('should return zero amountPaid when there are no payments', () => {
       const result = toMonthlySubcontractorPaymentsResponse(makeInput([]));
       expect(result.amountPaid).toBe(0);
+    });
+
+    it('should not include paymentDate on nested payments', () => {
+      const result = toMonthlySubcontractorPaymentsResponse(
+        makeInput([makePayment(500)]),
+      );
+      expect(result.payments[0]).not.toHaveProperty('paymentDate');
     });
   });
 

@@ -15,12 +15,40 @@ import {
   toMonthlySubcontractorPaymentsResponseList,
 } from './mappers/monthly-subcontractor-payments.mapper';
 import { MonthlySubcontractorPaymentsDto } from './dto/monthly-subcontractor-payments.dto';
+import { SubcontractorPaymentsByClientResponseDto } from './dto/subcontractor-payments-by-client-response.dto';
+import { toSubcontractorPaymentsByClientResponseList } from './mappers/subcontractor-payments-by-client.mapper';
 
 @Injectable()
 export class SubcontractorPaymentsService {
   private readonly logger = new Logger(SubcontractorPaymentsService.name);
 
   constructor(private readonly prismaService: PrismaService) {}
+
+  private async calculateProjectExpectedTotal(
+    subcontractorId: string,
+    projectId: string,
+    serviceDate: Date,
+  ): Promise<number> {
+    const report = await this.prismaService.projectReport.findFirst({
+      where: { subcontractorId, projectId, date: serviceDate },
+      select: {
+        income: true,
+        profitMargin: true,
+        corporationPayments: { select: { amount: true } },
+      },
+    });
+
+    if (!report) return 0;
+
+    const income = report.income.toNumber();
+    const afterProfit =
+      income - (report.profitMargin.toNumber() * income) / 100;
+    const corpTotal = report.corporationPayments.reduce(
+      (s, p) => s + p.amount.toNumber(),
+      0,
+    );
+    return afterProfit - corpTotal;
+  }
 
   private async calculateSubcontractorExpectedTotal(
     subcontractorId: string,
@@ -106,13 +134,15 @@ export class SubcontractorPaymentsService {
       const subcontractorPayment = await this.prismaService.$transaction(
         async (tx) => {
           const [amountOwed, existingPayments] = await Promise.all([
-            this.calculateSubcontractorExpectedTotal(
+            this.calculateProjectExpectedTotal(
               createSubcontractorPaymentDto.subcontractorId,
+              createSubcontractorPaymentDto.projectId,
               serviceDate,
             ),
             tx.subcontractorPayment.findMany({
               where: {
                 subcontractorId: createSubcontractorPaymentDto.subcontractorId,
+                projectId: createSubcontractorPaymentDto.projectId,
                 serviceDate,
               },
               select: { amount: true },
@@ -136,8 +166,8 @@ export class SubcontractorPaymentsService {
             data: { ...createSubcontractorPaymentDto },
             select: {
               id: true,
+              projectId: true,
               serviceDate: true,
-              paymentDate: true,
               amount: true,
               subcontractor: {
                 select: {
@@ -185,7 +215,6 @@ export class SubcontractorPaymentsService {
             select: {
               id: true,
               serviceDate: true,
-              paymentDate: true,
               amount: true,
             },
           },
@@ -234,7 +263,6 @@ export class SubcontractorPaymentsService {
               select: {
                 id: true,
                 serviceDate: true,
-                paymentDate: true,
                 amount: true,
               },
             },
@@ -260,6 +288,30 @@ export class SubcontractorPaymentsService {
     );
   }
 
+  async findByClient(
+    monthQuery: MonthQueryDto,
+  ): Promise<SubcontractorPaymentsByClientResponseDto[]> {
+    const serviceDate = new Date(monthQuery.month);
+
+    const payments = await this.prismaService.subcontractorPayment.findMany({
+      where: { serviceDate },
+      select: {
+        amount: true,
+        project: {
+          select: {
+            client: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+
+    this.logger.log(
+      `Retrieved subcontractor payments by client for ${serviceDate.toLocaleDateString()}`,
+    );
+
+    return toSubcontractorPaymentsByClientResponseList(payments);
+  }
+
   async update(
     id: string,
     updateSubcontractorPaymentDto: UpdateSubcontractorPaymentDto,
@@ -270,13 +322,15 @@ export class SubcontractorPaymentsService {
       const subcontractorPayment = await this.prismaService.$transaction(
         async (tx) => {
           const [amountOwed, existingPayments] = await Promise.all([
-            this.calculateSubcontractorExpectedTotal(
+            this.calculateProjectExpectedTotal(
               updateSubcontractorPaymentDto.subcontractorId,
+              updateSubcontractorPaymentDto.projectId,
               serviceDate,
             ),
             tx.subcontractorPayment.findMany({
               where: {
                 subcontractorId: updateSubcontractorPaymentDto.subcontractorId,
+                projectId: updateSubcontractorPaymentDto.projectId,
                 serviceDate,
                 NOT: { id },
               },
@@ -303,8 +357,8 @@ export class SubcontractorPaymentsService {
             data: { ...updateSubcontractorPaymentDto },
             select: {
               id: true,
+              projectId: true,
               serviceDate: true,
-              paymentDate: true,
               amount: true,
               subcontractor: {
                 select: {

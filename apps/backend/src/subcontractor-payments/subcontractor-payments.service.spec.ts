@@ -26,6 +26,7 @@ describe('SubcontractorPaymentsService', () => {
     },
     projectReport: {
       findMany: jest.fn(),
+      findFirst: jest.fn(),
     },
     subcontractor: {
       findUnique: jest.fn(),
@@ -58,14 +59,14 @@ describe('SubcontractorPaymentsService', () => {
   describe('create', () => {
     const createDto = {
       subcontractorId: '1',
+      projectId: 'project-1',
       serviceDate: '2023-01-01',
-      paymentDate: '2023-01-15',
       amount: 1000,
     };
     const mockPayment = {
       id: '1',
+      projectId: 'project-1',
       serviceDate: new Date('2023-01-01'),
-      paymentDate: new Date('2023-01-15'),
       amount: { toNumber: () => 1000 },
       subcontractor: {
         id: '1',
@@ -74,13 +75,11 @@ describe('SubcontractorPaymentsService', () => {
     };
 
     it('should create a subcontractor payment', async () => {
-      mockPrismaService.projectReport.findMany.mockResolvedValue([
-        {
-          income: { toNumber: () => 5000 },
-          profitMargin: { toNumber: () => 10 },
-          corporationPayments: [],
-        },
-      ]);
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        income: { toNumber: () => 5000 },
+        profitMargin: { toNumber: () => 10 },
+        corporationPayments: [],
+      });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
       mockPrismaService.subcontractorPayment.create.mockResolvedValue(
         mockPayment,
@@ -90,9 +89,9 @@ describe('SubcontractorPaymentsService', () => {
 
       expect(result).toEqual({
         id: mockPayment.id,
+        projectId: mockPayment.projectId,
         subcontractor: mockPayment.subcontractor,
         serviceDate: mockPayment.serviceDate.toISOString(),
-        paymentDate: mockPayment.paymentDate.toISOString(),
         amount: 1000,
       });
       expect(
@@ -101,8 +100,8 @@ describe('SubcontractorPaymentsService', () => {
         data: createDto,
         select: {
           id: true,
+          projectId: true,
           serviceDate: true,
-          paymentDate: true,
           amount: true,
           subcontractor: {
             select: {
@@ -115,14 +114,12 @@ describe('SubcontractorPaymentsService', () => {
     });
 
     it('should throw SubcontractorPaymentOverpaymentError when payment exceeds amount owed', async () => {
-      mockPrismaService.projectReport.findMany.mockResolvedValue([
-        {
-          income: { toNumber: () => 1000 },
-          profitMargin: { toNumber: () => 10 },
-          corporationPayments: [],
-        },
-      ]);
-      // amountOwed = 1000 - 100 = 900, already paid = 500, new amount = 1000 → overpayment
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        income: { toNumber: () => 1000 },
+        profitMargin: { toNumber: () => 10 },
+        corporationPayments: [],
+      });
+      // amountOwed = 900, already paid = 500, new amount = 1000 → overpayment
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([
         { amount: { toNumber: () => 500 } },
       ]);
@@ -133,13 +130,11 @@ describe('SubcontractorPaymentsService', () => {
     });
 
     it('should throw SubcontractorNotFoundError when subcontractor does not exist', async () => {
-      mockPrismaService.projectReport.findMany.mockResolvedValue([
-        {
-          income: { toNumber: () => 5000 },
-          profitMargin: { toNumber: () => 10 },
-          corporationPayments: [],
-        },
-      ]);
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        income: { toNumber: () => 5000 },
+        profitMargin: { toNumber: () => 10 },
+        corporationPayments: [],
+      });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
       const prismaError = new PrismaClientKnownRequestError(
@@ -170,7 +165,6 @@ describe('SubcontractorPaymentsService', () => {
             {
               id: 'payment-1',
               serviceDate: new Date('2023-01-01'),
-              paymentDate: new Date('2023-01-15'),
               amount: { toNumber: () => 1000 },
             },
           ],
@@ -182,7 +176,6 @@ describe('SubcontractorPaymentsService', () => {
             {
               id: 'payment-2',
               serviceDate: new Date('2023-01-01'),
-              paymentDate: new Date('2023-01-20'),
               amount: { toNumber: () => 2000 },
             },
           ],
@@ -204,26 +197,14 @@ describe('SubcontractorPaymentsService', () => {
         serviceDate: new Date('2023-01-01').toISOString(),
         amountOwed: 0,
         amountPaid: 1000,
-        payments: [
-          {
-            id: 'payment-1',
-            paymentDate: '2023-01-15T00:00:00.000Z',
-            amount: 1000,
-          },
-        ],
+        payments: [{ id: 'payment-1', amount: 1000 }],
       });
       expect(result[1]).toMatchObject({
         subcontractor: { id: '2', name: 'Subcontractor 2' },
         serviceDate: new Date('2023-01-01').toISOString(),
         amountOwed: 0,
         amountPaid: 2000,
-        payments: [
-          {
-            id: 'payment-2',
-            paymentDate: '2023-01-20T00:00:00.000Z',
-            amount: 2000,
-          },
-        ],
+        payments: [{ id: 'payment-2', amount: 2000 }],
       });
     });
 
@@ -247,19 +228,16 @@ describe('SubcontractorPaymentsService', () => {
             {
               id: 'payment-a',
               serviceDate: new Date('2023-01-01'),
-              paymentDate: new Date('2023-01-10'),
               amount: { toNumber: () => 300 },
             },
             {
               id: 'payment-b',
               serviceDate: new Date('2023-01-01'),
-              paymentDate: new Date('2023-01-20'),
               amount: { toNumber: () => 200 },
             },
             {
               id: 'payment-c',
               serviceDate: new Date('2023-01-01'),
-              paymentDate: null,
               amount: { toNumber: () => 400 },
             },
           ],
@@ -290,7 +268,6 @@ describe('SubcontractorPaymentsService', () => {
           {
             id: 'payment-1',
             serviceDate: new Date('2023-01-01'),
-            paymentDate: new Date('2023-01-15'),
             amount: { toNumber: () => 1000 },
           },
         ],
@@ -313,13 +290,7 @@ describe('SubcontractorPaymentsService', () => {
         serviceDate: new Date('2023-01-01').toISOString(),
         amountOwed: 0,
         amountPaid: 1000,
-        payments: [
-          {
-            id: 'payment-1',
-            paymentDate: '2023-01-15T00:00:00.000Z',
-            amount: 1000,
-          },
-        ],
+        payments: [{ id: 'payment-1', amount: 1000 }],
       });
     });
 
@@ -335,23 +306,66 @@ describe('SubcontractorPaymentsService', () => {
     });
   });
 
+  describe('findByClient', () => {
+    it('should return aggregated payments per client', async () => {
+      const mockPayments = [
+        {
+          amount: { toNumber: () => 1000 },
+          project: { client: { id: 'client-1', name: 'Client A' } },
+        },
+        {
+          amount: { toNumber: () => 2000 },
+          project: { client: { id: 'client-1', name: 'Client A' } },
+        },
+        {
+          amount: { toNumber: () => 500 },
+          project: { client: { id: 'client-2', name: 'Client B' } },
+        },
+      ];
+
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue(
+        mockPayments,
+      );
+
+      const result = await service.findByClient({ month: '2023-01-01' });
+
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({
+        clientId: 'client-1',
+        clientName: 'Client A',
+        totalSubcontractorPayments: 3000,
+      });
+      expect(result).toContainEqual({
+        clientId: 'client-2',
+        clientName: 'Client B',
+        totalSubcontractorPayments: 500,
+      });
+    });
+
+    it('should return empty list if no payments found', async () => {
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+
+      const result = await service.findByClient({ month: '2023-03-01' });
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('update', () => {
     const updateDto = {
       subcontractorId: '1',
+      projectId: 'project-1',
       serviceDate: '2023-01-01',
-      paymentDate: '2023-02-01',
       amount: 1500,
     };
 
     it('should throw SubcontractorPaymentOverpaymentError when updated amount exceeds amount owed', async () => {
-      // amountOwed = 1000 - 100 = 900. Other payments = 600. New amount = 400 → total 1000 > 900
-      mockPrismaService.projectReport.findMany.mockResolvedValue([
-        {
-          income: { toNumber: () => 1000 },
-          profitMargin: { toNumber: () => 10 },
-          corporationPayments: [],
-        },
-      ]);
+      // amountOwed = 900. Other payments = 600. New amount = 400 → total 1000 > 900
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        income: { toNumber: () => 1000 },
+        profitMargin: { toNumber: () => 10 },
+        corporationPayments: [],
+      });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([
         { amount: { toNumber: () => 600 } },
       ]);
@@ -363,19 +377,17 @@ describe('SubcontractorPaymentsService', () => {
 
     it('should allow updating a payment when new amount is within owed limit', async () => {
       // amountOwed = 900. Other payments = 0. New amount = 900 → exactly at limit
-      mockPrismaService.projectReport.findMany.mockResolvedValue([
-        {
-          income: { toNumber: () => 1000 },
-          profitMargin: { toNumber: () => 10 },
-          corporationPayments: [],
-        },
-      ]);
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        income: { toNumber: () => 1000 },
+        profitMargin: { toNumber: () => 10 },
+        corporationPayments: [],
+      });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
       const mockPayment = {
         id: '1',
+        projectId: 'project-1',
         serviceDate: new Date('2023-01-01'),
-        paymentDate: new Date('2023-02-01'),
         amount: { toNumber: () => 900 },
         subcontractor: { id: '1', name: 'Test Subcontractor' },
       };
@@ -390,8 +402,8 @@ describe('SubcontractorPaymentsService', () => {
     it('should update a subcontractor payment', async () => {
       const mockPayment = {
         id: '1',
+        projectId: 'project-1',
         serviceDate: new Date('2023-01-01'),
-        paymentDate: new Date('2023-02-01'),
         amount: { toNumber: () => 1500 },
         subcontractor: {
           id: '1',
@@ -399,14 +411,12 @@ describe('SubcontractorPaymentsService', () => {
         },
       };
 
-      // amountOwed = 2000 - 200 = 1800, existing other payments = 0, new amount = 1500 → ok
-      mockPrismaService.projectReport.findMany.mockResolvedValue([
-        {
-          income: { toNumber: () => 2000 },
-          profitMargin: { toNumber: () => 10 },
-          corporationPayments: [],
-        },
-      ]);
+      // amountOwed = 1800, existing other payments = 0, new amount = 1500 → ok
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        income: { toNumber: () => 2000 },
+        profitMargin: { toNumber: () => 10 },
+        corporationPayments: [],
+      });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
       mockPrismaService.subcontractorPayment.update.mockResolvedValue(
         mockPayment,
@@ -416,9 +426,9 @@ describe('SubcontractorPaymentsService', () => {
 
       expect(result).toEqual({
         id: mockPayment.id,
+        projectId: mockPayment.projectId,
         subcontractor: mockPayment.subcontractor,
         serviceDate: mockPayment.serviceDate.toISOString(),
-        paymentDate: mockPayment.paymentDate.toISOString(),
         amount: 1500,
       });
       expect(
@@ -428,8 +438,8 @@ describe('SubcontractorPaymentsService', () => {
         data: updateDto,
         select: {
           id: true,
+          projectId: true,
           serviceDate: true,
-          paymentDate: true,
           amount: true,
           subcontractor: {
             select: {
@@ -443,13 +453,11 @@ describe('SubcontractorPaymentsService', () => {
 
     it('should throw SubcontractorPaymentNotFoundError if payment not found', async () => {
       // amountOwed = 1800, new amount = 1500 → passes overpayment guard
-      mockPrismaService.projectReport.findMany.mockResolvedValue([
-        {
-          income: { toNumber: () => 2000 },
-          profitMargin: { toNumber: () => 10 },
-          corporationPayments: [],
-        },
-      ]);
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        income: { toNumber: () => 2000 },
+        profitMargin: { toNumber: () => 10 },
+        corporationPayments: [],
+      });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
       const prismaError = new PrismaClientKnownRequestError(

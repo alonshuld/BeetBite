@@ -28,6 +28,7 @@ import {
 import { SubcontractorPaymentResponseDto } from './dto/subcontractor-payments-response.dto';
 import { MonthlySubcontractorPaymentsDto } from './dto/monthly-subcontractor-payments.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
+import { SubcontractorPaymentsByClientResponseDto } from './dto/subcontractor-payments-by-client-response.dto';
 
 /**
  * Controller for subcontractor payment-related endpoints.
@@ -105,6 +106,21 @@ export class SubcontractorPaymentsController {
       subcontractorId,
       monthQueryDto,
     );
+  }
+
+  @Get('/subcontractor-payments/by-client')
+  @ApiOperation({
+    summary: 'Get total subcontractor payments per client for a month',
+  })
+  @ApiOkResponse({
+    description: 'Total subcontractor payments grouped by client.',
+    type: [SubcontractorPaymentsByClientResponseDto],
+  })
+  @ApiBadRequestResponse({ description: 'Invalid query parameters' })
+  async findByClient(
+    @Query() monthQueryDto: MonthQueryDto,
+  ): Promise<SubcontractorPaymentsByClientResponseDto[]> {
+    return this.subcontractorPaymentsService.findByClient(monthQueryDto);
   }
 
   /**
