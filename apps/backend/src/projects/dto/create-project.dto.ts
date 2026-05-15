@@ -5,6 +5,8 @@ import {
   IsNumber,
   IsISO8601,
   IsPositive,
+  IsBoolean,
+  IsOptional,
 } from 'class-validator';
 
 /**
@@ -55,4 +57,15 @@ export class CreateProjectDto {
     type: 'string',
   })
   description!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty({
+    example: false,
+    description: 'Whether the project is closed/done',
+    type: 'boolean',
+    required: false,
+    default: false,
+  })
+  isDone?: boolean;
 }

@@ -24,6 +24,7 @@ model Project {
   estimatedAmount Decimal  @db.Decimal(12, 2)
   finishDate      DateTime @db.Date
   description     String
+  isDone          Boolean  @default(false)
 
   client               Client                 @relation(fields: [clientId], references: [id])
   reports              ProjectReport[]

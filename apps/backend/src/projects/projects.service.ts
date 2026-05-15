@@ -13,8 +13,8 @@ import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaName
 import { PRISMA_ERROR_CODES, PAGINATION_DEFAULTS } from 'src/common/constants';
 import { ProjectNotFoundError } from './errors/project-not-found.exception';
 import { ClientNotFoundError } from '../clients/errors/client-not-found.exception';
-import { PaginationQueryDto } from '../common/pagination-query.dto';
 import { Prisma } from 'src/generated/client';
+import { ProjectsQueryDto } from './dto/projects-query.dto';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
 
 const PAID_REPORTS_INCLUDE = {
@@ -71,15 +71,30 @@ export class ProjectsService {
    * @param paginationQuery The pagination query parameters.
    * @returns A list of projects.
    */
-  async findAll(
-    paginationQuery?: PaginationQueryDto,
-  ): Promise<ProjectResponseDto[]> {
-    const page = paginationQuery?.page ?? PAGINATION_DEFAULTS.PAGE;
-    const limit = paginationQuery?.limit ?? PAGINATION_DEFAULTS.LIMIT;
+  async findAll(query?: ProjectsQueryDto): Promise<ProjectResponseDto[]> {
+    const page = query?.page ?? PAGINATION_DEFAULTS.PAGE;
+    const limit = query?.limit ?? PAGINATION_DEFAULTS.LIMIT;
+    const active = query?.active ?? true;
+    const future = query?.future ?? false;
+    const closed = query?.closed ?? false;
+    const clientId = query?.clientId;
+
+    const where: Prisma.ProjectWhereInput = {};
+    if (clientId) where.clientId = clientId;
+
+    if (active) {
+      where.isDone = false;
+      where.reports = { some: {} };
+    } else if (future) {
+      where.reports = { none: {} };
+    } else if (closed) {
+      where.isDone = true;
+    }
 
     const projectsWithReports = await this.prismaService.project.findMany({
       skip: Math.max(0, (page - 1) * limit),
       take: Math.max(1, limit),
+      where,
       include: PAID_REPORTS_INCLUDE,
     });
 

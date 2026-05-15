@@ -48,4 +48,11 @@ export class ProjectResponseDto {
     type: () => ProjectPaymentProgressDto,
   })
   paymentProgress!: ProjectPaymentProgressDto;
+
+  @ApiProperty({
+    example: false,
+    description: 'Whether the project is closed/done',
+    type: 'boolean',
+  })
+  isDone!: boolean;
 }

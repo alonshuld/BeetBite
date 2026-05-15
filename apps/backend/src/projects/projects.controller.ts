@@ -26,8 +26,8 @@ import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectResponseDto } from './dto/project-response.dto';
-import { PaginationQueryDto } from '../common/pagination-query.dto';
 import { ProjectBasicResponseDto } from './dto/project-basic-response.dto';
+import { ProjectsQueryDto } from './dto/projects-query.dto';
 
 /**
  * Controller for project-related endpoints.
@@ -73,9 +73,9 @@ export class ProjectsController {
   })
   @ApiBadRequestResponse({ description: 'Invalid pagination parameters' })
   async findAll(
-    @Query() pagination?: PaginationQueryDto,
+    @Query() query?: ProjectsQueryDto,
   ): Promise<ProjectResponseDto[]> {
-    return await this.projectsService.findAll(pagination);
+    return await this.projectsService.findAll(query);
   }
 
   /**
