@@ -9,6 +9,7 @@ BeetBite is a back-office tool for a single contractor company that manages cons
 **Clients** are people or companies that commission construction work. They agree on an estimated total cost for each **project** upfront (stored as `estimatedAmount`), then pay the contractor a monthly **income** as the work progresses. The income for a given month is recorded in a **ProjectReport**; the exact date the client wires the money is `incomeDate` (null until payment arrives).
 
 The contractor does not do the physical work itself. Instead it hires:
+
 - **Subcontractors** — individual workers assigned to a project for a given month. Each project report has exactly one subcontractor.
 - **Corporations** — specialist firms (flooring, plumbing, etc.) paid fixed amounts per month per project, stored as **CorporationPayments** attached to the report.
 
@@ -50,7 +51,7 @@ pnpx prisma generate           # Regenerate client without migrating
 Set in `.env` or `.env.local`:
 
 | Variable | Description |
-|---|---|
+| --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string |
 | `PORT` | HTTP port (default: 3000) |
 | `NODE_ENV` | `development` / `production` |
@@ -65,7 +66,7 @@ NestJS REST API backed by PostgreSQL via Prisma ORM. All routes are prefixed `ap
 Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` → Prisma (no separate repository layer).
 
 | Module | Responsibility |
-|---|---|
+| --- | --- |
 | `clients` | Manage clients (companies that own projects) |
 | `projects` | Manage projects; expose payment progress aggregates |
 | `project-reports` | Monthly financial reports per project, including corporation payments |
@@ -80,7 +81,7 @@ Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` →
 Key entity fields (see `prisma/schema.prisma` for the full schema):
 
 | Entity | Notable fields |
-|---|---|
+| --- | --- |
 | `Project` | `estimatedAmount` (Decimal), `finishDate` (Date), `description` (required String) |
 | `ProjectReport` | `incomeDate?` (nullable — null means income not yet received); unique on `(projectId, date)` |
 | `CorporationPayment` | `date?` (nullable payment date) |
@@ -93,17 +94,22 @@ The generated Prisma client lives in `src/generated/` (not `node_modules`). Impo
 ### Error handling
 
 Domain errors extend the base hierarchy in `src/common/errors/`:
+
 - `EntityError` → base
-  - `EntityNotFoundError` → maps to HTTP 404
-  - `EntityAlreadyExistsError` → maps to HTTP 409
+- `EntityNotFoundError` → maps to HTTP 404
+- `EntityAlreadyExistsError` → maps to HTTP 409
 
 Each module defines its own typed errors (e.g. `ProjectNotFoundError`, `ClientNotFoundError`) that extend these bases. `EntityExceptionFilter` (registered globally in `main.ts`) intercepts all exceptions and converts them to structured JSON responses.
 
 Services catch `PrismaClientKnownRequestError` and re-throw the appropriate domain error using the codes in `src/common/constants.ts` (`P2002` unique, `P2003` FK, `P2025` not found).
 
+`SubcontractorPaymentOverpaymentError` (extends `BadRequestException`) accepts an optional `paymentId` fourth argument — pass it on `update` so the error message identifies which payment triggered the violation.
+
 ### Mappers
 
 Each module with a non-trivial response shape has a `mappers/` subdirectory containing pure functions that convert Prisma entities to DTOs. Mappers handle `Decimal → number` and `Date → ISO string` conversions. The mapper is the only place these conversions happen — services pass raw Prisma types to mappers.
+
+**Important:** Always use explicit field picks in mapper return objects — never spread a Prisma model directly (e.g. `...projectReport`). Prisma models contain internal FK fields (`projectId`, `subcontractorId`) and nested relation arrays that are not part of the DTO shape and will leak into responses if spread. Pick only the fields declared in the target DTO.
 
 ### ProjectReport enrichment
 
@@ -112,10 +118,11 @@ When creating or updating a `ProjectReport`, `subcontractorId` and `profitMargin
 ### Financial calculations
 
 **ProjectReport** (computed at read time in `project-reports.service.ts:findOne`, not stored):
+
 - `profit = income × profitMargin / 100`
 - `subcontractorPayment = income − profit − Σ(corporationPayments)`
 
-**SubcontractorPayment** — `amount` is stored (provided by the caller). Multiple partial payments per `(subcontractorId, serviceDate)` are allowed. On `create`, the service computes `amountOwed` by summing `subcontractorPayment` across all `ProjectReport` rows for that month and rejects the payment if `Σ(existing payments) + newAmount > amountOwed`.
+**SubcontractorPayment** — `amount` is stored (provided by the caller). Multiple partial payments per `(subcontractorId, serviceDate)` are allowed. On `create` and `update`, the service computes `amountOwed` by summing `subcontractorPayment` across all `ProjectReport` rows for that month and rejects the payment if `Σ(existing payments) + newAmount > amountOwed`. The overpayment check and the DB write are executed inside a single `$transaction` to prevent race conditions — do not split them into separate steps.
 
 ### Project payment progress
 

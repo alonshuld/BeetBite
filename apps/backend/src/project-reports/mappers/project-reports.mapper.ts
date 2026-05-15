@@ -14,7 +14,9 @@ export const toProjectReportListItem = (
     subcontractor: { id: string; name: string };
   },
 ): ProjectReportListItemDto => ({
-  ...projectReport,
+  id: projectReport.id,
+  project: projectReport.project,
+  subcontractor: projectReport.subcontractor,
   date: projectReport.date.toISOString(),
   profitMargin: projectReport.profitMargin.toNumber(),
   income: projectReport.income.toNumber(),
@@ -58,17 +60,22 @@ export const toProjectReportResponse = (
   profit: number,
   subcontractorPayment: number,
 ): ProjectReportResponseDto => ({
-  ...projectReport,
+  id: projectReport.id,
+  project: projectReport.project,
   date: projectReport.date.toISOString(),
   profitMargin: projectReport.profitMargin.toNumber(),
   profit,
   income: projectReport.income.toNumber(),
   incomeDate: projectReport.incomeDate?.toISOString(),
   subcontractor: {
-    ...projectReport.subcontractor,
+    id: projectReport.subcontractor.id,
+    name: projectReport.subcontractor.name,
     payment: subcontractorPayment,
-    paymentDate:
-      projectReport.subcontractor.payments[0]?.paymentDate?.toISOString(),
+    paymentDate: projectReport.subcontractor.payments
+      .map((p) => p.paymentDate)
+      .filter((d): d is Date => d !== null)
+      .sort((a, b) => b.getTime() - a.getTime())[0]
+      ?.toISOString(),
   },
   corporationPayments: projectReport.corporationPayments.map(
     (corporationPay) => ({

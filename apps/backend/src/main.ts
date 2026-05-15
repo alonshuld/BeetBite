@@ -17,11 +17,11 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix('api/v1');
 
+  const rawOrigins = configService.get<string>('ALLOWED_ORIGINS', '');
+  const allowedOrigins = rawOrigins ? rawOrigins.split(',') : [];
+
   app.enableCors({
-    origin:
-      environment === 'production'
-        ? configService.get<string>('ALLOWED_ORIGINS', '').split(',')
-        : true,
+    origin: environment === 'production' ? allowedOrigins : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

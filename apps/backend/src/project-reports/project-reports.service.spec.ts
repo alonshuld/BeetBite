@@ -86,7 +86,6 @@ describe('ProjectReportsService', () => {
 
       expect(result).toMatchObject({
         id: 'report-1',
-        projectId: 'project-1',
         income: 10000,
         profitMargin: 10,
       });

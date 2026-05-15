@@ -11,6 +11,12 @@ describe('SubcontractorPaymentsService', () => {
   let service: SubcontractorPaymentsService;
 
   const mockPrismaService = {
+    $transaction: jest
+      .fn()
+      .mockImplementation(
+        (callback: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          callback(mockPrismaService),
+      ),
     subcontractorPayment: {
       create: jest.fn(),
       findMany: jest.fn(),

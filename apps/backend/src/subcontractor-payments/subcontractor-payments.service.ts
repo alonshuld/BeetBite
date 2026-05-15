@@ -102,50 +102,53 @@ export class SubcontractorPaymentsService {
   ): Promise<SubcontractorPaymentResponseDto> {
     const serviceDate = new Date(createSubcontractorPaymentDto.serviceDate);
 
-    const [amountOwed, existingPayments] = await Promise.all([
-      this.calculateSubcontractorExpectedTotal(
-        createSubcontractorPaymentDto.subcontractorId,
-        serviceDate,
-      ),
-      this.prismaService.subcontractorPayment.findMany({
-        where: {
-          subcontractorId: createSubcontractorPaymentDto.subcontractorId,
-          serviceDate,
-        },
-        select: { amount: true },
-      }),
-    ]);
-
-    const amountPaid = existingPayments.reduce(
-      (sum, p) => sum + p.amount.toNumber(),
-      0,
-    );
-
-    if (amountPaid + createSubcontractorPaymentDto.amount > amountOwed) {
-      throw new SubcontractorPaymentOverpaymentError(
-        amountOwed,
-        amountPaid,
-        createSubcontractorPaymentDto.amount,
-      );
-    }
-
     try {
-      const subcontractorPayment =
-        await this.prismaService.subcontractorPayment.create({
-          data: { ...createSubcontractorPaymentDto },
-          select: {
-            id: true,
-            serviceDate: true,
-            paymentDate: true,
-            amount: true,
-            subcontractor: {
-              select: {
-                id: true,
-                name: true,
+      const subcontractorPayment = await this.prismaService.$transaction(
+        async (tx) => {
+          const [amountOwed, existingPayments] = await Promise.all([
+            this.calculateSubcontractorExpectedTotal(
+              createSubcontractorPaymentDto.subcontractorId,
+              serviceDate,
+            ),
+            tx.subcontractorPayment.findMany({
+              where: {
+                subcontractorId: createSubcontractorPaymentDto.subcontractorId,
+                serviceDate,
+              },
+              select: { amount: true },
+            }),
+          ]);
+
+          const amountPaid = existingPayments.reduce(
+            (sum, p) => sum + p.amount.toNumber(),
+            0,
+          );
+
+          if (amountPaid + createSubcontractorPaymentDto.amount > amountOwed) {
+            throw new SubcontractorPaymentOverpaymentError(
+              amountOwed,
+              amountPaid,
+              createSubcontractorPaymentDto.amount,
+            );
+          }
+
+          return tx.subcontractorPayment.create({
+            data: { ...createSubcontractorPaymentDto },
+            select: {
+              id: true,
+              serviceDate: true,
+              paymentDate: true,
+              amount: true,
+              subcontractor: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
-          },
-        });
+          });
+        },
+      );
 
       this.logger.log(
         `Subcontractor payment created: ${subcontractorPayment.id}`,
@@ -153,6 +156,7 @@ export class SubcontractorPaymentsService {
 
       return toSubcontractorPaymentResponse(subcontractorPayment);
     } catch (error) {
+      if (error instanceof SubcontractorPaymentOverpaymentError) throw error;
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED) {
           throw new SubcontractorNotFoundError(
@@ -262,57 +266,62 @@ export class SubcontractorPaymentsService {
   ): Promise<SubcontractorPaymentResponseDto> {
     const serviceDate = new Date(updateSubcontractorPaymentDto.serviceDate);
 
-    const [amountOwed, existingPayments] = await Promise.all([
-      this.calculateSubcontractorExpectedTotal(
-        updateSubcontractorPaymentDto.subcontractorId,
-        serviceDate,
-      ),
-      this.prismaService.subcontractorPayment.findMany({
-        where: {
-          subcontractorId: updateSubcontractorPaymentDto.subcontractorId,
-          serviceDate,
-          NOT: { id },
-        },
-        select: { amount: true },
-      }),
-    ]);
-
-    const amountPaid = existingPayments.reduce(
-      (sum, p) => sum + p.amount.toNumber(),
-      0,
-    );
-
-    if (amountPaid + updateSubcontractorPaymentDto.amount > amountOwed) {
-      throw new SubcontractorPaymentOverpaymentError(
-        amountOwed,
-        amountPaid,
-        updateSubcontractorPaymentDto.amount,
-      );
-    }
-
     try {
-      const subcontractorPayment =
-        await this.prismaService.subcontractorPayment.update({
-          where: { id },
-          data: { ...updateSubcontractorPaymentDto },
-          select: {
-            id: true,
-            serviceDate: true,
-            paymentDate: true,
-            amount: true,
-            subcontractor: {
-              select: {
-                id: true,
-                name: true,
+      const subcontractorPayment = await this.prismaService.$transaction(
+        async (tx) => {
+          const [amountOwed, existingPayments] = await Promise.all([
+            this.calculateSubcontractorExpectedTotal(
+              updateSubcontractorPaymentDto.subcontractorId,
+              serviceDate,
+            ),
+            tx.subcontractorPayment.findMany({
+              where: {
+                subcontractorId: updateSubcontractorPaymentDto.subcontractorId,
+                serviceDate,
+                NOT: { id },
+              },
+              select: { amount: true },
+            }),
+          ]);
+
+          const amountPaid = existingPayments.reduce(
+            (sum, p) => sum + p.amount.toNumber(),
+            0,
+          );
+
+          if (amountPaid + updateSubcontractorPaymentDto.amount > amountOwed) {
+            throw new SubcontractorPaymentOverpaymentError(
+              amountOwed,
+              amountPaid,
+              updateSubcontractorPaymentDto.amount,
+              id,
+            );
+          }
+
+          return tx.subcontractorPayment.update({
+            where: { id },
+            data: { ...updateSubcontractorPaymentDto },
+            select: {
+              id: true,
+              serviceDate: true,
+              paymentDate: true,
+              amount: true,
+              subcontractor: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
-          },
-        });
+          });
+        },
+      );
 
       this.logger.log(`Subcontractor payment updated: ${id}`);
 
       return toSubcontractorPaymentResponse(subcontractorPayment);
     } catch (error) {
+      if (error instanceof SubcontractorPaymentOverpaymentError) throw error;
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === PRISMA_ERROR_CODES.NOT_FOUND) {
           throw new SubcontractorPaymentNotFoundError(id);
