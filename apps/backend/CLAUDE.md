@@ -72,7 +72,7 @@ Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` →
 | `project-reports` | Monthly financial reports per project, including corporation payments |
 | `corporations` | Corporations that receive payments from project reports |
 | `subcontractors` | Workers assigned to project reports |
-| `subcontractor-payments` | Track partial payments made to subcontractors per service month; enforces overpayment guard against computed amount owed |
+| `subcontractor-payments` | Track partial payments made to subcontractors per service month; enforces overpayment guard against computed amount owed per project; exposes `GET /by-client?month=` aggregation endpoint |
 | `incomes` | Income-related queries |
 | `prisma` | Singleton `PrismaService` extending `PrismaClient` with `@prisma/adapter-pg` |
 
@@ -82,10 +82,10 @@ Key entity fields (see `prisma/schema.prisma` for the full schema):
 
 | Entity | Notable fields |
 | --- | --- |
-| `Project` | `estimatedAmount` (Decimal), `finishDate` (Date), `description` (required String) |
+| `Project` | `estimatedAmount` (Decimal), `finishDate` (Date), `description` (required String), `isDone` (Boolean, default false — marks project as closed) |
 | `ProjectReport` | `incomeDate?` (nullable — null means income not yet received); unique on `(projectId, date)` |
-| `CorporationPayment` | `date?` (nullable payment date) |
-| `SubcontractorPayment` | `serviceDate` (Date — the service month's start date, required); `paymentDate?` (nullable — null means the partial payment has not yet been processed/recorded with a payment date); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, serviceDate)` allowed |
+| `CorporationPayment` | `date?` (nullable payment date); `description?` (optional String); `isFuture` (Boolean, default false — true means not yet invoiced); `vatPercentage?` (Decimal — only applicable when `isFuture` is false, defaults to 18%) |
+| `SubcontractorPayment` | `projectId` (String — required, payment must be assigned to a project); `serviceDate` (Date — the service month's start date, required); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, projectId, serviceDate)` allowed; no `paymentDate` — all payments are always considered paid |
 
 ### Prisma client
 
@@ -122,11 +122,26 @@ When creating or updating a `ProjectReport`, `subcontractorId` and `profitMargin
 - `profit = income × profitMargin / 100`
 - `subcontractorPayment = income − profit − Σ(corporationPayments)`
 
-**SubcontractorPayment** — `amount` is stored (provided by the caller). Multiple partial payments per `(subcontractorId, serviceDate)` are allowed. On `create` and `update`, the service computes `amountOwed` by summing `subcontractorPayment` across all `ProjectReport` rows for that month and rejects the payment if `Σ(existing payments) + newAmount > amountOwed`. The overpayment check and the DB write are executed inside a single `$transaction` to prevent race conditions — do not split them into separate steps.
+**SubcontractorPayment** — `amount` is stored (provided by the caller). Multiple partial payments per `(subcontractorId, projectId, serviceDate)` are allowed. On `create` and `update`, the service computes `amountOwed` for the specific project (not across all projects for the month) and rejects the payment if `Σ(existing payments for that project) + newAmount > amountOwed`. The overpayment check and the DB write are executed inside a single `$transaction` to prevent race conditions — do not split them into separate steps.
 
 ### Project payment progress
 
 `ProjectResponseDto` includes a `paymentProgress` field with a single field: `totalPaid` = sum of `ProjectReport.income` where `incomeDate IS NOT NULL`. The frontend derives `remainingAmount` and `percentagePaid` from `totalPaid` and the project's `estimatedAmount`.
+
+### Project filters
+
+`GET /projects` accepts optional boolean query params `active` (default true), `future`, and `closed`, plus an optional `clientId` string:
+
+- `active` — `isDone = false` AND has at least one project report
+- `future` — no project reports yet
+- `closed` — `isDone = true`
+- `clientId` — filter to a specific client's projects
+
+Filters are independent and combinable. Default view (no params) returns active projects only.
+
+### Income Per Month
+
+`GET /incomes/all-months` returns all project reports grouped by month. Each entry includes `income`, `incomeStatus` (`pending` when `incomeDate` is null, `paid` otherwise), and `completionPercent` (`totalPaidIncome / estimatedAmount × 100`).
 
 ### Testing approach
 
