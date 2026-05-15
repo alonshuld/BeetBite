@@ -47,6 +47,7 @@ describe('CorporationPaymentsController', () => {
         projectReportId: 'report-1',
         amount: 1000,
         date: '2023-01-01T00:00:00.000Z',
+        isFuture: false,
       };
       const expectedResult = {
         id: 'payment-1',
@@ -79,6 +80,7 @@ describe('CorporationPaymentsController', () => {
         projectReportId: 'report-1',
         amount: 1000,
         date: '2023-01-01T00:00:00.000Z',
+        isFuture: false,
       };
 
       mockCorporationPaymentsService.create.mockRejectedValue(
@@ -169,6 +171,7 @@ describe('CorporationPaymentsController', () => {
         projectReportId: 'report-1',
         amount: 1500,
         date: '2023-01-15T00:00:00.000Z',
+        isFuture: false,
       };
       const expectedResult = {
         id,
@@ -193,6 +196,7 @@ describe('CorporationPaymentsController', () => {
         projectReportId: 'report-1',
         amount: 1500,
         date: '2023-01-15T00:00:00.000Z',
+        isFuture: false,
       };
 
       mockCorporationPaymentsService.update.mockRejectedValue(
@@ -211,6 +215,7 @@ describe('CorporationPaymentsController', () => {
         projectReportId: 'report-1',
         amount: 1500,
         date: '2023-01-15T00:00:00.000Z',
+        isFuture: false,
       };
 
       mockCorporationPaymentsService.update.mockRejectedValue(

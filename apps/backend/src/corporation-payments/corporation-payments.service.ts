@@ -56,13 +56,25 @@ export class CorporationPaymentsService {
     createCorporationPaymentDto: CreateCorporationPaymentDto,
   ): Promise<CorporationPaymentResponseDto> {
     try {
+      const data = {
+        ...createCorporationPaymentDto,
+        vatPercentage:
+          !createCorporationPaymentDto.isFuture &&
+          createCorporationPaymentDto.vatPercentage === undefined
+            ? 18
+            : createCorporationPaymentDto.vatPercentage,
+      };
+
       const corporationPayment =
         await this.prismaService.corporationPayment.create({
-          data: { ...createCorporationPaymentDto },
+          data,
           select: {
             id: true,
             amount: true,
             date: true,
+            description: true,
+            isFuture: true,
+            vatPercentage: true,
             projectReportId: true,
             corporationId: true,
             projectReport: {
@@ -240,14 +252,26 @@ export class CorporationPaymentsService {
     updateCorporationPaymentDto: UpdateCorporationPaymentDto,
   ): Promise<CorporationPaymentResponseDto> {
     try {
+      const data = {
+        ...updateCorporationPaymentDto,
+        vatPercentage:
+          !updateCorporationPaymentDto.isFuture &&
+          updateCorporationPaymentDto.vatPercentage === undefined
+            ? 18
+            : updateCorporationPaymentDto.vatPercentage,
+      };
+
       const updatedCorporationPayment =
         await this.prismaService.corporationPayment.update({
           where: { id: corporationPaymentId },
-          data: { ...updateCorporationPaymentDto },
+          data,
           select: {
             id: true,
             amount: true,
             date: true,
+            description: true,
+            isFuture: true,
+            vatPercentage: true,
             projectReportId: true,
             corporationId: true,
             projectReport: {

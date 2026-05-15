@@ -37,4 +37,24 @@ export class CorporationPaymentResponseDto {
     nullable: true,
   })
   date!: string | null;
+
+  @ApiProperty({
+    example: 'Invoice #123',
+    description: 'Optional description for this payment',
+    nullable: true,
+  })
+  description!: string | null;
+
+  @ApiProperty({
+    example: false,
+    description: 'Whether this payment is for a future service',
+  })
+  isFuture!: boolean;
+
+  @ApiProperty({
+    example: 18,
+    description: 'VAT percentage — only applicable when isFuture is false',
+    nullable: true,
+  })
+  vatPercentage!: number | null;
 }

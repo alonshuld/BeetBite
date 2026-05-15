@@ -1,8 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsISO8601,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsString,
   Min,
 } from 'class-validator';
@@ -43,4 +45,30 @@ export class CreateCorporationPaymentDto {
     description: 'The date the service was provided for this payment',
   })
   date!: string;
+
+  @IsString()
+  @IsOptional()
+  @ApiProperty({
+    example: 'Invoice #123',
+    description: 'Optional description for this payment',
+    required: false,
+  })
+  description?: string;
+
+  @IsBoolean()
+  @ApiProperty({
+    example: false,
+    description: 'Whether this payment is for a future service',
+  })
+  isFuture!: boolean;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @ApiProperty({
+    example: 18,
+    description: 'VAT percentage — only applicable when isFuture is false',
+    required: false,
+  })
+  vatPercentage?: number;
 }

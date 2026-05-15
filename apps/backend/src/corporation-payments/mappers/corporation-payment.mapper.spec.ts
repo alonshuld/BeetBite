@@ -6,6 +6,9 @@ describe('corporation-payment mapper', () => {
     id: 'cp-1',
     amount: new Prisma.Decimal('1000'),
     date,
+    description: null,
+    isFuture: false,
+    vatPercentage: null,
     projectReport: {
       id: 'report-1',
       projectId: 'project-1',
@@ -35,6 +38,9 @@ describe('corporation-payment mapper', () => {
         id: 'cp-1',
         amount: 1000,
         date: date.toISOString(),
+        description: null,
+        isFuture: false,
+        vatPercentage: null,
         projectReport: {
           id: 'report-1',
           projectId: 'project-1',

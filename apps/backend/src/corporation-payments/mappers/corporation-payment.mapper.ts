@@ -8,7 +8,7 @@ import { CorporationPaymentResponseDto } from '../dto/corporation-payment-respon
 
 type CorporationPaymentWithMinimalRelations = Pick<
   CorporationPayment,
-  'id' | 'amount' | 'date'
+  'id' | 'amount' | 'date' | 'description' | 'isFuture' | 'vatPercentage'
 > & {
   projectReport: Pick<ProjectReport, 'id' | 'projectId'> & {
     project: Pick<Project, 'id' | 'name'>;
@@ -27,6 +27,9 @@ export const toCorporationPaymentResponseDto = (
   id: corporationPayment.id,
   amount: corporationPayment.amount.toNumber(),
   date: corporationPayment.date?.toISOString() ?? null,
+  description: corporationPayment.description,
+  isFuture: corporationPayment.isFuture,
+  vatPercentage: corporationPayment.vatPercentage?.toNumber() ?? null,
   projectReport: {
     id: corporationPayment.projectReport.id,
     projectId: corporationPayment.projectReport.projectId,

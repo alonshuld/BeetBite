@@ -56,6 +56,7 @@ describe('CorporationPaymentsService', () => {
       projectReportId: 'report-1',
       amount: 1000,
       date: '2023-01-01T00:00:00.000Z',
+      isFuture: false,
     };
 
     const mockPayment = {
@@ -64,6 +65,9 @@ describe('CorporationPaymentsService', () => {
         toNumber: () => 1000,
       },
       date: new Date('2023-01-01'),
+      description: null,
+      isFuture: false,
+      vatPercentage: null,
       projectReportId: 'report-1',
       corporationId: 'corp-1',
       corporation: {
@@ -91,6 +95,9 @@ describe('CorporationPaymentsService', () => {
         id: mockPayment.id,
         amount: 1000,
         date: mockPayment.date.toISOString(),
+        description: null,
+        isFuture: false,
+        vatPercentage: null,
         projectReport: {
           id: mockPayment.projectReport.id,
           projectId: mockPayment.projectReport.projectId,
@@ -102,11 +109,14 @@ describe('CorporationPaymentsService', () => {
         },
       });
       expect(mockPrismaService.corporationPayment.create).toHaveBeenCalledWith({
-        data: createDto,
+        data: { ...createDto, vatPercentage: 18 },
         select: {
           id: true,
           amount: true,
           date: true,
+          description: true,
+          isFuture: true,
+          vatPercentage: true,
           projectReportId: true,
           corporationId: true,
           projectReport: {
@@ -417,6 +427,7 @@ describe('CorporationPaymentsService', () => {
       projectReportId: 'report-1',
       amount: 1500,
       date: '2023-01-15T00:00:00.000Z',
+      isFuture: false,
     };
 
     const mockUpdatedPayment = {
@@ -425,6 +436,9 @@ describe('CorporationPaymentsService', () => {
         toNumber: () => 1500,
       },
       date: new Date('2023-01-15'),
+      description: null,
+      isFuture: false,
+      vatPercentage: null,
       projectReportId: 'report-1',
       corporationId: 'corp-1',
       corporation: {
@@ -452,6 +466,9 @@ describe('CorporationPaymentsService', () => {
         id: mockUpdatedPayment.id,
         amount: 1500,
         date: mockUpdatedPayment.date.toISOString(),
+        description: null,
+        isFuture: false,
+        vatPercentage: null,
         projectReport: {
           id: mockUpdatedPayment.projectReport.id,
           projectId: mockUpdatedPayment.projectReport.projectId,
@@ -464,11 +481,14 @@ describe('CorporationPaymentsService', () => {
       });
       expect(mockPrismaService.corporationPayment.update).toHaveBeenCalledWith({
         where: { id: 'payment-1' },
-        data: updateDto,
+        data: { ...updateDto, vatPercentage: 18 },
         select: {
           id: true,
           amount: true,
           date: true,
+          description: true,
+          isFuture: true,
+          vatPercentage: true,
           projectReportId: true,
           corporationId: true,
           projectReport: {
