@@ -28,8 +28,8 @@ export default {
         danger: "var(--danger)",
       },
       fontFamily: {
-        sans: ["DM Sans", "sans-serif"],
-        serif: ["DM Serif Display", "serif"],
+        sans: ["Heebo", "sans-serif"],
+        serif: ["Heebo", "sans-serif"],
       },
       borderRadius: {
         DEFAULT: "var(--radius)",

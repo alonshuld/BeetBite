@@ -35,7 +35,7 @@ body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: "DM Sans", sans-serif;
+  font-family: "Heebo", sans-serif;
   font-size: 14px;
   line-height: 1.5;
 }
@@ -80,7 +80,7 @@ body::after {
 
 /* RTL */
 [dir="rtl"] {
-  font-family: "DM Sans", "Arial Hebrew", sans-serif;
+  font-family: "Heebo", sans-serif;
 }
 
 [dir="rtl"] th,
