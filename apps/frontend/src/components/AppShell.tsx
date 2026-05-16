@@ -1,21 +1,29 @@
+import { useState } from "react";
 import { Outlet } from "react-router-dom";
+import { Sidebar } from "@/components/organisms/Sidebar";
+import { TopHeader } from "@/components/organisms/TopHeader";
 
-function Sidebar() {
-  return <aside style={{ width: "var(--sidebar-w, 240px)" }} />;
-}
-
-function TopHeader() {
-  return <header />;
+function todayYM(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
 export default function AppShell() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [month, setMonth] = useState(todayYM);
+
   return (
-    <div style={{ display: "flex", height: "100%" }}>
-      <Sidebar />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <TopHeader />
-        <main style={{ flex: 1, overflow: "auto" }}>
-          <Outlet />
+    <div className="flex h-full overflow-hidden">
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      <div className="flex flex-col flex-1 min-w-0">
+        <TopHeader
+          onMenuClick={() => setSidebarOpen(true)}
+          month={month}
+          onMonthChange={setMonth}
+        />
+        <main className="flex-1 overflow-auto p-7 max-[768px]:p-4">
+          <Outlet context={{ month }} />
         </main>
       </div>
     </div>

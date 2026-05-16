@@ -17,6 +17,8 @@ const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
 const ClientsPage = lazy(() => import("@/pages/ClientsPage"));
 const SubcontractorsPage = lazy(() => import("@/pages/SubcontractorsPage"));
 const CorporationsPage = lazy(() => import("@/pages/CorporationsPage"));
+const IncomePerMonthPage = lazy(() => import("@/pages/IncomePerMonthPage"));
+const ProfitSimulatorPage = lazy(() => import("@/pages/ProfitSimulatorPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
 const wrap = (Page: React.ComponentType) => (
@@ -55,6 +57,8 @@ export const router = createBrowserRouter([
           { path: "clients", element: wrap(ClientsPage) },
           { path: "subcontractors", element: wrap(SubcontractorsPage) },
           { path: "corporations", element: wrap(CorporationsPage) },
+          { path: "income-per-month", element: wrap(IncomePerMonthPage) },
+          { path: "simulator", element: wrap(ProfitSimulatorPage) },
         ],
       },
     ],
