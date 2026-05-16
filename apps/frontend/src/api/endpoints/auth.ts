@@ -7,7 +7,7 @@ interface LoginRequest {
 }
 
 interface LoginResponse {
-  access_token: string;
+  accessToken: string;
 }
 
 export const authApi = baseApi.injectEndpoints({
@@ -20,7 +20,7 @@ export const authApi = baseApi.injectEndpoints({
       }),
       onQueryStarted: async (_arg, { dispatch, queryFulfilled }) => {
         const { data } = await queryFulfilled;
-        dispatch(setCredentials({ token: data.access_token }));
+        dispatch(setCredentials({ token: data.accessToken }));
       },
     }),
   }),

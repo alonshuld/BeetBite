@@ -1,15 +1,50 @@
 version: "3.8"
+
+# DB credentials — edit the defaults below (beetbite → your values)
+# or override via a .env file: DB_USER=foo DB_PASSWORD=bar DB_NAME=baz
+
 services:
   db:
-    image: postgres:18-alpine
+    image: postgres:17-alpine
     environment:
-      POSTGRES_USER: username
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: mydb
+      POSTGRES_USER: ${DB_USER:-pgUser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pgPassword}
+      POSTGRES_DB: ${DB_NAME:-pgDb}
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pgUser} -d ${DB_NAME:-pgDb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER:-pgUser}:${DB_PASSWORD:-pgPassword}@db:5432/${DB_NAME:-pgDb}"
+      PORT: "3000"
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:-changeme-in-production}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
 
 volumes:
   postgres-data:

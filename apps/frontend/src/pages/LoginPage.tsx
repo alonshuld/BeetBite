@@ -4,10 +4,13 @@ import { Input, ButtonPrimary } from "@/components/atoms";
 import { LangToggle } from "@/components/molecules";
 import { useLang } from "@/contexts/useLang";
 import { useLoginMutation } from "@/api/endpoints/auth";
+import { useAppDispatch } from "@/app/hooks";
+import { setCredentials } from "@/features/auth/authSlice";
 
 export default function LoginPage() {
   const { t, lang, setLang } = useLang();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
 
   const [username, setUsername] = useState("");
@@ -22,7 +25,8 @@ export default function LoginPage() {
     }
     setError("");
     try {
-      await login({ username, password }).unwrap();
+      const data = await login({ username, password }).unwrap();
+      dispatch(setCredentials({ token: data.accessToken }));
       await navigate("/");
     } catch (err: unknown) {
       const msg =
