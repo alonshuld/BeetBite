@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { ButtonIcon } from "@/components/atoms";
-import { MonthPicker, LangToggle } from "@/components/molecules";
+import { MonthPicker, LangToggle, ThemeToggle } from "@/components/molecules";
 import { useLang } from "@/contexts/useLang";
 
 const OVERVIEW_PATHS = [
@@ -48,8 +48,8 @@ export function TopHeader({
   const labelKey = SCREEN_LABELS[rootPath];
 
   return (
-    <header className="h-14 flex items-center justify-between px-4 border-b border-border bg-surface shrink-0 rtl:flex-row-reverse">
-      <div className="flex items-center gap-2 rtl:flex-row-reverse">
+    <header className="h-14 flex items-center justify-between px-4 border-b border-border bg-surface shrink-0">
+      <div className="flex items-center gap-2">
         <ButtonIcon
           className="lg:hidden"
           onClick={onMenuClick}
@@ -62,10 +62,11 @@ export function TopHeader({
         )}
       </div>
 
-      <div className="flex items-center gap-2 rtl:flex-row-reverse">
+      <div className="flex items-center gap-2">
         {isOverviewScreen && (
           <MonthPicker value={month} onChange={onMonthChange} />
         )}
+        <ThemeToggle />
         <LangToggle lang={lang} onChange={setLang} />
       </div>
     </header>
