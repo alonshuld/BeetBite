@@ -5,6 +5,7 @@ import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { Select } from "@/components/atoms/Select";
 import { FormGroup } from "@/components/molecules/FormGroup";
+import { useLang } from "@/contexts/useLang";
 
 function formatILS(n: number): string {
   return `₪${Math.round(n).toLocaleString("he-IL")}`;
@@ -22,6 +23,7 @@ export default function ProfitSimulatorPage() {
   const { data: clients = [] } = useGetClientsQuery();
   const { data: projects = [] } = useGetProjectsQuery();
   const { data: reports = [] } = useGetProjectReportsQuery();
+  const { t } = useLang();
 
   const [clientId, setClientId] = useState<string>("");
   const [baseline, setBaseline] = useState<number>(20);
@@ -82,19 +84,19 @@ export default function ProfitSimulatorPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Profit Margin Simulator"
-        subtitle="Preview how margin changes affect totals — nothing is saved"
+        title={t("profitSimulator")}
+        subtitle={t("profitSimulatorSubtitle")}
       />
 
       <div className="flex flex-col gap-4 max-w-lg">
         <FormGroup>
           <Select
             id="sim-client"
-            label="Client"
+            label={t("client")}
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
           >
-            <option value="">— Select a client —</option>
+            <option value="">{t("selectClientPlaceholder")}</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -106,7 +108,7 @@ export default function ProfitSimulatorPage() {
         {clientId && (
           <FormGroup>
             <label className="text-[12px] font-medium uppercase tracking-wide text-text-muted block mb-1">
-              Baseline margin: {baseline}%
+              {t("baselineMarginLabel")} {baseline}%
             </label>
             <input
               type="range"
@@ -123,7 +125,7 @@ export default function ProfitSimulatorPage() {
 
       {clientId && simProjects.length === 0 && (
         <p className="text-text-muted text-sm">
-          This client has no projects yet.
+          {t("noProjectsForClient")}
         </p>
       )}
 
@@ -144,16 +146,16 @@ export default function ProfitSimulatorPage() {
                     <div>
                       <p className="font-medium text-text">{sp.projectName}</p>
                       <p className="text-xs text-text-muted">
-                        Saved margin: {sp.savedMargin}%
+                        {t("savedMarginLabel")} {sp.savedMargin}%
                         {hasOverride && (
                           <span className="ml-2 text-beet-bright">
-                            (overridden)
+                            {t("overridden")}
                           </span>
                         )}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-xs text-text-muted">Income</p>
+                      <p className="text-xs text-text-muted">{t("income")}</p>
                       <p className="font-semibold text-text">
                         {formatILS(sp.totalIncome)}
                       </p>
@@ -177,7 +179,7 @@ export default function ProfitSimulatorPage() {
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-text-muted">
-                      Sim profit:{" "}
+                      {t("simProfitLabel")}{" "}
                       <span className="text-success font-medium">
                         {formatILS(simProfitHere)}
                       </span>
@@ -195,11 +197,11 @@ export default function ProfitSimulatorPage() {
           </div>
 
           <div className="bg-surface-2 border border-border rounded p-5 flex flex-col gap-3">
-            <h2 className="font-serif text-lg text-text">Summary</h2>
+            <h2 className="font-serif text-lg text-text">{t("summary")}</h2>
             <div className="grid grid-cols-3 gap-4 max-[640px]:grid-cols-1 text-sm">
               <div>
                 <p className="text-text-muted text-xs uppercase tracking-wide mb-1">
-                  Total Income
+                  {t("totalIncome")}
                 </p>
                 <p className="font-bold text-text text-lg">
                   {formatILS(totalIncome)}
@@ -207,7 +209,7 @@ export default function ProfitSimulatorPage() {
               </div>
               <div>
                 <p className="text-text-muted text-xs uppercase tracking-wide mb-1">
-                  Simulated Profit
+                  {t("simulatedProfit")}
                 </p>
                 <p className="font-bold text-success text-lg">
                   {formatILS(simProfit)}
@@ -215,7 +217,7 @@ export default function ProfitSimulatorPage() {
               </div>
               <div>
                 <p className="text-text-muted text-xs uppercase tracking-wide mb-1">
-                  Delta vs Saved
+                  {t("deltaVsSaved")}
                 </p>
                 <p
                   className={`font-bold text-lg ${delta >= 0 ? "text-success" : "text-danger"}`}
@@ -229,7 +231,7 @@ export default function ProfitSimulatorPage() {
               onClick={reset}
               className="text-xs text-text-muted hover:text-beet-bright underline self-start"
             >
-              Reset to saved values
+              {t("resetToSavedValues")}
             </button>
           </div>
         </>

@@ -3,6 +3,7 @@ import { useOutletContext } from "react-router-dom";
 import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { EmptyState } from "@/components/atoms";
+import { useLang } from "@/contexts/useLang";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
@@ -32,6 +33,7 @@ export default function CorporationPaymentsPage() {
   const { month } = useOutletContext<{ month: string }>();
   const { data: allReports = [], isLoading } = useGetProjectReportsQuery();
   const { hoverId, setHoverId } = useHover();
+  const { t } = useLang();
 
   const monthReports = allReports.filter((r) => r.month === month);
 
@@ -61,15 +63,15 @@ export default function CorporationPaymentsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Corporation Payments" subtitle={formatMonth(month)} />
+      <PageHeader title={t("corporationPayments")} subtitle={formatMonth(month)} />
 
       {isLoading ? (
-        <p className="text-text-muted text-sm">Loading…</p>
+        <p className="text-text-muted text-sm">{t("loading")}</p>
       ) : rows.length === 0 ? (
         <EmptyState
           icon="🏢"
-          title={`No corporation payments for ${formatMonth(month)}`}
-          description="Corporation payments are recorded inside project reports"
+          title={`${t("noCorporationPaymentsFor")} ${formatMonth(month)}`}
+          description={t("corporationPaymentsNote")}
         />
       ) : (
         <div className="overflow-x-auto">
@@ -77,13 +79,13 @@ export default function CorporationPaymentsPage() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Corporation
+                  {t("corporation")}
                 </th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
-                  # Projects
+                  {t("numProjects")}
                 </th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
-                  Total Paid
+                  {t("totalPaid")}
                 </th>
               </tr>
             </thead>
@@ -108,7 +110,7 @@ export default function CorporationPaymentsPage() {
                     {hoverId === row.corpId && (
                       <div className="absolute right-0 top-full mt-1 z-10 bg-surface border border-border rounded shadow-lg min-w-[240px] p-3 text-left rtl:right-auto rtl:left-0">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-text-dim mb-2">
-                          Per-project breakdown
+                          {t("perProjectBreakdown")}
                         </p>
                         {row.projectBreakdown.map((pb, i) => (
                           <div
@@ -135,7 +137,7 @@ export default function CorporationPaymentsPage() {
                   colSpan={2}
                   className="py-3 px-4 text-right font-semibold text-text rtl:text-left"
                 >
-                  Grand Total
+                  {t("grandTotal")}
                 </td>
                 <td className="py-3 px-4 text-right rtl:text-left">
                   <span className="text-warning font-bold text-[20px]">

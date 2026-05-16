@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useGetAllMonthsIncomesQuery } from "@/api/endpoints/incomes";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { Badge, EmptyState } from "@/components/atoms";
+import { useLang } from "@/contexts/useLang";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
@@ -20,6 +21,7 @@ type FilterPill = "all" | "unpaid" | "paid";
 export default function IncomePerMonthPage() {
   const { data: entries = [], isLoading } = useGetAllMonthsIncomesQuery();
   const [filter, setFilter] = useState<FilterPill>("all");
+  const { t } = useLang();
 
   const filtered = entries.filter((e) => {
     if (filter === "paid") return !!e.incomeDate;
@@ -39,8 +41,8 @@ export default function IncomePerMonthPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        title="Income Per Month"
-        subtitle="All projects grouped by month"
+        title={t("incomePerMonth")}
+        subtitle={t("allProjectsByMonth")}
         actions={
           <div className="flex items-center gap-2">
             {(["all", "unpaid", "paid"] as const).map((pill) => (
@@ -53,7 +55,7 @@ export default function IncomePerMonthPage() {
                     : "bg-transparent text-text-muted border-border hover:bg-surface-2"
                 }`}
               >
-                {pill}
+                {t(pill)}
               </button>
             ))}
           </div>
@@ -61,15 +63,15 @@ export default function IncomePerMonthPage() {
       />
 
       {isLoading ? (
-        <p className="text-text-muted text-sm">Loading…</p>
+        <p className="text-text-muted text-sm">{t("loading")}</p>
       ) : months.length === 0 ? (
         <EmptyState
           icon="📅"
-          title="No income records found"
+          title={t("noIncomeRecords")}
           description={
             filter !== "all"
-              ? "Try switching to All to see more"
-              : "Income records appear here once project reports are created"
+              ? t("trySwitchingFilter")
+              : t("incomeRecordsNote")
           }
         />
       ) : (
@@ -86,19 +88,19 @@ export default function IncomePerMonthPage() {
                     <thead>
                       <tr className="border-b border-border">
                         <th className="text-left py-2.5 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                          Project
+                          {t("project")}
                         </th>
                         <th className="text-left py-2.5 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                          Client
+                          {t("client")}
                         </th>
                         <th className="text-right py-2.5 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
-                          Income
+                          {t("income")}
                         </th>
                         <th className="text-left py-2.5 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                          Status
+                          {t("status")}
                         </th>
                         <th className="text-left py-2.5 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                          Completion %
+                          {t("completion")} %
                         </th>
                       </tr>
                     </thead>
@@ -125,7 +127,7 @@ export default function IncomePerMonthPage() {
                             </td>
                             <td className="py-2.5 px-4">
                               <Badge variant={isPaid ? "green" : "yellow"}>
-                                {isPaid ? "Received" : "Pending"}
+                                {isPaid ? t("received") : t("pending")}
                               </Badge>
                             </td>
                             <td className="py-2.5 px-4 min-w-[120px]">

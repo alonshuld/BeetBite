@@ -4,6 +4,7 @@ import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { StatCard } from "@/components/molecules/StatCard";
 import { EmptyState, LinkButton } from "@/components/atoms";
+import { useLang } from "@/contexts/useLang";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
@@ -21,6 +22,7 @@ export default function IncomePage() {
   const { month } = useOutletContext<{ month: string }>();
   const navigate = useNavigate();
   const { data: allReports = [], isLoading } = useGetProjectReportsQuery();
+  const { t } = useLang();
 
   const reports = allReports.filter((r) => r.month === month);
 
@@ -32,23 +34,23 @@ export default function IncomePage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Monthly Income" subtitle={formatMonth(month)} />
+      <PageHeader title={t("monthlyIncome")} subtitle={formatMonth(month)} />
 
       <div className="grid grid-cols-2 gap-4 max-[640px]:grid-cols-1">
-        <StatCard label="Total Income" value={formatILS(totalIncome)} />
+        <StatCard label={t("totalIncome")} value={formatILS(totalIncome)} />
         <StatCard
-          label="Total Profit"
+          label={t("totalProfit")}
           value={formatILS(Math.round(totalProfit))}
         />
       </div>
 
       {isLoading ? (
-        <p className="text-text-muted text-sm">Loading…</p>
+        <p className="text-text-muted text-sm">{t("loading")}</p>
       ) : reports.length === 0 ? (
         <EmptyState
           icon="💰"
-          title={`No project reports for ${formatMonth(month)}`}
-          description="Reports show here when created for the selected month"
+          title={`${t("noProjectReportsFor")} ${formatMonth(month)}`}
+          description={t("reportsAppearNote")}
         />
       ) : (
         <div className="overflow-x-auto">
@@ -56,19 +58,19 @@ export default function IncomePage() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Project
+                  {t("project")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Client
+                  {t("client")}
                 </th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
-                  Income
+                  {t("income")}
                 </th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
-                  Margin %
+                  {t("marginPct")}
                 </th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
-                  Profit
+                  {t("profit")}
                 </th>
               </tr>
             </thead>
@@ -114,7 +116,7 @@ export default function IncomePage() {
                   colSpan={4}
                   className="py-3 px-4 text-right font-semibold text-text rtl:text-left"
                 >
-                  Total Profit
+                  {t("totalProfit")}
                 </td>
                 <td className="py-3 px-4 text-right font-bold text-success text-base rtl:text-left">
                   {formatILS(Math.round(totalProfit))}

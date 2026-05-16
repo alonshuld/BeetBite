@@ -17,6 +17,7 @@ import {
   EmptyState,
 } from "@/components/atoms";
 import { FormModal } from "@/components/organisms/Modal";
+import { useLang } from "@/contexts/useLang";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
@@ -55,6 +56,7 @@ export default function SubcontractorPaymentsPage() {
   const { data: allPayments = [] } = useGetSubcontractorPaymentsQuery();
   const [createPayment, { isLoading: saving }] =
     useCreateSubcontractorPaymentMutation();
+  const { t } = useLang();
 
   const [selectedSubId, setSelectedSubId] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -160,13 +162,13 @@ export default function SubcontractorPaymentsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Subcontractor Payments" subtitle={month} />
+      <PageHeader title={t("subcontractorPayments")} subtitle={month} />
 
       {cards.length === 0 ? (
         <EmptyState
           icon="👷"
-          title="No subcontractor reports this month"
-          description="Subcontractors appear here when assigned to project reports"
+          title={t("noSubcontractorReports")}
+          description={t("subcontractorsNote")}
         />
       ) : (
         <div className="flex gap-5 max-[768px]:flex-col">
@@ -188,18 +190,18 @@ export default function SubcontractorPaymentsPage() {
                     <span className="font-medium text-text text-sm">
                       {card.subName}
                     </span>
-                    <Badge variant={STATUS_VARIANT[status]}>{status}</Badge>
+                    <Badge variant={STATUS_VARIANT[status]}>{t(status.toLowerCase() as "paid" | "partial" | "unpaid")}</Badge>
                   </div>
                   <p className="text-[11px] text-text-muted mb-1">
                     {card.projectBreakdown.length} project
                     {card.projectBreakdown.length !== 1 ? "s" : ""}
                   </p>
                   <p className="text-sm text-success font-semibold">
-                    Owed: {formatILS(card.totalOwed)}
+                    {t("owed")}: {formatILS(card.totalOwed)}
                   </p>
                   {card.totalPaid > 0 && (
                     <p className="text-xs text-text-muted">
-                      Paid: {formatILS(card.totalPaid)}
+                      {t("paid")}: {formatILS(card.totalPaid)}
                     </p>
                   )}
                 </button>
@@ -217,10 +219,10 @@ export default function SubcontractorPaymentsPage() {
                   <thead>
                     <tr className="border-b border-border">
                       <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                        Project
+                        {t("project")}
                       </th>
                       <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
-                        Amount Owed
+                        {t("amountOwed")}
                       </th>
                     </tr>
                   </thead>
@@ -239,7 +241,7 @@ export default function SubcontractorPaymentsPage() {
                   <tfoot>
                     <tr className="border-t-2 border-border">
                       <td className="py-2 px-3 font-semibold text-text">
-                        Total Owed
+                        {t("totalOwed")}
                       </td>
                       <td className="py-2 px-3 text-right font-bold text-success rtl:text-left">
                         {formatILS(selectedCard.totalOwed)}
@@ -252,20 +254,20 @@ export default function SubcontractorPaymentsPage() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="font-serif text-xl text-text">
-                    Payment Instalments
+                    {t("paymentInstalments")}
                   </h2>
-                  <ButtonIcon onClick={openModal} title="Add instalment">
+                  <ButtonIcon onClick={openModal} title={t("addInstalment")}>
                     +
                   </ButtonIcon>
                 </div>
                 {paymentsForSelected.length === 0 ? (
                   <p className="text-text-muted text-sm">
-                    No payments recorded yet.{" "}
+                    {t("noPaymentsYet")}{" "}
                     <button
                       onClick={openModal}
                       className="text-beet-bright hover:underline text-sm"
                     >
-                      Add first instalment
+                      {t("addFirstInstalment")}
                     </button>
                   </p>
                 ) : (
@@ -288,13 +290,13 @@ export default function SubcontractorPaymentsPage() {
               </div>
 
               <ButtonPrimary onClick={openModal}>
-                + Add Instalment
+                + {t("addInstalment")}
               </ButtonPrimary>
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-text-muted text-sm">
-                Select a subcontractor to view details
+                {t("selectSubcontractor")}
               </p>
             </div>
           )}
@@ -305,17 +307,17 @@ export default function SubcontractorPaymentsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={() => void handleAddPayment()}
-        title="Add Instalment"
+        title={t("addInstalment")}
         loading={saving}
       >
         <FormGroup>
           <Select
             id="inst-project"
-            label="Project"
+            label={t("project")}
             value={modalProjectId}
             onChange={(e) => setModalProjectId(e.target.value)}
           >
-            <option value="">— Select project —</option>
+            <option value="">{t("selectProjectPlaceholder")}</option>
             {projectsForSelectedSub.map((pb) => (
               <option key={pb.projectId} value={pb.projectId}>
                 {pb.projectName}
@@ -326,7 +328,7 @@ export default function SubcontractorPaymentsPage() {
         <FormGroup>
           <Input
             id="inst-amount"
-            label="Amount (₪)"
+            label={t("amountILS")}
             type="number"
             min="0.01"
             step="0.01"
@@ -345,7 +347,7 @@ export default function SubcontractorPaymentsPage() {
         <FormGroup>
           <Input
             id="inst-date"
-            label="Date"
+            label={t("date")}
             type="date"
             value={modalDate}
             onChange={(e) => setModalDate(e.target.value)}
