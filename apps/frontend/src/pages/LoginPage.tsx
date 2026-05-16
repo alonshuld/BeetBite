@@ -2,7 +2,7 @@ import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input, ButtonPrimary } from "@/components/atoms";
 import { LangToggle } from "@/components/molecules";
-import { useLang } from "@/contexts/LangContext";
+import { useLang } from "@/contexts/useLang";
 import { useLoginMutation } from "@/api/endpoints/auth";
 
 export default function LoginPage() {
@@ -72,7 +72,9 @@ export default function LoginPage() {
 
         <div className="bg-surface rounded p-7">
           <form
-            onSubmit={handleSubmit}
+            onSubmit={(e) => {
+              void handleSubmit(e);
+            }}
             className="flex flex-col gap-4"
             noValidate
           >

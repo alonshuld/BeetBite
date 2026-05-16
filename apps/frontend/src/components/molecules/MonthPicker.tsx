@@ -7,8 +7,18 @@ interface MonthPickerProps {
 }
 
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 function parseYM(ym: string): { year: number; month: number } {
@@ -20,7 +30,11 @@ function formatYM(year: number, month: number): string {
   return `${year}-${String(month + 1).padStart(2, "0")}`;
 }
 
-export function MonthPicker({ value, onChange, className = "" }: MonthPickerProps) {
+export function MonthPicker({
+  value,
+  onChange,
+  className = "",
+}: MonthPickerProps) {
   const { year, month } = parseYM(value);
 
   function prev() {
@@ -34,14 +48,24 @@ export function MonthPicker({ value, onChange, className = "" }: MonthPickerProp
   }
 
   return (
-    <div className={`flex items-center gap-1 rtl:flex-row-reverse ${className}`}>
-      <ButtonIcon onClick={prev} aria-label="Previous month" style={{ width: 30, height: 30 }}>
+    <div
+      className={`flex items-center gap-1 rtl:flex-row-reverse ${className}`}
+    >
+      <ButtonIcon
+        onClick={prev}
+        aria-label="Previous month"
+        style={{ width: 30, height: 30 }}
+      >
         ‹
       </ButtonIcon>
       <span className="min-w-[120px] text-center text-sm font-medium text-text">
         {MONTH_NAMES[month]} {year}
       </span>
-      <ButtonIcon onClick={next} aria-label="Next month" style={{ width: 30, height: 30 }}>
+      <ButtonIcon
+        onClick={next}
+        aria-label="Next month"
+        style={{ width: 30, height: 30 }}
+      >
         ›
       </ButtonIcon>
     </div>

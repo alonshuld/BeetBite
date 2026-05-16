@@ -4,7 +4,11 @@ interface LangToggleProps {
   className?: string;
 }
 
-export function LangToggle({ lang, onChange, className = "" }: LangToggleProps) {
+export function LangToggle({
+  lang,
+  onChange,
+  className = "",
+}: LangToggleProps) {
   return (
     <div
       className={`flex items-center bg-surface-2 border border-border rounded overflow-hidden ${className}`}

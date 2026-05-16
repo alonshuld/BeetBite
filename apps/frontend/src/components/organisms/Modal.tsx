@@ -1,6 +1,6 @@
 import { ReactNode, useEffect } from "react";
 import { ButtonGhost, ButtonDanger, ButtonPrimary } from "@/components/atoms";
-import { useLang } from "@/contexts/LangContext";
+import { useLang } from "@/contexts/useLang";
 
 interface ModalProps {
   open: boolean;
@@ -11,7 +11,14 @@ interface ModalProps {
   footer?: ReactNode;
 }
 
-export function Modal({ open, onClose, title, children, large = false, footer }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  large = false,
+  footer,
+}: ModalProps) {
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -72,7 +79,14 @@ interface ConfirmModalProps {
   loading?: boolean;
 }
 
-export function ConfirmModal({ open, onClose, onConfirm, message, title, loading }: ConfirmModalProps) {
+export function ConfirmModal({
+  open,
+  onClose,
+  onConfirm,
+  message,
+  title,
+  loading,
+}: ConfirmModalProps) {
   const { t } = useLang();
   return (
     <Modal
@@ -81,7 +95,9 @@ export function ConfirmModal({ open, onClose, onConfirm, message, title, loading
       title={title}
       footer={
         <>
-          <ButtonGhost onClick={onClose} disabled={loading}>{t("cancel")}</ButtonGhost>
+          <ButtonGhost onClick={onClose} disabled={loading}>
+            {t("cancel")}
+          </ButtonGhost>
           <ButtonDanger onClick={onConfirm} disabled={loading}>
             {loading ? "…" : t("delete")}
           </ButtonDanger>
@@ -103,7 +119,15 @@ interface FormModalProps {
   large?: boolean;
 }
 
-export function FormModal({ open, onClose, onSubmit, title, children, loading, large }: FormModalProps) {
+export function FormModal({
+  open,
+  onClose,
+  onSubmit,
+  title,
+  children,
+  loading,
+  large,
+}: FormModalProps) {
   const { t } = useLang();
   return (
     <Modal
@@ -113,7 +137,9 @@ export function FormModal({ open, onClose, onSubmit, title, children, loading, l
       large={large}
       footer={
         <>
-          <ButtonGhost onClick={onClose} disabled={loading}>{t("cancel")}</ButtonGhost>
+          <ButtonGhost onClick={onClose} disabled={loading}>
+            {t("cancel")}
+          </ButtonGhost>
           <ButtonPrimary onClick={onSubmit} disabled={loading}>
             {loading ? "…" : t("save")}
           </ButtonPrimary>

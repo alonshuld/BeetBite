@@ -1,7 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { ButtonIcon } from "@/components/atoms";
 import { MonthPicker, LangToggle } from "@/components/molecules";
-import { useLang } from "@/contexts/LangContext";
+import { useLang } from "@/contexts/useLang";
 
 const OVERVIEW_PATHS = [
   "/reports",
@@ -16,7 +16,10 @@ interface TopHeaderProps {
   onMonthChange: (ym: string) => void;
 }
 
-const SCREEN_LABELS: Record<string, Parameters<ReturnType<typeof useLang>["t"]>[0]> = {
+const SCREEN_LABELS: Record<
+  string,
+  Parameters<ReturnType<typeof useLang>["t"]>[0]
+> = {
   "/reports": "projectReports",
   "/income": "monthlyIncome",
   "/corporation-payments": "corporationPayments",
@@ -29,7 +32,11 @@ const SCREEN_LABELS: Record<string, Parameters<ReturnType<typeof useLang>["t"]>[
   "/simulator": "profitSimulator",
 };
 
-export function TopHeader({ onMenuClick, month, onMonthChange }: TopHeaderProps) {
+export function TopHeader({
+  onMenuClick,
+  month,
+  onMonthChange,
+}: TopHeaderProps) {
   const { t, lang, setLang } = useLang();
   const { pathname } = useLocation();
 
@@ -41,9 +48,7 @@ export function TopHeader({ onMenuClick, month, onMonthChange }: TopHeaderProps)
   const labelKey = SCREEN_LABELS[rootPath];
 
   return (
-    <header
-      className="h-14 flex items-center justify-between px-4 border-b border-border bg-surface shrink-0 rtl:flex-row-reverse"
-    >
+    <header className="h-14 flex items-center justify-between px-4 border-b border-border bg-surface shrink-0 rtl:flex-row-reverse">
       <div className="flex items-center gap-2 rtl:flex-row-reverse">
         <ButtonIcon
           className="lg:hidden"
@@ -61,7 +66,7 @@ export function TopHeader({ onMenuClick, month, onMonthChange }: TopHeaderProps)
         {isOverviewScreen && (
           <MonthPicker value={month} onChange={onMonthChange} />
         )}
-        <LangToggle lang={lang as "en" | "he"} onChange={setLang} />
+        <LangToggle lang={lang} onChange={setLang} />
       </div>
     </header>
   );

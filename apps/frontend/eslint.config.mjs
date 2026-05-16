@@ -10,6 +10,14 @@ export default tseslint.config(
   {
     ignores: ['dist', 'eslint.config.mjs'],
   },
+  {
+    files: ['scripts/**'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   eslintPluginPrettierRecommended,
@@ -25,7 +33,7 @@ export default tseslint.config(
       sourceType: 'module',
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['postcss.config.js'],
+          allowDefaultProject: ['postcss.config.js', 'tailwind.config.ts', 'scripts/codegen.mjs'],
         },
         tsconfigRootDir: import.meta.dirname,
       },
