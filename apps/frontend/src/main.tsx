@@ -5,11 +5,14 @@ import { Provider } from "react-redux";
 import { RouterProvider } from "react-router-dom";
 import { store } from "@/app/store";
 import { router } from "./router";
+import { LangProvider } from "@/contexts/LangContext";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Provider store={store}>
-      <RouterProvider router={router} />
+      <LangProvider>
+        <RouterProvider router={router} />
+      </LangProvider>
     </Provider>
   </StrictMode>,
 );
