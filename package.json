@@ -9,7 +9,9 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "prepare": "pnpm exec husky",
-    "postinstall": "pnpm --filter backend exec prisma generate"
+    "postinstall": "pnpm --filter backend exec prisma generate",
+    "infra:up": "docker compose up db backend -d",
+    "infra:down": "docker compose stop db backend"
   },
   "keywords": [],
   "author": "",
