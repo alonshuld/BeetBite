@@ -71,8 +71,8 @@ function NavSection({
           className={({ isActive }) =>
             `flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors ${
               isActive
-                ? "bg-[var(--beet-glow)] text-beet-bright border-l-2 border-beet"
-                : "text-text-muted hover:bg-surface-2 border-l-2 border-transparent"
+                ? "bg-[var(--beet-glow)] text-beet-bright ltr:border-l-2 rtl:border-r-2 border-beet"
+                : "text-text-muted hover:bg-surface-2 ltr:border-l-2 rtl:border-r-2 border-transparent"
             }`
           }
         >

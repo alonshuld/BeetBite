@@ -4,6 +4,7 @@ export type Lang = "en" | "he";
 
 export const translations = {
   en: {
+    // Nav
     projectReports: "Project Reports",
     monthlyIncome: "Monthly Income",
     corporationPayments: "Corporation Payments",
@@ -17,6 +18,7 @@ export const translations = {
     overview: "Overview",
     management: "Management",
     tools: "Tools",
+    // Auth
     username: "Username",
     password: "Password",
     signIn: "Sign in",
@@ -24,6 +26,7 @@ export const translations = {
     fillFields: "Please fill in all fields",
     constructionPlatform: "Construction management platform",
     copyright: "BeetBite © 2026",
+    // General
     admin: "Admin",
     search: "Search…",
     noResults: "No results",
@@ -35,8 +38,35 @@ export const translations = {
     add: "Add",
     edit: "Edit",
     close: "Close",
+    month: "Month",
+    actions: "Actions",
+    name: "Name",
+    description: "Description",
+    finishDate: "Finish Date",
+    estimatedAmount: "Estimated Amount",
+    status: "Status",
+    // Financial / status
+    income: "Income",
+    profit: "Profit",
+    subPayment: "Sub Payment",
+    received: "Received",
+    pending: "Pending",
+    owed: "Owed",
+    paid: "Paid",
+    unpaid: "Unpaid",
+    partial: "Partial",
+    grandTotal: "Grand Total",
+    totalIncome: "Total Income",
+    totalProfit: "Total Profit",
+    completion: "Completion",
+    profitMargin: "Profit Margin",
+    active: "Active",
+    future: "Future",
+    closed: "Closed",
+    all: "All",
   },
   he: {
+    // Nav
     projectReports: "דוחות פרויקט",
     monthlyIncome: "הכנסה חודשית",
     corporationPayments: "תשלומי חברה",
@@ -50,6 +80,7 @@ export const translations = {
     overview: "סקירה",
     management: "ניהול",
     tools: "כלים",
+    // Auth
     username: "שם משתמש",
     password: "סיסמה",
     signIn: "כניסה",
@@ -57,6 +88,7 @@ export const translations = {
     fillFields: "נא למלא את כל השדות",
     constructionPlatform: "פלטפורמת ניהול בנייה",
     copyright: "BeetBite © 2026",
+    // General
     admin: "מנהל",
     search: "חיפוש…",
     noResults: "אין תוצאות",
@@ -68,6 +100,32 @@ export const translations = {
     add: "הוסף",
     edit: "עריכה",
     close: "סגור",
+    month: "חודש",
+    actions: "פעולות",
+    name: "שם",
+    description: "תיאור",
+    finishDate: "תאריך סיום",
+    estimatedAmount: "סכום משוער",
+    status: "סטטוס",
+    // Financial / status
+    income: "הכנסה",
+    profit: "רווח",
+    subPayment: "תשלום קבלן",
+    received: "התקבל",
+    pending: "ממתין",
+    owed: "חייב",
+    paid: "שולם",
+    unpaid: "לא שולם",
+    partial: "חלקי",
+    grandTotal: 'סה"כ',
+    totalIncome: "סך הכנסות",
+    totalProfit: "סך רווחים",
+    completion: "השלמה",
+    profitMargin: "מרווח רווח",
+    active: "פעיל",
+    future: "עתידי",
+    closed: "סגור",
+    all: "הכל",
   },
 } as const;
 
