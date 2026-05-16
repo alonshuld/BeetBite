@@ -34,5 +34,15 @@ const baseQueryWithReauth: BaseQueryFn<
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithReauth,
+  tagTypes: [
+    "Clients",
+    "Subcontractors",
+    "Corporations",
+    "Projects",
+    "ProjectReports",
+    "CorporationPayments",
+    "SubcontractorPayments",
+    "Incomes",
+  ],
   endpoints: () => ({}),
 });
