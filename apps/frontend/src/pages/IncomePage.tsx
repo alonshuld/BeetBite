@@ -5,24 +5,17 @@ import { PageHeader } from "@/components/molecules/PageHeader";
 import { StatCard } from "@/components/molecules/StatCard";
 import { EmptyState, LinkButton } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
+import { formatYM } from "@/utils/formatMonth";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
-}
-
-function formatMonth(ym: string): string {
-  const [y, m] = ym.split("-");
-  return new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString("en-GB", {
-    month: "short",
-    year: "numeric",
-  });
 }
 
 export default function IncomePage() {
   const { month } = useOutletContext<{ month: string }>();
   const navigate = useNavigate();
   const { data: allReports = [], isLoading } = useGetProjectReportsQuery();
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   const reports = allReports.filter((r) => r.month === month);
 
@@ -34,7 +27,7 @@ export default function IncomePage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title={t("monthlyIncome")} subtitle={formatMonth(month)} />
+      <PageHeader title={t("monthlyIncome")} subtitle={formatYM(month, lang)} />
 
       <div className="grid grid-cols-2 gap-4 max-[640px]:grid-cols-1">
         <StatCard label={t("totalIncome")} value={formatILS(totalIncome)} />
@@ -49,7 +42,7 @@ export default function IncomePage() {
       ) : reports.length === 0 ? (
         <EmptyState
           icon="💰"
-          title={`${t("noProjectReportsFor")} ${formatMonth(month)}`}
+          title={`${t("noProjectReportsFor")} ${formatYM(month, lang)}`}
           description={t("reportsAppearNote")}
         />
       ) : (

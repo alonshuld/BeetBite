@@ -3,17 +3,10 @@ import { useGetAllMonthsIncomesQuery } from "@/api/endpoints/incomes";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { Badge, EmptyState } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
+import { formatYM } from "@/utils/formatMonth";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
-}
-
-function formatMonth(ym: string): string {
-  const [y, m] = ym.split("-");
-  return new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString("en-GB", {
-    month: "long",
-    year: "numeric",
-  });
 }
 
 type FilterPill = "all" | "unpaid" | "paid";
@@ -21,7 +14,7 @@ type FilterPill = "all" | "unpaid" | "paid";
 export default function IncomePerMonthPage() {
   const { data: entries = [], isLoading } = useGetAllMonthsIncomesQuery();
   const [filter, setFilter] = useState<FilterPill>("all");
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   const filtered = entries.filter((e) => {
     if (filter === "paid") return !!e.incomeDate;
@@ -81,7 +74,7 @@ export default function IncomePerMonthPage() {
             return (
               <div key={month}>
                 <h2 className="font-serif text-lg text-text mb-3">
-                  {formatMonth(month)}
+                  {formatYM(month, lang, "long")}
                 </h2>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-sm">

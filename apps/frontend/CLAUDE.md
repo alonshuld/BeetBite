@@ -42,6 +42,8 @@ src/
   pages/                    # One file per route, lazy-loaded
   styles/
     globals.css             # :root CSS vars + Tailwind directives + scrollbar + grain
+  utils/
+    formatMonth.ts          # formatYM(ym, lang, format?) and formatISODate(iso, lang, opts?) — locale-aware date helpers
   router.tsx                # createBrowserRouter route table
   main.tsx                  # Entry point
 scripts/
@@ -91,6 +93,8 @@ Design reference for all visual specs (colours, spacing, component shapes, anima
 
 Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`) lives in `AppShell` and is provided above the login page too. Persist selected lang to `localStorage` key `beetbite.lang`. On lang change, set `document.documentElement.dir` to `"rtl"` or `"ltr"`. RTL layout rules are in `globals.css` under `[dir="rtl"]` — no JS layout logic needed.
 
+**Month/date formatting**: always use `formatYM(ym, lang)` and `formatISODate(iso, lang)` from `src/utils/formatMonth.ts` — never hardcode `"en-GB"`. These map `lang` to the correct locale (`en-GB` / `he-IL`) so month names render in the active language.
+
 ## Sidebar nav sections
 
 **Overview** (use global month picker in TopHeader): Project Reports, Monthly Income, Corporation Payments, Subcontractors, Income Per Month\*
@@ -108,7 +112,8 @@ Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`) lives in `AppShell` and is
 - **Corporation payment fields**: `amount`, `description`, `date`, `isFuture` (bool), `vatPercentage` (number, default 18, shown only when `isFuture = false`).
 - **Project filters** (three independent toggles, Active on by default): Active (`isDone=false` + has reports), Future (no reports yet), Closed (`isDone=true`).
 - **ProjectReportFormModal flow**: client picker → filtered project list → subcontractor prefills from last month → completion % prefills from last month → report month → income + date → profit margin % → corporation payments (multi-row).
-- **Date display in reports**: month + year only (`MMM YYYY`), no day.
+- **Date display in reports**: month + year only (`MMM YYYY`), no day. Use `formatISODate(iso, lang)` — locale-aware.
+- **MonthPicker**: click the label to open a popover with a year `<select>` (±10 years) and a 3×4 month button grid. No prev/next arrows. Month names in the picker also respect `lang` via `MONTH_NAMES[lang]` arrays defined in the component.
 - **Profit Simulator**: read-only, no API writes. Uses already-loaded RTK Query data.
 
 ## Path alias

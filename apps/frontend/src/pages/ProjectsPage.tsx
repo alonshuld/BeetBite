@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLang } from "@/contexts/useLang";
+import { formatISODate } from "@/utils/formatMonth";
 import {
   useGetProjectsQuery,
   useCreateProjectMutation,
@@ -27,11 +28,6 @@ function formatILS(amount: number): string {
   return `₪${amount.toLocaleString("he-IL")}`;
 }
 
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
-}
 
 function projectStatus(p: Project): "active" | "future" | "closed" {
   if (p.isDone) return "closed";
@@ -97,7 +93,7 @@ const EMPTY_FORM: FormState = {
 };
 
 export default function ProjectsPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { data: projects = [], isLoading } = useGetProjectsQuery();
   const { data: clients = [] } = useGetClientsQuery();
   const [createProject, { isLoading: creating }] = useCreateProjectMutation();
@@ -281,7 +277,7 @@ export default function ProjectsPage() {
                       {formatILS(project.estimatedAmount)}
                     </td>
                     <td className="py-3 px-4 text-text-muted">
-                      {formatDate(project.finishDate)}
+                      {project.finishDate ? formatISODate(project.finishDate, lang) : "—"}
                     </td>
                     <td className="py-3 px-4 min-w-[100px]">
                       <div className="flex flex-col gap-1">

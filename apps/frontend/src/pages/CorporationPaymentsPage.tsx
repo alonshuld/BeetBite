@@ -4,17 +4,10 @@ import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { EmptyState } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
+import { formatYM } from "@/utils/formatMonth";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
-}
-
-function formatMonth(ym: string): string {
-  const [y, m] = ym.split("-");
-  return new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString("en-GB", {
-    month: "short",
-    year: "numeric",
-  });
 }
 
 interface CorpRow {
@@ -33,7 +26,7 @@ export default function CorporationPaymentsPage() {
   const { month } = useOutletContext<{ month: string }>();
   const { data: allReports = [], isLoading } = useGetProjectReportsQuery();
   const { hoverId, setHoverId } = useHover();
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   const monthReports = allReports.filter((r) => r.month === month);
 
@@ -63,14 +56,14 @@ export default function CorporationPaymentsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title={t("corporationPayments")} subtitle={formatMonth(month)} />
+      <PageHeader title={t("corporationPayments")} subtitle={formatYM(month, lang)} />
 
       {isLoading ? (
         <p className="text-text-muted text-sm">{t("loading")}</p>
       ) : rows.length === 0 ? (
         <EmptyState
           icon="🏢"
-          title={`${t("noCorporationPaymentsFor")} ${formatMonth(month)}`}
+          title={`${t("noCorporationPaymentsFor")} ${formatYM(month, lang)}`}
           description={t("corporationPaymentsNote")}
         />
       ) : (

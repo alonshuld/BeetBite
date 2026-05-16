@@ -26,6 +26,7 @@ import {
 import { FormModal } from "@/components/organisms/Modal";
 import { FormRow } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
+import { formatYM, formatISODate } from "@/utils/formatMonth";
 
 interface CorpPaymentDraft {
   corporationId: number | "";
@@ -45,17 +46,6 @@ function todayYM(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function formatMonthYear(ym: string): string {
-  const [year, m] = ym.split("-");
-  const d = new Date(Number(year), Number(m) - 1, 1);
-  return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
-}
-
 interface TimelineRange {
   subName: string;
   subId: number;
@@ -63,12 +53,12 @@ interface TimelineRange {
   label: string;
 }
 
-function buildRangeLabel(months: string[]): string {
-  if (months.length === 1) return formatMonthYear(months[0]);
-  return `${formatMonthYear(months[0])} → ${formatMonthYear(months[months.length - 1])}`;
+function buildRangeLabel(months: string[], lang: "en" | "he"): string {
+  if (months.length === 1) return formatYM(months[0], lang);
+  return `${formatYM(months[0], lang)} → ${formatYM(months[months.length - 1], lang)}`;
 }
 
-function buildSubcontractorTimeline(reports: ProjectReport[]): TimelineRange[] {
+function buildSubcontractorTimeline(reports: ProjectReport[], lang: "en" | "he"): TimelineRange[] {
   const withSub = reports
     .filter((r) => r.subcontractor)
     .sort((a, b) => a.month.localeCompare(b.month));
@@ -93,14 +83,14 @@ function buildSubcontractorTimeline(reports: ProjectReport[]): TimelineRange[] {
 
   return ranges.map((range) => ({
     ...range,
-    label: buildRangeLabel(range.months),
+    label: buildRangeLabel(range.months, lang),
   }));
 }
 
 export default function ProjectReportsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const projectId = Number(id);
 
   const [month, setMonth] = useState(todayYM);
@@ -244,7 +234,7 @@ export default function ProjectReportsPage() {
     );
   }
 
-  const timelineRanges = buildSubcontractorTimeline(reports);
+  const timelineRanges = buildSubcontractorTimeline(reports, lang);
   const saving = creating || updating;
 
   const subPayment = currentReport
@@ -295,7 +285,7 @@ export default function ProjectReportsPage() {
         />
         <StatCard
           label="Finish Date"
-          value={finishDate ? formatDate(finishDate) : "—"}
+          value={finishDate ? formatISODate(finishDate, lang) : "—"}
         />
       </div>
 
@@ -345,7 +335,7 @@ export default function ProjectReportsPage() {
                       <div className="flex gap-1 flex-wrap">
                         {isActive && (
                           <Badge variant="beet">
-                            Active in {formatMonthYear(month)}
+                            Active in {formatYM(month, lang)}
                           </Badge>
                         )}
                         {isLatest && <Badge variant="green">Latest</Badge>}
@@ -362,7 +352,7 @@ export default function ProjectReportsPage() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
-              Report — {formatMonthYear(month)}
+              Report — {formatYM(month, lang)}
             </h2>
             {currentReport ? (
               <ButtonGhost
@@ -392,7 +382,7 @@ export default function ProjectReportsPage() {
                   <span className="text-xs text-text-muted">Client Income</span>
                   {currentReport.incomeDate ? (
                     <span className="text-[11px] text-success">
-                      Received {formatDate(currentReport.incomeDate)}
+                      Received {formatISODate(currentReport.incomeDate, lang)}
                     </span>
                   ) : (
                     <span className="text-[11px] text-warning">
@@ -421,7 +411,7 @@ export default function ProjectReportsPage() {
                       {cp.corporation.name}
                     </span>
                     <span className="text-[11px] text-text-dim">
-                      {formatDate(cp.date)}
+                      {formatISODate(cp.date, lang)}
                       {!cp.isFuture && ` · VAT ${cp.vatPercentage}%`}
                     </span>
                   </div>

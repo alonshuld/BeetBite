@@ -18,17 +18,10 @@ import {
 } from "@/components/atoms";
 import { FormModal } from "@/components/organisms/Modal";
 import { useLang } from "@/contexts/useLang";
+import { formatYM, formatISODate } from "@/utils/formatMonth";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
-}
-
-function formatDate(d: string): string {
-  return new Date(d).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 function todayISO(): string {
@@ -56,7 +49,7 @@ export default function SubcontractorPaymentsPage() {
   const { data: allPayments = [] } = useGetSubcontractorPaymentsQuery();
   const [createPayment, { isLoading: saving }] =
     useCreateSubcontractorPaymentMutation();
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   const [selectedSubId, setSelectedSubId] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -162,7 +155,7 @@ export default function SubcontractorPaymentsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title={t("subcontractorPayments")} subtitle={month} />
+      <PageHeader title={t("subcontractorPayments")} subtitle={formatYM(month, lang)} />
 
       {cards.length === 0 ? (
         <EmptyState
@@ -278,7 +271,7 @@ export default function SubcontractorPaymentsPage() {
                         className="flex items-center justify-between px-4 py-3 bg-surface border border-border rounded"
                       >
                         <span className="text-text-muted text-sm">
-                          {formatDate(p.date)}
+                          {formatISODate(p.date, lang, { day: "2-digit", month: "short", year: "numeric" })}
                         </span>
                         <span className="text-success font-semibold">
                           {formatILS(p.amount)}
