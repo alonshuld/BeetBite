@@ -23,7 +23,7 @@ export default function LoginPage() {
     setError("");
     try {
       await login({ username, password }).unwrap();
-      navigate("/");
+      await navigate("/");
     } catch (err: unknown) {
       const msg =
         err &&
@@ -32,7 +32,7 @@ export default function LoginPage() {
         err.data &&
         typeof err.data === "object" &&
         "message" in err.data
-          ? String((err.data as { message: unknown }).message)
+          ? String(err.data.message)
           : "Login failed";
       setError(msg);
     }
@@ -49,7 +49,7 @@ export default function LoginPage() {
       />
 
       <div className="absolute top-4 right-4 rtl:right-auto rtl:left-4">
-        <LangToggle lang={lang as "en" | "he"} onChange={setLang} />
+        <LangToggle lang={lang} onChange={setLang} />
       </div>
 
       <div className="relative w-full max-w-[400px] flex flex-col gap-8">
@@ -61,13 +61,21 @@ export default function LoginPage() {
             🫀
           </div>
           <div className="text-center">
-            <h1 className="font-serif text-[32px] text-text leading-tight">BeetBite</h1>
-            <p className="text-[14px] text-text-muted">{t("constructionPlatform")}</p>
+            <h1 className="font-serif text-[32px] text-text leading-tight">
+              BeetBite
+            </h1>
+            <p className="text-[14px] text-text-muted">
+              {t("constructionPlatform")}
+            </p>
           </div>
         </div>
 
         <div className="bg-surface rounded p-7">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-4"
+            noValidate
+          >
             <Input
               id="username"
               label={t("username")}
@@ -86,9 +94,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
 
-            {error && (
-              <p className="text-sm text-danger">{error}</p>
-            )}
+            {error && <p className="text-sm text-danger">{error}</p>}
 
             <ButtonPrimary
               type="submit"
@@ -100,7 +106,9 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-[12px] text-text-dim">{t("copyright")}</p>
+        <p className="text-center text-[12px] text-text-dim">
+          {t("copyright")}
+        </p>
       </div>
     </div>
   );
