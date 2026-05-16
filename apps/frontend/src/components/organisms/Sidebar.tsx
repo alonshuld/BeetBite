@@ -1,10 +1,10 @@
 import { NavLink } from "react-router-dom";
-import { useLang } from "@/contexts/LangContext";
+import { useLang } from "@/contexts/useLang";
 import { useAppSelector } from "@/app/hooks";
 
 function parseJwtPayload(token: string): Record<string, unknown> {
   try {
-    return JSON.parse(atob(token.split(".")[1]));
+    return JSON.parse(atob(token.split(".")[1])) as Record<string, unknown>;
   } catch {
     return {};
   }
@@ -24,8 +24,16 @@ interface NavItem {
 const OVERVIEW_ITEMS: NavItem[] = [
   { path: "/reports", labelKey: "projectReports", icon: "📊" },
   { path: "/income", labelKey: "monthlyIncome", icon: "💰" },
-  { path: "/corporation-payments", labelKey: "corporationPayments", icon: "🏢" },
-  { path: "/subcontractor-payments", labelKey: "subcontractorPayments", icon: "👷" },
+  {
+    path: "/corporation-payments",
+    labelKey: "corporationPayments",
+    icon: "🏢",
+  },
+  {
+    path: "/subcontractor-payments",
+    labelKey: "subcontractorPayments",
+    icon: "👷",
+  },
   { path: "/income-per-month", labelKey: "incomePerMonth", icon: "📅" },
 ];
 
@@ -40,7 +48,15 @@ const TOOLS_ITEMS: NavItem[] = [
   { path: "/simulator", labelKey: "profitSimulator", icon: "🧮" },
 ];
 
-function NavSection({ label, items, onClose }: { label: string; items: NavItem[]; onClose: () => void }) {
+function NavSection({
+  label,
+  items,
+  onClose,
+}: {
+  label: string;
+  items: NavItem[];
+  onClose: () => void;
+}) {
   const { t } = useLang();
   return (
     <div className="mb-4">
@@ -71,7 +87,8 @@ function NavSection({ label, items, onClose }: { label: string; items: NavItem[]
 export function Sidebar({ open, onClose }: SidebarProps) {
   const { t } = useLang();
   const token = useAppSelector((s) => s.auth.token);
-  const username = token ? String(parseJwtPayload(token).sub ?? "Admin") : "Admin";
+  const sub = token ? parseJwtPayload(token).sub : undefined;
+  const username = typeof sub === "string" ? sub : "Admin";
   const initial = username.charAt(0).toUpperCase();
 
   return (
@@ -99,9 +116,21 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-2 py-3">
-          <NavSection label={t("overview")} items={OVERVIEW_ITEMS} onClose={onClose} />
-          <NavSection label={t("management")} items={MANAGEMENT_ITEMS} onClose={onClose} />
-          <NavSection label={t("tools")} items={TOOLS_ITEMS} onClose={onClose} />
+          <NavSection
+            label={t("overview")}
+            items={OVERVIEW_ITEMS}
+            onClose={onClose}
+          />
+          <NavSection
+            label={t("management")}
+            items={MANAGEMENT_ITEMS}
+            onClose={onClose}
+          />
+          <NavSection
+            label={t("tools")}
+            items={TOOLS_ITEMS}
+            onClose={onClose}
+          />
         </nav>
 
         <div className="flex items-center gap-2.5 px-3 py-3 border-t border-border shrink-0">

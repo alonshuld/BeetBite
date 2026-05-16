@@ -1,6 +1,6 @@
 import { InputHTMLAttributes, forwardRef } from "react";
 
-interface SearchInputProps extends InputHTMLAttributes<HTMLInputElement> {}
+type SearchInputProps = InputHTMLAttributes<HTMLInputElement>;
 
 export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
   ({ className = "", ...props }, ref) => {

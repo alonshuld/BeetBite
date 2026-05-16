@@ -7,7 +7,14 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const backendUrl = process.env.BACKEND_URL ?? "http://localhost:3000";
 const schemaUrl = new URL(`${backendUrl}/api/v1/docs-json`);
-const outPath = path.join(__dirname, "..", "src", "api", "generated", "schema.d.ts");
+const outPath = path.join(
+  __dirname,
+  "..",
+  "src",
+  "api",
+  "generated",
+  "schema.d.ts",
+);
 
 console.log(`Fetching schema from ${schemaUrl.toString()}…`);
 const ast = await openapiTS(schemaUrl);
