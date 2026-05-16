@@ -32,4 +32,12 @@ export class MonthIncomeProjectDto {
       'Percentage of project estimated amount covered by all paid incomes',
   })
   completionPercent!: number;
+
+  @ApiProperty({
+    example: 'Client Corp',
+    description: 'Client name, or null if not associated',
+    nullable: true,
+    type: String,
+  })
+  clientName!: string | null;
 }

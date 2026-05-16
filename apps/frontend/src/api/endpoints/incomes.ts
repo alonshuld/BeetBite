@@ -1,26 +1,22 @@
 import { baseApi } from "@/api/baseApi";
 
-export interface IncomeEntry {
-  id: number;
-  month: string;
+export interface MonthIncomeProject {
+  projectId: string;
+  projectName: string;
   income: number;
-  incomeDate?: string;
-  profitMarginPercent: number;
+  incomeStatus: "pending" | "paid";
   completionPercent: number;
-  project: {
-    id: number;
-    name: string;
-    estimatedAmount: number;
-  };
-  client?: {
-    id: number;
-    name: string;
-  };
+  clientName: string | null;
+}
+
+export interface MonthlyIncome {
+  month: string;
+  projects: MonthIncomeProject[];
 }
 
 export const incomesApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    getAllMonthsIncomes: build.query<IncomeEntry[], void>({
+    getAllMonthsIncomes: build.query<MonthlyIncome[], void>({
       query: () => "/incomes/all-months",
       providesTags: ["Incomes"],
     }),

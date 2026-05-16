@@ -59,7 +59,13 @@ export class IncomesService {
   async getAllMonthsIncome(): Promise<MonthlyIncomeDto[]> {
     const allReports = await this.prismaService.projectReport.findMany({
       include: {
-        project: { select: { name: true, estimatedAmount: true } },
+        project: {
+          select: {
+            name: true,
+            estimatedAmount: true,
+            client: { select: { name: true } },
+          },
+        },
       },
       orderBy: { date: 'asc' },
     });

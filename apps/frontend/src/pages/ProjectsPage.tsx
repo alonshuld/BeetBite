@@ -28,7 +28,6 @@ function formatILS(amount: number): string {
   return `₪${amount.toLocaleString("he-IL")}`;
 }
 
-
 function projectStatus(p: Project): "active" | "future" | "closed" {
   if (p.isDone) return "closed";
   if (!p.reports || p.reports.length === 0) return "future";
@@ -277,7 +276,9 @@ export default function ProjectsPage() {
                       {formatILS(project.estimatedAmount)}
                     </td>
                     <td className="py-3 px-4 text-text-muted">
-                      {project.finishDate ? formatISODate(project.finishDate, lang) : "—"}
+                      {project.finishDate
+                        ? formatISODate(project.finishDate, lang)
+                        : "—"}
                     </td>
                     <td className="py-3 px-4 min-w-[100px]">
                       <div className="flex flex-col gap-1">

@@ -14,10 +14,16 @@ export default function NotFoundPage() {
 
       <div className="flex flex-col gap-2 max-w-xs">
         <h1 className="font-serif text-xl text-text">{t("pageNotFound")}</h1>
-        <p className="text-text-muted text-sm">{t("pageNotFoundDescription")}</p>
+        <p className="text-text-muted text-sm">
+          {t("pageNotFoundDescription")}
+        </p>
       </div>
 
-      <ButtonPrimary onClick={() => navigate("/")}>
+      <ButtonPrimary
+        onClick={() => {
+          void navigate("/");
+        }}
+      >
         {t("goHome")}
       </ButtonPrimary>
     </div>

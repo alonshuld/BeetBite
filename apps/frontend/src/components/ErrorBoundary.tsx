@@ -2,7 +2,7 @@ import { Component, type ReactNode, type ErrorInfo } from "react";
 import { useLang } from "@/contexts/useLang";
 import { ButtonPrimary } from "@/components/atoms/Button";
 
-function ErrorFallback() {
+export function ErrorFallback() {
   const { t } = useLang();
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-8 text-center bg-bg">

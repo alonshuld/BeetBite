@@ -58,7 +58,10 @@ function buildRangeLabel(months: string[], lang: "en" | "he"): string {
   return `${formatYM(months[0], lang)} → ${formatYM(months[months.length - 1], lang)}`;
 }
 
-function buildSubcontractorTimeline(reports: ProjectReport[], lang: "en" | "he"): TimelineRange[] {
+function buildSubcontractorTimeline(
+  reports: ProjectReport[],
+  lang: "en" | "he",
+): TimelineRange[] {
   const withSub = reports
     .filter((r) => r.subcontractor)
     .sort((a, b) => a.month.localeCompare(b.month));

@@ -8,7 +8,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'eslint.config.mjs'],
+    ignores: ['dist', 'eslint.config.mjs', 'vite.config.js', 'vite.config.d.ts'],
   },
   {
     files: ['scripts/**'],

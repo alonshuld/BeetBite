@@ -1,4 +1,8 @@
-import { useRouteError, isRouteErrorResponse, useNavigate } from "react-router-dom";
+import {
+  useRouteError,
+  isRouteErrorResponse,
+  useNavigate,
+} from "react-router-dom";
 import { useLang } from "@/contexts/useLang";
 import { ButtonPrimary } from "@/components/atoms/Button";
 
@@ -7,8 +11,7 @@ export default function ErrorPage() {
   const navigate = useNavigate();
   const error = useRouteError();
 
-  const is404 =
-    isRouteErrorResponse(error) && error.status === 404;
+  const is404 = isRouteErrorResponse(error) && error.status === 404;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-8 text-center bg-bg">
@@ -24,7 +27,11 @@ export default function ErrorPage() {
       </div>
 
       {is404 ? (
-        <ButtonPrimary onClick={() => navigate("/")}>
+        <ButtonPrimary
+          onClick={() => {
+            void navigate("/");
+          }}
+        >
           {t("goHome")}
         </ButtonPrimary>
       ) : (

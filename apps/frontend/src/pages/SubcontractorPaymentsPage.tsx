@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
-import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import {
   useGetSubcontractorPaymentsQuery,
   useCreateSubcontractorPaymentMutation,
@@ -45,7 +44,6 @@ const STATUS_VARIANT: Record<PaymentStatus, "green" | "yellow" | "red"> = {
 export default function SubcontractorPaymentsPage() {
   const { month } = useOutletContext<{ month: string }>();
   const { data: allReports = [] } = useGetProjectReportsQuery();
-  const { data: subcontractors = [] } = useGetSubcontractorsQuery();
   const { data: allPayments = [] } = useGetSubcontractorPaymentsQuery();
   const [createPayment, { isLoading: saving }] =
     useCreateSubcontractorPaymentMutation();
@@ -89,11 +87,10 @@ export default function SubcontractorPaymentsPage() {
       existing.projectBreakdown.push(entry);
       existing.totalOwed += Math.round(owed);
     } else {
-      const fullSub = subcontractors.find((s) => s.id === sub.id);
       subMap.set(sub.id, {
         subId: sub.id,
         subName: sub.name,
-        agreedAmount: fullSub?.agreedAmount ?? 0,
+        agreedAmount: sub.agreedAmount,
         projectBreakdown: [entry],
         totalOwed: Math.round(owed),
         totalPaid: 0,
@@ -136,11 +133,10 @@ export default function SubcontractorPaymentsPage() {
     if (!selectedSubId || !modalProjectId || !modalAmount) return;
     const amount = parseFloat(modalAmount);
     if (isNaN(amount) || amount <= 0) return;
-    const sub = subcontractors.find((s) => s.id === selectedSubId);
     const totalPaid = selectedCard?.totalPaid ?? 0;
-    if (sub && totalPaid + amount > sub.agreedAmount) {
+    if (selectedCard && totalPaid + amount > selectedCard.agreedAmount) {
       setOverpayError(
-        `Total paid (${formatILS(totalPaid + amount)}) would exceed agreed amount (${formatILS(sub.agreedAmount)})`,
+        `Total paid (${formatILS(totalPaid + amount)}) would exceed agreed amount (${formatILS(selectedCard.agreedAmount)})`,
       );
       return;
     }
@@ -155,7 +151,10 @@ export default function SubcontractorPaymentsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title={t("subcontractorPayments")} subtitle={formatYM(month, lang)} />
+      <PageHeader
+        title={t("subcontractorPayments")}
+        subtitle={formatYM(month, lang)}
+      />
 
       {cards.length === 0 ? (
         <EmptyState
@@ -183,7 +182,9 @@ export default function SubcontractorPaymentsPage() {
                     <span className="font-medium text-text text-sm">
                       {card.subName}
                     </span>
-                    <Badge variant={STATUS_VARIANT[status]}>{t(status.toLowerCase() as "paid" | "partial" | "unpaid")}</Badge>
+                    <Badge variant={STATUS_VARIANT[status]}>
+                      {t(status.toLowerCase() as "paid" | "partial" | "unpaid")}
+                    </Badge>
                   </div>
                   <p className="text-[11px] text-text-muted mb-1">
                     {card.projectBreakdown.length} project
@@ -271,7 +272,11 @@ export default function SubcontractorPaymentsPage() {
                         className="flex items-center justify-between px-4 py-3 bg-surface border border-border rounded"
                       >
                         <span className="text-text-muted text-sm">
-                          {formatISODate(p.date, lang, { day: "2-digit", month: "short", year: "numeric" })}
+                          {formatISODate(p.date, lang, {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
                         </span>
                         <span className="text-success font-semibold">
                           {formatILS(p.amount)}

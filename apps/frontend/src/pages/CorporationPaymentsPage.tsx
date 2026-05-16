@@ -56,7 +56,10 @@ export default function CorporationPaymentsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title={t("corporationPayments")} subtitle={formatYM(month, lang)} />
+      <PageHeader
+        title={t("corporationPayments")}
+        subtitle={formatYM(month, lang)}
+      />
 
       {isLoading ? (
         <p className="text-text-muted text-sm">{t("loading")}</p>

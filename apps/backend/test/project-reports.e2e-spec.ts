@@ -38,7 +38,7 @@ describe('ProjectReportsService Integration Tests', () => {
 
   beforeAll(async () => {
     // Start PostgreSQL container
-    container = await new PostgreSqlContainer()
+    container = await new PostgreSqlContainer('postgres:latest')
       .withDatabase('test_db')
       .withUsername('test_user')
       .withPassword('test_password')
@@ -95,6 +95,7 @@ describe('ProjectReportsService Integration Tests', () => {
           clientId,
           estimatedAmount: 100000,
           finishDate: new Date('2026-12-31'),
+          description: 'Test project',
         },
       })
     ).id;
@@ -265,6 +266,7 @@ describe('ProjectReportsService Integration Tests', () => {
             clientId,
             estimatedAmount: 100000,
             finishDate: new Date('2026-12-31'),
+            description: 'Test project',
           },
         })
       ).id;
@@ -301,6 +303,7 @@ describe('ProjectReportsService Integration Tests', () => {
             clientId,
             estimatedAmount: 100000,
             finishDate: new Date('2026-12-31'),
+            description: 'Test project',
           },
         })
       ).id;
@@ -384,12 +387,10 @@ describe('ProjectReportsService Integration Tests', () => {
 
       await service.create(createDto);
 
-      const payment = await prismaService.subcontractorPayment.findUnique({
+      const payment = await prismaService.subcontractorPayment.findFirst({
         where: {
-          subcontractorId_serviceDate: {
-            subcontractorId,
-            serviceDate: testDateStr,
-          },
+          subcontractorId,
+          serviceDate: testDateStr,
         },
       });
 
@@ -908,6 +909,7 @@ describe('ProjectReportsService Integration Tests', () => {
               clientId,
               estimatedAmount: 100000,
               finishDate: new Date('2026-12-31'),
+              description: 'Test project',
             },
           })
         ).id;
@@ -933,7 +935,7 @@ describe('ProjectReportsService Integration Tests', () => {
 
     it('should retrieve all reports for a given month with default pagination', async () => {
       const result = await service.findProjectReportsInMonth({
-        monthQuery: { month: testDateStr },
+        month: testDateStr,
       });
 
       expect(result.length).toBeGreaterThanOrEqual(10);
@@ -941,8 +943,9 @@ describe('ProjectReportsService Integration Tests', () => {
 
     it('should apply page limit correctly', async () => {
       const result = await service.findProjectReportsInMonth({
-        monthQuery: { month: testDateStr },
-        paginationQuery: { page: 1, limit: 5 },
+        month: testDateStr,
+        page: 1,
+        limit: 5,
       });
 
       expect(result.length).toBeLessThanOrEqual(5);
@@ -950,13 +953,15 @@ describe('ProjectReportsService Integration Tests', () => {
 
     it('should respect page number in pagination', async () => {
       const page1 = await service.findProjectReportsInMonth({
-        monthQuery: { month: testDateStr },
-        paginationQuery: { page: 1, limit: 3 },
+        month: testDateStr,
+        page: 1,
+        limit: 3,
       });
 
       const page2 = await service.findProjectReportsInMonth({
-        monthQuery: { month: testDateStr },
-        paginationQuery: { page: 2, limit: 3 },
+        month: testDateStr,
+        page: 2,
+        limit: 3,
       });
 
       if (page1.length === 3 && page2.length > 0) {
@@ -968,8 +973,9 @@ describe('ProjectReportsService Integration Tests', () => {
 
     it('should handle large limit values', async () => {
       const result = await service.findProjectReportsInMonth({
-        monthQuery: { month: testDateStr },
-        paginationQuery: { page: 1, limit: 1000 },
+        month: testDateStr,
+        page: 1,
+        limit: 1000,
       });
 
       expect(Array.isArray(result)).toBe(true);
@@ -978,8 +984,9 @@ describe('ProjectReportsService Integration Tests', () => {
 
     it('should handle page size of 1', async () => {
       const result = await service.findProjectReportsInMonth({
-        monthQuery: { month: testDateStr },
-        paginationQuery: { page: 1, limit: 1 },
+        month: testDateStr,
+        page: 1,
+        limit: 1,
       });
 
       expect(result.length).toBeLessThanOrEqual(1);
@@ -987,8 +994,9 @@ describe('ProjectReportsService Integration Tests', () => {
 
     it('should return empty array for page beyond available data', async () => {
       const result = await service.findProjectReportsInMonth({
-        monthQuery: { month: testDateStr },
-        paginationQuery: { page: 9999, limit: 10 },
+        month: testDateStr,
+        page: 9999,
+        limit: 10,
       });
 
       expect(result.length).toBe(0);
@@ -996,13 +1004,15 @@ describe('ProjectReportsService Integration Tests', () => {
 
     it('should handle month queries with different date formats', async () => {
       const result1 = await service.findProjectReportsInMonth({
-        monthQuery: { month: testDateStr },
-        paginationQuery: { page: 1, limit: 100 },
+        month: testDateStr,
+        page: 1,
+        limit: 100,
       });
 
       const result2 = await service.findProjectReportsInMonth({
-        monthQuery: { month: testDateStr },
-        paginationQuery: { page: 1, limit: 100 },
+        month: testDateStr,
+        page: 1,
+        limit: 100,
       });
 
       expect(result1.length).toBeGreaterThan(0);
@@ -1012,8 +1022,9 @@ describe('ProjectReportsService Integration Tests', () => {
     it('should return empty for month with no reports', async () => {
       const farMonth = new Date('2030-05-01').toISOString();
       const result = await service.findProjectReportsInMonth({
-        monthQuery: { month: farMonth },
-        paginationQuery: { page: 1, limit: 100 },
+        month: farMonth,
+        page: 1,
+        limit: 100,
       });
 
       expect(result).toEqual([]);
@@ -1040,6 +1051,7 @@ describe('ProjectReportsService Integration Tests', () => {
             clientId,
             estimatedAmount: 100000,
             finishDate: new Date(testDateStr),
+            description: 'Test project',
           },
         })
       ).id;
@@ -1059,6 +1071,7 @@ describe('ProjectReportsService Integration Tests', () => {
             clientId,
             estimatedAmount: 100000,
             finishDate: new Date('2026-12-31'),
+            description: 'Test project',
           },
         })
       ).id;
@@ -1248,6 +1261,7 @@ describe('ProjectReportsService Integration Tests', () => {
             clientId,
             estimatedAmount: 100000,
             finishDate: new Date('2026-12-31'),
+            description: 'Test project',
           },
         })
       ).id;
@@ -1273,12 +1287,10 @@ describe('ProjectReportsService Integration Tests', () => {
 
       await service.create(createDto);
 
-      const payment = await prismaService.subcontractorPayment.findUnique({
+      const payment = await prismaService.subcontractorPayment.findFirst({
         where: {
-          subcontractorId_serviceDate: {
-            subcontractorId: newSubId,
-            serviceDate: subPaymentDate,
-          },
+          subcontractorId: newSubId,
+          serviceDate: subPaymentDate,
         },
       });
 

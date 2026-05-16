@@ -9,27 +9,63 @@ interface MonthPickerProps {
 
 const MONTH_NAMES: Record<"en" | "he", string[]> = {
   en: [
-    "January", "February", "March", "April",
-    "May", "June", "July", "August",
-    "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ],
   he: [
-    "ינואר", "פברואר", "מרץ", "אפריל",
-    "מאי", "יוני", "יולי", "אוגוסט",
-    "ספטמבר", "אוקטובר", "נובמבר", "דצמבר",
+    "ינואר",
+    "פברואר",
+    "מרץ",
+    "אפריל",
+    "מאי",
+    "יוני",
+    "יולי",
+    "אוגוסט",
+    "ספטמבר",
+    "אוקטובר",
+    "נובמבר",
+    "דצמבר",
   ],
 };
 
 const MONTH_NAMES_SHORT: Record<"en" | "he", string[]> = {
   en: [
-    "Jan", "Feb", "Mar", "Apr",
-    "May", "Jun", "Jul", "Aug",
-    "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ],
   he: [
-    "ינו׳", "פבר׳", "מרץ", "אפר׳",
-    "מאי", "יוני", "יולי", "אוג׳",
-    "ספט׳", "אוק׳", "נוב׳", "דצמ׳",
+    "ינו׳",
+    "פבר׳",
+    "מרץ",
+    "אפר׳",
+    "מאי",
+    "יוני",
+    "יולי",
+    "אוג׳",
+    "ספט׳",
+    "אוק׳",
+    "נוב׳",
+    "דצמ׳",
   ],
 };
 
@@ -76,10 +112,7 @@ export function MonthPicker({
   }
 
   return (
-    <div
-      ref={ref}
-      className={`relative inline-flex ${className}`}
-    >
+    <div ref={ref} className={`relative inline-flex ${className}`}>
       <button
         onClick={() => setOpen((o) => !o)}
         className="min-w-[120px] text-center text-sm font-medium text-text hover:text-beet transition-colors px-2 py-1 rounded border border-border hover:bg-surface-2 cursor-pointer"

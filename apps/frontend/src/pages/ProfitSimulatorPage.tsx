@@ -124,9 +124,7 @@ export default function ProfitSimulatorPage() {
       </div>
 
       {clientId && simProjects.length === 0 && (
-        <p className="text-text-muted text-sm">
-          {t("noProjectsForClient")}
-        </p>
+        <p className="text-text-muted text-sm">{t("noProjectsForClient")}</p>
       )}
 
       {simProjects.length > 0 && (

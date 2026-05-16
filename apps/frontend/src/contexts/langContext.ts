@@ -79,16 +79,19 @@ export const translations = {
     // Breakdown / tooltips
     perProjectBreakdown: "Per-project breakdown",
     // Empty states / notes
-    corporationPaymentsNote: "Corporation payments are recorded inside project reports",
+    corporationPaymentsNote:
+      "Corporation payments are recorded inside project reports",
     noCorporationPaymentsFor: "No corporation payments for",
     noProjectReportsFor: "No project reports for",
     reportsAppearNote: "Reports show here when created for the selected month",
     allProjectsByMonth: "All projects grouped by month",
     noIncomeRecords: "No income records found",
     trySwitchingFilter: 'Try switching to "All" to see more',
-    incomeRecordsNote: "Income records appear here once project reports are created",
+    incomeRecordsNote:
+      "Income records appear here once project reports are created",
     noSubcontractorReports: "No subcontractor reports this month",
-    subcontractorsNote: "Subcontractors appear here when assigned to project reports",
+    subcontractorsNote:
+      "Subcontractors appear here when assigned to project reports",
     // Subcontractor payments
     paymentInstalments: "Payment Instalments",
     addInstalment: "Add Instalment",
@@ -97,7 +100,8 @@ export const translations = {
     selectSubcontractor: "Select a subcontractor to view details",
     selectProjectPlaceholder: "— Select project —",
     // Profit simulator
-    profitSimulatorSubtitle: "Preview how margin changes affect totals — nothing is saved",
+    profitSimulatorSubtitle:
+      "Preview how margin changes affect totals — nothing is saved",
     selectClientPlaceholder: "— Select a client —",
     baselineMarginLabel: "Baseline margin:",
     noProjectsForClient: "This client has no projects yet.",
@@ -110,11 +114,13 @@ export const translations = {
     resetToSavedValues: "Reset to saved values",
     // Not found / errors
     pageNotFound: "Page not found",
-    pageNotFoundDescription: "The page you're looking for doesn't exist or was moved.",
+    pageNotFoundDescription:
+      "The page you're looking for doesn't exist or was moved.",
     goHome: "Go to dashboard",
     errorTitle: "Something went wrong",
     errorDescription: "An unexpected error occurred. Please reload the page.",
     reload: "Reload",
+    signOut: "Sign out",
   },
   he: {
     // Nav
@@ -228,6 +234,7 @@ export const translations = {
     errorTitle: "משהו השתבש",
     errorDescription: "אירעה שגיאה בלתי צפויה. אנא טען מחדש את הדף.",
     reload: "טען מחדש",
+    signOut: "התנתק",
   },
 } as const;
 

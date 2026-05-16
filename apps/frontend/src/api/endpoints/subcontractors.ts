@@ -1,19 +1,16 @@
 import { baseApi } from "@/api/baseApi";
 
 export interface Subcontractor {
-  id: number;
+  id: string;
   name: string;
-  agreedAmount: number;
 }
 
 export interface CreateSubcontractorDto {
   name: string;
-  agreedAmount: number;
 }
 
 export interface UpdateSubcontractorDto {
   name: string;
-  agreedAmount: number;
 }
 
 export const subcontractorsApi = baseApi.injectEndpoints({
@@ -28,7 +25,7 @@ export const subcontractorsApi = baseApi.injectEndpoints({
     }),
     updateSubcontractor: build.mutation<
       Subcontractor,
-      { id: number } & UpdateSubcontractorDto
+      { id: string } & UpdateSubcontractorDto
     >({
       query: ({ id, ...body }) => ({
         url: `/subcontractors/${id}`,
@@ -37,7 +34,7 @@ export const subcontractorsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Subcontractors"],
     }),
-    deleteSubcontractor: build.mutation<void, number>({
+    deleteSubcontractor: build.mutation<void, string>({
       query: (id) => ({ url: `/subcontractors/${id}`, method: "DELETE" }),
       invalidatesTags: ["Subcontractors"],
     }),

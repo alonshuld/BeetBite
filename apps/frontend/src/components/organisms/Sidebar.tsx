@@ -1,6 +1,7 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useLang } from "@/contexts/useLang";
-import { useAppSelector } from "@/app/hooks";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { logout } from "@/features/auth/authSlice";
 
 function parseJwtPayload(token: string): Record<string, unknown> {
   try {
@@ -86,10 +87,17 @@ function NavSection({
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const { t } = useLang();
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const token = useAppSelector((s) => s.auth.token);
   const sub = token ? parseJwtPayload(token).sub : undefined;
   const username = typeof sub === "string" ? sub : "Admin";
   const initial = username.charAt(0).toUpperCase();
+
+  function handleSignOut() {
+    dispatch(logout());
+    void navigate("/login", { replace: true });
+  }
 
   return (
     <>
@@ -137,10 +145,31 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold bg-beet-dim text-white shrink-0">
             {initial}
           </div>
-          <div className="flex flex-col min-w-0">
+          <div className="flex flex-col min-w-0 flex-1">
             <span className="text-sm text-text truncate">{username}</span>
             <span className="text-[11px] text-text-dim">{t("admin")}</span>
           </div>
+          <button
+            onClick={handleSignOut}
+            title={t("signOut")}
+            className="p-1.5 rounded text-text-dim hover:text-text hover:bg-surface-2 transition-colors shrink-0"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
         </div>
       </aside>
     </>

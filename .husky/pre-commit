@@ -1,3 +1,2 @@
-npx pnpm --filter backend run format:check
-npx pnpm --filter backend run lint:check
-npx pnpm --filter backend run test
+npx pnpm format:check
+npx pnpm lint:check
