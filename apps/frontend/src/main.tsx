@@ -6,13 +6,19 @@ import { RouterProvider } from "react-router-dom";
 import { store } from "@/app/store";
 import { router } from "./router";
 import { LangProvider } from "@/contexts/LangContext";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Provider store={store}>
-      <LangProvider>
-        <RouterProvider router={router} />
-      </LangProvider>
-    </Provider>
+    <ErrorBoundary>
+      <Provider store={store}>
+        <LangProvider>
+          <ToastProvider>
+            <RouterProvider router={router} />
+          </ToastProvider>
+        </LangProvider>
+      </Provider>
+    </ErrorBoundary>
   </StrictMode>,
 );
