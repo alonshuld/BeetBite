@@ -108,8 +108,13 @@ export const translations = {
     simulatedProfit: "Simulated Profit",
     deltaVsSaved: "Delta vs Saved",
     resetToSavedValues: "Reset to saved values",
-    // Not found
+    // Not found / errors
     pageNotFound: "Page not found",
+    pageNotFoundDescription: "The page you're looking for doesn't exist or was moved.",
+    goHome: "Go to dashboard",
+    errorTitle: "Something went wrong",
+    errorDescription: "An unexpected error occurred. Please reload the page.",
+    reload: "Reload",
   },
   he: {
     // Nav
@@ -216,8 +221,13 @@ export const translations = {
     simulatedProfit: "רווח מסומלל",
     deltaVsSaved: "הפרש מהנשמר",
     resetToSavedValues: "אפס לערכים שמורים",
-    // Not found
+    // Not found / errors
     pageNotFound: "הדף לא נמצא",
+    pageNotFoundDescription: "הדף שחיפשת לא קיים או הועבר.",
+    goHome: "לדף הבית",
+    errorTitle: "משהו השתבש",
+    errorDescription: "אירעה שגיאה בלתי צפויה. אנא טען מחדש את הדף.",
+    reload: "טען מחדש",
   },
 } as const;
 
