@@ -20,6 +20,7 @@ const CorporationsPage = lazy(() => import("@/pages/CorporationsPage"));
 const IncomePerMonthPage = lazy(() => import("@/pages/IncomePerMonthPage"));
 const ProfitSimulatorPage = lazy(() => import("@/pages/ProfitSimulatorPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
+const ErrorPage = lazy(() => import("@/pages/ErrorPage"));
 
 const wrap = (Page: React.ComponentType) => (
   <Suspense>
@@ -31,9 +32,11 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: wrap(LoginPage),
+    errorElement: wrap(ErrorPage),
   },
   {
     element: <RequireAuth />,
+    errorElement: wrap(ErrorPage),
     children: [
       {
         element: <AppShell />,
@@ -63,5 +66,5 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: "*", element: wrap(NotFoundPage) },
+  { path: "*", element: wrap(NotFoundPage), errorElement: wrap(ErrorPage) },
 ]);
