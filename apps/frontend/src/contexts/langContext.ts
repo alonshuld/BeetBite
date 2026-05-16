@@ -34,6 +34,7 @@ export const translations = {
     save: "Save",
     add: "Add",
     edit: "Edit",
+    actions: "Actions",
     close: "Close",
   },
   he: {
@@ -67,6 +68,7 @@ export const translations = {
     save: "שמירה",
     add: "הוסף",
     edit: "עריכה",
+    actions: "פעולות",
     close: "סגור",
   },
 } as const;
