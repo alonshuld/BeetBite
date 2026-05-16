@@ -71,17 +71,45 @@ Data router via `createBrowserRouter`. All authenticated routes are wrapped in `
 | `/reports` | ReportsPage |
 | `/reports/projects/:id` | ProjectReportsPage |
 | `/income` | IncomePage |
+| `/income-per-month` | IncomePerMonthPage |
 | `/corporation-payments` | CorporationPaymentsPage |
 | `/subcontractor-payments` | SubcontractorPaymentsPage |
 | `/projects` | ProjectsPage |
 | `/clients` | ClientsPage |
 | `/subcontractors` | SubcontractorsPage |
 | `/corporations` | CorporationsPage |
+| `/simulator` | ProfitSimulatorPage |
 | `*` | NotFoundPage |
 
 ## Styling
 
 Tailwind v3 with `tailwind.config.ts`. All colours map to CSS custom properties declared in `src/styles/globals.css`, which in turn use the oklch palette from the mockup. Use Tailwind utility classes; reach for raw CSS vars only when no utility maps to the token.
+
+Design reference for all visual specs (colours, spacing, component shapes, animations): `apps/frontend/BeetBite.mockup.html`.
+
+## i18n + RTL
+
+Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`) lives in `AppShell` and is provided above the login page too. Persist selected lang to `localStorage` key `beetbite.lang`. On lang change, set `document.documentElement.dir` to `"rtl"` or `"ltr"`. RTL layout rules are in `globals.css` under `[dir="rtl"]` — no JS layout logic needed.
+
+## Sidebar nav sections
+
+**Overview** (use global month picker in TopHeader): Project Reports, Monthly Income, Corporation Payments, Subcontractors, Income Per Month\*
+
+**Management**: Projects, Clients, Subcontractors, Corporations
+
+**Tools**: Profit Margin Simulator
+
+\* Income Per Month does not use the global month picker — exclude from `OVERVIEW_SCREENS`.
+
+## Key design decisions
+
+- **Project completion %**: `sum of reports with incomeDate ÷ project.estimatedAmount`. Shown as 6px progress bar across Projects page, Project Detail, and Income Per Month.
+- **Subcontractor overpay guard**: block save in AddInstalmentModal if `totalPaid + newAmount > subcontractor.agreedAmount`.
+- **Corporation payment fields**: `amount`, `description`, `date`, `isFuture` (bool), `vatPercentage` (number, default 18, shown only when `isFuture = false`).
+- **Project filters** (three independent toggles, Active on by default): Active (`isDone=false` + has reports), Future (no reports yet), Closed (`isDone=true`).
+- **ProjectReportFormModal flow**: client picker → filtered project list → subcontractor prefills from last month → completion % prefills from last month → report month → income + date → profit margin % → corporation payments (multi-row).
+- **Date display in reports**: month + year only (`MMM YYYY`), no day.
+- **Profit Simulator**: read-only, no API writes. Uses already-loaded RTK Query data.
 
 ## Path alias
 
