@@ -63,7 +63,7 @@ export default function ReportsPage() {
 
   const monthReports = reports.filter((r) => r.month === month);
   const filteredProjects = clientId
-    ? projects.filter((p) => p.client?.id === clientId)
+    ? projects.filter((p) => p.clientId === clientId)
     : projects;
 
   function handleProjectChange(pid: string) {

@@ -12,6 +12,7 @@ export interface Project {
   estimatedAmount: number;
   finishDate?: string;
   isDone: boolean;
+  clientId?: string;
   client?: ProjectClient;
   reports?: { id: string }[];
 }
