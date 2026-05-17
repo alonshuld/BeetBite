@@ -43,7 +43,7 @@ const STATUS_VARIANT: Record<PaymentStatus, "green" | "yellow" | "red"> = {
 
 export default function SubcontractorPaymentsPage() {
   const { month } = useOutletContext<{ month: string }>();
-  const { data: allReports = [] } = useGetProjectReportsQuery();
+  const { data: monthReports = [] } = useGetProjectReportsQuery(month);
   const { data: allPayments = [] } = useGetSubcontractorPaymentsQuery();
   const [createPayment, { isLoading: saving }] =
     useCreateSubcontractorPaymentMutation();
@@ -54,14 +54,10 @@ export default function SubcontractorPaymentsPage() {
   const [modalProjectId, setModalProjectId] = useState("");
   const [modalAmount, setModalAmount] = useState("");
   const [modalDate, setModalDate] = useState(todayISO);
-  const [overpayError, setOverpayError] = useState("");
-
-  const monthReports = allReports.filter((r) => r.month === month);
 
   interface SubCard {
     subId: string;
     subName: string;
-    agreedAmount: number;
     projectBreakdown: {
       projectId: string;
       projectName: string;
@@ -73,10 +69,8 @@ export default function SubcontractorPaymentsPage() {
 
   const subMap = new Map<string, SubCard>();
   for (const report of monthReports) {
-    if (!report.subcontractor) continue;
     const sub = report.subcontractor;
-    const owed =
-      report.income - report.income * (report.profitMarginPercent / 100);
+    const owed = report.income - report.income * (report.profitMargin / 100);
     const existing = subMap.get(sub.id);
     const entry = {
       projectId: report.project.id,
@@ -90,7 +84,6 @@ export default function SubcontractorPaymentsPage() {
       subMap.set(sub.id, {
         subId: sub.id,
         subName: sub.name,
-        agreedAmount: sub.agreedAmount,
         projectBreakdown: [entry],
         totalOwed: Math.round(owed),
         totalPaid: 0,
@@ -125,7 +118,6 @@ export default function SubcontractorPaymentsPage() {
     );
     setModalAmount("");
     setModalDate(todayISO());
-    setOverpayError("");
     setModalOpen(true);
   }
 
@@ -133,13 +125,6 @@ export default function SubcontractorPaymentsPage() {
     if (!selectedSubId || !modalProjectId || !modalAmount) return;
     const amount = parseFloat(modalAmount);
     if (isNaN(amount) || amount <= 0) return;
-    const totalPaid = selectedCard?.totalPaid ?? 0;
-    if (selectedCard && totalPaid + amount > selectedCard.agreedAmount) {
-      setOverpayError(
-        `Total paid (${formatILS(totalPaid + amount)}) would exceed agreed amount (${formatILS(selectedCard.agreedAmount)})`,
-      );
-      return;
-    }
     await createPayment({
       subcontractorId: selectedSubId,
       projectId: modalProjectId,
@@ -333,14 +318,10 @@ export default function SubcontractorPaymentsPage() {
             value={modalAmount}
             onChange={(e) => {
               setModalAmount(e.target.value);
-              setOverpayError("");
             }}
             placeholder="0"
             required
           />
-          {overpayError && (
-            <p className="text-danger text-xs mt-1">{overpayError}</p>
-          )}
         </FormGroup>
         <FormGroup>
           <Input

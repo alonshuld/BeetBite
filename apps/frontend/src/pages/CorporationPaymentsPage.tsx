@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
+import { useGetCorporationPaymentsByMonthQuery } from "@/api/endpoints/corporation-payments";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { EmptyState } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
@@ -10,13 +10,6 @@ function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
 }
 
-interface CorpRow {
-  corpId: string;
-  corpName: string;
-  projectBreakdown: { projectName: string; amount: number }[];
-  total: number;
-}
-
 function useHover() {
   const [hoverId, setHoverId] = useState<string | null>(null);
   return { hoverId, setHoverId };
@@ -24,35 +17,12 @@ function useHover() {
 
 export default function CorporationPaymentsPage() {
   const { month } = useOutletContext<{ month: string }>();
-  const { data: allReports = [], isLoading } = useGetProjectReportsQuery();
+  const { data, isLoading } = useGetCorporationPaymentsByMonthQuery(month);
   const { hoverId, setHoverId } = useHover();
   const { t, lang } = useLang();
 
-  const monthReports = allReports.filter((r) => r.month === month);
-
-  const corpMap = new Map<string, CorpRow>();
-  for (const report of monthReports) {
-    for (const cp of report.corporationPayments ?? []) {
-      const existing = corpMap.get(cp.corporation.id);
-      const entry = { projectName: report.project.name, amount: cp.amount };
-      if (existing) {
-        existing.projectBreakdown.push(entry);
-        existing.total += cp.amount;
-      } else {
-        corpMap.set(cp.corporation.id, {
-          corpId: cp.corporation.id,
-          corpName: cp.corporation.name,
-          projectBreakdown: [entry],
-          total: cp.amount,
-        });
-      }
-    }
-  }
-
-  const rows = Array.from(corpMap.values()).sort((a, b) =>
-    a.corpName.localeCompare(b.corpName),
-  );
-  const grandTotal = rows.reduce((sum, r) => sum + r.total, 0);
+  const rows = data?.corporationsPayments ?? [];
+  const grandTotal = data?.total ?? 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -88,36 +58,36 @@ export default function CorporationPaymentsPage() {
             <tbody>
               {rows.map((row) => (
                 <tr
-                  key={row.corpId}
+                  key={row.corporation.id}
                   className="border-b border-border hover:bg-surface-2 transition-colors relative cursor-default"
-                  onMouseEnter={() => setHoverId(row.corpId)}
+                  onMouseEnter={() => setHoverId(row.corporation.id)}
                   onMouseLeave={() => setHoverId(null)}
                 >
                   <td className="py-3 px-4 text-text font-medium">
-                    {row.corpName}
+                    {row.corporation.name}
                   </td>
                   <td className="py-3 px-4 text-right text-text-muted rtl:text-left">
-                    {row.projectBreakdown.length}
+                    {row.projectPayments.length}
                   </td>
                   <td className="py-3 px-4 text-right rtl:text-left relative">
                     <span className="text-warning font-bold text-[17px]">
                       {formatILS(row.total)}
                     </span>
-                    {hoverId === row.corpId && (
+                    {hoverId === row.corporation.id && (
                       <div className="absolute right-0 top-full mt-1 z-10 bg-surface border border-border rounded shadow-lg min-w-[240px] p-3 text-left rtl:right-auto rtl:left-0">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-text-dim mb-2">
                           {t("perProjectBreakdown")}
                         </p>
-                        {row.projectBreakdown.map((pb, i) => (
+                        {row.projectPayments.map((pp) => (
                           <div
-                            key={i}
+                            key={pp.id}
                             className="flex justify-between gap-4 py-1 border-b border-border last:border-0 text-xs"
                           >
                             <span className="text-text truncate">
-                              {pb.projectName}
+                              {pp.projectReport.projectName}
                             </span>
                             <span className="text-warning font-medium shrink-0">
-                              {formatILS(pb.amount)}
+                              {formatILS(pp.amount)}
                             </span>
                           </div>
                         ))}

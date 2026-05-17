@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
@@ -20,9 +21,10 @@ interface SimProject {
 }
 
 export default function ProfitSimulatorPage() {
+  const { month } = useOutletContext<{ month: string }>();
   const { data: clients = [] } = useGetClientsQuery();
   const { data: projects = [] } = useGetProjectsQuery();
-  const { data: reports = [] } = useGetProjectReportsQuery();
+  const { data: reports = [] } = useGetProjectReportsQuery(month);
   const { t } = useLang();
 
   const [clientId, setClientId] = useState<string>("");
@@ -37,7 +39,7 @@ export default function ProfitSimulatorPage() {
     const projectReports = reports.filter((r) => r.project.id === p.id);
     const totalIncome = projectReports.reduce((sum, r) => sum + r.income, 0);
     const lastReport = projectReports[projectReports.length - 1];
-    const savedMargin = lastReport?.profitMarginPercent ?? baseline;
+    const savedMargin = lastReport?.profitMargin ?? baseline;
     const simMargin = overrides.get(p.id) ?? baseline;
     return {
       projectId: p.id,

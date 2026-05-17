@@ -14,14 +14,12 @@ function formatILS(n: number): string {
 export default function IncomePage() {
   const { month } = useOutletContext<{ month: string }>();
   const navigate = useNavigate();
-  const { data: allReports = [], isLoading } = useGetProjectReportsQuery();
+  const { data: reports = [], isLoading } = useGetProjectReportsQuery(month);
   const { t, lang } = useLang();
-
-  const reports = allReports.filter((r) => r.month === month);
 
   const totalIncome = reports.reduce((sum, r) => sum + r.income, 0);
   const totalProfit = reports.reduce(
-    (sum, r) => sum + r.income * (r.profitMarginPercent / 100),
+    (sum, r) => sum + r.income * (r.profitMargin / 100),
     0,
   );
 
@@ -53,9 +51,6 @@ export default function IncomePage() {
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
                   {t("project")}
                 </th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  {t("client")}
-                </th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
                   {t("income")}
                 </th>
@@ -69,8 +64,7 @@ export default function IncomePage() {
             </thead>
             <tbody>
               {reports.map((report) => {
-                const profit =
-                  report.income * (report.profitMarginPercent / 100);
+                const profit = report.income * (report.profitMargin / 100);
                 return (
                   <tr
                     key={report.id}
@@ -87,14 +81,11 @@ export default function IncomePage() {
                         {report.project.name}
                       </LinkButton>
                     </td>
-                    <td className="py-3 px-4 text-text-muted">
-                      {report.client?.name ?? "—"}
-                    </td>
                     <td className="py-3 px-4 text-right text-text rtl:text-left">
                       {formatILS(report.income)}
                     </td>
                     <td className="py-3 px-4 text-right text-text-muted rtl:text-left">
-                      {report.profitMarginPercent}%
+                      {report.profitMargin}%
                     </td>
                     <td className="py-3 px-4 text-right font-bold text-success rtl:text-left">
                       {formatILS(Math.round(profit))}
@@ -106,7 +97,7 @@ export default function IncomePage() {
             <tfoot>
               <tr className="border-t-2 border-border">
                 <td
-                  colSpan={4}
+                  colSpan={3}
                   className="py-3 px-4 text-right font-semibold text-text rtl:text-left"
                 >
                   {t("totalProfit")}

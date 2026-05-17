@@ -1,61 +1,47 @@
 import { baseApi } from "@/api/baseApi";
 
-export interface ReportProject {
+// Matches backend ProjectReportListItemDto
+export interface ProjectReport {
   id: string;
-  name: string;
-  estimatedAmount: number;
+  date: string; // ISO "2024-06-01T00:00:00.000Z"
+  income: number;
+  incomeDate?: string;
+  profitMargin: number;
+  project: { id: string; name: string };
+  subcontractor: { id: string; name: string };
 }
 
-export interface ReportClient {
-  id: string;
-  name: string;
-}
-
-export interface ReportSubcontractor {
-  id: string;
-  name: string;
-  agreedAmount: number;
-}
-
+// Matches backend ProjectReportResponseDto
 export interface CorporationPaymentRow {
   id: string;
   corporation: { id: string; name: string };
   amount: number;
-  description?: string;
-  date: string;
-  isFuture: boolean;
-  vatPercentage: number;
 }
 
-export interface ProjectReport {
+export interface ProjectReportDetail {
   id: string;
-  month: string;
+  date: string;
   income: number;
   incomeDate?: string;
-  profitMarginPercent: number;
-  completionPercent: number;
-  project: ReportProject;
-  client?: ReportClient;
-  subcontractor?: ReportSubcontractor;
-  corporationPayments?: CorporationPaymentRow[];
+  profitMargin: number;
+  profit: number;
+  project: { id: string; name: string };
+  subcontractor: { id: string; name: string; payment: number };
+  corporationPayments: CorporationPaymentRow[];
 }
 
+// Matches backend CreateProjectReportDto
 export interface CreateProjectReportDto {
   projectId: string;
-  clientId?: string;
   subcontractorId?: string;
-  month: string;
+  date: string; // ISO date "2024-06-01"
   income: number;
   incomeDate?: string;
-  profitMarginPercent: number;
-  completionPercent: number;
-  corporationPayments?: {
+  profitMargin?: number;
+  corporationPayments: {
     corporationId: string;
     amount: number;
-    description?: string;
     date: string;
-    isFuture: boolean;
-    vatPercentage: number;
   }[];
 }
 
@@ -63,16 +49,16 @@ export type UpdateProjectReportDto = Partial<CreateProjectReportDto>;
 
 export const projectReportsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    getProjectReports: build.query<ProjectReport[], void>({
-      query: () => "/project-reports",
+    getProjectReports: build.query<ProjectReport[], string>({
+      query: (month) => `/projects/reports?month=${month}-01`,
       providesTags: ["ProjectReports"],
     }),
-    getProjectReportsByProject: build.query<ProjectReport[], string>({
-      query: (projectId) => `/project-reports?projectId=${projectId}`,
+    getProjectReport: build.query<ProjectReportDetail, string>({
+      query: (id) => `/projects/reports/${id}`,
       providesTags: ["ProjectReports"],
     }),
     createProjectReport: build.mutation<ProjectReport, CreateProjectReportDto>({
-      query: (body) => ({ url: "/project-reports", method: "POST", body }),
+      query: (body) => ({ url: "/projects/reports", method: "POST", body }),
       invalidatesTags: ["ProjectReports", "Projects"],
     }),
     updateProjectReport: build.mutation<
@@ -80,14 +66,14 @@ export const projectReportsApi = baseApi.injectEndpoints({
       { id: string } & UpdateProjectReportDto
     >({
       query: ({ id, ...body }) => ({
-        url: `/project-reports/${id}`,
-        method: "PATCH",
+        url: `/projects/reports/${id}`,
+        method: "PUT",
         body,
       }),
       invalidatesTags: ["ProjectReports"],
     }),
     deleteProjectReport: build.mutation<void, string>({
-      query: (id) => ({ url: `/project-reports/${id}`, method: "DELETE" }),
+      query: (id) => ({ url: `/projects/reports/${id}`, method: "DELETE" }),
       invalidatesTags: ["ProjectReports", "Projects"],
     }),
   }),
@@ -95,7 +81,7 @@ export const projectReportsApi = baseApi.injectEndpoints({
 
 export const {
   useGetProjectReportsQuery,
-  useGetProjectReportsByProjectQuery,
+  useGetProjectReportQuery,
   useCreateProjectReportMutation,
   useUpdateProjectReportMutation,
   useDeleteProjectReportMutation,

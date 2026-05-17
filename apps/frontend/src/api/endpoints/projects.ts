@@ -15,6 +15,7 @@ export interface Project {
   clientId?: string;
   client?: ProjectClient;
   reports?: { id: string }[];
+  paymentProgress?: { totalPaid: number };
 }
 
 export interface CreateProjectDto {

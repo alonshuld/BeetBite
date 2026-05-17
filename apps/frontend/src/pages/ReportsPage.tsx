@@ -27,10 +27,7 @@ import { useLang } from "@/contexts/useLang";
 interface CorpPaymentDraft {
   corporationId: string;
   amount: string;
-  description: string;
   date: string;
-  isFuture: boolean;
-  vatPercentage: string;
 }
 
 function todayISO(): string {
@@ -42,7 +39,7 @@ export default function ReportsPage() {
   const navigate = useNavigate();
   const { t } = useLang();
 
-  const { data: reports = [], isLoading } = useGetProjectReportsQuery();
+  const { data: reports = [], isLoading } = useGetProjectReportsQuery(month);
   const { data: clients = [] } = useGetClientsQuery();
   const { data: projects = [] } = useGetProjectsQuery();
   const { data: subcontractors = [] } = useGetSubcontractorsQuery();
@@ -54,14 +51,12 @@ export default function ReportsPage() {
   const [clientId, setClientId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [subcontractorId, setSubcontractorId] = useState("");
-  const [completionPercent, setCompletionPercent] = useState("");
   const [reportMonth, setReportMonth] = useState(month);
   const [income, setIncome] = useState("");
   const [incomeDate, setIncomeDate] = useState(todayISO());
   const [profitMarginPercent, setProfitMarginPercent] = useState("");
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
 
-  const monthReports = reports.filter((r) => r.month === month);
   const filteredProjects = clientId
     ? projects.filter((p) => p.clientId === clientId)
     : projects;
@@ -70,18 +65,15 @@ export default function ReportsPage() {
     setProjectId(pid);
     if (!pid) {
       setSubcontractorId("");
-      setCompletionPercent("");
       return;
     }
     const last = reports
       .filter((r) => r.project.id === pid)
-      .sort((a, b) => b.month.localeCompare(a.month))[0];
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
     if (last) {
-      setSubcontractorId(last.subcontractor?.id ?? "");
-      setCompletionPercent(String(last.completionPercent));
+      setSubcontractorId(last.subcontractor.id);
     } else {
       setSubcontractorId("");
-      setCompletionPercent("");
     }
   }
 
@@ -89,7 +81,6 @@ export default function ReportsPage() {
     setClientId("");
     setProjectId("");
     setSubcontractorId("");
-    setCompletionPercent("");
     setReportMonth(month);
     setIncome("");
     setIncomeDate(todayISO());
@@ -102,22 +93,17 @@ export default function ReportsPage() {
     if (!projectId) return;
     const dto: CreateProjectReportDto = {
       projectId,
-      clientId: clientId || undefined,
       subcontractorId: subcontractorId || undefined,
-      month: reportMonth,
+      date: reportMonth + "-01",
       income: Number(income),
       incomeDate: incomeDate || undefined,
-      profitMarginPercent: Number(profitMarginPercent),
-      completionPercent: Number(completionPercent),
+      profitMargin: Number(profitMarginPercent) || undefined,
       corporationPayments: corpPayments
         .filter((cp) => cp.corporationId !== "")
         .map((cp) => ({
           corporationId: cp.corporationId,
           amount: Number(cp.amount),
-          description: cp.description || undefined,
           date: cp.date,
-          isFuture: cp.isFuture,
-          vatPercentage: Number(cp.vatPercentage),
         })),
     };
     await createReport(dto);
@@ -127,14 +113,7 @@ export default function ReportsPage() {
   function addCorpPayment() {
     setCorpPayments((prev) => [
       ...prev,
-      {
-        corporationId: "",
-        amount: "",
-        description: "",
-        date: todayISO(),
-        isFuture: false,
-        vatPercentage: "18",
-      },
+      { corporationId: "", amount: "", date: todayISO() },
     ]);
   }
 
@@ -165,7 +144,7 @@ export default function ReportsPage() {
         }
       />
 
-      {monthReports.length === 0 ? (
+      {reports.length === 0 ? (
         <EmptyState
           title={t("noData")}
           action={
@@ -174,7 +153,7 @@ export default function ReportsPage() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {monthReports.map((report) => (
+          {reports.map((report) => (
             <ReportCard
               key={report.id}
               report={report}
@@ -203,7 +182,6 @@ export default function ReportsPage() {
                 setClientId(e.target.value);
                 setProjectId("");
                 setSubcontractorId("");
-                setCompletionPercent("");
               }}
             >
               <option value="">— Select client —</option>
@@ -243,23 +221,14 @@ export default function ReportsPage() {
             </Select>
 
             <Input
-              label="Completion %"
-              type="number"
-              min={0}
-              max={100}
-              value={completionPercent}
-              onChange={(e) => setCompletionPercent(e.target.value)}
-            />
-          </FormRow>
-
-          <FormRow>
-            <Input
               label="Report Month"
               type="month"
               value={reportMonth}
               onChange={(e) => setReportMonth(e.target.value)}
             />
+          </FormRow>
 
+          <FormRow>
             <Input
               label="Income (₪)"
               type="number"
@@ -267,25 +236,23 @@ export default function ReportsPage() {
               value={income}
               onChange={(e) => setIncome(e.target.value)}
             />
-          </FormRow>
 
-          <FormRow>
             <Input
               label="Income Date"
               type="date"
               value={incomeDate}
               onChange={(e) => setIncomeDate(e.target.value)}
             />
-
-            <Input
-              label="Profit Margin %"
-              type="number"
-              min={0}
-              max={100}
-              value={profitMarginPercent}
-              onChange={(e) => setProfitMarginPercent(e.target.value)}
-            />
           </FormRow>
+
+          <Input
+            label="Profit Margin %"
+            type="number"
+            min={0}
+            max={100}
+            value={profitMarginPercent}
+            onChange={(e) => setProfitMarginPercent(e.target.value)}
+          />
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
@@ -309,9 +276,7 @@ export default function ReportsPage() {
                   <Select
                     value={cp.corporationId}
                     onChange={(e) =>
-                      updateCorpPayment(i, {
-                        corporationId: e.target.value,
-                      })
+                      updateCorpPayment(i, { corporationId: e.target.value })
                     }
                   >
                     <option value="">— Corporation —</option>
@@ -331,15 +296,6 @@ export default function ReportsPage() {
                     }
                   />
                   <Input
-                    placeholder="Description"
-                    value={cp.description}
-                    onChange={(e) =>
-                      updateCorpPayment(i, { description: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-2 items-end">
-                  <Input
                     label="Date"
                     type="date"
                     value={cp.date}
@@ -347,27 +303,6 @@ export default function ReportsPage() {
                       updateCorpPayment(i, { date: e.target.value })
                     }
                   />
-                  <label className="flex items-center gap-2 text-sm text-text cursor-pointer pb-2">
-                    <input
-                      type="checkbox"
-                      checked={cp.isFuture}
-                      onChange={(e) =>
-                        updateCorpPayment(i, { isFuture: e.target.checked })
-                      }
-                    />
-                    Future
-                  </label>
-                  {!cp.isFuture && (
-                    <Input
-                      label="VAT %"
-                      type="number"
-                      min={0}
-                      value={cp.vatPercentage}
-                      onChange={(e) =>
-                        updateCorpPayment(i, { vatPercentage: e.target.value })
-                      }
-                    />
-                  )}
                 </div>
                 <div className="flex justify-end">
                   <ButtonDanger
@@ -393,9 +328,7 @@ interface ReportCardProps {
 
 function ReportCard({ report, onClick }: ReportCardProps) {
   const isReceived = Boolean(report.incomeDate);
-  const subAmount = report.subcontractor
-    ? report.income * (1 - report.profitMarginPercent / 100)
-    : null;
+  const subAmount = report.income * (1 - report.profitMargin / 100);
 
   return (
     <button
@@ -403,14 +336,7 @@ function ReportCard({ report, onClick }: ReportCardProps) {
       className="w-full text-left bg-surface rounded-[var(--radius)] border border-border p-4 flex flex-col gap-3 transition-colors hover:border-beet/40 hover:bg-surface-2 active:scale-[0.99]"
     >
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-medium text-text text-sm">{report.project.name}</p>
-          {report.client && (
-            <p className="text-text-muted text-xs mt-0.5">
-              {report.client.name}
-            </p>
-          )}
-        </div>
+        <p className="font-medium text-text text-sm">{report.project.name}</p>
         <Badge variant={isReceived ? "green" : "yellow"}>
           {isReceived ? "Received" : "Pending"}
         </Badge>
@@ -425,16 +351,14 @@ function ReportCard({ report, onClick }: ReportCardProps) {
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-text-muted">Profit Margin</span>
-          <span className="text-text">{report.profitMarginPercent}%</span>
+          <span className="text-text">{report.profitMargin}%</span>
         </div>
-        {report.subcontractor && subAmount !== null && (
-          <div className="flex justify-between text-sm">
-            <span className="text-text-muted">{report.subcontractor.name}</span>
-            <span className="text-text">
-              ₪{subAmount.toLocaleString("he-IL")}
-            </span>
-          </div>
-        )}
+        <div className="flex justify-between text-sm">
+          <span className="text-text-muted">{report.subcontractor.name}</span>
+          <span className="text-text">
+            ₪{subAmount.toLocaleString("he-IL")}
+          </span>
+        </div>
       </div>
     </button>
   );

@@ -1,24 +1,23 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  useGetProjectReportsByProjectQuery,
+  useGetProjectReportsQuery,
+  useGetProjectReportQuery,
   useUpdateProjectReportMutation,
   useCreateProjectReportMutation,
-  type ProjectReport,
+  type ProjectReportDetail,
   type CreateProjectReportDto,
   type UpdateProjectReportDto,
 } from "@/api/endpoints/project-reports";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
-import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { MonthPicker } from "@/components/molecules/MonthPicker";
 import { StatCard } from "@/components/molecules/StatCard";
 import {
   ButtonGhost,
   ButtonPrimary,
   ButtonDanger,
-  Badge,
   EmptyState,
   Input,
   Select,
@@ -31,10 +30,7 @@ import { formatYM, formatISODate } from "@/utils/formatMonth";
 interface CorpPaymentDraft {
   corporationId: string;
   amount: string;
-  description: string;
   date: string;
-  isFuture: boolean;
-  vatPercentage: string;
 }
 
 function todayISO(): string {
@@ -46,50 +42,6 @@ function todayYM(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-interface TimelineRange {
-  subName: string;
-  subId: string;
-  months: string[];
-  label: string;
-}
-
-function buildRangeLabel(months: string[], lang: "en" | "he"): string {
-  if (months.length === 1) return formatYM(months[0], lang);
-  return `${formatYM(months[0], lang)} → ${formatYM(months[months.length - 1], lang)}`;
-}
-
-function buildSubcontractorTimeline(
-  reports: ProjectReport[],
-  lang: "en" | "he",
-): TimelineRange[] {
-  const withSub = reports
-    .filter((r) => r.subcontractor)
-    .sort((a, b) => a.month.localeCompare(b.month));
-
-  if (withSub.length === 0) return [];
-
-  const ranges: TimelineRange[] = [];
-  let current: TimelineRange | null = null;
-
-  for (const r of withSub) {
-    const subId = r.subcontractor!.id;
-    const subName = r.subcontractor!.name;
-
-    if (current && current.subId === subId) {
-      current.months.push(r.month);
-    } else {
-      if (current) ranges.push(current);
-      current = { subId, subName, months: [r.month], label: "" };
-    }
-  }
-  if (current) ranges.push(current);
-
-  return ranges.map((range) => ({
-    ...range,
-    label: buildRangeLabel(range.months, lang),
-  }));
-}
-
 export default function ProjectReportsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -98,76 +50,67 @@ export default function ProjectReportsPage() {
 
   const [month, setMonth] = useState(todayYM);
 
-  const { data: reports = [], isLoading } =
-    useGetProjectReportsByProjectQuery(projectId);
+  const { data: monthReports = [], isLoading } =
+    useGetProjectReportsQuery(month);
   const { data: projects = [] } = useGetProjectsQuery();
   const { data: subcontractors = [] } = useGetSubcontractorsQuery();
   const { data: corporations = [] } = useGetCorporationsQuery();
-  const { data: clients = [] } = useGetClientsQuery();
   const [createReport, { isLoading: creating }] =
     useCreateProjectReportMutation();
   const [updateReport, { isLoading: updating }] =
     useUpdateProjectReportMutation();
 
   const project = projects.find((p) => p.id === projectId);
-  const projectName =
-    project?.name ?? reports[0]?.project.name ?? `Project ${projectId}`;
-  const estimatedAmount =
-    project?.estimatedAmount ?? reports[0]?.project.estimatedAmount ?? 0;
+  const projectName = project?.name ?? `Project ${projectId}`;
+  const estimatedAmount = project?.estimatedAmount ?? 0;
   const finishDate = project?.finishDate;
-
-  const totalPaid = reports
-    .filter((r) => r.incomeDate)
-    .reduce((sum, r) => sum + r.income, 0);
+  const totalPaid = project?.paymentProgress?.totalPaid ?? 0;
 
   const completionPct =
     estimatedAmount > 0
       ? Math.min(100, Math.round((totalPaid / estimatedAmount) * 100))
       : 0;
 
-  const currentReport = reports.find((r) => r.month === month) ?? null;
+  const currentListReport =
+    monthReports.find((r) => r.project.id === projectId) ?? null;
+
+  const { data: currentReport } = useGetProjectReportQuery(
+    currentListReport?.id ?? "",
+    { skip: !currentListReport },
+  );
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [subcontractorId, setSubcontractorId] = useState("");
-  const [completionPercent, setCompletionPercent] = useState("");
   const [reportMonth, setReportMonth] = useState(month);
   const [income, setIncome] = useState("");
   const [incomeDate, setIncomeDate] = useState(todayISO());
   const [profitMarginPercent, setProfitMarginPercent] = useState("");
-  const [clientId, setClientId] = useState("");
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
 
   function openAdd() {
     setEditingId(null);
     setSubcontractorId("");
-    setCompletionPercent("");
     setReportMonth(month);
     setIncome("");
     setIncomeDate(todayISO());
     setProfitMarginPercent("");
-    setClientId(reports[0]?.client?.id ?? "");
     setCorpPayments([]);
     setModalOpen(true);
   }
 
-  function openEdit(report: ProjectReport) {
+  function openEdit(report: ProjectReportDetail) {
     setEditingId(report.id);
-    setSubcontractorId(report.subcontractor?.id ?? "");
-    setCompletionPercent(String(report.completionPercent));
-    setReportMonth(report.month);
+    setSubcontractorId(report.subcontractor.id);
+    setReportMonth(report.date.slice(0, 7));
     setIncome(String(report.income));
     setIncomeDate(report.incomeDate ?? "");
-    setProfitMarginPercent(String(report.profitMarginPercent));
-    setClientId(report.client?.id ?? "");
+    setProfitMarginPercent(String(report.profitMargin));
     setCorpPayments(
-      (report.corporationPayments ?? []).map((cp) => ({
+      report.corporationPayments.map((cp) => ({
         corporationId: cp.corporation.id,
         amount: String(cp.amount),
-        description: cp.description ?? "",
-        date: cp.date,
-        isFuture: cp.isFuture,
-        vatPercentage: String(cp.vatPercentage),
+        date: todayISO(),
       })),
     );
     setModalOpen(true);
@@ -179,33 +122,27 @@ export default function ProjectReportsPage() {
       .map((cp) => ({
         corporationId: cp.corporationId,
         amount: Number(cp.amount),
-        description: cp.description || undefined,
         date: cp.date,
-        isFuture: cp.isFuture,
-        vatPercentage: Number(cp.vatPercentage),
       }));
 
     if (editingId !== null) {
       const dto: UpdateProjectReportDto = {
         subcontractorId: subcontractorId || undefined,
-        month: reportMonth,
+        date: reportMonth + "-01",
         income: Number(income),
         incomeDate: incomeDate || undefined,
-        profitMarginPercent: Number(profitMarginPercent),
-        completionPercent: Number(completionPercent),
+        profitMargin: Number(profitMarginPercent) || undefined,
         corporationPayments: corpPaymentsDto,
       };
       await updateReport({ id: editingId, ...dto });
     } else {
       const dto: CreateProjectReportDto = {
         projectId,
-        clientId: clientId || undefined,
         subcontractorId: subcontractorId || undefined,
-        month: reportMonth,
+        date: reportMonth + "-01",
         income: Number(income),
         incomeDate: incomeDate || undefined,
-        profitMarginPercent: Number(profitMarginPercent),
-        completionPercent: Number(completionPercent),
+        profitMargin: Number(profitMarginPercent) || undefined,
         corporationPayments: corpPaymentsDto,
       };
       await createReport(dto);
@@ -216,14 +153,7 @@ export default function ProjectReportsPage() {
   function addCorpPayment() {
     setCorpPayments((prev) => [
       ...prev,
-      {
-        corporationId: "",
-        amount: "",
-        description: "",
-        date: todayISO(),
-        isFuture: false,
-        vatPercentage: "18",
-      },
+      { corporationId: "", amount: "", date: todayISO() },
     ]);
   }
 
@@ -237,15 +167,7 @@ export default function ProjectReportsPage() {
     );
   }
 
-  const timelineRanges = buildSubcontractorTimeline(reports, lang);
   const saving = creating || updating;
-
-  const subPayment = currentReport
-    ? currentReport.income * (1 - currentReport.profitMarginPercent / 100)
-    : 0;
-  const profit = currentReport
-    ? currentReport.income * (currentReport.profitMarginPercent / 100)
-    : 0;
 
   if (isLoading) {
     return (
@@ -266,10 +188,9 @@ export default function ProjectReportsPage() {
             ← {t("projectReports")}
           </ButtonGhost>
           <h1 className="font-serif text-[26px] text-text">{projectName}</h1>
-          {project?.client?.name && (
+          {project?.clientId && (
             <p className="text-text-muted text-sm mt-0.5">
-              {project.client.name}
-              {project.description && ` · ${project.description}`}
+              {project.description && project.description}
             </p>
           )}
         </div>
@@ -305,145 +226,90 @@ export default function ProjectReportsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Subcontractor timeline */}
-        <div className="flex flex-col gap-3">
+      {/* Monthly report panel */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
-            Subcontractor Timeline
+            Report — {formatYM(month, lang)}
           </h2>
-          {timelineRanges.length === 0 ? (
-            <EmptyState title="No subcontractor records" />
+          {currentReport ? (
+            <ButtonGhost
+              onClick={() => openEdit(currentReport)}
+              className="text-xs py-1 px-3"
+            >
+              {t("edit")}
+            </ButtonGhost>
           ) : (
-            <div className="relative flex flex-col gap-0">
-              <div className="absolute left-[7px] top-0 bottom-0 w-px bg-border" />
-              {timelineRanges.map((range, idx) => {
-                const isActive = range.months.includes(month);
-                const isLatest = idx === timelineRanges.length - 1;
-                return (
-                  <div key={idx} className="flex gap-4 pb-4 relative">
-                    <div
-                      className={`mt-1 w-[14px] h-[14px] rounded-full border-2 shrink-0 z-10 ${
-                        isActive
-                          ? "border-beet bg-beet"
-                          : "border-border bg-surface"
-                      }`}
-                    />
-                    <div className="flex flex-col gap-1">
-                      <p
-                        className={`text-sm font-medium ${isActive ? "text-beet-bright" : "text-text"}`}
-                      >
-                        {range.subName}
-                      </p>
-                      <p className="text-xs text-text-muted">{range.label}</p>
-                      <div className="flex gap-1 flex-wrap">
-                        {isActive && (
-                          <Badge variant="beet">
-                            Active in {formatYM(month, lang)}
-                          </Badge>
-                        )}
-                        {isLatest && <Badge variant="green">Latest</Badge>}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <ButtonPrimary onClick={openAdd} className="text-xs py-1.5 px-3">
+              + {t("add")}
+            </ButtonPrimary>
           )}
         </div>
 
-        {/* Monthly report panel */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
-              Report — {formatYM(month, lang)}
-            </h2>
-            {currentReport ? (
-              <ButtonGhost
-                onClick={() => openEdit(currentReport)}
-                className="text-xs py-1 px-3"
-              >
-                {t("edit")}
-              </ButtonGhost>
-            ) : (
-              <ButtonPrimary onClick={openAdd} className="text-xs py-1.5 px-3">
-                + {t("add")}
-              </ButtonPrimary>
-            )}
-          </div>
-
-          {!currentReport ? (
-            <EmptyState
-              title="No report for this month"
-              action={
-                <ButtonPrimary onClick={openAdd}>+ Add Report</ButtonPrimary>
-              }
-            />
-          ) : (
-            <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-3">
-              <div className="flex justify-between items-center">
-                <div className="flex flex-col">
-                  <span className="text-xs text-text-muted">Client Income</span>
-                  {currentReport.incomeDate ? (
-                    <span className="text-[11px] text-success">
-                      Received {formatISODate(currentReport.incomeDate, lang)}
-                    </span>
-                  ) : (
-                    <span className="text-[11px] text-warning">
-                      ⚠ Payment pending
-                    </span>
-                  )}
-                </div>
-                <span className="text-text font-semibold">
-                  ₪{currentReport.income.toLocaleString("he-IL")}
-                </span>
+        {!currentReport ? (
+          <EmptyState
+            title="No report for this month"
+            action={
+              <ButtonPrimary onClick={openAdd}>+ Add Report</ButtonPrimary>
+            }
+          />
+        ) : (
+          <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-3">
+            <div className="flex justify-between items-center">
+              <div className="flex flex-col">
+                <span className="text-xs text-text-muted">Client Income</span>
+                {currentReport.incomeDate ? (
+                  <span className="text-[11px] text-success">
+                    Received {formatISODate(currentReport.incomeDate, lang)}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-warning">
+                    ⚠ Payment pending
+                  </span>
+                )}
               </div>
+              <span className="text-text font-semibold">
+                ₪{currentReport.income.toLocaleString("he-IL")}
+              </span>
+            </div>
 
-              <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-text-muted">
+                Profit ({currentReport.profitMargin}%)
+              </span>
+              <span className="text-success font-semibold">
+                ₪{currentReport.profit.toLocaleString("he-IL")}
+              </span>
+            </div>
+
+            {currentReport.corporationPayments.map((cp) => (
+              <div key={cp.id} className="flex justify-between items-center">
                 <span className="text-xs text-text-muted">
-                  Profit ({currentReport.profitMarginPercent}%)
+                  {cp.corporation.name}
                 </span>
-                <span className="text-success font-semibold">
-                  ₪{profit.toLocaleString("he-IL")}
+                <span className="text-warning font-medium">
+                  − ₪{cp.amount.toLocaleString("he-IL")}
                 </span>
               </div>
+            ))}
 
-              {(currentReport.corporationPayments ?? []).map((cp) => (
-                <div key={cp.id} className="flex justify-between items-center">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-text-muted">
-                      {cp.corporation.name}
-                    </span>
-                    <span className="text-[11px] text-text-dim">
-                      {formatISODate(cp.date, lang)}
-                      {!cp.isFuture && ` · VAT ${cp.vatPercentage}%`}
-                    </span>
-                  </div>
-                  <span className="text-warning font-medium">
-                    − ₪{cp.amount.toLocaleString("he-IL")}
-                  </span>
-                </div>
-              ))}
+            <div className="border-t border-border" />
 
-              <div className="border-t border-border" />
-
-              {currentReport.subcontractor && (
-                <div className="bg-success/10 border border-success/30 rounded p-3 flex justify-between items-center">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-success font-semibold uppercase tracking-wide">
-                      Subcontractor Payment
-                    </span>
-                    <span className="text-sm text-text">
-                      {currentReport.subcontractor.name}
-                    </span>
-                  </div>
-                  <span className="text-success font-bold text-lg">
-                    ₪{subPayment.toLocaleString("he-IL")}
-                  </span>
-                </div>
-              )}
+            <div className="bg-success/10 border border-success/30 rounded p-3 flex justify-between items-center">
+              <div className="flex flex-col">
+                <span className="text-xs text-success font-semibold uppercase tracking-wide">
+                  Subcontractor Payment
+                </span>
+                <span className="text-sm text-text">
+                  {currentReport.subcontractor.name}
+                </span>
+              </div>
+              <span className="text-success font-bold text-lg">
+                ₪{currentReport.subcontractor.payment.toLocaleString("he-IL")}
+              </span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <FormModal
@@ -459,44 +325,18 @@ export default function ProjectReportsPage() {
         large
       >
         <div className="flex flex-col gap-4">
-          {editingId === null && (
-            <Select
-              label="Client"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-            >
-              <option value="">— Select client —</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
-          )}
-
-          <FormRow>
-            <Select
-              label="Subcontractor"
-              value={subcontractorId}
-              onChange={(e) => setSubcontractorId(e.target.value)}
-            >
-              <option value="">— None —</option>
-              {subcontractors.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </Select>
-
-            <Input
-              label="Completion %"
-              type="number"
-              min={0}
-              max={100}
-              value={completionPercent}
-              onChange={(e) => setCompletionPercent(e.target.value)}
-            />
-          </FormRow>
+          <Select
+            label="Subcontractor"
+            value={subcontractorId}
+            onChange={(e) => setSubcontractorId(e.target.value)}
+          >
+            <option value="">— None —</option>
+            {subcontractors.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </Select>
 
           <FormRow>
             <Input
@@ -577,15 +417,6 @@ export default function ProjectReportsPage() {
                     }
                   />
                   <Input
-                    placeholder="Description"
-                    value={cp.description}
-                    onChange={(e) =>
-                      updateCorpPayment(i, { description: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-2 items-end">
-                  <Input
                     label="Date"
                     type="date"
                     value={cp.date}
@@ -593,27 +424,6 @@ export default function ProjectReportsPage() {
                       updateCorpPayment(i, { date: e.target.value })
                     }
                   />
-                  <label className="flex items-center gap-2 text-sm text-text cursor-pointer pb-2">
-                    <input
-                      type="checkbox"
-                      checked={cp.isFuture}
-                      onChange={(e) =>
-                        updateCorpPayment(i, { isFuture: e.target.checked })
-                      }
-                    />
-                    Future
-                  </label>
-                  {!cp.isFuture && (
-                    <Input
-                      label="VAT %"
-                      type="number"
-                      min={0}
-                      value={cp.vatPercentage}
-                      onChange={(e) =>
-                        updateCorpPayment(i, { vatPercentage: e.target.value })
-                      }
-                    />
-                  )}
                 </div>
                 <div className="flex justify-end">
                   <ButtonDanger
