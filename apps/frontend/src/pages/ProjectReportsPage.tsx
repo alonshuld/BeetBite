@@ -29,7 +29,7 @@ import { useLang } from "@/contexts/useLang";
 import { formatYM, formatISODate } from "@/utils/formatMonth";
 
 interface CorpPaymentDraft {
-  corporationId: number | "";
+  corporationId: string;
   amount: string;
   description: string;
   date: string;
@@ -48,7 +48,7 @@ function todayYM(): string {
 
 interface TimelineRange {
   subName: string;
-  subId: number;
+  subId: string;
   months: string[];
   label: string;
 }
@@ -94,7 +94,7 @@ export default function ProjectReportsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, lang } = useLang();
-  const projectId = Number(id);
+  const projectId = id!;
 
   const [month, setMonth] = useState(todayYM);
 
@@ -128,14 +128,14 @@ export default function ProjectReportsPage() {
   const currentReport = reports.find((r) => r.month === month) ?? null;
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [subcontractorId, setSubcontractorId] = useState<number | "">("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [subcontractorId, setSubcontractorId] = useState("");
   const [completionPercent, setCompletionPercent] = useState("");
   const [reportMonth, setReportMonth] = useState(month);
   const [income, setIncome] = useState("");
   const [incomeDate, setIncomeDate] = useState(todayISO());
   const [profitMarginPercent, setProfitMarginPercent] = useState("");
-  const [clientId, setClientId] = useState<number | "">("");
+  const [clientId, setClientId] = useState("");
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
 
   function openAdd() {
@@ -177,7 +177,7 @@ export default function ProjectReportsPage() {
     const corpPaymentsDto = corpPayments
       .filter((cp) => cp.corporationId !== "")
       .map((cp) => ({
-        corporationId: Number(cp.corporationId),
+        corporationId: cp.corporationId,
         amount: Number(cp.amount),
         description: cp.description || undefined,
         date: cp.date,
@@ -187,7 +187,7 @@ export default function ProjectReportsPage() {
 
     if (editingId !== null) {
       const dto: UpdateProjectReportDto = {
-        subcontractorId: subcontractorId ? Number(subcontractorId) : undefined,
+        subcontractorId: subcontractorId || undefined,
         month: reportMonth,
         income: Number(income),
         incomeDate: incomeDate || undefined,
@@ -199,8 +199,8 @@ export default function ProjectReportsPage() {
     } else {
       const dto: CreateProjectReportDto = {
         projectId,
-        clientId: clientId ? Number(clientId) : undefined,
-        subcontractorId: subcontractorId ? Number(subcontractorId) : undefined,
+        clientId: clientId || undefined,
+        subcontractorId: subcontractorId || undefined,
         month: reportMonth,
         income: Number(income),
         incomeDate: incomeDate || undefined,
@@ -462,10 +462,8 @@ export default function ProjectReportsPage() {
           {editingId === null && (
             <Select
               label="Client"
-              value={String(clientId)}
-              onChange={(e) =>
-                setClientId(e.target.value ? Number(e.target.value) : "")
-              }
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
             >
               <option value="">— Select client —</option>
               {clients.map((c) => (
@@ -479,10 +477,8 @@ export default function ProjectReportsPage() {
           <FormRow>
             <Select
               label="Subcontractor"
-              value={String(subcontractorId)}
-              onChange={(e) =>
-                setSubcontractorId(e.target.value ? Number(e.target.value) : "")
-              }
+              value={subcontractorId}
+              onChange={(e) => setSubcontractorId(e.target.value)}
             >
               <option value="">— None —</option>
               {subcontractors.map((s) => (
@@ -557,12 +553,10 @@ export default function ProjectReportsPage() {
               >
                 <div className="grid grid-cols-3 gap-2">
                   <Select
-                    value={String(cp.corporationId)}
+                    value={cp.corporationId}
                     onChange={(e) =>
                       updateCorpPayment(i, {
-                        corporationId: e.target.value
-                          ? Number(e.target.value)
-                          : "",
+                        corporationId: e.target.value,
                       })
                     }
                   >

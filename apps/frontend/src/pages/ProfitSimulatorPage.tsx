@@ -12,7 +12,7 @@ function formatILS(n: number): string {
 }
 
 interface SimProject {
-  projectId: number;
+  projectId: string;
   projectName: string;
   savedMargin: number;
   simMargin: number;
@@ -27,10 +27,10 @@ export default function ProfitSimulatorPage() {
 
   const [clientId, setClientId] = useState<string>("");
   const [baseline, setBaseline] = useState<number>(20);
-  const [overrides, setOverrides] = useState<Map<number, number>>(new Map());
+  const [overrides, setOverrides] = useState<Map<string, number>>(new Map());
 
   const clientProjects = projects.filter(
-    (p) => clientId && p.client?.id === parseInt(clientId),
+    (p) => clientId && p.client?.id === clientId,
   );
 
   const simProjects: SimProject[] = clientProjects.map((p) => {
@@ -48,7 +48,7 @@ export default function ProfitSimulatorPage() {
     };
   });
 
-  function setOverride(projectId: number, value: number) {
+  function setOverride(projectId: string, value: number) {
     setOverrides((prev) => {
       const next = new Map(prev);
       next.set(projectId, value);

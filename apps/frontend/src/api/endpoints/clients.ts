@@ -1,7 +1,7 @@
 import { baseApi } from "@/api/baseApi";
 
 export interface Client {
-  id: number;
+  id: string;
   name: string;
 }
 
@@ -23,7 +23,7 @@ export const clientsApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/clients", method: "POST", body }),
       invalidatesTags: ["Clients"],
     }),
-    updateClient: build.mutation<Client, { id: number } & UpdateClientDto>({
+    updateClient: build.mutation<Client, { id: string } & UpdateClientDto>({
       query: ({ id, ...body }) => ({
         url: `/clients/${id}`,
         method: "PATCH",
@@ -31,7 +31,7 @@ export const clientsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Clients"],
     }),
-    deleteClient: build.mutation<void, number>({
+    deleteClient: build.mutation<void, string>({
       query: (id) => ({ url: `/clients/${id}`, method: "DELETE" }),
       invalidatesTags: ["Clients"],
     }),

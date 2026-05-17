@@ -1,25 +1,25 @@
 import { baseApi } from "@/api/baseApi";
 
 export interface ReportProject {
-  id: number;
+  id: string;
   name: string;
   estimatedAmount: number;
 }
 
 export interface ReportClient {
-  id: number;
+  id: string;
   name: string;
 }
 
 export interface ReportSubcontractor {
-  id: number;
+  id: string;
   name: string;
   agreedAmount: number;
 }
 
 export interface CorporationPaymentRow {
-  id: number;
-  corporation: { id: number; name: string };
+  id: string;
+  corporation: { id: string; name: string };
   amount: number;
   description?: string;
   date: string;
@@ -28,7 +28,7 @@ export interface CorporationPaymentRow {
 }
 
 export interface ProjectReport {
-  id: number;
+  id: string;
   month: string;
   income: number;
   incomeDate?: string;
@@ -41,16 +41,16 @@ export interface ProjectReport {
 }
 
 export interface CreateProjectReportDto {
-  projectId: number;
-  clientId?: number;
-  subcontractorId?: number;
+  projectId: string;
+  clientId?: string;
+  subcontractorId?: string;
   month: string;
   income: number;
   incomeDate?: string;
   profitMarginPercent: number;
   completionPercent: number;
   corporationPayments?: {
-    corporationId: number;
+    corporationId: string;
     amount: number;
     description?: string;
     date: string;
@@ -67,7 +67,7 @@ export const projectReportsApi = baseApi.injectEndpoints({
       query: () => "/project-reports",
       providesTags: ["ProjectReports"],
     }),
-    getProjectReportsByProject: build.query<ProjectReport[], number>({
+    getProjectReportsByProject: build.query<ProjectReport[], string>({
       query: (projectId) => `/project-reports?projectId=${projectId}`,
       providesTags: ["ProjectReports"],
     }),
@@ -77,7 +77,7 @@ export const projectReportsApi = baseApi.injectEndpoints({
     }),
     updateProjectReport: build.mutation<
       ProjectReport,
-      { id: number } & UpdateProjectReportDto
+      { id: string } & UpdateProjectReportDto
     >({
       query: ({ id, ...body }) => ({
         url: `/project-reports/${id}`,
@@ -86,7 +86,7 @@ export const projectReportsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["ProjectReports"],
     }),
-    deleteProjectReport: build.mutation<void, number>({
+    deleteProjectReport: build.mutation<void, string>({
       query: (id) => ({ url: `/project-reports/${id}`, method: "DELETE" }),
       invalidatesTags: ["ProjectReports", "Projects"],
     }),

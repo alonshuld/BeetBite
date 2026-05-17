@@ -49,7 +49,7 @@ export default function SubcontractorPaymentsPage() {
     useCreateSubcontractorPaymentMutation();
   const { t, lang } = useLang();
 
-  const [selectedSubId, setSelectedSubId] = useState<number | null>(null);
+  const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalProjectId, setModalProjectId] = useState("");
   const [modalAmount, setModalAmount] = useState("");
@@ -59,11 +59,11 @@ export default function SubcontractorPaymentsPage() {
   const monthReports = allReports.filter((r) => r.month === month);
 
   interface SubCard {
-    subId: number;
+    subId: string;
     subName: string;
     agreedAmount: number;
     projectBreakdown: {
-      projectId: number;
+      projectId: string;
       projectName: string;
       owed: number;
     }[];
@@ -71,7 +71,7 @@ export default function SubcontractorPaymentsPage() {
     totalPaid: number;
   }
 
-  const subMap = new Map<number, SubCard>();
+  const subMap = new Map<string, SubCard>();
   for (const report of monthReports) {
     if (!report.subcontractor) continue;
     const sub = report.subcontractor;
@@ -142,7 +142,7 @@ export default function SubcontractorPaymentsPage() {
     }
     await createPayment({
       subcontractorId: selectedSubId,
-      projectId: parseInt(modalProjectId),
+      projectId: modalProjectId,
       amount,
       date: modalDate,
     });

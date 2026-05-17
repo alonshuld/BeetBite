@@ -131,7 +131,7 @@ export default function ProjectsPage() {
     setEditing(project);
     setForm({
       name: project.name,
-      clientId: project.client ? String(project.client.id) : "",
+      clientId: project.client?.id ?? "",
       description: project.description ?? "",
       estimatedAmount: String(project.estimatedAmount),
       finishDate: project.finishDate ? project.finishDate.slice(0, 10) : "",
@@ -158,7 +158,7 @@ export default function ProjectsPage() {
       description: form.description.trim() || undefined,
       estimatedAmount: amount,
       finishDate: form.finishDate || undefined,
-      clientId: form.clientId ? parseInt(form.clientId) : undefined,
+      clientId: form.clientId || undefined,
     };
     if (editing) {
       await updateProject({ id: editing.id, ...payload });

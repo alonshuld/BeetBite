@@ -1,16 +1,16 @@
 import { baseApi } from "@/api/baseApi";
 
 export interface SubcontractorPayment {
-  id: number;
-  subcontractor: { id: number; name: string };
-  project: { id: number; name: string };
+  id: string;
+  subcontractor: { id: string; name: string };
+  project: { id: string; name: string };
   amount: number;
   date: string;
 }
 
 export interface CreateSubcontractorPaymentDto {
-  subcontractorId: number;
-  projectId: number;
+  subcontractorId: string;
+  projectId: string;
   amount: number;
   date: string;
 }

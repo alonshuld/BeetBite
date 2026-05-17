@@ -11,14 +11,14 @@ function formatILS(n: number): string {
 }
 
 interface CorpRow {
-  corpId: number;
+  corpId: string;
   corpName: string;
   projectBreakdown: { projectName: string; amount: number }[];
   total: number;
 }
 
 function useHover() {
-  const [hoverId, setHoverId] = useState<number | null>(null);
+  const [hoverId, setHoverId] = useState<string | null>(null);
   return { hoverId, setHoverId };
 }
 
@@ -30,7 +30,7 @@ export default function CorporationPaymentsPage() {
 
   const monthReports = allReports.filter((r) => r.month === month);
 
-  const corpMap = new Map<number, CorpRow>();
+  const corpMap = new Map<string, CorpRow>();
   for (const report of monthReports) {
     for (const cp of report.corporationPayments ?? []) {
       const existing = corpMap.get(cp.corporation.id);

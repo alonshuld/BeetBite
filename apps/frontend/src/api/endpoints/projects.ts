@@ -1,19 +1,19 @@
 import { baseApi } from "@/api/baseApi";
 
 export interface ProjectClient {
-  id: number;
+  id: string;
   name: string;
 }
 
 export interface Project {
-  id: number;
+  id: string;
   name: string;
   description?: string;
   estimatedAmount: number;
   finishDate?: string;
   isDone: boolean;
   client?: ProjectClient;
-  reports?: { id: number }[];
+  reports?: { id: string }[];
 }
 
 export interface CreateProjectDto {
@@ -21,7 +21,7 @@ export interface CreateProjectDto {
   description?: string;
   estimatedAmount: number;
   finishDate?: string;
-  clientId?: number;
+  clientId?: string;
 }
 
 export interface UpdateProjectDto {
@@ -29,7 +29,7 @@ export interface UpdateProjectDto {
   description?: string;
   estimatedAmount?: number;
   finishDate?: string;
-  clientId?: number;
+  clientId?: string;
   isDone?: boolean;
 }
 
@@ -43,7 +43,7 @@ export const projectsApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/projects", method: "POST", body }),
       invalidatesTags: ["Projects"],
     }),
-    updateProject: build.mutation<Project, { id: number } & UpdateProjectDto>({
+    updateProject: build.mutation<Project, { id: string } & UpdateProjectDto>({
       query: ({ id, ...body }) => ({
         url: `/projects/${id}`,
         method: "PATCH",
@@ -51,7 +51,7 @@ export const projectsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Projects"],
     }),
-    deleteProject: build.mutation<void, number>({
+    deleteProject: build.mutation<void, string>({
       query: (id) => ({ url: `/projects/${id}`, method: "DELETE" }),
       invalidatesTags: ["Projects"],
     }),

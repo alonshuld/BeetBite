@@ -25,7 +25,7 @@ import { FormRow } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
 
 interface CorpPaymentDraft {
-  corporationId: number | "";
+  corporationId: string;
   amount: string;
   description: string;
   date: string;
@@ -51,9 +51,9 @@ export default function ReportsPage() {
     useCreateProjectReportMutation();
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [clientId, setClientId] = useState<number | "">("");
-  const [projectId, setProjectId] = useState<number | "">("");
-  const [subcontractorId, setSubcontractorId] = useState<number | "">("");
+  const [clientId, setClientId] = useState("");
+  const [projectId, setProjectId] = useState("");
+  const [subcontractorId, setSubcontractorId] = useState("");
   const [completionPercent, setCompletionPercent] = useState("");
   const [reportMonth, setReportMonth] = useState(month);
   const [income, setIncome] = useState("");
@@ -66,7 +66,7 @@ export default function ReportsPage() {
     ? projects.filter((p) => p.client?.id === clientId)
     : projects;
 
-  function handleProjectChange(pid: number | "") {
+  function handleProjectChange(pid: string) {
     setProjectId(pid);
     if (!pid) {
       setSubcontractorId("");
@@ -101,9 +101,9 @@ export default function ReportsPage() {
   async function handleSave() {
     if (!projectId) return;
     const dto: CreateProjectReportDto = {
-      projectId: Number(projectId),
-      clientId: clientId ? Number(clientId) : undefined,
-      subcontractorId: subcontractorId ? Number(subcontractorId) : undefined,
+      projectId,
+      clientId: clientId || undefined,
+      subcontractorId: subcontractorId || undefined,
       month: reportMonth,
       income: Number(income),
       incomeDate: incomeDate || undefined,
@@ -112,7 +112,7 @@ export default function ReportsPage() {
       corporationPayments: corpPayments
         .filter((cp) => cp.corporationId !== "")
         .map((cp) => ({
-          corporationId: Number(cp.corporationId),
+          corporationId: cp.corporationId,
           amount: Number(cp.amount),
           description: cp.description || undefined,
           date: cp.date,
@@ -198,9 +198,9 @@ export default function ReportsPage() {
           <FormRow>
             <Select
               label="Client"
-              value={String(clientId)}
+              value={clientId}
               onChange={(e) => {
-                setClientId(e.target.value ? Number(e.target.value) : "");
+                setClientId(e.target.value);
                 setProjectId("");
                 setSubcontractorId("");
                 setCompletionPercent("");
@@ -216,12 +216,8 @@ export default function ReportsPage() {
 
             <Select
               label="Project"
-              value={String(projectId)}
-              onChange={(e) =>
-                handleProjectChange(
-                  e.target.value ? Number(e.target.value) : "",
-                )
-              }
+              value={projectId}
+              onChange={(e) => handleProjectChange(e.target.value)}
             >
               <option value="">— Select project —</option>
               {filteredProjects.map((p) => (
@@ -235,9 +231,9 @@ export default function ReportsPage() {
           <FormRow>
             <Select
               label="Subcontractor"
-              value={String(subcontractorId)}
+              value={subcontractorId}
               onChange={(e) =>
-                setSubcontractorId(e.target.value ? Number(e.target.value) : "")
+                setSubcontractorId(e.target.value)
               }
             >
               <option value="">— None —</option>
@@ -313,12 +309,10 @@ export default function ReportsPage() {
               >
                 <div className="grid grid-cols-3 gap-2">
                   <Select
-                    value={String(cp.corporationId)}
+                    value={cp.corporationId}
                     onChange={(e) =>
                       updateCorpPayment(i, {
-                        corporationId: e.target.value
-                          ? Number(e.target.value)
-                          : "",
+                        corporationId: e.target.value,
                       })
                     }
                   >

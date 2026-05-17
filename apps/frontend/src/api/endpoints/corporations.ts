@@ -1,7 +1,7 @@
 import { baseApi } from "@/api/baseApi";
 
 export interface Corporation {
-  id: number;
+  id: string;
   name: string;
 }
 
@@ -25,7 +25,7 @@ export const corporationsApi = baseApi.injectEndpoints({
     }),
     updateCorporation: build.mutation<
       Corporation,
-      { id: number } & UpdateCorporationDto
+      { id: string } & UpdateCorporationDto
     >({
       query: ({ id, ...body }) => ({
         url: `/corporations/${id}`,
@@ -34,7 +34,7 @@ export const corporationsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Corporations"],
     }),
-    deleteCorporation: build.mutation<void, number>({
+    deleteCorporation: build.mutation<void, string>({
       query: (id) => ({ url: `/corporations/${id}`, method: "DELETE" }),
       invalidatesTags: ["Corporations"],
     }),
