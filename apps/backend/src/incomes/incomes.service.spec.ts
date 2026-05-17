@@ -44,7 +44,7 @@ describe('IncomesService', () => {
     it('should return total income', async () => {
       const mockProjectReports = [
         {
-          id: '1',
+          id: 'clh0000000000000000000001',
           projectId: 'p1',
           clientId: 'c1',
           date: new Date('2024-05-01T00:00:00.000Z'),
@@ -54,7 +54,7 @@ describe('IncomesService', () => {
           project: { id: 'p1', name: 'Project 1' },
         },
         {
-          id: '2',
+          id: 'clh0000000000000000000002',
           projectId: 'p2',
           clientId: 'c2',
           date: new Date('2024-05-01T00:00:00.000Z'),

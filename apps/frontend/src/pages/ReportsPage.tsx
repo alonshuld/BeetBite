@@ -232,9 +232,7 @@ export default function ReportsPage() {
             <Select
               label="Subcontractor"
               value={subcontractorId}
-              onChange={(e) =>
-                setSubcontractorId(e.target.value)
-              }
+              onChange={(e) => setSubcontractorId(e.target.value)}
             >
               <option value="">— None —</option>
               {subcontractors.map((s) => (

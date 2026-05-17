@@ -45,7 +45,7 @@ describe('ClientsService', () => {
   describe('create', () => {
     const createDto: CreateClientDto = { name: 'Test Client' };
     const mockClient = {
-      id: '1',
+      id: 'clh0000000000000000000001',
       name: 'Test Client',
     };
 
@@ -80,11 +80,11 @@ describe('ClientsService', () => {
     it('should return a list of clients', async () => {
       const mockClients = [
         {
-          id: '1',
+          id: 'clh0000000000000000000001',
           name: 'Client 1',
         },
         {
-          id: '2',
+          id: 'clh0000000000000000000002',
           name: 'Client 2',
         },
       ];
@@ -93,8 +93,8 @@ describe('ClientsService', () => {
       const result = await service.findAll();
 
       expect(result).toEqual([
-        { id: '1', name: 'Client 1' },
-        { id: '2', name: 'Client 2' },
+        { id: 'clh0000000000000000000001', name: 'Client 1' },
+        { id: 'clh0000000000000000000002', name: 'Client 2' },
       ]);
       expect(mockPrismaService.client.findMany).toHaveBeenCalledWith({
         skip: 0,
@@ -105,7 +105,7 @@ describe('ClientsService', () => {
     it('should apply pagination params when provided', async () => {
       const mockClients = [
         {
-          id: '3',
+          id: 'clh0000000000000000000003',
           name: 'Client 3',
         },
       ];
@@ -117,7 +117,9 @@ describe('ClientsService', () => {
         limit: 1,
       });
 
-      expect(result).toEqual([{ id: '3', name: 'Client 3' }]);
+      expect(result).toEqual([
+        { id: 'clh0000000000000000000003', name: 'Client 3' },
+      ]);
       expect(mockPrismaService.client.findMany).toHaveBeenCalledWith({
         skip: 1,
         take: 1,
@@ -127,14 +129,14 @@ describe('ClientsService', () => {
 
   describe('findOne', () => {
     const mockClient = {
-      id: '1',
+      id: 'clh0000000000000000000001',
       name: 'Test Client',
     };
 
     it('should return a client', async () => {
       mockPrismaService.client.findUnique.mockResolvedValue(mockClient);
 
-      const result = await service.findOne('1');
+      const result = await service.findOne('clh0000000000000000000001');
 
       expect(result).toEqual({
         id: mockClient.id,
@@ -145,21 +147,26 @@ describe('ClientsService', () => {
     it('should throw ClientNotFoundError when client not found', async () => {
       mockPrismaService.client.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('1')).rejects.toThrow(ClientNotFoundError);
+      await expect(
+        service.findOne('clh0000000000000000000001'),
+      ).rejects.toThrow(ClientNotFoundError);
     });
   });
 
   describe('update', () => {
     const updateDto: UpdateClientDto = { name: 'Updated Client' };
     const mockClient = {
-      id: '1',
+      id: 'clh0000000000000000000001',
       name: 'Updated Client',
     };
 
     it('should update a client', async () => {
       mockPrismaService.client.update.mockResolvedValue(mockClient);
 
-      const result = await service.update('1', updateDto);
+      const result = await service.update(
+        'clh0000000000000000000001',
+        updateDto,
+      );
 
       expect(result).toEqual({
         id: mockClient.id,
@@ -174,9 +181,9 @@ describe('ClientsService', () => {
       });
       mockPrismaService.client.update.mockRejectedValue(error);
 
-      await expect(service.update('1', updateDto)).rejects.toThrow(
-        ClientNotFoundError,
-      );
+      await expect(
+        service.update('clh0000000000000000000001', updateDto),
+      ).rejects.toThrow(ClientNotFoundError);
     });
 
     it('should throw ClientAlreadyExistsError on duplicate name', async () => {
@@ -186,22 +193,22 @@ describe('ClientsService', () => {
       });
       mockPrismaService.client.update.mockRejectedValue(error);
 
-      await expect(service.update('1', updateDto)).rejects.toThrow(
-        ClientAlreadyExistsError,
-      );
+      await expect(
+        service.update('clh0000000000000000000001', updateDto),
+      ).rejects.toThrow(ClientAlreadyExistsError);
     });
   });
 
   describe('remove', () => {
     const mockClient = {
-      id: '1',
+      id: 'clh0000000000000000000001',
       name: 'Test Client',
     };
 
     it('should delete a client', async () => {
       mockPrismaService.client.delete.mockResolvedValue(mockClient);
 
-      const result = await service.remove('1');
+      const result = await service.remove('clh0000000000000000000001');
 
       expect(result).toBeUndefined();
     });
@@ -213,7 +220,9 @@ describe('ClientsService', () => {
       });
       mockPrismaService.client.delete.mockRejectedValue(error);
 
-      await expect(service.remove('1')).rejects.toThrow(ClientNotFoundError);
+      await expect(service.remove('clh0000000000000000000001')).rejects.toThrow(
+        ClientNotFoundError,
+      );
     });
   });
 });

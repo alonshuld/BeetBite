@@ -58,18 +58,18 @@ describe('SubcontractorPaymentsService', () => {
 
   describe('create', () => {
     const createDto = {
-      subcontractorId: '1',
+      subcontractorId: 'clh0000000000000000000001',
       projectId: 'project-1',
       serviceDate: '2023-01-01',
       amount: 1000,
     };
     const mockPayment = {
-      id: '1',
+      id: 'clh0000000000000000000001',
       projectId: 'project-1',
       serviceDate: new Date('2023-01-01'),
       amount: { toNumber: () => 1000 },
       subcontractor: {
-        id: '1',
+        id: 'clh0000000000000000000001',
         name: 'Test Subcontractor',
       },
     };
@@ -159,7 +159,7 @@ describe('SubcontractorPaymentsService', () => {
     it('should return grouped payments for a month', async () => {
       const mockSubcontractors = [
         {
-          id: '1',
+          id: 'clh0000000000000000000001',
           name: 'Subcontractor 1',
           payments: [
             {
@@ -170,7 +170,7 @@ describe('SubcontractorPaymentsService', () => {
           ],
         },
         {
-          id: '2',
+          id: 'clh0000000000000000000002',
           name: 'Subcontractor 2',
           payments: [
             {
@@ -193,14 +193,20 @@ describe('SubcontractorPaymentsService', () => {
 
       expect(result).toHaveLength(2);
       expect(result[0]).toMatchObject({
-        subcontractor: { id: '1', name: 'Subcontractor 1' },
+        subcontractor: {
+          id: 'clh0000000000000000000001',
+          name: 'Subcontractor 1',
+        },
         serviceDate: new Date('2023-01-01').toISOString(),
         amountOwed: 0,
         amountPaid: 1000,
         payments: [{ id: 'payment-1', amount: 1000 }],
       });
       expect(result[1]).toMatchObject({
-        subcontractor: { id: '2', name: 'Subcontractor 2' },
+        subcontractor: {
+          id: 'clh0000000000000000000002',
+          name: 'Subcontractor 2',
+        },
         serviceDate: new Date('2023-01-01').toISOString(),
         amountOwed: 0,
         amountPaid: 2000,
@@ -222,7 +228,7 @@ describe('SubcontractorPaymentsService', () => {
     it('should accumulate amountPaid across multiple partial payments for the same subcontractor', async () => {
       const mockSubcontractors = [
         {
-          id: '1',
+          id: 'clh0000000000000000000001',
           name: 'Subcontractor 1',
           payments: [
             {
@@ -262,7 +268,7 @@ describe('SubcontractorPaymentsService', () => {
   describe('findSubcontractorMonthlyPayments', () => {
     it('should return monthly payments for a specific subcontractor', async () => {
       const mockSubcontractor = {
-        id: '1',
+        id: 'clh0000000000000000000001',
         name: 'Test Subcontractor',
         payments: [
           {
@@ -278,13 +284,16 @@ describe('SubcontractorPaymentsService', () => {
       );
       mockPrismaService.projectReport.findMany.mockResolvedValue([]);
 
-      const result = await service.findSubcontractorMonthlyPayments('1', {
-        month: '2023-01-01',
-      });
+      const result = await service.findSubcontractorMonthlyPayments(
+        'clh0000000000000000000001',
+        {
+          month: '2023-01-01',
+        },
+      );
 
       expect(result).toMatchObject({
         subcontractor: {
-          id: '1',
+          id: 'clh0000000000000000000001',
           name: 'Test Subcontractor',
         },
         serviceDate: new Date('2023-01-01').toISOString(),
@@ -299,7 +308,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findMany.mockResolvedValue([]);
 
       await expect(
-        service.findSubcontractorMonthlyPayments('999', {
+        service.findSubcontractorMonthlyPayments('clh0000000000000000000999', {
           month: '2023-01-01',
         }),
       ).rejects.toThrow(SubcontractorNotFoundError);
@@ -353,7 +362,7 @@ describe('SubcontractorPaymentsService', () => {
 
   describe('update', () => {
     const updateDto = {
-      subcontractorId: '1',
+      subcontractorId: 'clh0000000000000000000001',
       projectId: 'project-1',
       serviceDate: '2023-01-01',
       amount: 1500,
@@ -371,7 +380,10 @@ describe('SubcontractorPaymentsService', () => {
       ]);
 
       await expect(
-        service.update('1', { ...updateDto, amount: 400 }),
+        service.update('clh0000000000000000000001', {
+          ...updateDto,
+          amount: 400,
+        }),
       ).rejects.toThrow(SubcontractorPaymentOverpaymentError);
     });
 
@@ -385,28 +397,34 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
       const mockPayment = {
-        id: '1',
+        id: 'clh0000000000000000000001',
         projectId: 'project-1',
         serviceDate: new Date('2023-01-01'),
         amount: { toNumber: () => 900 },
-        subcontractor: { id: '1', name: 'Test Subcontractor' },
+        subcontractor: {
+          id: 'clh0000000000000000000001',
+          name: 'Test Subcontractor',
+        },
       };
       mockPrismaService.subcontractorPayment.update.mockResolvedValue(
         mockPayment,
       );
 
-      const result = await service.update('1', { ...updateDto, amount: 900 });
+      const result = await service.update('clh0000000000000000000001', {
+        ...updateDto,
+        amount: 900,
+      });
       expect(result.amount).toBe(900);
     });
 
     it('should update a subcontractor payment', async () => {
       const mockPayment = {
-        id: '1',
+        id: 'clh0000000000000000000001',
         projectId: 'project-1',
         serviceDate: new Date('2023-01-01'),
         amount: { toNumber: () => 1500 },
         subcontractor: {
-          id: '1',
+          id: 'clh0000000000000000000001',
           name: 'Test Subcontractor',
         },
       };
@@ -422,7 +440,10 @@ describe('SubcontractorPaymentsService', () => {
         mockPayment,
       );
 
-      const result = await service.update('1', updateDto);
+      const result = await service.update(
+        'clh0000000000000000000001',
+        updateDto,
+      );
 
       expect(result).toEqual({
         id: mockPayment.id,
@@ -434,7 +455,7 @@ describe('SubcontractorPaymentsService', () => {
       expect(
         mockPrismaService.subcontractorPayment.update,
       ).toHaveBeenCalledWith({
-        where: { id: '1' },
+        where: { id: 'clh0000000000000000000001' },
         data: updateDto,
         select: {
           id: true,
@@ -472,9 +493,9 @@ describe('SubcontractorPaymentsService', () => {
         prismaError,
       );
 
-      await expect(service.update('999', updateDto)).rejects.toThrow(
-        SubcontractorPaymentNotFoundError,
-      );
+      await expect(
+        service.update('clh0000000000000000000999', updateDto),
+      ).rejects.toThrow(SubcontractorPaymentNotFoundError);
     });
   });
 
@@ -482,12 +503,14 @@ describe('SubcontractorPaymentsService', () => {
     it('should remove a subcontractor payment', async () => {
       mockPrismaService.subcontractorPayment.delete.mockResolvedValue({});
 
-      await expect(service.remove('1')).resolves.toBeUndefined();
+      await expect(
+        service.remove('clh0000000000000000000001'),
+      ).resolves.toBeUndefined();
 
       expect(
         mockPrismaService.subcontractorPayment.delete,
       ).toHaveBeenCalledWith({
-        where: { id: '1' },
+        where: { id: 'clh0000000000000000000001' },
       });
     });
 
@@ -504,7 +527,7 @@ describe('SubcontractorPaymentsService', () => {
         prismaError,
       );
 
-      await expect(service.remove('999')).rejects.toThrow(
+      await expect(service.remove('clh0000000000000000000999')).rejects.toThrow(
         SubcontractorPaymentNotFoundError,
       );
     });

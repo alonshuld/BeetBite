@@ -44,7 +44,7 @@ describe('SubcontractorsService', () => {
   describe('create', () => {
     const createDto: CreateSubcontractorDto = { name: 'Test Subcontractor' };
     const mockSubcontractor = {
-      id: '1',
+      id: 'clh0000000000000000000001',
       name: 'Test Subcontractor',
     };
 
@@ -80,11 +80,11 @@ describe('SubcontractorsService', () => {
     it('should return a list of subcontractors', async () => {
       const mockSubcontractors = [
         {
-          id: '1',
+          id: 'clh0000000000000000000001',
           name: 'Subcontractor 1',
         },
         {
-          id: '2',
+          id: 'clh0000000000000000000002',
           name: 'Subcontractor 2',
         },
       ];
@@ -95,8 +95,8 @@ describe('SubcontractorsService', () => {
       const result = await service.findAll();
 
       expect(result).toEqual([
-        { id: '1', name: 'Subcontractor 1' },
-        { id: '2', name: 'Subcontractor 2' },
+        { id: 'clh0000000000000000000001', name: 'Subcontractor 1' },
+        { id: 'clh0000000000000000000002', name: 'Subcontractor 2' },
       ]);
       expect(mockPrismaService.subcontractor.findMany).toHaveBeenCalledWith({
         skip: 0,
@@ -107,7 +107,7 @@ describe('SubcontractorsService', () => {
     it('should apply pagination parameters', async () => {
       const mockSubcontractors = [
         {
-          id: '3',
+          id: 'clh0000000000000000000003',
           name: 'Subcontractor 3',
         },
       ];
@@ -120,7 +120,9 @@ describe('SubcontractorsService', () => {
         limit: 1,
       });
 
-      expect(result).toEqual([{ id: '3', name: 'Subcontractor 3' }]);
+      expect(result).toEqual([
+        { id: 'clh0000000000000000000003', name: 'Subcontractor 3' },
+      ]);
       expect(mockPrismaService.subcontractor.findMany).toHaveBeenCalledWith({
         skip: 1,
         take: 1,
@@ -131,7 +133,7 @@ describe('SubcontractorsService', () => {
   describe('findOne', () => {
     it('should return a subcontractor', async () => {
       const mockSubcontractor = {
-        id: '1',
+        id: 'clh0000000000000000000001',
         name: 'Test Subcontractor',
       };
 
@@ -139,7 +141,7 @@ describe('SubcontractorsService', () => {
         mockSubcontractor,
       );
 
-      const result = await service.findOne('1');
+      const result = await service.findOne('clh0000000000000000000001');
 
       expect(result).toEqual({
         id: mockSubcontractor.id,
@@ -161,7 +163,7 @@ describe('SubcontractorsService', () => {
 
     it('should update a subcontractor', async () => {
       const mockSubcontractor = {
-        id: '1',
+        id: 'clh0000000000000000000001',
         name: 'Updated Subcontractor',
       };
 
@@ -169,14 +171,17 @@ describe('SubcontractorsService', () => {
         mockSubcontractor,
       );
 
-      const result = await service.update('1', updateDto);
+      const result = await service.update(
+        'clh0000000000000000000001',
+        updateDto,
+      );
 
       expect(result).toEqual({
         id: mockSubcontractor.id,
         name: mockSubcontractor.name,
       });
       expect(mockPrismaService.subcontractor.update).toHaveBeenCalledWith({
-        where: { id: '1' },
+        where: { id: 'clh0000000000000000000001' },
         data: updateDto,
       });
     });
@@ -188,15 +193,15 @@ describe('SubcontractorsService', () => {
       });
       mockPrismaService.subcontractor.update.mockRejectedValue(error);
 
-      await expect(service.update('1', updateDto)).rejects.toThrow(
-        SubcontractorNotFoundError,
-      );
+      await expect(
+        service.update('clh0000000000000000000001', updateDto),
+      ).rejects.toThrow(SubcontractorNotFoundError);
     });
   });
 
   describe('remove', () => {
     const mockSubcontractor = {
-      id: '1',
+      id: 'clh0000000000000000000001',
       name: 'Test Subcontractor',
     };
 
@@ -205,17 +210,17 @@ describe('SubcontractorsService', () => {
         mockSubcontractor,
       );
 
-      const result = await service.remove('1');
+      const result = await service.remove('clh0000000000000000000001');
 
       expect(result).toBeUndefined();
     });
 
     it('should throw SubcontractorNotFoundError when subcontractor does not exist', async () => {
-      const subcontractorId = '1';
+      const subcontractorId = 'clh0000000000000000000001';
       const error = new SubcontractorNotFoundError(subcontractorId);
       mockPrismaService.subcontractor.delete.mockRejectedValue(error);
 
-      await expect(service.remove('1')).rejects.toThrow(
+      await expect(service.remove('clh0000000000000000000001')).rejects.toThrow(
         SubcontractorNotFoundError,
       );
     });
@@ -227,7 +232,9 @@ describe('SubcontractorsService', () => {
       });
       mockPrismaService.subcontractor.delete.mockRejectedValue(prismaError);
 
-      await expect(service.remove('1')).rejects.toThrow(prismaError);
+      await expect(service.remove('clh0000000000000000000001')).rejects.toThrow(
+        prismaError,
+      );
     });
   });
 

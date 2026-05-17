@@ -42,13 +42,13 @@ describe('SubcontractorPaymentsController', () => {
   describe('create', () => {
     it('should create a subcontractor payment', async () => {
       const createDto = {
-        subcontractorId: '1',
+        subcontractorId: 'clh0000000000000000000001',
         projectId: 'project-1',
         serviceDate: '2024-06-01',
         amount: 1000,
       };
       const expectedResult = {
-        id: '1',
+        id: 'clh0000000000000000000001',
         projectId: 'project-1',
         subcontractor: { id: 'sub1', name: 'Test Sub' },
         serviceDate: '2024-06-01T00:00:00.000Z',
@@ -67,7 +67,7 @@ describe('SubcontractorPaymentsController', () => {
 
     it('should throw if subcontractor payment creation fails', async () => {
       const createDto = {
-        subcontractorId: '1',
+        subcontractorId: 'clh0000000000000000000001',
         projectId: 'project-1',
         serviceDate: '2024-06-01',
         amount: 1000,
@@ -84,7 +84,7 @@ describe('SubcontractorPaymentsController', () => {
 
     it('should propagate SubcontractorPaymentOverpaymentError when payment would exceed amount owed', async () => {
       const createDto = {
-        subcontractorId: '1',
+        subcontractorId: 'clh0000000000000000000001',
         projectId: 'project-1',
         serviceDate: '2024-06-01',
         amount: 1000,
@@ -104,7 +104,7 @@ describe('SubcontractorPaymentsController', () => {
     it('should return all subcontractor payments for a month', async () => {
       const expectedResult = [
         {
-          subcontractor: { id: '1', name: 'Sub 1' },
+          subcontractor: { id: 'clh0000000000000000000001', name: 'Sub 1' },
           payments: [
             { id: 'p1', serviceDate: '2024-06-01T00:00:00.000Z', amount: 1000 },
           ],
@@ -129,7 +129,7 @@ describe('SubcontractorPaymentsController', () => {
   describe('findOne', () => {
     it('should return a subcontractor payment by id', async () => {
       const expectedResult = {
-        subcontractor: { id: '1', name: 'Sub 1' },
+        subcontractor: { id: 'clh0000000000000000000001', name: 'Sub 1' },
         payments: [
           { id: 'p1', serviceDate: '2024-06-01T00:00:00.000Z', amount: 1000 },
         ],
@@ -141,12 +141,14 @@ describe('SubcontractorPaymentsController', () => {
         expectedResult,
       );
 
-      const result = await controller.findOne('1', { month: '2024-06' });
+      const result = await controller.findOne('clh0000000000000000000001', {
+        month: '2024-06',
+      });
 
       expect(result).toEqual(expectedResult);
       expect(
         mockSubcontractorPaymentsService.findSubcontractorMonthlyPayments,
-      ).toHaveBeenCalledWith('1', { month: '2024-06' });
+      ).toHaveBeenCalledWith('clh0000000000000000000001', { month: '2024-06' });
     });
   });
 
@@ -181,13 +183,13 @@ describe('SubcontractorPaymentsController', () => {
   describe('update', () => {
     it('should update a subcontractor payment', async () => {
       const updateDto = {
-        subcontractorId: '1',
+        subcontractorId: 'clh0000000000000000000001',
         projectId: 'project-1',
         serviceDate: '2024-06-01',
         amount: 1500,
       };
       const expectedResult = {
-        id: '1',
+        id: 'clh0000000000000000000001',
         projectId: 'project-1',
         subcontractor: { id: 'sub1', name: 'Test Sub' },
         serviceDate: '2024-06-01T00:00:00.000Z',
@@ -196,47 +198,55 @@ describe('SubcontractorPaymentsController', () => {
 
       mockSubcontractorPaymentsService.update.mockResolvedValue(expectedResult);
 
-      const result = await controller.update('1', updateDto);
+      const result = await controller.update(
+        'clh0000000000000000000001',
+        updateDto,
+      );
 
       expect(result).toEqual(expectedResult);
       expect(mockSubcontractorPaymentsService.update).toHaveBeenCalledWith(
-        '1',
+        'clh0000000000000000000001',
         updateDto,
       );
     });
 
     it('should throw SubcontractorPaymentNotFoundError if update fails', async () => {
       const updateDto = {
-        subcontractorId: '1',
+        subcontractorId: 'clh0000000000000000000001',
         projectId: 'project-1',
         serviceDate: '2024-06-01',
         amount: 1500,
       };
 
       mockSubcontractorPaymentsService.update.mockRejectedValue(
-        new SubcontractorPaymentNotFoundError('1'),
+        new SubcontractorPaymentNotFoundError('clh0000000000000000000001'),
       );
 
-      await expect(controller.update('1', updateDto)).rejects.toThrow(
-        SubcontractorPaymentNotFoundError,
-      );
+      await expect(
+        controller.update('clh0000000000000000000001', updateDto),
+      ).rejects.toThrow(SubcontractorPaymentNotFoundError);
     });
 
     it('should propagate SubcontractorPaymentOverpaymentError when updated amount would exceed amount owed', async () => {
       const updateDto = {
-        subcontractorId: '1',
+        subcontractorId: 'clh0000000000000000000001',
         projectId: 'project-1',
         serviceDate: '2024-06-01',
         amount: 1500,
       };
 
       mockSubcontractorPaymentsService.update.mockRejectedValue(
-        new SubcontractorPaymentOverpaymentError(900, 500, 1500, '1'),
+        new SubcontractorPaymentOverpaymentError(
+          900,
+          500,
+          1500,
+          'clh0000000000000000000001',
+        ),
       );
 
-      await expect(controller.update('1', updateDto)).rejects.toThrow(
-        SubcontractorPaymentOverpaymentError,
-      );
+      await expect(
+        controller.update('clh0000000000000000000001', updateDto),
+      ).rejects.toThrow(SubcontractorPaymentOverpaymentError);
     });
   });
 
@@ -244,20 +254,22 @@ describe('SubcontractorPaymentsController', () => {
     it('should remove a subcontractor payment', async () => {
       mockSubcontractorPaymentsService.remove.mockResolvedValue(undefined);
 
-      const result = await controller.remove('1');
+      const result = await controller.remove('clh0000000000000000000001');
 
       expect(result).toBeUndefined();
-      expect(mockSubcontractorPaymentsService.remove).toHaveBeenCalledWith('1');
+      expect(mockSubcontractorPaymentsService.remove).toHaveBeenCalledWith(
+        'clh0000000000000000000001',
+      );
     });
 
     it('should throw SubcontractorPaymentNotFoundError if removal fails', async () => {
       mockSubcontractorPaymentsService.remove.mockRejectedValue(
-        new SubcontractorPaymentNotFoundError('1'),
+        new SubcontractorPaymentNotFoundError('clh0000000000000000000001'),
       );
 
-      await expect(controller.remove('1')).rejects.toThrow(
-        SubcontractorPaymentNotFoundError,
-      );
+      await expect(
+        controller.remove('clh0000000000000000000001'),
+      ).rejects.toThrow(SubcontractorPaymentNotFoundError);
     });
   });
 

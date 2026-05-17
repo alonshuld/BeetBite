@@ -86,8 +86,8 @@ describe('ProjectsController', () => {
     it('should return a list of projects', async () => {
       const expectedResult: ProjectResponseDto[] = [
         {
-          id: 'p1',
-          clientId: 'c1',
+          id: 'clhp000000000000000000001',
+          clientId: 'clhc000000000000000000001',
           name: 'Project 1',
           estimatedAmount: 5000,
           finishDate: '',
@@ -96,8 +96,8 @@ describe('ProjectsController', () => {
           paymentProgress: { totalPaid: 2000 },
         },
         {
-          id: 'p2',
-          clientId: 'c2',
+          id: 'clhp000000000000000000002',
+          clientId: 'clhc000000000000000000002',
           name: 'Project 2',
           estimatedAmount: 10000,
           finishDate: '',
@@ -151,8 +151,8 @@ describe('ProjectsController', () => {
   describe('findOne', () => {
     it('should return a single project', async () => {
       const expectedResult: ProjectResponseDto = {
-        id: 'p1',
-        clientId: 'c1',
+        id: 'clhp000000000000000000001',
+        clientId: 'clhc000000000000000000001',
         name: 'Project 1',
         estimatedAmount: 5000,
         finishDate: '',
@@ -163,10 +163,12 @@ describe('ProjectsController', () => {
 
       mockProjectsService.findOne.mockResolvedValue(expectedResult);
 
-      const result = await controller.findOne('p1');
+      const result = await controller.findOne('clhp000000000000000000001');
 
       expect(result).toEqual(expectedResult);
-      expect(mockProjectsService.findOne).toHaveBeenCalledWith('p1');
+      expect(mockProjectsService.findOne).toHaveBeenCalledWith(
+        'clhp000000000000000000001',
+      );
     });
 
     it('should throw if project not found', async () => {
@@ -174,10 +176,12 @@ describe('ProjectsController', () => {
         new Error('Project not found'),
       );
 
-      await expect(controller.findOne('999')).rejects.toThrow(
-        'Project not found',
+      await expect(
+        controller.findOne('clh0000000000000000000999'),
+      ).rejects.toThrow('Project not found');
+      expect(mockProjectsService.findOne).toHaveBeenCalledWith(
+        'clh0000000000000000000999',
       );
-      expect(mockProjectsService.findOne).toHaveBeenCalledWith('999');
     });
   });
 
@@ -192,7 +196,7 @@ describe('ProjectsController', () => {
       };
 
       const expectedResult: ProjectBasicResponseDto = {
-        id: 'p1',
+        id: 'clhp000000000000000000001',
         clientId: 'client-2',
         name: 'Updated Project',
         estimatedAmount: 200000,
@@ -203,10 +207,16 @@ describe('ProjectsController', () => {
 
       mockProjectsService.update.mockResolvedValue(expectedResult);
 
-      const result = await controller.update('p1', updateDto);
+      const result = await controller.update(
+        'clhp000000000000000000001',
+        updateDto,
+      );
 
       expect(result).toEqual(expectedResult);
-      expect(mockProjectsService.update).toHaveBeenCalledWith('p1', updateDto);
+      expect(mockProjectsService.update).toHaveBeenCalledWith(
+        'clhp000000000000000000001',
+        updateDto,
+      );
     });
 
     it('should throw if project not found', async () => {
@@ -215,7 +225,7 @@ describe('ProjectsController', () => {
       );
 
       await expect(
-        controller.update('p1', {} as UpdateProjectDto),
+        controller.update('clhp000000000000000000001', {} as UpdateProjectDto),
       ).rejects.toThrow('Project not found');
     });
 
@@ -225,7 +235,7 @@ describe('ProjectsController', () => {
       );
 
       await expect(
-        controller.update('p1', {
+        controller.update('clhp000000000000000000001', {
           name: 'Duplicate Project',
         } as UpdateProjectDto),
       ).rejects.toThrow('Project already exists');
@@ -236,11 +246,13 @@ describe('ProjectsController', () => {
     it('should delete a project', async () => {
       mockProjectsService.remove.mockResolvedValue(undefined);
 
-      const result = await controller.remove('p1');
+      const result = await controller.remove('clhp000000000000000000001');
 
       expect(result).toBeUndefined();
       expect(mockProjectsService.remove).toHaveBeenCalledTimes(1);
-      expect(mockProjectsService.remove).toHaveBeenCalledWith('p1');
+      expect(mockProjectsService.remove).toHaveBeenCalledWith(
+        'clhp000000000000000000001',
+      );
     });
 
     it('should throw if project not found', async () => {
@@ -248,9 +260,9 @@ describe('ProjectsController', () => {
         new Error('Project not found'),
       );
 
-      await expect(controller.remove('p1')).rejects.toThrow(
-        'Project not found',
-      );
+      await expect(
+        controller.remove('clhp000000000000000000001'),
+      ).rejects.toThrow('Project not found');
     });
   });
 });

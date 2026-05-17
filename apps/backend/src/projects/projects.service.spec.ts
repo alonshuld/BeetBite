@@ -132,11 +132,23 @@ describe('ProjectsService', () => {
     it('should return a list of projects with default pagination and correct payment progress', async () => {
       const projects = [
         {
-          ...baseProject('p1', 'c1', 'Project 1', '5000', 'Description 1'),
+          ...baseProject(
+            'clhp000000000000000000001',
+            'clhc000000000000000000001',
+            'Project 1',
+            '5000',
+            'Description 1',
+          ),
           reports: [{ income: new Prisma.Decimal('2000') }],
         },
         {
-          ...baseProject('p2', 'c2', 'Project 2', '10000', 'Description 2'),
+          ...baseProject(
+            'clhp000000000000000000002',
+            'clhc000000000000000000002',
+            'Project 2',
+            '10000',
+            'Description 2',
+          ),
           reports: [{ income: new Prisma.Decimal('5000') }],
         },
       ];
@@ -164,7 +176,13 @@ describe('ProjectsService', () => {
     it('should apply pagination params and correctly filter paid incomes', async () => {
       const projects = [
         {
-          ...baseProject('p1', 'c1', 'Project 1', '5000', 'Description 1'),
+          ...baseProject(
+            'clhp000000000000000000001',
+            'clhc000000000000000000001',
+            'Project 1',
+            '5000',
+            'Description 1',
+          ),
           reports: [{ income: new Prisma.Decimal('5000') }],
         },
       ];
@@ -193,8 +211,8 @@ describe('ProjectsService', () => {
 
   describe('findOne', () => {
     const baseProject = {
-      id: 'p1',
-      clientId: 'c1',
+      id: 'clhp000000000000000000001',
+      clientId: 'clhc000000000000000000001',
       name: 'Test Project',
       estimatedAmount: new Prisma.Decimal('1000'),
       finishDate: new Date('2026-01-10T00:00:00.000Z'),
@@ -206,7 +224,7 @@ describe('ProjectsService', () => {
         ...baseProject,
         reports: [],
       });
-      const result = await service.findOne('p1');
+      const result = await service.findOne('clhp000000000000000000001');
       expect(result.id).toBe(baseProject.id);
     });
 
@@ -215,7 +233,7 @@ describe('ProjectsService', () => {
         ...baseProject,
         reports: [],
       });
-      const result = await service.findOne('p1');
+      const result = await service.findOne('clhp000000000000000000001');
       expect(result.paymentProgress).toEqual({ totalPaid: 0 });
     });
 
@@ -224,7 +242,7 @@ describe('ProjectsService', () => {
         ...baseProject,
         reports: [{ income: new Prisma.Decimal('500') }],
       });
-      const result = await service.findOne('p1');
+      const result = await service.findOne('clhp000000000000000000001');
       expect(result.paymentProgress).toEqual({ totalPaid: 500 });
     });
 
@@ -236,13 +254,15 @@ describe('ProjectsService', () => {
           { income: new Prisma.Decimal('600') },
         ],
       });
-      const result = await service.findOne('p1');
+      const result = await service.findOne('clhp000000000000000000001');
       expect(result.paymentProgress).toEqual({ totalPaid: 1000 });
     });
 
     it('should throw ProjectNotFoundError when project not found', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(null);
-      await expect(service.findOne('p1')).rejects.toThrow(ProjectNotFoundError);
+      await expect(
+        service.findOne('clhp000000000000000000001'),
+      ).rejects.toThrow(ProjectNotFoundError);
     });
   });
 
@@ -256,7 +276,7 @@ describe('ProjectsService', () => {
     };
 
     const mockUpdatedProject = {
-      id: 'p1',
+      id: 'clhp000000000000000000001',
       clientId: updateDto.clientId,
       name: updateDto.name,
       estimatedAmount: new Prisma.Decimal(updateDto.estimatedAmount),
@@ -267,9 +287,12 @@ describe('ProjectsService', () => {
     it('should update a project', async () => {
       mockPrismaService.project.update.mockResolvedValue(mockUpdatedProject);
 
-      const result = await service.update('p1', updateDto);
+      const result = await service.update(
+        'clhp000000000000000000001',
+        updateDto,
+      );
 
-      expect(result.id).toBe('p1');
+      expect(result.id).toBe('clhp000000000000000000001');
     });
 
     it('should throw ProjectNotFoundError when project does not exist', async () => {
@@ -280,9 +303,9 @@ describe('ProjectsService', () => {
 
       mockPrismaService.project.update.mockRejectedValue(error);
 
-      await expect(service.update('p1', updateDto)).rejects.toThrow(
-        ProjectNotFoundError,
-      );
+      await expect(
+        service.update('clhp000000000000000000001', updateDto),
+      ).rejects.toThrow(ProjectNotFoundError);
     });
 
     it('should throw ClientNotFoundError on invalid clientId', async () => {
@@ -293,9 +316,9 @@ describe('ProjectsService', () => {
 
       mockPrismaService.project.update.mockRejectedValue(error);
 
-      await expect(service.update('p1', updateDto)).rejects.toThrow(
-        ClientNotFoundError,
-      );
+      await expect(
+        service.update('clhp000000000000000000001', updateDto),
+      ).rejects.toThrow(ClientNotFoundError);
     });
 
     it('should throw ProjectAlreadyExistsError on duplicate project', async () => {
@@ -306,9 +329,9 @@ describe('ProjectsService', () => {
 
       mockPrismaService.project.update.mockRejectedValue(error);
 
-      await expect(service.update('p1', updateDto)).rejects.toThrow(
-        ProjectAlreadyExistsError,
-      );
+      await expect(
+        service.update('clhp000000000000000000001', updateDto),
+      ).rejects.toThrow(ProjectAlreadyExistsError);
     });
   });
 
@@ -316,11 +339,11 @@ describe('ProjectsService', () => {
     it('should delete a project', async () => {
       mockPrismaService.project.delete.mockResolvedValue({});
 
-      const result = await service.remove('p1');
+      const result = await service.remove('clhp000000000000000000001');
 
       expect(result).toBeUndefined();
       expect(mockPrismaService.project.delete).toHaveBeenCalledWith({
-        where: { id: 'p1' },
+        where: { id: 'clhp000000000000000000001' },
       });
     });
 
@@ -332,7 +355,9 @@ describe('ProjectsService', () => {
 
       mockPrismaService.project.delete.mockRejectedValue(error);
 
-      await expect(service.remove('p1')).rejects.toThrow(ProjectNotFoundError);
+      await expect(service.remove('clhp000000000000000000001')).rejects.toThrow(
+        ProjectNotFoundError,
+      );
     });
   });
 });
