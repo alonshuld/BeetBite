@@ -172,8 +172,10 @@ export default function SubcontractorPaymentsPage() {
                     </Badge>
                   </div>
                   <p className="text-[11px] text-text-muted mb-1">
-                    {card.projectBreakdown.length} project
-                    {card.projectBreakdown.length !== 1 ? "s" : ""}
+                    {card.projectBreakdown.length}{" "}
+                    {card.projectBreakdown.length === 1
+                      ? t("project")
+                      : t("projects")}
                   </p>
                   <p className="text-sm text-success font-semibold">
                     {t("owed")}: {formatILS(card.totalOwed)}

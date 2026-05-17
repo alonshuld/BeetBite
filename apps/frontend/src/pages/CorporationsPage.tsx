@@ -72,10 +72,10 @@ export default function CorporationsPage() {
     <div className="flex flex-col gap-5">
       <PageHeader
         title={t("corporations")}
-        subtitle="Corporation database — available for billing"
+        subtitle={t("corporationsSubtitle")}
         actions={
           <ButtonPrimary onClick={openAdd}>
-            + {t("add")} Corporation
+            + {t("addCorporation")}
           </ButtonPrimary>
         }
       />
@@ -88,18 +88,16 @@ export default function CorporationsPage() {
       />
 
       {isLoading ? (
-        <p className="text-text-muted text-sm">Loading…</p>
+        <p className="text-text-muted text-sm">{t("loading")}</p>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="🏛️"
-          title={search ? t("noResults") : "No corporations yet"}
-          description={
-            search ? undefined : "Add your first corporation to get started"
-          }
+          title={search ? t("noResults") : t("noCorporationsYet")}
+          description={search ? undefined : t("addFirstCorporationHint")}
           action={
             !search ? (
               <ButtonPrimary onClick={openAdd}>
-                + {t("add")} Corporation
+                + {t("addCorporation")}
               </ButtonPrimary>
             ) : undefined
           }
@@ -110,7 +108,7 @@ export default function CorporationsPage() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Name
+                  {t("name")}
                 </th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
                   {t("actions")}
@@ -152,16 +150,16 @@ export default function CorporationsPage() {
         open={formOpen}
         onClose={closeForm}
         onSubmit={() => void handleSave()}
-        title={editing ? "Edit Corporation" : "Add Corporation"}
+        title={editing ? t("editCorporation") : t("addCorporation")}
         loading={creating || updating}
       >
         <FormGroup>
           <Input
             id="corp-name"
-            label="Name"
+            label={t("name")}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Corporation name"
+            placeholder={t("corporationNamePlaceholder")}
             required
             autoFocus
           />
@@ -172,8 +170,8 @@ export default function CorporationsPage() {
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => void handleDelete()}
-        title={`Delete "${deleteTarget?.name}"?`}
-        message={`This will permanently delete "${deleteTarget?.name}". This action cannot be undone.`}
+        title={`${t("deletePrefix")} "${deleteTarget?.name}"?`}
+        message={`${t("permanentlyDelete")} "${deleteTarget?.name}". ${t("cannotBeUndone")}`}
         loading={deleting}
       />
     </div>

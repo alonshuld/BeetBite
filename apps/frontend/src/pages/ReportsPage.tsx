@@ -130,7 +130,7 @@ export default function ReportsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-40 text-text-muted text-sm">
-        Loading…
+        {t("loading")}
       </div>
     );
   }
@@ -176,7 +176,7 @@ export default function ReportsPage() {
         <div className="flex flex-col gap-4">
           <FormRow>
             <Select
-              label="Client"
+              label={t("client")}
               value={clientId}
               onChange={(e) => {
                 setClientId(e.target.value);
@@ -184,7 +184,7 @@ export default function ReportsPage() {
                 setSubcontractorId("");
               }}
             >
-              <option value="">— Select client —</option>
+              <option value="">{t("selectClientPlaceholder")}</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -193,11 +193,11 @@ export default function ReportsPage() {
             </Select>
 
             <Select
-              label="Project"
+              label={t("project")}
               value={projectId}
               onChange={(e) => handleProjectChange(e.target.value)}
             >
-              <option value="">— Select project —</option>
+              <option value="">{t("selectProjectPlaceholder")}</option>
               {filteredProjects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -208,11 +208,11 @@ export default function ReportsPage() {
 
           <FormRow>
             <Select
-              label="Subcontractor"
+              label={t("subcontractor")}
               value={subcontractorId}
               onChange={(e) => setSubcontractorId(e.target.value)}
             >
-              <option value="">— None —</option>
+              <option value="">—</option>
               {subcontractors.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -221,7 +221,7 @@ export default function ReportsPage() {
             </Select>
 
             <Input
-              label="Report Month"
+              label={t("reportMonth")}
               type="month"
               value={reportMonth}
               onChange={(e) => setReportMonth(e.target.value)}
@@ -230,7 +230,7 @@ export default function ReportsPage() {
 
           <FormRow>
             <Input
-              label="Income (₪)"
+              label={t("incomeILS")}
               type="number"
               min={0}
               value={income}
@@ -238,7 +238,7 @@ export default function ReportsPage() {
             />
 
             <Input
-              label="Income Date"
+              label={t("incomeDate")}
               type="date"
               value={incomeDate}
               onChange={(e) => setIncomeDate(e.target.value)}
@@ -246,7 +246,7 @@ export default function ReportsPage() {
           </FormRow>
 
           <Input
-            label="Profit Margin %"
+            label={t("profitMarginPct")}
             type="number"
             min={0}
             max={100}
@@ -257,13 +257,13 @@ export default function ReportsPage() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
-                Corporation Payments
+                {t("corporationPayments")}
               </span>
               <ButtonGhost
                 onClick={addCorpPayment}
                 className="text-xs py-1 px-3"
               >
-                + Add
+                + {t("add")}
               </ButtonGhost>
             </div>
 
@@ -279,7 +279,7 @@ export default function ReportsPage() {
                       updateCorpPayment(i, { corporationId: e.target.value })
                     }
                   >
-                    <option value="">— Corporation —</option>
+                    <option value="">— {t("corporation")} —</option>
                     {corporations.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -287,7 +287,7 @@ export default function ReportsPage() {
                     ))}
                   </Select>
                   <Input
-                    placeholder="Amount (₪)"
+                    placeholder={t("amountILS")}
                     type="number"
                     min={0}
                     value={cp.amount}
@@ -296,7 +296,7 @@ export default function ReportsPage() {
                     }
                   />
                   <Input
-                    label="Date"
+                    label={t("date")}
                     type="date"
                     value={cp.date}
                     onChange={(e) =>
@@ -309,7 +309,7 @@ export default function ReportsPage() {
                     onClick={() => removeCorpPayment(i)}
                     className="text-xs py-1 px-3"
                   >
-                    Remove
+                    {t("remove")}
                   </ButtonDanger>
                 </div>
               </div>
@@ -327,6 +327,7 @@ interface ReportCardProps {
 }
 
 function ReportCard({ report, onClick }: ReportCardProps) {
+  const { t } = useLang();
   const isReceived = Boolean(report.incomeDate);
   const subAmount = report.income * (1 - report.profitMargin / 100);
 
@@ -338,19 +339,19 @@ function ReportCard({ report, onClick }: ReportCardProps) {
       <div className="flex items-start justify-between gap-2">
         <p className="font-medium text-text text-sm">{report.project.name}</p>
         <Badge variant={isReceived ? "green" : "yellow"}>
-          {isReceived ? "Received" : "Pending"}
+          {isReceived ? t("received") : t("pending")}
         </Badge>
       </div>
 
       <div className="flex flex-col gap-1">
         <div className="flex justify-between text-sm">
-          <span className="text-text-muted">Income</span>
+          <span className="text-text-muted">{t("income")}</span>
           <span className="text-text font-medium">
             ₪{report.income.toLocaleString("he-IL")}
           </span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-text-muted">Profit Margin</span>
+          <span className="text-text-muted">{t("profitMargin")}</span>
           <span className="text-text">{report.profitMargin}%</span>
         </div>
         <div className="flex justify-between text-sm">

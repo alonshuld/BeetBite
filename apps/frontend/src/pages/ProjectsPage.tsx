@@ -34,12 +34,6 @@ function projectStatus(p: Project): "active" | "future" | "closed" {
   return "active";
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  active: "Active",
-  future: "Future",
-  closed: "Closed",
-};
-
 const STATUS_VARIANT: Record<string, "green" | "muted" | "yellow"> = {
   active: "green",
   future: "muted",
@@ -191,39 +185,39 @@ export default function ProjectsPage() {
     <div className="flex flex-col gap-5">
       <PageHeader
         title={t("projects")}
-        subtitle="All construction projects"
+        subtitle={t("allConstructionProjects")}
         actions={
-          <ButtonPrimary onClick={openAdd}>+ {t("add")} Project</ButtonPrimary>
+          <ButtonPrimary onClick={openAdd}>+ {t("addProject")}</ButtonPrimary>
         }
       />
 
       <div className="flex items-center gap-2 flex-wrap">
         <FilterToggle
-          label="Active"
+          label={t("active")}
           active={filters.active}
           onClick={() => toggleFilter("active")}
         />
         <FilterToggle
-          label="Future"
+          label={t("future")}
           active={filters.future}
           onClick={() => toggleFilter("future")}
         />
         <FilterToggle
-          label="Closed"
+          label={t("closed")}
           active={filters.closed}
           onClick={() => toggleFilter("closed")}
         />
       </div>
 
       {isLoading ? (
-        <p className="text-text-muted text-sm">Loading…</p>
+        <p className="text-text-muted text-sm">{t("loading")}</p>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="🏗️"
-          title="No projects match selected filters"
-          description="Try toggling filter buttons above or add a new project"
+          title={t("noProjectsMatchFilters")}
+          description={t("tryTogglingFilters")}
           action={
-            <ButtonGhost onClick={openAdd}>+ {t("add")} Project</ButtonGhost>
+            <ButtonGhost onClick={openAdd}>+ {t("addProject")}</ButtonGhost>
           }
         />
       ) : (
@@ -232,25 +226,25 @@ export default function ProjectsPage() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Project
+                  {t("project")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Client
+                  {t("client")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Estimated
+                  {t("estimated")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Finish Date
+                  {t("finishDate")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Completion
+                  {t("completion")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Status
+                  {t("status")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Done
+                  {t("done")}
                 </th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
                   {t("actions")}
@@ -295,7 +289,7 @@ export default function ProjectsPage() {
                     </td>
                     <td className="py-3 px-4">
                       <Badge variant={STATUS_VARIANT[status]}>
-                        {STATUS_LABEL[status]}
+                        {t(status)}
                       </Badge>
                     </td>
                     <td className="py-3 px-4">
@@ -334,7 +328,7 @@ export default function ProjectsPage() {
         open={formOpen}
         onClose={closeForm}
         onSubmit={() => void handleSave()}
-        title={editing ? "Edit Project" : "Add Project"}
+        title={editing ? t("editProject") : t("addProject")}
         loading={creating || updating}
         large
       >
@@ -342,10 +336,10 @@ export default function ProjectsPage() {
           <FormGroup>
             <Input
               id="proj-name"
-              label="Name"
+              label={t("name")}
               value={form.name}
               onChange={(e) => setField("name", e.target.value)}
-              placeholder="Project name"
+              placeholder={t("projectNamePlaceholder")}
               required
               autoFocus
             />
@@ -353,11 +347,11 @@ export default function ProjectsPage() {
           <FormGroup>
             <Select
               id="proj-client"
-              label="Client (optional)"
+              label={t("clientOptional")}
               value={form.clientId}
               onChange={(e) => setField("clientId", e.target.value)}
             >
-              <option value="">— No client —</option>
+              <option value="">{t("noClientOption")}</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -369,10 +363,10 @@ export default function ProjectsPage() {
         <FormGroup>
           <Textarea
             id="proj-desc"
-            label="Description"
+            label={t("description")}
             value={form.description}
             onChange={(e) => setField("description", e.target.value)}
-            placeholder="Project description"
+            placeholder={t("projectDescriptionPlaceholder")}
             rows={3}
           />
         </FormGroup>
@@ -380,7 +374,7 @@ export default function ProjectsPage() {
           <FormGroup>
             <Input
               id="proj-amount"
-              label="Estimated Amount (₪)"
+              label={t("estimatedAmountLabel")}
               type="number"
               min="0"
               step="1"
@@ -393,7 +387,7 @@ export default function ProjectsPage() {
           <FormGroup>
             <Input
               id="proj-finish"
-              label="Finish Date"
+              label={t("finishDate")}
               type="date"
               value={form.finishDate}
               onChange={(e) => setField("finishDate", e.target.value)}
@@ -406,8 +400,8 @@ export default function ProjectsPage() {
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => void handleDelete()}
-        title={`Delete "${deleteTarget?.name}"?`}
-        message={`This will permanently delete "${deleteTarget?.name}". This action cannot be undone.`}
+        title={`${t("deletePrefix")} "${deleteTarget?.name}"?`}
+        message={`${t("permanentlyDelete")} "${deleteTarget?.name}". ${t("cannotBeUndone")}`}
         loading={deleting}
       />
     </div>

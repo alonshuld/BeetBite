@@ -69,9 +69,9 @@ export default function ClientsPage() {
     <div className="flex flex-col gap-5">
       <PageHeader
         title={t("clients")}
-        subtitle="Manage your client database"
+        subtitle={t("manageClientsSubtitle")}
         actions={
-          <ButtonPrimary onClick={openAdd}>+ {t("add")} Client</ButtonPrimary>
+          <ButtonPrimary onClick={openAdd}>+ {t("addClient")}</ButtonPrimary>
         }
       />
 
@@ -83,18 +83,16 @@ export default function ClientsPage() {
       />
 
       {isLoading ? (
-        <p className="text-text-muted text-sm">Loading…</p>
+        <p className="text-text-muted text-sm">{t("loading")}</p>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="👤"
-          title={search ? t("noResults") : "No clients yet"}
-          description={
-            search ? undefined : "Add your first client to get started"
-          }
+          title={search ? t("noResults") : t("noClientsYet")}
+          description={search ? undefined : t("addFirstClientHint")}
           action={
             !search ? (
               <ButtonPrimary onClick={openAdd}>
-                + {t("add")} Client
+                + {t("addClient")}
               </ButtonPrimary>
             ) : undefined
           }
@@ -105,7 +103,7 @@ export default function ClientsPage() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Name
+                  {t("name")}
                 </th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
                   {t("actions")}
@@ -147,16 +145,16 @@ export default function ClientsPage() {
         open={formOpen}
         onClose={closeForm}
         onSubmit={() => void handleSave()}
-        title={editing ? "Edit Client" : "Add Client"}
+        title={editing ? t("editClient") : t("addClient")}
         loading={creating || updating}
       >
         <FormGroup>
           <Input
             id="client-name"
-            label="Name"
+            label={t("name")}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Client name"
+            placeholder={t("clientNamePlaceholder")}
             required
             autoFocus
           />
@@ -167,8 +165,8 @@ export default function ClientsPage() {
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => void handleDelete()}
-        title={`Delete "${deleteTarget?.name}"?`}
-        message={`This will permanently delete "${deleteTarget?.name}". This action cannot be undone.`}
+        title={`${t("deletePrefix")} "${deleteTarget?.name}"?`}
+        message={`${t("permanentlyDelete")} "${deleteTarget?.name}". ${t("cannotBeUndone")}`}
         loading={deleting}
       />
     </div>

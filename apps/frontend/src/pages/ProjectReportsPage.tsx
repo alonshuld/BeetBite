@@ -172,7 +172,7 @@ export default function ProjectReportsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-40 text-text-muted text-sm">
-        Loading…
+        {t("loading")}
       </div>
     );
   }
@@ -199,23 +199,23 @@ export default function ProjectReportsPage() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard
-          label="Estimated Amount"
+          label={t("estimatedAmount")}
           value={`₪${estimatedAmount.toLocaleString("he-IL")}`}
         />
         <StatCard
-          label="Total Paid by Client"
+          label={t("totalPaidByClient")}
           value={`₪${totalPaid.toLocaleString("he-IL")}`}
           style={{ color: "var(--success)" }}
         />
         <StatCard
-          label="Finish Date"
+          label={t("finishDate")}
           value={finishDate ? formatISODate(finishDate, lang) : "—"}
         />
       </div>
 
       <div className="flex flex-col gap-1">
         <div className="flex justify-between text-xs text-text-muted">
-          <span>Completion</span>
+          <span>{t("completion")}</span>
           <span>{completionPct}%</span>
         </div>
         <div className="h-[6px] rounded-full bg-surface-3 overflow-hidden">
@@ -230,7 +230,7 @@ export default function ProjectReportsPage() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
-            Report — {formatYM(month, lang)}
+            {t("reportLabel")} — {formatYM(month, lang)}
           </h2>
           {currentReport ? (
             <ButtonGhost
@@ -248,7 +248,7 @@ export default function ProjectReportsPage() {
 
         {!currentReport ? (
           <EmptyState
-            title="No report for this month"
+            title={t("noReportThisMonth")}
             action={
               <ButtonPrimary onClick={openAdd}>+ Add Report</ButtonPrimary>
             }
@@ -257,14 +257,17 @@ export default function ProjectReportsPage() {
           <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-3">
             <div className="flex justify-between items-center">
               <div className="flex flex-col">
-                <span className="text-xs text-text-muted">Client Income</span>
+                <span className="text-xs text-text-muted">
+                  {t("clientIncome")}
+                </span>
                 {currentReport.incomeDate ? (
                   <span className="text-[11px] text-success">
-                    Received {formatISODate(currentReport.incomeDate, lang)}
+                    {t("received")}{" "}
+                    {formatISODate(currentReport.incomeDate, lang)}
                   </span>
                 ) : (
                   <span className="text-[11px] text-warning">
-                    ⚠ Payment pending
+                    {t("paymentPending")}
                   </span>
                 )}
               </div>
@@ -275,7 +278,7 @@ export default function ProjectReportsPage() {
 
             <div className="flex justify-between items-center">
               <span className="text-xs text-text-muted">
-                Profit ({currentReport.profitMargin}%)
+                {t("profit")} ({currentReport.profitMargin}%)
               </span>
               <span className="text-success font-semibold">
                 ₪{currentReport.profit.toLocaleString("he-IL")}
@@ -298,7 +301,7 @@ export default function ProjectReportsPage() {
             <div className="bg-success/10 border border-success/30 rounded p-3 flex justify-between items-center">
               <div className="flex flex-col">
                 <span className="text-xs text-success font-semibold uppercase tracking-wide">
-                  Subcontractor Payment
+                  {t("subcontractorPayment")}
                 </span>
                 <span className="text-sm text-text">
                   {currentReport.subcontractor.name}
@@ -326,7 +329,7 @@ export default function ProjectReportsPage() {
       >
         <div className="flex flex-col gap-4">
           <Select
-            label="Subcontractor"
+            label={t("subcontractor")}
             value={subcontractorId}
             onChange={(e) => setSubcontractorId(e.target.value)}
           >
@@ -340,14 +343,14 @@ export default function ProjectReportsPage() {
 
           <FormRow>
             <Input
-              label="Report Month"
+              label={t("reportMonth")}
               type="month"
               value={reportMonth}
               onChange={(e) => setReportMonth(e.target.value)}
             />
 
             <Input
-              label="Income (₪)"
+              label={t("incomeILS")}
               type="number"
               min={0}
               value={income}
@@ -357,14 +360,14 @@ export default function ProjectReportsPage() {
 
           <FormRow>
             <Input
-              label="Income Date"
+              label={t("incomeDate")}
               type="date"
               value={incomeDate}
               onChange={(e) => setIncomeDate(e.target.value)}
             />
 
             <Input
-              label="Profit Margin %"
+              label={t("profitMarginPct")}
               type="number"
               min={0}
               max={100}
@@ -376,13 +379,13 @@ export default function ProjectReportsPage() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
-                Corporation Payments
+                {t("corporationPayments")}
               </span>
               <ButtonGhost
                 onClick={addCorpPayment}
                 className="text-xs py-1 px-3"
               >
-                + Add
+                + {t("add")}
               </ButtonGhost>
             </div>
 
@@ -400,7 +403,7 @@ export default function ProjectReportsPage() {
                       })
                     }
                   >
-                    <option value="">— Corporation —</option>
+                    <option value="">— {t("corporation")} —</option>
                     {corporations.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -408,7 +411,7 @@ export default function ProjectReportsPage() {
                     ))}
                   </Select>
                   <Input
-                    placeholder="Amount (₪)"
+                    placeholder={t("amountILS")}
                     type="number"
                     min={0}
                     value={cp.amount}
@@ -417,7 +420,7 @@ export default function ProjectReportsPage() {
                     }
                   />
                   <Input
-                    label="Date"
+                    label={t("date")}
                     type="date"
                     value={cp.date}
                     onChange={(e) =>
@@ -430,7 +433,7 @@ export default function ProjectReportsPage() {
                     onClick={() => removeCorpPayment(i)}
                     className="text-xs py-1 px-3"
                   >
-                    Remove
+                    {t("remove")}
                   </ButtonDanger>
                 </div>
               </div>

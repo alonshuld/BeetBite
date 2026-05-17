@@ -72,10 +72,10 @@ export default function SubcontractorsPage() {
     <div className="flex flex-col gap-5">
       <PageHeader
         title={t("subcontractors")}
-        subtitle="Manage subcontractor records"
+        subtitle={t("manageSubcontractorsSubtitle")}
         actions={
           <ButtonPrimary onClick={openAdd}>
-            + {t("add")} Subcontractor
+            + {t("addSubcontractor")}
           </ButtonPrimary>
         }
       />
@@ -88,18 +88,16 @@ export default function SubcontractorsPage() {
       />
 
       {isLoading ? (
-        <p className="text-text-muted text-sm">Loading…</p>
+        <p className="text-text-muted text-sm">{t("loading")}</p>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="🔧"
-          title={search ? t("noResults") : "No subcontractors yet"}
-          description={
-            search ? undefined : "Add your first subcontractor to get started"
-          }
+          title={search ? t("noResults") : t("noSubcontractorsYet")}
+          description={search ? undefined : t("addFirstSubcontractorHint")}
           action={
             !search ? (
               <ButtonPrimary onClick={openAdd}>
-                + {t("add")} Subcontractor
+                + {t("addSubcontractor")}
               </ButtonPrimary>
             ) : undefined
           }
@@ -110,7 +108,7 @@ export default function SubcontractorsPage() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  Name
+                  {t("name")}
                 </th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
                   {t("actions")}
@@ -152,17 +150,17 @@ export default function SubcontractorsPage() {
         open={formOpen}
         onClose={closeForm}
         onSubmit={() => void handleSave()}
-        title={editing ? "Edit Subcontractor" : "Add Subcontractor"}
+        title={editing ? t("editSubcontractor") : t("addSubcontractor")}
         loading={creating || updating}
       >
         <FormRow>
           <FormGroup>
             <Input
               id="sub-name"
-              label="Name"
+              label={t("name")}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Subcontractor name"
+              placeholder={t("subcontractorNamePlaceholder")}
               required
               autoFocus
             />
@@ -174,8 +172,8 @@ export default function SubcontractorsPage() {
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => void handleDelete()}
-        title={`Delete "${deleteTarget?.name}"?`}
-        message={`This will permanently delete "${deleteTarget?.name}". This action cannot be undone.`}
+        title={`${t("deletePrefix")} "${deleteTarget?.name}"?`}
+        message={`${t("permanentlyDelete")} "${deleteTarget?.name}". ${t("cannotBeUndone")}`}
         loading={deleting}
       />
     </div>
