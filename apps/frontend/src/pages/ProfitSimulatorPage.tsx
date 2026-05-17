@@ -32,7 +32,7 @@ export default function ProfitSimulatorPage() {
   const [overrides, setOverrides] = useState<Map<string, number>>(new Map());
 
   const clientProjects = projects.filter(
-    (p) => clientId && p.client?.id === clientId,
+    (p) => clientId && p.clientId === clientId,
   );
 
   const simProjects: SimProject[] = clientProjects.map((p) => {
@@ -146,7 +146,7 @@ export default function ProfitSimulatorPage() {
                     <div>
                       <p className="font-medium text-text">{sp.projectName}</p>
                       <p className="text-xs text-text-muted">
-                        {t("savedMarginLabel")} {sp.savedMargin}%
+                        {t("savedMarginLabel")} {sp.savedMargin.toFixed(1)}%
                         {hasOverride && (
                           <span className="ml-2 text-beet-bright">
                             {t("overridden")}

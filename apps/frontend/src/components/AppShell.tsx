@@ -3,14 +3,25 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "@/components/organisms/Sidebar";
 import { TopHeader } from "@/components/organisms/TopHeader";
 
+const MONTH_KEY = "beetbite.month";
+
 function todayYM(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function getInitialMonth(): string {
+  return localStorage.getItem(MONTH_KEY) ?? todayYM();
+}
+
 export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [month, setMonth] = useState(todayYM);
+  const [month, setMonthState] = useState(getInitialMonth);
+
+  function setMonth(ym: string) {
+    localStorage.setItem(MONTH_KEY, ym);
+    setMonthState(ym);
+  }
 
   return (
     <div className="flex h-full overflow-hidden">
