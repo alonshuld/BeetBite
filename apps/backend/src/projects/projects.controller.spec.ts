@@ -93,6 +93,7 @@ describe('ProjectsController', () => {
           finishDate: '',
           description: 'Description 1',
           isDone: false,
+          hasReports: true,
           paymentProgress: { totalPaid: 2000 },
         },
         {
@@ -103,6 +104,7 @@ describe('ProjectsController', () => {
           finishDate: '',
           description: 'Description 2',
           isDone: false,
+          hasReports: true,
           paymentProgress: { totalPaid: 5000 },
         },
       ];
@@ -127,6 +129,7 @@ describe('ProjectsController', () => {
           finishDate: '',
           description: 'Description 3',
           isDone: false,
+          hasReports: false,
           paymentProgress: { totalPaid: 0 },
         },
       ];
@@ -158,6 +161,7 @@ describe('ProjectsController', () => {
         finishDate: '',
         description: 'Description 1',
         isDone: false,
+        hasReports: true,
         paymentProgress: { totalPaid: 2000 },
       };
 

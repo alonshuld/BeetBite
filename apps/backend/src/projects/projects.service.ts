@@ -22,6 +22,9 @@ const PAID_REPORTS_INCLUDE = {
     where: { incomeDate: { not: null } },
     select: { income: true },
   },
+  _count: {
+    select: { reports: true },
+  },
 } as const;
 
 /**
@@ -82,14 +85,11 @@ export class ProjectsService {
     const where: Prisma.ProjectWhereInput = {};
     if (clientId) where.clientId = clientId;
 
-    if (active) {
-      where.isDone = false;
-      where.reports = { some: {} };
-    } else if (future) {
-      where.reports = { none: {} };
-    } else if (closed) {
-      where.isDone = true;
-    }
+    const statusConditions: Prisma.ProjectWhereInput[] = [];
+    if (active) statusConditions.push({ isDone: false, reports: { some: {} } });
+    if (future) statusConditions.push({ isDone: false, reports: { none: {} } });
+    if (closed) statusConditions.push({ isDone: true });
+    if (statusConditions.length > 0) where.OR = statusConditions;
 
     const projectsWithReports = await this.prismaService.project.findMany({
       skip: Math.max(0, (page - 1) * limit),
@@ -99,17 +99,25 @@ export class ProjectsService {
     });
 
     const projectIdToIncomesSumMap = new Map<string, number>();
-    const projects = projectsWithReports.map(({ reports, ...project }) => {
-      projectIdToIncomesSumMap.set(
-        project.id,
-        reports.reduce((sum, r) => sum + Number(r.income), 0),
-      );
-      return project;
-    });
+    const projectIdToHasReportsMap = new Map<string, boolean>();
+    const projects = projectsWithReports.map(
+      ({ reports, _count, ...project }) => {
+        projectIdToIncomesSumMap.set(
+          project.id,
+          reports.reduce((sum, r) => sum + Number(r.income), 0),
+        );
+        projectIdToHasReportsMap.set(project.id, _count.reports > 0);
+        return project;
+      },
+    );
 
     this.logger.log(`Projects retrieved: ${projects.length} items`);
 
-    return toProjectResponseList(projects, projectIdToIncomesSumMap);
+    return toProjectResponseList(
+      projects,
+      projectIdToIncomesSumMap,
+      projectIdToHasReportsMap,
+    );
   }
 
   /**
@@ -127,11 +135,11 @@ export class ProjectsService {
       throw new ProjectNotFoundError(id);
     }
 
-    const { reports, ...project } = projectWithReports;
+    const { reports, _count, ...project } = projectWithReports;
     const incomesSum = reports.reduce((sum, r) => sum + Number(r.income), 0);
 
     this.logger.log(`Project retrieved: ${id}`);
-    return toProjectResponse(project, incomesSum);
+    return toProjectResponse(project, incomesSum, _count.reports > 0);
   }
 
   /**

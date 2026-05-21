@@ -5,24 +5,40 @@ import { PageHeader } from "@/components/molecules/PageHeader";
 import { EmptyState } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
 import { formatYM } from "@/utils/formatMonth";
+import type { CorporationPaymentsGroup } from "@/api/endpoints/corporation-payments";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
 }
 
-function useHover() {
-  const [hoverId, setHoverId] = useState<string | null>(null);
-  return { hoverId, setHoverId };
+interface TooltipState {
+  id: string;
+  top: number;
+  right: number;
+  row: CorporationPaymentsGroup;
 }
 
 export default function CorporationPaymentsPage() {
   const { month } = useOutletContext<{ month: string }>();
   const { data, isLoading } = useGetCorporationPaymentsByMonthQuery(month);
-  const { hoverId, setHoverId } = useHover();
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const { t, lang } = useLang();
 
   const rows = data?.corporationsPayments ?? [];
   const grandTotal = data?.total ?? 0;
+
+  function handleMouseEnter(
+    e: React.MouseEvent<HTMLTableRowElement>,
+    row: CorporationPaymentsGroup,
+  ) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({
+      id: row.corporation.id,
+      top: rect.bottom + 4,
+      right: window.innerWidth - rect.right,
+      row,
+    });
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -59,9 +75,9 @@ export default function CorporationPaymentsPage() {
               {rows.map((row) => (
                 <tr
                   key={row.corporation.id}
-                  className="border-b border-border hover:bg-surface-2 transition-colors relative cursor-default"
-                  onMouseEnter={() => setHoverId(row.corporation.id)}
-                  onMouseLeave={() => setHoverId(null)}
+                  className="border-b border-border hover:bg-surface-2 transition-colors cursor-default"
+                  onMouseEnter={(e) => handleMouseEnter(e, row)}
+                  onMouseLeave={() => setTooltip(null)}
                 >
                   <td className="py-3 px-4 text-text font-medium">
                     {row.corporation.name}
@@ -69,30 +85,10 @@ export default function CorporationPaymentsPage() {
                   <td className="py-3 px-4 text-right text-text-muted rtl:text-left">
                     {row.projectPayments.length}
                   </td>
-                  <td className="py-3 px-4 text-right rtl:text-left relative">
+                  <td className="py-3 px-4 text-right rtl:text-left">
                     <span className="text-warning font-bold text-[17px]">
                       {formatILS(row.total)}
                     </span>
-                    {hoverId === row.corporation.id && (
-                      <div className="absolute right-0 top-full mt-1 z-10 bg-surface border border-border rounded shadow-lg min-w-[240px] p-3 text-left rtl:right-auto rtl:left-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-text-dim mb-2">
-                          {t("perProjectBreakdown")}
-                        </p>
-                        {row.projectPayments.map((pp) => (
-                          <div
-                            key={pp.id}
-                            className="flex justify-between gap-4 py-1 border-b border-border last:border-0 text-xs"
-                          >
-                            <span className="text-text truncate">
-                              {pp.projectReport.projectName}
-                            </span>
-                            <span className="text-warning font-medium shrink-0">
-                              {formatILS(pp.amount)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </td>
                 </tr>
               ))}
@@ -113,6 +109,32 @@ export default function CorporationPaymentsPage() {
               </tr>
             </tfoot>
           </table>
+        </div>
+      )}
+
+      {tooltip && (
+        <div
+          className="fixed z-50 bg-surface border border-border rounded shadow-lg min-w-[240px] p-3 text-left rtl:text-right"
+          style={{ top: tooltip.top, right: tooltip.right }}
+          onMouseEnter={() => setTooltip(tooltip)}
+          onMouseLeave={() => setTooltip(null)}
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-text-dim mb-2">
+            {t("perProjectBreakdown")}
+          </p>
+          {tooltip.row.projectPayments.map((pp) => (
+            <div
+              key={pp.id}
+              className="flex justify-between gap-4 py-1 border-b border-border last:border-0 text-xs"
+            >
+              <span className="text-text truncate">
+                {pp.projectReport.projectName}
+              </span>
+              <span className="text-warning font-medium shrink-0">
+                {formatILS(pp.amount)}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -154,7 +154,7 @@ export class CorporationPaymentsService {
         name: true,
         payments: {
           where: {
-            date: { gte: startDate, lte: endDate },
+            projectReport: { date: { gte: startDate, lte: endDate } },
           },
           select: {
             id: true,
@@ -203,7 +203,7 @@ export class CorporationPaymentsService {
       where: {
         payments: {
           some: {
-            date: { gte: startDate, lte: endDate },
+            projectReport: { date: { gte: startDate, lte: endDate } },
           },
         },
       },
@@ -212,7 +212,7 @@ export class CorporationPaymentsService {
         name: true,
         payments: {
           where: {
-            date: { gte: startDate, lte: endDate },
+            projectReport: { date: { gte: startDate, lte: endDate } },
           },
           select: {
             id: true,

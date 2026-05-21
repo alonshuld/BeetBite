@@ -24,10 +24,12 @@ export const toProjectBasicResponse = (
 export const toProjectResponse = (
   project: Project,
   incomesSum: number,
+  hasReports: boolean,
 ): ProjectResponseDto => ({
   ...project,
   estimatedAmount: project.estimatedAmount.toNumber(),
   finishDate: project.finishDate.toISOString(),
+  hasReports,
   paymentProgress: {
     totalPaid: Number(incomesSum ?? 0),
   },
@@ -37,12 +39,18 @@ export const toProjectResponse = (
  * Converts the given list of project entities to a list of project response DTOs with payment progress.
  * @param projects The array of project entities to convert.
  * @param projectIdToIncomesSumMap A map of project IDs to their income sums.
+ * @param projectIdToHasReportsMap A map of project IDs to whether they have any reports.
  * @returns An array of project response DTOs with payment progress.
  */
 export const toProjectResponseList = (
   projects: Project[],
   projectIdToIncomesSumMap: Map<string, number>,
+  projectIdToHasReportsMap: Map<string, boolean>,
 ): ProjectResponseDto[] =>
   projects.map((project) =>
-    toProjectResponse(project, projectIdToIncomesSumMap.get(project.id) || 0),
+    toProjectResponse(
+      project,
+      projectIdToIncomesSumMap.get(project.id) || 0,
+      projectIdToHasReportsMap.get(project.id) ?? false,
+    ),
   );

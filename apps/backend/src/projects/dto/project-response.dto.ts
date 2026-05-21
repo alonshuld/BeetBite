@@ -55,4 +55,11 @@ export class ProjectResponseDto {
     type: 'boolean',
   })
   isDone!: boolean;
+
+  @ApiProperty({
+    example: true,
+    description: 'Whether the project has any reports',
+    type: 'boolean',
+  })
+  hasReports!: boolean;
 }

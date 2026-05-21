@@ -140,6 +140,7 @@ describe('ProjectsService', () => {
             'Description 1',
           ),
           reports: [{ income: new Prisma.Decimal('2000') }],
+          _count: { reports: 1 },
         },
         {
           ...baseProject(
@@ -150,6 +151,7 @@ describe('ProjectsService', () => {
             'Description 2',
           ),
           reports: [{ income: new Prisma.Decimal('5000') }],
+          _count: { reports: 1 },
         },
       ];
       mockPrismaService.project.findMany.mockResolvedValue(projects);
@@ -165,6 +167,9 @@ describe('ProjectsService', () => {
             reports: {
               where: { incomeDate: { not: null } },
               select: { income: true },
+            },
+            _count: {
+              select: { reports: true },
             },
           },
         }),
@@ -184,6 +189,7 @@ describe('ProjectsService', () => {
             'Description 1',
           ),
           reports: [{ income: new Prisma.Decimal('5000') }],
+          _count: { reports: 1 },
         },
       ];
       mockPrismaService.project.findMany.mockResolvedValue(projects);
@@ -201,6 +207,9 @@ describe('ProjectsService', () => {
             reports: {
               where: { incomeDate: { not: null } },
               select: { income: true },
+            },
+            _count: {
+              select: { reports: true },
             },
           },
         }),
@@ -223,6 +232,7 @@ describe('ProjectsService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         ...baseProject,
         reports: [],
+        _count: { reports: 0 },
       });
       const result = await service.findOne('clhp000000000000000000001');
       expect(result.id).toBe(baseProject.id);
@@ -232,6 +242,7 @@ describe('ProjectsService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         ...baseProject,
         reports: [],
+        _count: { reports: 0 },
       });
       const result = await service.findOne('clhp000000000000000000001');
       expect(result.paymentProgress).toEqual({ totalPaid: 0 });
@@ -241,6 +252,7 @@ describe('ProjectsService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         ...baseProject,
         reports: [{ income: new Prisma.Decimal('500') }],
+        _count: { reports: 1 },
       });
       const result = await service.findOne('clhp000000000000000000001');
       expect(result.paymentProgress).toEqual({ totalPaid: 500 });
@@ -253,6 +265,7 @@ describe('ProjectsService', () => {
           { income: new Prisma.Decimal('400') },
           { income: new Prisma.Decimal('600') },
         ],
+        _count: { reports: 2 },
       });
       const result = await service.findOne('clhp000000000000000000001');
       expect(result.paymentProgress).toEqual({ totalPaid: 1000 });

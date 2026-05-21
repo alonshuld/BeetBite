@@ -30,7 +30,7 @@ function formatILS(amount: number): string {
 
 function projectStatus(p: Project): "active" | "future" | "closed" {
   if (p.isDone) return "closed";
-  if (!p.reports || p.reports.length === 0) return "future";
+  if (!p.hasReports) return "future";
   return "active";
 }
 
@@ -173,11 +173,10 @@ export default function ProjectsPage() {
   }
 
   function completionPct(p: Project): number {
-    if (!p.reports || p.reports.length === 0 || p.estimatedAmount === 0)
-      return 0;
+    if (!p.paymentProgress || p.estimatedAmount === 0) return 0;
     return Math.min(
       100,
-      Math.round((p.reports.length / p.estimatedAmount) * 100),
+      Math.round((p.paymentProgress.totalPaid / p.estimatedAmount) * 100),
     );
   }
 

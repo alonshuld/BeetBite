@@ -14,7 +14,7 @@ export interface Project {
   isDone: boolean;
   clientId?: string;
   client?: ProjectClient;
-  reports?: { id: string }[];
+  hasReports?: boolean;
   paymentProgress?: { totalPaid: number };
 }
 
@@ -38,7 +38,10 @@ export interface UpdateProjectDto {
 export const projectsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getProjects: build.query<Project[], void>({
-      query: () => "/projects",
+      query: () => ({
+        url: "/projects",
+        params: { active: true, future: true, closed: true, limit: 1000 },
+      }),
       providesTags: ["Projects"],
     }),
     createProject: build.mutation<Project, CreateProjectDto>({

@@ -268,9 +268,11 @@ describe('CorporationPaymentsService', () => {
           name: true,
           payments: {
             where: {
-              date: {
-                gte: new Date('2023-01-01T00:00:00.000Z'),
-                lte: new Date('2023-01-31T00:00:00.000Z'),
+              projectReport: {
+                date: {
+                  gte: new Date('2023-01-01T00:00:00.000Z'),
+                  lte: new Date('2023-01-31T00:00:00.000Z'),
+                },
               },
             },
             select: {
@@ -366,9 +368,11 @@ describe('CorporationPaymentsService', () => {
         where: {
           payments: {
             some: {
-              date: {
-                gte: new Date('2023-01-01T00:00:00.000Z'),
-                lte: new Date('2023-01-31T00:00:00.000Z'),
+              projectReport: {
+                date: {
+                  gte: new Date('2023-01-01T00:00:00.000Z'),
+                  lte: new Date('2023-01-31T00:00:00.000Z'),
+                },
               },
             },
           },
@@ -378,9 +382,11 @@ describe('CorporationPaymentsService', () => {
           name: true,
           payments: {
             where: {
-              date: {
-                gte: new Date('2023-01-01T00:00:00.000Z'),
-                lte: new Date('2023-01-31T00:00:00.000Z'),
+              projectReport: {
+                date: {
+                  gte: new Date('2023-01-01T00:00:00.000Z'),
+                  lte: new Date('2023-01-31T00:00:00.000Z'),
+                },
               },
             },
             select: {
