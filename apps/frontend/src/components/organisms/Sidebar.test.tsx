@@ -76,8 +76,10 @@ describe("Sidebar", () => {
     expect(store.getState().auth.token).toBeNull();
   });
 
-  it("shows username from token sub claim", () => {
-    const payload = btoa(JSON.stringify({ sub: "testuser" }));
+  it("shows username from token username claim", () => {
+    const payload = btoa(
+      JSON.stringify({ sub: "user-id", username: "testuser" }),
+    );
     const token = `header.${payload}.sig`;
     renderSidebar({ token });
     expect(screen.getByText("testuser")).toBeInTheDocument();
