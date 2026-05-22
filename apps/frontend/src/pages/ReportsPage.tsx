@@ -34,12 +34,21 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function prevYearMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  if (m === 1) return `${y - 1}-12`;
+  return `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+
 export default function ReportsPage() {
   const { month } = useOutletContext<{ month: string }>();
   const navigate = useNavigate();
   const { t } = useLang();
 
   const { data: reports = [], isLoading } = useGetProjectReportsQuery(month);
+  const { data: prevReports = [] } = useGetProjectReportsQuery(
+    prevYearMonth(month),
+  );
   const { data: clients = [] } = useGetClientsQuery();
   const { data: projects = [] } = useGetProjectsQuery();
   const { data: subcontractors = [] } = useGetSubcontractorsQuery();
@@ -65,15 +74,23 @@ export default function ReportsPage() {
     setProjectId(pid);
     if (!pid) {
       setSubcontractorId("");
+      setProfitMarginPercent("");
       return;
     }
-    const last = reports
+    const selectedProject = projects.find((p) => p.id === pid);
+    if (selectedProject?.clientId) {
+      setClientId(selectedProject.clientId);
+    }
+    const allReports = [...reports, ...prevReports];
+    const last = allReports
       .filter((r) => r.project.id === pid)
       .sort((a, b) => b.date.localeCompare(a.date))[0];
     if (last) {
       setSubcontractorId(last.subcontractor.id);
+      setProfitMarginPercent(String(last.profitMargin));
     } else {
       setSubcontractorId("");
+      setProfitMarginPercent("");
     }
   }
 
@@ -176,6 +193,7 @@ export default function ReportsPage() {
         <div className="flex flex-col gap-4">
           <FormRow>
             <Select
+              id="report-client"
               label={t("client")}
               value={clientId}
               onChange={(e) => {
@@ -193,6 +211,7 @@ export default function ReportsPage() {
             </Select>
 
             <Select
+              id="report-project"
               label={t("project")}
               value={projectId}
               onChange={(e) => handleProjectChange(e.target.value)}
@@ -208,6 +227,7 @@ export default function ReportsPage() {
 
           <FormRow>
             <Select
+              id="report-subcontractor"
               label={t("subcontractor")}
               value={subcontractorId}
               onChange={(e) => setSubcontractorId(e.target.value)}
@@ -230,6 +250,7 @@ export default function ReportsPage() {
 
           <FormRow>
             <Input
+              id="report-income"
               label={t("incomeILS")}
               type="number"
               min={0}
@@ -246,6 +267,7 @@ export default function ReportsPage() {
           </FormRow>
 
           <Input
+            id="report-profit-margin"
             label={t("profitMarginPct")}
             type="number"
             min={0}
