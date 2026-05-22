@@ -17,14 +17,10 @@ import {
 } from "@/components/atoms";
 import { FormModal } from "@/components/organisms/Modal";
 import { useLang } from "@/contexts/useLang";
-import { formatYM, formatISODate } from "@/utils/formatMonth";
+import { formatYM } from "@/utils/formatMonth";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
-}
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 type PaymentStatus = "Paid" | "Partial" | "Unpaid";
@@ -44,7 +40,8 @@ const STATUS_VARIANT: Record<PaymentStatus, "green" | "yellow" | "red"> = {
 export default function SubcontractorPaymentsPage() {
   const { month } = useOutletContext<{ month: string }>();
   const { data: monthReports = [] } = useGetProjectReportsQuery(month);
-  const { data: allPayments = [] } = useGetSubcontractorPaymentsQuery();
+  const { data: monthlyPayments = [] } =
+    useGetSubcontractorPaymentsQuery(month);
   const [createPayment, { isLoading: saving }] =
     useCreateSubcontractorPaymentMutation();
   const { t, lang } = useLang();
@@ -53,7 +50,6 @@ export default function SubcontractorPaymentsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalProjectId, setModalProjectId] = useState("");
   const [modalAmount, setModalAmount] = useState("");
-  const [modalDate, setModalDate] = useState(todayISO);
 
   interface SubCard {
     subId: string;
@@ -91,10 +87,10 @@ export default function SubcontractorPaymentsPage() {
     }
   }
 
-  for (const payment of allPayments) {
-    const card = subMap.get(payment.subcontractor.id);
+  for (const mp of monthlyPayments) {
+    const card = subMap.get(mp.subcontractor.id);
     if (card) {
-      card.totalPaid += payment.amount;
+      card.totalPaid = mp.amountPaid;
     }
   }
 
@@ -104,9 +100,10 @@ export default function SubcontractorPaymentsPage() {
 
   const selectedCard = cards.find((c) => c.subId === selectedSubId) ?? null;
 
-  const paymentsForSelected = allPayments.filter(
-    (p) => p.subcontractor.id === selectedSubId,
+  const selectedMonthlyData = monthlyPayments.find(
+    (mp) => mp.subcontractor.id === selectedSubId,
   );
+  const paymentsForSelected = selectedMonthlyData?.payments ?? [];
 
   const projectsForSelectedSub = selectedCard?.projectBreakdown ?? [];
 
@@ -117,7 +114,6 @@ export default function SubcontractorPaymentsPage() {
         : "",
     );
     setModalAmount("");
-    setModalDate(todayISO());
     setModalOpen(true);
   }
 
@@ -128,8 +124,8 @@ export default function SubcontractorPaymentsPage() {
     await createPayment({
       subcontractorId: selectedSubId,
       projectId: modalProjectId,
+      serviceDate: month + "-01",
       amount,
-      date: modalDate,
     });
     setModalOpen(false);
   }
@@ -258,13 +254,6 @@ export default function SubcontractorPaymentsPage() {
                         key={p.id}
                         className="flex items-center justify-between px-4 py-3 bg-surface border border-border rounded"
                       >
-                        <span className="text-text-muted text-sm">
-                          {formatISODate(p.date, lang, {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </span>
                         <span className="text-success font-semibold">
                           {formatILS(p.amount)}
                         </span>
@@ -323,15 +312,6 @@ export default function SubcontractorPaymentsPage() {
             }}
             placeholder="0"
             required
-          />
-        </FormGroup>
-        <FormGroup>
-          <Input
-            id="inst-date"
-            label={t("date")}
-            type="date"
-            value={modalDate}
-            onChange={(e) => setModalDate(e.target.value)}
           />
         </FormGroup>
       </FormModal>

@@ -7,33 +7,27 @@ export interface ProjectClient {
 
 export interface Project {
   id: string;
+  clientId: string;
+  client: ProjectClient | null;
   name: string;
-  description?: string;
+  description: string;
   estimatedAmount: number;
-  finishDate?: string;
+  finishDate: string;
   isDone: boolean;
-  clientId?: string;
-  client?: ProjectClient;
-  hasReports?: boolean;
-  paymentProgress?: { totalPaid: number };
+  hasReports: boolean;
+  paymentProgress: { totalPaid: number };
 }
 
 export interface CreateProjectDto {
+  clientId: string;
   name: string;
-  description?: string;
+  description: string;
   estimatedAmount: number;
-  finishDate?: string;
-  clientId?: string;
-}
-
-export interface UpdateProjectDto {
-  name?: string;
-  description?: string;
-  estimatedAmount?: number;
-  finishDate?: string;
-  clientId?: string;
+  finishDate: string;
   isDone?: boolean;
 }
+
+export type UpdateProjectDto = CreateProjectDto;
 
 export const projectsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
