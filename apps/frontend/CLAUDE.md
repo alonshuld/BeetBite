@@ -9,12 +9,17 @@ Vite + React 18 + TypeScript (strict). State: Redux Toolkit + RTK Query. Routing
 ## Commands
 
 ```bash
-pnpm dev          # Vite dev server on :5173
+pnpm dev          # Vite dev server on :5173 (proxies /api → :3000)
 pnpm build        # tsc -b && vite build
 pnpm preview      # Preview production build
 pnpm typecheck    # tsc --noEmit
-pnpm lint         # ESLint (auto-fix)
-pnpm test         # Vitest
+pnpm lint         # ESLint + tsc (auto-fix)
+pnpm lint:check   # ESLint + tsc (no fix, for CI)
+pnpm format       # Prettier write
+pnpm test         # Vitest (all files)
+
+# Run single test file
+pnpm vitest run src/components/atoms/Button.test.tsx
 
 # API type generation — requires backend running on :3000
 pnpm codegen
@@ -37,15 +42,27 @@ src/
     auth/
       authSlice.ts          # JWT token in localStorage (key: beetbite.token)
   components/
+    atoms/                  # Primitive UI: Button variants, Badge, Input, Select, Textarea, Toggle, Divider, EmptyState, SearchInput, StatCard, MonthPicker, FormGroup, LangToggle, PageHeader, ThemeToggle
+    molecules/              # Composed but stateless: (currently flat — files in atoms/ re-exported via index)
+    organisms/              # Modal (+ ConfirmModal + FormModal), Sidebar, TopHeader
     AppShell.tsx            # Sidebar + TopHeader + <Outlet />
     RequireAuth.tsx         # Redirects to /login when unauthenticated
+    ErrorBoundary.tsx       # Catches render errors
+  contexts/
+    LangContext.tsx         # LangProvider — persists to localStorage (beetbite.lang)
+    ThemeContext.tsx        # ThemeProvider — sets data-theme="dark" on <html>
+    ToastContext.tsx        # ToastProvider — portal-rendered toasts
+    useLang.ts              # Hook: { lang, isRTL, t, setLang }
+    useTheme.ts             # Hook: { theme, setTheme }
+    useToast.ts             # Hook: { toast(message, variant?) }
+    langContext.ts          # createContext + translations object (en/he)
   pages/                    # One file per route, lazy-loaded
   styles/
     globals.css             # :root CSS vars + Tailwind directives + scrollbar + grain
   utils/
     formatMonth.ts          # formatYM(ym, lang, format?) and formatISODate(iso, lang, opts?) — locale-aware date helpers
   router.tsx                # createBrowserRouter route table
-  main.tsx                  # Entry point
+  main.tsx                  # Entry point — provider tree
 scripts/
   codegen.mjs               # Fetches OpenAPI JSON and writes schema.d.ts
 ```
@@ -89,9 +106,34 @@ Tailwind v3 with `tailwind.config.ts`. All colours map to CSS custom properties 
 
 Design reference for all visual specs (colours, spacing, component shapes, animations): `apps/frontend/BeetBite.mockup.html`.
 
+## Provider tree
+
+```
+ErrorBoundary
+  Redux Provider (store)
+    ThemeProvider   → data-theme on <html>
+      LangProvider  → dir/lang on <html>, beetbite.lang in localStorage
+        ToastProvider → portal toasts
+          RouterProvider
+```
+
+Access via `useLang()`, `useTheme()`, `useToast()` from `@/contexts/use*.ts`. All three hooks throw if used outside their provider.
+
+## Component imports
+
+Import atoms/molecules/organisms by their specific path — e.g.:
+
+```ts
+import { Input } from "@/components/atoms/Input";
+import { PageHeader } from "@/components/molecules/PageHeader";
+import { FormModal, ConfirmModal } from "@/components/organisms/Modal";
+```
+
+Barrel import `@/components/atoms` works for atoms only.
+
 ## i18n + RTL
 
-Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`) lives in `AppShell` and is provided above the login page too. Persist selected lang to `localStorage` key `beetbite.lang`. On lang change, set `document.documentElement.dir` to `"rtl"` or `"ltr"`. RTL layout rules are in `globals.css` under `[dir="rtl"]` — no JS layout logic needed.
+Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`, `setLang`) is provided at root in `main.tsx` (above router). Persist selected lang to `localStorage` key `beetbite.lang`. On lang change, set `document.documentElement.dir` to `"rtl"` or `"ltr"`. RTL layout rules are in `globals.css` under `[dir="rtl"]` — no JS layout logic needed.
 
 **Month/date formatting**: always use `formatYM(ym, lang)` and `formatISODate(iso, lang)` from `src/utils/formatMonth.ts` — never hardcode `"en-GB"`. These map `lang` to the correct locale (`en-GB` / `he-IL`) so month names render in the active language.
 

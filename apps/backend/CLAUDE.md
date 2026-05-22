@@ -4,23 +4,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This project uses `pnpm` as package manager
 
-## Business domain
-
-BeetBite is a back-office tool for a single contractor company that manages construction projects on behalf of clients. Each deployment of the application represents one such contractor.
-
-**Clients** are people or companies that commission construction work. They agree on an estimated total cost for each **project** upfront (stored as `estimatedAmount`), then pay the contractor a monthly **income** as the work progresses. The income for a given month is recorded in a **ProjectReport**; the exact date the client wires the money is `incomeDate` (null until payment arrives).
-
-The contractor does not do the physical work itself. Instead it hires:
-
-- **Subcontractors** — individual workers assigned to a project for a given month. Each project report has exactly one subcontractor.
-- **Corporations** — specialist firms (flooring, plumbing, etc.) paid fixed amounts per month per project, stored as **CorporationPayments** attached to the report.
-
-Each month, the contractor keeps a **profit margin** percentage of the income, then pays the corporations their agreed amounts, and the subcontractor receives whatever is left. These values are derived at read time, not stored (see *Financial calculations* below).
-
-**SubcontractorPayments** track partial payments made to a subcontractor for a given service month. Multiple partial payments per month are allowed. The amount owed is computed from project reports at read time; the service rejects any payment that would cause the total paid to exceed that amount.
-
-Users manually enter clients, projects, corporations, and subcontractors once, then create a project report each month per project. The system derives all financial insights (profits, payments, income totals, project payment progress) from these reports.
-
 ## Commands
 
 ```bash
@@ -30,8 +13,11 @@ pnpm build              # Compile TypeScript via NestJS CLI
 pnpm start:prod         # Run compiled output
 
 # Code quality
-pnpm lint               # ESLint with auto-fix
-pnpm format             # Prettier
+pnpm lint               # ESLint + tsc (auto-fix)
+pnpm lint:check         # ESLint + tsc (no fix, for CI)
+pnpm typecheck          # tsc --noEmit only
+pnpm format             # Prettier write
+pnpm format:check       # Prettier check (no write)
 
 # Testing
 pnpm test               # Run all unit tests (jest, rootDir: src)
@@ -46,18 +32,23 @@ pnpm test -- --testPathPattern=projects.service
 pnpx prisma migrate dev        # Apply migrations and regenerate client
 pnpx prisma migrate deploy     # Apply migrations (CI/production)
 pnpx prisma generate           # Regenerate client without migrating
+pnpx prisma db seed            # Seed admin user + optional mock data
 ```
 
 ### Required environment variables
 
-Set in `.env` or `.env.local`:
+Set in `.env` or `.env.local` (`.env.local` takes precedence):
 
 | Variable | Description |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | Secret for signing JWT tokens — **required**, app throws on startup if missing |
 | `PORT` | HTTP port (default: 3000) |
 | `NODE_ENV` | `development` / `production` |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins (production only) |
+| `JWT_EXPIRES_IN` | Token TTL (default: `24h`) |
+| `ADMIN_USERNAME` | Seed admin username (default: `admin`) |
+| `ADMIN_PASSWORD` | Seed admin password — **required** when running `prisma db seed` |
 
 ## Architecture
 
@@ -69,6 +60,8 @@ Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` →
 
 | Module | Responsibility |
 | --- | --- |
+| `auth` | JWT + Passport auth; `POST /auth/login` issues tokens; global `JwtAuthGuard` protects all routes |
+| `users` | User lookup by username/id; used internally by auth strategies |
 | `clients` | Manage clients (companies that own projects) |
 | `projects` | Manage projects; expose payment progress aggregates |
 | `project-reports` | Monthly financial reports per project, including corporation payments |
@@ -77,6 +70,17 @@ Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` →
 | `subcontractor-payments` | Track partial payments made to subcontractors per service month; enforces overpayment guard against computed amount owed per project; exposes `GET /by-client?month=` aggregation endpoint |
 | `incomes` | Income-related queries |
 | `prisma` | Singleton `PrismaService` extending `PrismaClient` with `@prisma/adapter-pg` |
+
+### Authentication
+
+`JwtAuthGuard` is registered as a global `APP_GUARD` in `AppModule` — every route requires a valid Bearer token by default. To exempt a route, apply `@Public()` from `src/auth/decorators/public.decorator.ts`.
+
+Flow:
+1. `POST /api/v1/auth/login` — `@Public()`, `LocalAuthGuard` runs Passport local strategy (username + bcrypt password check via `UsersService`)
+2. On success, `AuthService.login()` signs a JWT with payload `{ sub: userId, username }`
+3. Client sends `Authorization: Bearer <token>`; `JwtStrategy` validates and attaches `{ userId, username }` to `req.user`
+
+Users are stored in the `User` model with a `passwordHash` (bcrypt, 12 rounds). Create/update users via `prisma db seed` or directly via Prisma.
 
 ### Data models
 
@@ -92,6 +96,10 @@ Key entity fields (see `prisma/schema.prisma` for the full schema):
 ### Prisma client
 
 The generated Prisma client lives in `src/generated/` (not `node_modules`). Import from `src/generated/client`, not from `@prisma/client`. After schema changes, regenerate with `pnpx prisma generate`.
+
+### Validation
+
+Global `ValidationPipe` is configured with `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`, and `enableImplicitConversion: true`. All DTO properties must be decorated with `class-validator` decorators; extra properties are rejected with 400. Error messages are suppressed in production.
 
 ### Error handling
 
