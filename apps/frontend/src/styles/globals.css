@@ -19,6 +19,10 @@
   --success: oklch(55% 0.18 145);
   --warning: oklch(60% 0.18 75);
   --danger: oklch(52% 0.22 25);
+  --badge-success-border: oklch(55% 0.18 145 / 0.30);
+  --badge-warning-border: oklch(60% 0.18 75 / 0.30);
+  --badge-danger-border: oklch(52% 0.22 25 / 0.30);
+  --badge-beet-border: oklch(52% 0.22 5 / 0.30);
   --sidebar-w: 240px;
   --radius: 10px;
   --radius-sm: 6px;
@@ -41,6 +45,10 @@
   --success: oklch(68% 0.18 145);
   --warning: oklch(75% 0.18 75);
   --danger: oklch(58% 0.22 25);
+  --badge-success-border: oklch(68% 0.18 145 / 0.55);
+  --badge-warning-border: oklch(75% 0.18 75 / 0.55);
+  --badge-danger-border: oklch(58% 0.22 25 / 0.55);
+  --badge-beet-border: oklch(52% 0.22 5 / 0.55);
 }
 
 *, *::before, *::after {

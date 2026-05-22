@@ -7,10 +7,12 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  green: "bg-success/15 text-success border-success/30",
-  red: "bg-danger/15 text-danger border-danger/30",
-  yellow: "bg-warning/15 text-warning border-warning/30",
-  beet: "bg-beet/15 text-beet-bright border-beet/30",
+  green:
+    "bg-success/15 text-success [border-color:var(--badge-success-border)]",
+  red: "bg-danger/15 text-danger [border-color:var(--badge-danger-border)]",
+  yellow:
+    "bg-warning/15 text-warning [border-color:var(--badge-warning-border)]",
+  beet: "bg-beet/15 text-beet-bright [border-color:var(--badge-beet-border)]",
   muted: "bg-surface-3 text-text-muted border-border",
 };
 

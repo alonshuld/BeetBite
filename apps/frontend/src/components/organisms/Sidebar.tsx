@@ -90,8 +90,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const token = useAppSelector((s) => s.auth.token);
-  const sub = token ? parseJwtPayload(token).sub : undefined;
-  const username = typeof sub === "string" ? sub : "Admin";
+  const payload = token ? parseJwtPayload(token) : {};
+  const username =
+    typeof payload.username === "string" ? payload.username : "Admin";
   const initial = username.charAt(0).toUpperCase();
 
   function handleSignOut() {
