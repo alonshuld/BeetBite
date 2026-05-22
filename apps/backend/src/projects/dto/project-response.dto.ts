@@ -1,6 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ProjectPaymentProgressDto } from './project-payment-progress.dto';
 
+export class ProjectClientDto {
+  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  id!: string;
+
+  @ApiProperty({ example: 'Acme Corp' })
+  name!: string;
+}
+
 /**
  * Represents the parameters of a project as returned by the API (with payment progress aggregation).
  */
@@ -16,6 +24,13 @@ export class ProjectResponseDto {
     description: 'ID of the client that owns this project',
   })
   clientId!: string;
+
+  @ApiProperty({
+    description: 'Client that owns this project',
+    type: () => ProjectClientDto,
+    nullable: true,
+  })
+  client!: ProjectClientDto | null;
 
   @ApiProperty({
     example: 'Office Building Renovation',

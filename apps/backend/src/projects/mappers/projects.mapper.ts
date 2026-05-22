@@ -1,6 +1,13 @@
 import { Project } from 'src/generated/client';
-import { ProjectResponseDto } from '../dto/project-response.dto';
+import {
+  ProjectClientDto,
+  ProjectResponseDto,
+} from '../dto/project-response.dto';
 import { ProjectBasicResponseDto } from '../dto/project-basic-response.dto';
+
+type ProjectWithClient = Project & {
+  client?: ProjectClientDto | null;
+};
 
 /**
  * Converts the given project entity to a basic project response DTO (without payment progress).
@@ -22,13 +29,14 @@ export const toProjectBasicResponse = (
  * @returns The project response DTO with payment progress.
  */
 export const toProjectResponse = (
-  project: Project,
+  project: ProjectWithClient,
   incomesSum: number,
   hasReports: boolean,
 ): ProjectResponseDto => ({
   ...project,
   estimatedAmount: project.estimatedAmount.toNumber(),
   finishDate: project.finishDate.toISOString(),
+  client: project.client ? project.client : null,
   hasReports,
   paymentProgress: {
     totalPaid: Number(incomesSum ?? 0),
@@ -43,7 +51,7 @@ export const toProjectResponse = (
  * @returns An array of project response DTOs with payment progress.
  */
 export const toProjectResponseList = (
-  projects: Project[],
+  projects: ProjectWithClient[],
   projectIdToIncomesSumMap: Map<string, number>,
   projectIdToHasReportsMap: Map<string, boolean>,
 ): ProjectResponseDto[] =>

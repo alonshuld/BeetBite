@@ -88,6 +88,7 @@ describe('ProjectsController', () => {
         {
           id: 'clhp000000000000000000001',
           clientId: 'clhc000000000000000000001',
+          client: null,
           name: 'Project 1',
           estimatedAmount: 5000,
           finishDate: '',
@@ -99,6 +100,7 @@ describe('ProjectsController', () => {
         {
           id: 'clhp000000000000000000002',
           clientId: 'clhc000000000000000000002',
+          client: null,
           name: 'Project 2',
           estimatedAmount: 10000,
           finishDate: '',
@@ -124,6 +126,7 @@ describe('ProjectsController', () => {
         {
           id: 'p3',
           clientId: 'c3',
+          client: null,
           name: 'Project 3',
           estimatedAmount: 7500,
           finishDate: '',
@@ -156,6 +159,7 @@ describe('ProjectsController', () => {
       const expectedResult: ProjectResponseDto = {
         id: 'clhp000000000000000000001',
         clientId: 'clhc000000000000000000001',
+        client: null,
         name: 'Project 1',
         estimatedAmount: 5000,
         finishDate: '',

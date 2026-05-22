@@ -164,6 +164,7 @@ describe('ProjectsService', () => {
           skip: 0,
           take: PAGINATION_DEFAULTS.LIMIT,
           include: {
+            client: { select: { id: true, name: true } },
             reports: {
               where: { incomeDate: { not: null } },
               select: { income: true },
@@ -204,6 +205,7 @@ describe('ProjectsService', () => {
           skip: 1,
           take: 1,
           include: {
+            client: { select: { id: true, name: true } },
             reports: {
               where: { incomeDate: { not: null } },
               select: { income: true },

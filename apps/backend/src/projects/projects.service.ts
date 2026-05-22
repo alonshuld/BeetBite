@@ -25,6 +25,9 @@ const PAID_REPORTS_INCLUDE = {
   _count: {
     select: { reports: true },
   },
+  client: {
+    select: { id: true, name: true },
+  },
 } as const;
 
 /**
