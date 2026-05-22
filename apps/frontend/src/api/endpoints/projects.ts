@@ -45,7 +45,7 @@ export const projectsApi = baseApi.injectEndpoints({
     updateProject: build.mutation<Project, { id: string } & UpdateProjectDto>({
       query: ({ id, ...body }) => ({
         url: `/projects/${id}`,
-        method: "PATCH",
+        method: "PUT",
         body,
       }),
       invalidatesTags: ["Projects"],

@@ -29,7 +29,7 @@ export const subcontractorsApi = baseApi.injectEndpoints({
     >({
       query: ({ id, ...body }) => ({
         url: `/subcontractors/${id}`,
-        method: "PATCH",
+        method: "PUT",
         body,
       }),
       invalidatesTags: ["Subcontractors"],
