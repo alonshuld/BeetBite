@@ -1,5 +1,3 @@
-version: "3.8"
-
 # DB credentials — edit the defaults below (beetbite → your values)
 # or override via a .env file: DB_USER=foo DB_PASSWORD=bar DB_NAME=baz
 
