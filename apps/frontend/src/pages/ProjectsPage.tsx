@@ -149,10 +149,10 @@ export default function ProjectsPage() {
     if (isNaN(amount) || amount < 0) return;
     const payload = {
       name: form.name.trim(),
-      description: form.description.trim() || undefined,
+      description: form.description.trim(),
       estimatedAmount: amount,
-      finishDate: form.finishDate || undefined,
-      clientId: form.clientId || undefined,
+      finishDate: form.finishDate,
+      clientId: form.clientId,
     };
     if (editing) {
       await updateProject({ id: editing.id, ...payload });
@@ -169,7 +169,15 @@ export default function ProjectsPage() {
   }
 
   async function handleToggleDone(project: Project) {
-    await updateProject({ id: project.id, isDone: !project.isDone });
+    await updateProject({
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      estimatedAmount: project.estimatedAmount,
+      finishDate: project.finishDate,
+      clientId: project.clientId,
+      isDone: !project.isDone,
+    });
   }
 
   function completionPct(p: Project): number {

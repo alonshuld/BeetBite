@@ -37,7 +37,7 @@ export default function ProfitSimulatorPage() {
 
   const simProjects: SimProject[] = clientProjects.map((p) => {
     const projectReports = reports.filter((r) => r.project.id === p.id);
-    const totalIncome = projectReports.reduce((sum, r) => sum + r.income, 0);
+    const totalIncome = p.paymentProgress?.totalPaid ?? 0;
     const lastReport = projectReports[projectReports.length - 1];
     const savedMargin = lastReport?.profitMargin ?? baseline;
     const simMargin = overrides.get(p.id) ?? baseline;
@@ -110,15 +110,15 @@ export default function ProfitSimulatorPage() {
         {clientId && (
           <FormGroup>
             <label className="text-[12px] font-medium uppercase tracking-wide text-text-muted block mb-1">
-              {t("baselineMarginLabel")} {baseline}%
+              {t("baselineMarginLabel")} {baseline.toFixed(1)}%
             </label>
             <input
               type="range"
               min={0}
               max={30}
-              step={1}
+              step={0.1}
               value={baseline}
-              onChange={(e) => handleBaselineChange(parseInt(e.target.value))}
+              onChange={(e) => handleBaselineChange(parseFloat(e.target.value))}
               className="w-full accent-beet"
             />
           </FormGroup>
@@ -163,16 +163,16 @@ export default function ProfitSimulatorPage() {
                   </div>
                   <div className="flex items-center gap-3 mb-2">
                     <label className="text-xs text-text-muted shrink-0 w-16">
-                      {sp.simMargin}%
+                      {sp.simMargin.toFixed(1)}%
                     </label>
                     <input
                       type="range"
                       min={0}
                       max={30}
-                      step={1}
+                      step={0.1}
                       value={sp.simMargin}
                       onChange={(e) =>
-                        setOverride(sp.projectId, parseInt(e.target.value))
+                        setOverride(sp.projectId, parseFloat(e.target.value))
                       }
                       className="flex-1 accent-beet"
                     />
