@@ -53,7 +53,6 @@ export class ProjectsService {
         data: {
           ...createProjectDto,
           estimatedAmount: new Prisma.Decimal(createProjectDto.estimatedAmount),
-          finishDate: new Date(createProjectDto.finishDate),
         },
       });
       this.logger.log(`Project created: ${createdProject.id}`);
@@ -161,7 +160,6 @@ export class ProjectsService {
         data: {
           ...updateProjectDto,
           estimatedAmount: new Prisma.Decimal(updateProjectDto.estimatedAmount),
-          finishDate: new Date(updateProjectDto.finishDate),
         },
       });
 

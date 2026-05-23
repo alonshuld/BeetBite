@@ -19,7 +19,6 @@ export const toProjectBasicResponse = (
 ): ProjectBasicResponseDto => ({
   ...project,
   estimatedAmount: project.estimatedAmount.toNumber(),
-  finishDate: project.finishDate.toISOString(),
 });
 
 /**
@@ -35,7 +34,6 @@ export const toProjectResponse = (
 ): ProjectResponseDto => ({
   ...project,
   estimatedAmount: project.estimatedAmount.toNumber(),
-  finishDate: project.finishDate.toISOString(),
   client: project.client ? project.client : null,
   hasReports,
   paymentProgress: {

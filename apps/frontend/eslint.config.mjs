@@ -33,7 +33,7 @@ export default tseslint.config(
       sourceType: 'module',
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['postcss.config.js', 'tailwind.config.ts', 'scripts/codegen.mjs', 'vite.config.e2e.ts'],
+          allowDefaultProject: ['postcss.config.js', 'tailwind.config.ts', 'scripts/codegen.mjs', 'vite.config.e2e.ts', 'vitest.config.ts'],
         },
         tsconfigRootDir: import.meta.dirname,
       },

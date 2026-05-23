@@ -32,7 +32,6 @@ const mockProjects = [
     estimatedAmount: 100000,
     paymentProgress: { totalPaid: 50000 },
     client: { id: "c1", name: "Acme Corp" },
-    finishDate: null,
     description: null,
   },
   {
@@ -43,7 +42,6 @@ const mockProjects = [
     estimatedAmount: 20000,
     paymentProgress: null,
     client: null,
-    finishDate: null,
     description: null,
   },
 ];

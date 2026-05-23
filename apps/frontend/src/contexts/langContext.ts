@@ -42,7 +42,6 @@ export const translations = {
     month: "Month",
     name: "Name",
     description: "Description",
-    finishDate: "Finish Date",
     estimatedAmount: "Estimated Amount",
     status: "Status",
     // Financial / status
@@ -215,7 +214,6 @@ export const translations = {
     month: "חודש",
     name: "שם",
     description: "תיאור",
-    finishDate: "תאריך סיום",
     estimatedAmount: "סכום משוער",
     status: "סטטוס",
     // Financial / status

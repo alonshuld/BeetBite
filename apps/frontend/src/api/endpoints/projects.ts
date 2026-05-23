@@ -12,7 +12,6 @@ export interface Project {
   name: string;
   description: string;
   estimatedAmount: number;
-  finishDate: string;
   isDone: boolean;
   hasReports: boolean;
   paymentProgress: { totalPaid: number };
@@ -23,7 +22,6 @@ export interface CreateProjectDto {
   name: string;
   description: string;
   estimatedAmount: number;
-  finishDate: string;
   isDone?: boolean;
 }
 

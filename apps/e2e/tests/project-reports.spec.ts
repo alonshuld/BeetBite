@@ -9,7 +9,6 @@ async function seedBaseData(db: ReturnType<typeof Object>) {
       clientId: client.id,
       name: 'Reports Project',
       estimatedAmount: 200000,
-      finishDate: new Date('2027-12-31'),
       description: 'For e2e report tests',
     },
   });

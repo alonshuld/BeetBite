@@ -23,7 +23,6 @@ dbTest.describe('Projects CRUD', () => {
     await page.selectOption('#proj-client', { value: client.id });
     await page.fill('#proj-desc', 'Created by e2e test');
     await page.fill('#proj-amount', '100000');
-    await page.fill('#proj-finish', '2027-12-31');
     await page.getByRole('button', { name: /save/i }).click();
 
     await expect(
@@ -40,7 +39,6 @@ dbTest.describe('Projects CRUD', () => {
         clientId: client.id,
         name: 'Project To Edit',
         estimatedAmount: 50000,
-        finishDate: new Date('2027-01-01'),
         description: 'Original',
       },
     });
@@ -73,7 +71,6 @@ dbTest.describe('Projects CRUD', () => {
         clientId: client.id,
         name: 'Project To Delete',
         estimatedAmount: 50000,
-        finishDate: new Date('2027-01-01'),
         description: 'For deletion',
       },
     });
@@ -104,7 +101,6 @@ dbTest.describe('Projects CRUD', () => {
         clientId: client.id,
         name: 'Active Project',
         estimatedAmount: 100000,
-        finishDate: new Date('2027-01-01'),
         description: 'Active',
       },
     });
@@ -113,7 +109,6 @@ dbTest.describe('Projects CRUD', () => {
         clientId: client.id,
         name: 'Closed Project',
         estimatedAmount: 100000,
-        finishDate: new Date('2026-01-01'),
         description: 'Closed',
         isDone: true,
       },
@@ -123,7 +118,6 @@ dbTest.describe('Projects CRUD', () => {
         clientId: client.id,
         name: 'Future Project',
         estimatedAmount: 100000,
-        finishDate: new Date('2028-01-01'),
         description: 'Future',
       },
     });

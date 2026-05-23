@@ -88,7 +88,7 @@ Key entity fields (see `prisma/schema.prisma` for the full schema):
 
 | Entity | Notable fields |
 | --- | --- |
-| `Project` | `estimatedAmount` (Decimal), `finishDate` (Date), `description` (required String), `isDone` (Boolean, default false — marks project as closed) |
+| `Project` | `estimatedAmount` (Decimal), `description` (required String), `isDone` (Boolean, default false — marks project as closed) |
 | `ProjectReport` | `incomeDate?` (nullable — null means income not yet received); unique on `(projectId, date)` |
 | `CorporationPayment` | `date?` (nullable payment date); `description?` (optional String); `isFuture` (Boolean, default false — true means not yet invoiced); `vatPercentage?` (Decimal — only applicable when `isFuture` is false, defaults to 18%) |
 | `SubcontractorPayment` | `projectId` (String — required, payment must be assigned to a project); `serviceDate` (Date — the service month's start date, required); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, projectId, serviceDate)` allowed; no `paymentDate` — all payments are always considered paid |

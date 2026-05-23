@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLang } from "@/contexts/useLang";
-import { formatISODate } from "@/utils/formatMonth";
 import {
   useGetProjectsQuery,
   useCreateProjectMutation,
@@ -74,7 +73,6 @@ interface FormState {
   clientId: string;
   description: string;
   estimatedAmount: string;
-  finishDate: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -82,11 +80,10 @@ const EMPTY_FORM: FormState = {
   clientId: "",
   description: "",
   estimatedAmount: "",
-  finishDate: "",
 };
 
 export default function ProjectsPage() {
-  const { t, lang } = useLang();
+  const { t } = useLang();
   const { data: projects = [], isLoading } = useGetProjectsQuery();
   const { data: clients = [] } = useGetClientsQuery();
   const [createProject, { isLoading: creating }] = useCreateProjectMutation();
@@ -128,7 +125,6 @@ export default function ProjectsPage() {
       clientId: project.client?.id ?? "",
       description: project.description ?? "",
       estimatedAmount: String(project.estimatedAmount),
-      finishDate: project.finishDate ? project.finishDate.slice(0, 10) : "",
     });
     setFormOpen(true);
   }
@@ -151,7 +147,6 @@ export default function ProjectsPage() {
       name: form.name.trim(),
       description: form.description.trim(),
       estimatedAmount: amount,
-      finishDate: form.finishDate,
       clientId: form.clientId,
     };
     if (editing) {
@@ -174,7 +169,6 @@ export default function ProjectsPage() {
       name: project.name,
       description: project.description,
       estimatedAmount: project.estimatedAmount,
-      finishDate: project.finishDate,
       clientId: project.clientId,
       isDone: !project.isDone,
     });
@@ -242,9 +236,6 @@ export default function ProjectsPage() {
                   {t("estimated")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  {t("finishDate")}
-                </th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
                   {t("completion")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
@@ -275,11 +266,6 @@ export default function ProjectsPage() {
                     </td>
                     <td className="py-3 px-4 text-text">
                       {formatILS(project.estimatedAmount)}
-                    </td>
-                    <td className="py-3 px-4 text-text-muted">
-                      {project.finishDate
-                        ? formatISODate(project.finishDate, lang)
-                        : "—"}
                     </td>
                     <td className="py-3 px-4 min-w-[100px]">
                       <div className="flex flex-col gap-1">
@@ -389,15 +375,6 @@ export default function ProjectsPage() {
               onChange={(e) => setField("estimatedAmount", e.target.value)}
               placeholder="0"
               required
-            />
-          </FormGroup>
-          <FormGroup>
-            <Input
-              id="proj-finish"
-              label={t("finishDate")}
-              type="date"
-              value={form.finishDate}
-              onChange={(e) => setField("finishDate", e.target.value)}
             />
           </FormGroup>
         </FormRow>

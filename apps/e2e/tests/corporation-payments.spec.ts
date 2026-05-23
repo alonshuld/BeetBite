@@ -18,7 +18,6 @@ dbTest.describe('Corporation Payments Page', () => {
         clientId: client.id,
         name: 'CorpPay Project',
         estimatedAmount: 300000,
-        finishDate: new Date('2027-12-31'),
         description: 'Corp payment test',
       },
     });

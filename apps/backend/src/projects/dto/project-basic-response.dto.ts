@@ -30,14 +30,6 @@ export class ProjectBasicResponseDto {
   estimatedAmount!: number;
 
   @ApiProperty({
-    example: '2026-01-10T00:00:00.000Z',
-    description: 'Expected finish date of the project in the ISO-8601 format',
-    type: 'string',
-    format: 'ISO-8601',
-  })
-  finishDate!: string;
-
-  @ApiProperty({
     example: 'Renovation of the office building located at 123 Main St.',
     description: 'A description of the project',
     type: 'string',

@@ -43,7 +43,6 @@ describe('ProjectsController', () => {
         clientId: 'client-1',
         name: 'Test Project',
         estimatedAmount: 100000,
-        finishDate: '2026-12-31',
         description: 'Test project description',
       };
 
@@ -52,7 +51,6 @@ describe('ProjectsController', () => {
         clientId: 'client-1',
         name: 'Test Project',
         estimatedAmount: 100000,
-        finishDate: '2026-12-31',
         description: 'Test project description',
         isDone: false,
       };
@@ -75,7 +73,6 @@ describe('ProjectsController', () => {
           clientId: 'client-1',
           name: 'Duplicate Project',
           estimatedAmount: 1000,
-          finishDate: '2026-01-01',
           description: 'A description',
         }),
       ).rejects.toThrow('Project already exists');
@@ -91,7 +88,6 @@ describe('ProjectsController', () => {
           client: null,
           name: 'Project 1',
           estimatedAmount: 5000,
-          finishDate: '',
           description: 'Description 1',
           isDone: false,
           hasReports: true,
@@ -103,7 +99,6 @@ describe('ProjectsController', () => {
           client: null,
           name: 'Project 2',
           estimatedAmount: 10000,
-          finishDate: '',
           description: 'Description 2',
           isDone: false,
           hasReports: true,
@@ -129,7 +124,6 @@ describe('ProjectsController', () => {
           client: null,
           name: 'Project 3',
           estimatedAmount: 7500,
-          finishDate: '',
           description: 'Description 3',
           isDone: false,
           hasReports: false,
@@ -162,7 +156,6 @@ describe('ProjectsController', () => {
         client: null,
         name: 'Project 1',
         estimatedAmount: 5000,
-        finishDate: '',
         description: 'Description 1',
         isDone: false,
         hasReports: true,
@@ -199,7 +192,6 @@ describe('ProjectsController', () => {
         clientId: 'client-2',
         name: 'Updated Project',
         estimatedAmount: 200000,
-        finishDate: '2027-01-01',
         description: 'Updated description',
       };
 
@@ -208,7 +200,6 @@ describe('ProjectsController', () => {
         clientId: 'client-2',
         name: 'Updated Project',
         estimatedAmount: 200000,
-        finishDate: '2027-01-01',
         description: 'Updated description',
         isDone: false,
       };

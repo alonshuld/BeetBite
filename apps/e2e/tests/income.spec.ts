@@ -13,7 +13,6 @@ dbTest.describe('Income Page', () => {
         clientId: client.id,
         name: 'Income Project',
         estimatedAmount: 500000,
-        finishDate: new Date('2027-12-31'),
         description: 'Income page test',
       },
     });
@@ -52,7 +51,6 @@ dbTest.describe('Income Page', () => {
         clientId: client.id,
         name: 'NavIncome Project',
         estimatedAmount: 300000,
-        finishDate: new Date('2027-12-31'),
         description: 'Navigation test',
       },
     });

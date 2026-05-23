@@ -63,7 +63,6 @@ export default function ProjectReportsPage() {
   const project = projects.find((p) => p.id === projectId);
   const projectName = project?.name ?? `Project ${projectId}`;
   const estimatedAmount = project?.estimatedAmount ?? 0;
-  const finishDate = project?.finishDate;
   const totalPaid = project?.paymentProgress?.totalPaid ?? 0;
 
   const completionPct =
@@ -206,10 +205,6 @@ export default function ProjectReportsPage() {
           label={t("totalPaidByClient")}
           value={`₪${totalPaid.toLocaleString("he-IL")}`}
           style={{ color: "var(--success)" }}
-        />
-        <StatCard
-          label={t("finishDate")}
-          value={finishDate ? formatISODate(finishDate, lang) : "—"}
         />
       </div>
 

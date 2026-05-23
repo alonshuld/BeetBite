@@ -48,7 +48,6 @@ describe('ProjectsService', () => {
       clientId: 'client-1',
       name: 'Test Project',
       estimatedAmount: 100000,
-      finishDate: '2026-01-10T00:00:00.000Z',
       description: 'Test project description',
     };
 
@@ -57,7 +56,6 @@ describe('ProjectsService', () => {
       clientId: createDto.clientId,
       name: createDto.name,
       estimatedAmount: new Prisma.Decimal(createDto.estimatedAmount),
-      finishDate: new Date(createDto.finishDate),
       description: createDto.description,
     };
 
@@ -71,7 +69,6 @@ describe('ProjectsService', () => {
         clientId: mockProject.clientId,
         name: mockProject.name,
         estimatedAmount: mockProject.estimatedAmount.toNumber(),
-        finishDate: mockProject.finishDate.toISOString(),
         description: mockProject.description,
       });
 
@@ -80,7 +77,6 @@ describe('ProjectsService', () => {
           clientId: createDto.clientId,
           name: createDto.name,
           estimatedAmount: new Prisma.Decimal(createDto.estimatedAmount),
-          finishDate: new Date(createDto.finishDate),
           description: createDto.description,
         },
       });
@@ -125,7 +121,6 @@ describe('ProjectsService', () => {
       clientId,
       name,
       estimatedAmount: new Prisma.Decimal(estimatedAmount),
-      finishDate: new Date('2026-01-10T00:00:00.000Z'),
       description,
     });
 
@@ -226,7 +221,6 @@ describe('ProjectsService', () => {
       clientId: 'clhc000000000000000000001',
       name: 'Test Project',
       estimatedAmount: new Prisma.Decimal('1000'),
-      finishDate: new Date('2026-01-10T00:00:00.000Z'),
       description: 'Test project description',
     };
 
@@ -286,7 +280,6 @@ describe('ProjectsService', () => {
       clientId: 'client-2',
       name: 'Updated Project',
       estimatedAmount: 200000,
-      finishDate: '2026-01-10T00:00:00.000Z',
       description: 'Updated project description',
     };
 
@@ -295,7 +288,6 @@ describe('ProjectsService', () => {
       clientId: updateDto.clientId,
       name: updateDto.name,
       estimatedAmount: new Prisma.Decimal(updateDto.estimatedAmount),
-      finishDate: new Date(updateDto.finishDate),
       description: updateDto.description,
     };
 

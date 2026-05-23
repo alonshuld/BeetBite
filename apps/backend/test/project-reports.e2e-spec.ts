@@ -94,7 +94,6 @@ describe('ProjectReportsService Integration Tests', () => {
           name: `Test Project ${Date.now()}`,
           clientId,
           estimatedAmount: 100000,
-          finishDate: new Date('2026-12-31'),
           description: 'Test project',
         },
       })
@@ -265,7 +264,6 @@ describe('ProjectReportsService Integration Tests', () => {
             name: `Another Project ${Date.now()}`,
             clientId,
             estimatedAmount: 100000,
-            finishDate: new Date('2026-12-31'),
             description: 'Test project',
           },
         })
@@ -302,7 +300,6 @@ describe('ProjectReportsService Integration Tests', () => {
             name: `New Project ${Date.now()}`,
             clientId,
             estimatedAmount: 100000,
-            finishDate: new Date('2026-12-31'),
             description: 'Test project',
           },
         })
@@ -908,7 +905,6 @@ describe('ProjectReportsService Integration Tests', () => {
               name: `Project Pag ${i} ${Date.now()}`,
               clientId,
               estimatedAmount: 100000,
-              finishDate: new Date('2026-12-31'),
               description: 'Test project',
             },
           })
@@ -1050,7 +1046,6 @@ describe('ProjectReportsService Integration Tests', () => {
             name: `New Project For Prev ${Date.now()}`,
             clientId,
             estimatedAmount: 100000,
-            finishDate: new Date(testDateStr),
             description: 'Test project',
           },
         })
@@ -1070,7 +1065,6 @@ describe('ProjectReportsService Integration Tests', () => {
             name: `Project CrossYear ${Date.now()}`,
             clientId,
             estimatedAmount: 100000,
-            finishDate: new Date('2026-12-31'),
             description: 'Test project',
           },
         })
@@ -1260,7 +1254,6 @@ describe('ProjectReportsService Integration Tests', () => {
             name: `Project for Payment Test ${Date.now()}`,
             clientId,
             estimatedAmount: 100000,
-            finishDate: new Date('2026-12-31'),
             description: 'Test project',
           },
         })

@@ -3,7 +3,6 @@ import {
   IsString,
   IsNotEmpty,
   IsNumber,
-  IsISO8601,
   IsPositive,
   IsBoolean,
   IsOptional,
@@ -39,15 +38,6 @@ export class CreateProjectDto {
     type: 'number',
   })
   estimatedAmount!: number;
-
-  @IsISO8601()
-  @ApiProperty({
-    example: '2026-01-10T00:00:00.000Z',
-    description: 'Expected finish date of the project in the ISO-8601 format',
-    type: 'string',
-    format: 'ISO-8601',
-  })
-  finishDate!: string;
 
   @IsNotEmpty()
   @IsString()

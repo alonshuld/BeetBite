@@ -13,7 +13,6 @@ dbTest.describe('Subcontractor Payments', () => {
         clientId: client.id,
         name: 'SubPay Project',
         estimatedAmount: 200000,
-        finishDate: new Date('2027-12-31'),
         description: 'Subcontractor payment tests',
       },
     });
