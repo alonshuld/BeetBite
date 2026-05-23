@@ -199,6 +199,12 @@ export default function ProjectsPage() {
     );
   }
 
+  const totalRemaining = projects.reduce(
+    (sum, p) =>
+      sum + Math.max(0, p.estimatedAmount - (p.paymentProgress?.totalPaid ?? 0)),
+    0,
+  );
+
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
@@ -209,22 +215,28 @@ export default function ProjectsPage() {
         }
       />
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <FilterToggle
-          label={t("active")}
-          active={filters.active}
-          onClick={() => toggleFilter("active")}
-        />
-        <FilterToggle
-          label={t("future")}
-          active={filters.future}
-          onClick={() => toggleFilter("future")}
-        />
-        <FilterToggle
-          label={t("closed")}
-          active={filters.closed}
-          onClick={() => toggleFilter("closed")}
-        />
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <FilterToggle
+            label={t("active")}
+            active={filters.active}
+            onClick={() => toggleFilter("active")}
+          />
+          <FilterToggle
+            label={t("future")}
+            active={filters.future}
+            onClick={() => toggleFilter("future")}
+          />
+          <FilterToggle
+            label={t("closed")}
+            active={filters.closed}
+            onClick={() => toggleFilter("closed")}
+          />
+        </div>
+        <span className="text-sm text-text-muted">
+          {t("totalRemaining")}:{" "}
+          <span className="font-bold text-base text-text">{formatILS(totalRemaining)}</span>
+        </span>
       </div>
 
       {isLoading ? (
