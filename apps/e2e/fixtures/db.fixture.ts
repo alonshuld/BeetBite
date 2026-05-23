@@ -1,5 +1,6 @@
 import { test as base } from '@playwright/test';
 import * as path from 'path';
+import * as fs from 'fs';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { PrismaClient } = require(
@@ -36,4 +37,40 @@ export const test = base.extend<DbFixture>({
   },
 });
 
+// Extend test to apply auth state from file
+const testWithAuth = test.extend({
+  page: async ({ page }, use) => {
+    // Load auth state from file and inject localStorage via addInitScript.
+    // addInitScript runs before any page scripts on every navigation, so
+    // authSlice's initialState reads the token before React mounts.
+    const authFilePath = path.resolve(
+      __dirname,
+      '../playwright/.auth/user.json',
+    );
+    if (fs.existsSync(authFilePath)) {
+      const authState = JSON.parse(
+        fs.readFileSync(authFilePath, 'utf-8'),
+      );
+
+      if (authState.origins && authState.origins[0]) {
+        const origin = authState.origins[0];
+        if (origin.localStorage) {
+          await page.addInitScript(
+            (items: Array<{ name: string; value: string }>) => {
+              items.forEach((item) => {
+                localStorage.setItem(item.name, item.value);
+              });
+            },
+            origin.localStorage,
+          );
+        }
+      }
+    }
+
+    await use(page);
+  },
+});
+
 export { expect } from '@playwright/test';
+// Export the extended test as the default export so tests can use "test as dbTest"
+export { testWithAuth as test };

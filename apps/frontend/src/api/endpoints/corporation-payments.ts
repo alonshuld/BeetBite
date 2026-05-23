@@ -41,7 +41,11 @@ export const corporationPaymentsApi = baseApi.injectEndpoints({
       { id: string },
       CreateCorporationPaymentDto
     >({
-      query: (body) => ({ url: "/corporations/payments", method: "POST", body }),
+      query: (body) => ({
+        url: "/corporations/payments",
+        method: "POST",
+        body,
+      }),
       invalidatesTags: ["ProjectReports", "CorporationPayments"],
     }),
     updateCorporationPayment: build.mutation<

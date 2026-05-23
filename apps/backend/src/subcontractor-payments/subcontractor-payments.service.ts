@@ -40,8 +40,12 @@ export class SubcontractorPaymentsService {
 
     if (!report) return 0;
 
-    const income = report.incomeEntries.reduce((s, e) => s + e.amount.toNumber(), 0);
-    const afterProfit = income - (report.profitMargin.toNumber() * income) / 100;
+    const income = report.incomeEntries.reduce(
+      (s, e) => s + e.amount.toNumber(),
+      0,
+    );
+    const afterProfit =
+      income - (report.profitMargin.toNumber() * income) / 100;
     const corpTotal = report.corporationPayments.reduce(
       (s, p) => s + p.amount.toNumber(),
       0,
@@ -64,7 +68,10 @@ export class SubcontractorPaymentsService {
       });
 
     return subcontractorMonthlyProjects.reduce((total, project) => {
-      const income = project.incomeEntries.reduce((s, e) => s + e.amount.toNumber(), 0);
+      const income = project.incomeEntries.reduce(
+        (s, e) => s + e.amount.toNumber(),
+        0,
+      );
       const profitMargin = project.profitMargin.toNumber();
       const afterProfit = income - (profitMargin * income) / 100;
       const corporationPaymentsTotal = project.corporationPayments.reduce(
@@ -91,7 +98,10 @@ export class SubcontractorPaymentsService {
 
     const expectedTotalBySubcontractor = subcontractorsMonthlyProjects.reduce(
       (acc, project) => {
-        const income = project.incomeEntries.reduce((s, e) => s + e.amount.toNumber(), 0);
+        const income = project.incomeEntries.reduce(
+          (s, e) => s + e.amount.toNumber(),
+          0,
+        );
         const profitMargin = project.profitMargin.toNumber();
         const afterProfit = income - (profitMargin * income) / 100;
         const corporationPaymentsTotal = project.corporationPayments.reduce(

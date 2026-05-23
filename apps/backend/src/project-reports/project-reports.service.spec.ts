@@ -70,7 +70,11 @@ describe('ProjectReportsService', () => {
     subcontractorId: 'sub-1',
     date: new Date('2024-05-01T00:00:00.000Z'),
     profitMargin: new Prisma.Decimal('10'),
-    project: { id: 'project-1', name: 'Project 1', client: { id: 'client-1', name: 'Client 1' } },
+    project: {
+      id: 'project-1',
+      name: 'Project 1',
+      client: { id: 'client-1', name: 'Client 1' },
+    },
     subcontractor: { id: 'sub-1', name: 'Sub 1' },
     incomeEntries: defaultIncomeEntries,
     corporationPayments: [] as {

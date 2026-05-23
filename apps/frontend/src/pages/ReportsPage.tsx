@@ -10,10 +10,6 @@ import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
-import {
-  useCreateCorporationPaymentMutation,
-  useDeleteCorporationPaymentMutation,
-} from "@/api/endpoints/corporation-payments";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import {
   ButtonPrimary,
@@ -67,8 +63,6 @@ export default function ReportsPage() {
   const { data: corporations = [] } = useGetCorporationsQuery();
   const [createReport, { isLoading: saving }] =
     useCreateProjectReportMutation();
-  const [createCorp] = useCreateCorporationPaymentMutation();
-  const [deleteCorp] = useDeleteCorporationPaymentMutation();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [clientId, setClientId] = useState("");
@@ -292,23 +286,10 @@ export default function ReportsPage() {
                   report={report}
                   lang={lang}
                   month={month}
-                  corporations={corporations}
                   onNavigate={() =>
                     void navigate(
                       `/reports/projects/${report.project.id}?month=${month}`,
                     )
-                  }
-                  onAddCorp={(corpId, amount, date) =>
-                    void createCorp({
-                      projectReportId: report.id,
-                      corporationId: corpId,
-                      amount,
-                      date,
-                      isFuture: false,
-                    })
-                  }
-                  onDeleteCorp={(corpPaymentId) =>
-                    void deleteCorp(corpPaymentId)
                   }
                 />
               ))}
@@ -530,35 +511,15 @@ function ClientCard({ client, reportCount, onClick }: ClientCardProps) {
   );
 }
 
-interface Corporation {
-  id: string;
-  name: string;
-}
-
 interface ProjectSheetProps {
   report: ProjectReport;
   lang: string;
   month: string;
-  corporations: Corporation[];
   onNavigate: () => void;
-  onAddCorp: (corporationId: string, amount: number, date: string) => void;
-  onDeleteCorp: (corpPaymentId: string) => void;
 }
 
-function ProjectSheet({
-  report,
-  lang,
-  corporations,
-  onNavigate,
-  onAddCorp,
-  onDeleteCorp,
-}: ProjectSheetProps) {
+function ProjectSheet({ report, lang, onNavigate }: ProjectSheetProps) {
   const { t } = useLang();
-
-  const [addingCorp, setAddingCorp] = useState(false);
-  const [newCorpId, setNewCorpId] = useState("");
-  const [newCorpAmount, setNewCorpAmount] = useState("");
-  const [newCorpDate, setNewCorpDate] = useState(todayISO());
 
   const profit = report.totalIncome * (report.profitMargin / 100);
   const corpTotal = report.corporationPayments.reduce(
@@ -566,15 +527,6 @@ function ProjectSheet({
     0,
   );
   const subPayment = report.totalIncome - profit - corpTotal;
-
-  function submitAddCorp() {
-    if (!newCorpId || !newCorpAmount) return;
-    onAddCorp(newCorpId, Number(newCorpAmount), newCorpDate);
-    setAddingCorp(false);
-    setNewCorpId("");
-    setNewCorpAmount("");
-    setNewCorpDate(todayISO());
-  }
 
   return (
     <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-2">
@@ -630,75 +582,13 @@ function ProjectSheet({
       </div>
 
       {report.corporationPayments.map((cp) => (
-        <div
-          key={cp.id}
-          className="flex justify-between items-center text-sm group"
-        >
+        <div key={cp.id} className="flex justify-between items-center text-sm">
           <span className="text-text-muted">{cp.corporation.name}</span>
-          <div className="flex items-center gap-2">
-            <span className="text-warning font-medium">
-              − ₪{cp.amount.toLocaleString("he-IL")}
-            </span>
-            <ButtonDanger
-              onClick={() => onDeleteCorp(cp.id)}
-              className="text-xs py-0 px-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              ×
-            </ButtonDanger>
-          </div>
+          <span className="text-warning font-medium">
+            − ₪{cp.amount.toLocaleString("he-IL")}
+          </span>
         </div>
       ))}
-
-      {addingCorp ? (
-        <div className="flex gap-2 items-end p-2 bg-surface-2 rounded border border-border mt-1">
-          <Select
-            value={newCorpId}
-            onChange={(e) => setNewCorpId(e.target.value)}
-            className="flex-1"
-          >
-            <option value="">— {t("corporation")} —</option>
-            {corporations.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-          <Input
-            placeholder={t("amountILS")}
-            type="number"
-            min={0}
-            value={newCorpAmount}
-            onChange={(e) => setNewCorpAmount(e.target.value)}
-            className="w-28"
-          />
-          <Input
-            type="date"
-            value={newCorpDate}
-            onChange={(e) => setNewCorpDate(e.target.value)}
-            className="w-36"
-          />
-          <ButtonPrimary
-            onClick={submitAddCorp}
-            disabled={!newCorpId || !newCorpAmount}
-            className="text-xs py-1 px-3 mb-[1px]"
-          >
-            {t("add")}
-          </ButtonPrimary>
-          <ButtonGhost
-            onClick={() => setAddingCorp(false)}
-            className="text-xs py-1 px-3 mb-[1px]"
-          >
-            {t("cancel")}
-          </ButtonGhost>
-        </div>
-      ) : (
-        <ButtonGhost
-          onClick={() => setAddingCorp(true)}
-          className="text-xs py-0.5 px-2 self-start text-text-muted hover:text-text"
-        >
-          + {t("corporationPayments")}
-        </ButtonGhost>
-      )}
 
       <div className="border-t border-border my-1" />
 

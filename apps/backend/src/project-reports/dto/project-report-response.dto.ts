@@ -49,13 +49,15 @@ export class ProjectReportResponseDto {
   incomeEntries!: IncomeEntryResponseDto[];
 
   @ApiProperty({
-    description: 'The payments made to corporations for their work on the project that month',
+    description:
+      'The payments made to corporations for their work on the project that month',
     type: [NestedCorporationPaymentDto],
   })
   corporationPayments!: NestedCorporationPaymentDto[];
 
   @ApiProperty({
-    description: "Subcontractor information for the given month's project report",
+    description:
+      "Subcontractor information for the given month's project report",
     type: NestedSubcontractorWithPaymentDto,
   })
   subcontractor!: NestedSubcontractorWithPaymentDto;

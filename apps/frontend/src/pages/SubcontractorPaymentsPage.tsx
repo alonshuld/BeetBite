@@ -66,7 +66,8 @@ export default function SubcontractorPaymentsPage() {
   const subMap = new Map<string, SubCard>();
   for (const report of monthReports) {
     const sub = report.subcontractor;
-    const owed = report.totalIncome - report.totalIncome * (report.profitMargin / 100);
+    const owed =
+      report.totalIncome - report.totalIncome * (report.profitMargin / 100);
     const existing = subMap.get(sub.id);
     const entry = {
       projectId: report.project.id,

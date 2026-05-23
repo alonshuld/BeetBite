@@ -134,7 +134,9 @@ describe('ProjectsService', () => {
             '5000',
             'Description 1',
           ),
-          reports: [{ incomeEntries: [{ amount: new Prisma.Decimal('2000') }] }],
+          reports: [
+            { incomeEntries: [{ amount: new Prisma.Decimal('2000') }] },
+          ],
           _count: { reports: 1 },
         },
         {
@@ -145,7 +147,9 @@ describe('ProjectsService', () => {
             '10000',
             'Description 2',
           ),
-          reports: [{ incomeEntries: [{ amount: new Prisma.Decimal('5000') }] }],
+          reports: [
+            { incomeEntries: [{ amount: new Prisma.Decimal('5000') }] },
+          ],
           _count: { reports: 1 },
         },
       ];
@@ -188,7 +192,9 @@ describe('ProjectsService', () => {
             '5000',
             'Description 1',
           ),
-          reports: [{ incomeEntries: [{ amount: new Prisma.Decimal('5000') }] }],
+          reports: [
+            { incomeEntries: [{ amount: new Prisma.Decimal('5000') }] },
+          ],
           _count: { reports: 1 },
         },
       ];

@@ -53,19 +53,27 @@ export class ProjectReportsController {
   }
 
   @Get('/projects/reports')
-  @ApiOperation({ summary: 'Get all project reports in a given month with pagination' })
+  @ApiOperation({
+    summary: 'Get all project reports in a given month with pagination',
+  })
   @ApiOkResponse({ type: ProjectReportListItemDto, isArray: true })
-  @ApiBadRequestResponse({ description: 'Invalid pagination or month query parameters' })
+  @ApiBadRequestResponse({
+    description: 'Invalid pagination or month query parameters',
+  })
   async findProjectReportsInMonth(
     @Query() paginatedMonthQueryDto: PaginatedMonthQueryDto,
   ): Promise<ProjectReportListItemDto[]> {
-    return await this.projectReportsService.findProjectReportsInMonth(paginatedMonthQueryDto);
+    return await this.projectReportsService.findProjectReportsInMonth(
+      paginatedMonthQueryDto,
+    );
   }
 
   // Income entry routes must come before :id routes to avoid routing conflicts
   @Post('/projects/reports/:reportId/income-entries')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Add a new income entry to an existing project report' })
+  @ApiOperation({
+    summary: 'Add a new income entry to an existing project report',
+  })
   @ApiParam({ name: 'reportId', description: 'Project report ID' })
   @ApiCreatedResponse({ type: IncomeEntryResponseDto })
   @ApiNotFoundResponse({ description: 'Project report not found' })
@@ -73,7 +81,11 @@ export class ProjectReportsController {
     @Param('reportId') reportId: string,
     @Body() dto: CreateIncomeEntryDto,
   ): Promise<IncomeEntryResponseDto> {
-    return await this.projectReportsService.addIncomeEntry(reportId, dto.amount, dto.incomeDate);
+    return await this.projectReportsService.addIncomeEntry(
+      reportId,
+      dto.amount,
+      dto.incomeDate,
+    );
   }
 
   @Put('/projects/reports/income-entries/:id')

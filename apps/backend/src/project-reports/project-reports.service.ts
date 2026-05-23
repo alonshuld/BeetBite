@@ -63,7 +63,9 @@ export class ProjectReportsService {
       createProjectReportDto.subcontractorId !== undefined
     )
       return createProjectReportDto as CreateProjectReportDto &
-        Required<Pick<CreateProjectReportDto, 'subcontractorId' | 'profitMargin'>>;
+        Required<
+          Pick<CreateProjectReportDto, 'subcontractorId' | 'profitMargin'>
+        >;
 
     const previousMonthDate = new Date(createProjectReportDto.date);
     previousMonthDate.setUTCMonth(previousMonthDate.getUTCMonth() - 1);
@@ -107,7 +109,9 @@ export class ProjectReportsService {
   async create(
     createProjectReportDto: CreateProjectReportDto,
   ): Promise<ProjectReportListItemDto> {
-    const enriched = await this.enrichCreateProjectReportDto(createProjectReportDto);
+    const enriched = await this.enrichCreateProjectReportDto(
+      createProjectReportDto,
+    );
 
     try {
       const created = await this.prismaService.$transaction(async (tx) => {
@@ -159,7 +163,10 @@ export class ProjectReportsService {
           );
         }
         case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
-          throw new ProjectReportAlreadyExistsError(enriched.projectId, enriched.date);
+          throw new ProjectReportAlreadyExistsError(
+            enriched.projectId,
+            enriched.date,
+          );
         default:
           throw error;
       }
@@ -202,7 +209,10 @@ export class ProjectReportsService {
     });
 
     if (!projectReport)
-      throw new ProjectReportNotFoundError(projectId, previousMonthDate.toISOString());
+      throw new ProjectReportNotFoundError(
+        projectId,
+        previousMonthDate.toISOString(),
+      );
 
     this.logger.log(`Project report retrieved: ${projectReport.id}`);
     return toProjectReportListItem(projectReport);
@@ -237,30 +247,33 @@ export class ProjectReportsService {
     if (!projectReport) throw new ProjectReportNotFoundError(id);
 
     // Re-fetch with correct serviceDate filter
-    const reportWithSubPayments = await this.prismaService.projectReport.findUnique({
-      where: { id },
-      include: {
-        project: { select: { id: true, name: true } },
-        incomeEntries: { select: { id: true, amount: true, incomeDate: true } },
-        corporationPayments: {
-          select: {
-            id: true,
-            amount: true,
-            corporation: { select: { id: true, name: true } },
+    const reportWithSubPayments =
+      await this.prismaService.projectReport.findUnique({
+        where: { id },
+        include: {
+          project: { select: { id: true, name: true } },
+          incomeEntries: {
+            select: { id: true, amount: true, incomeDate: true },
           },
-        },
-        subcontractor: {
-          select: {
-            id: true,
-            name: true,
-            payments: {
-              where: { serviceDate: projectReport.date },
-              select: { id: true },
+          corporationPayments: {
+            select: {
+              id: true,
+              amount: true,
+              corporation: { select: { id: true, name: true } },
+            },
+          },
+          subcontractor: {
+            select: {
+              id: true,
+              name: true,
+              payments: {
+                where: { serviceDate: projectReport.date },
+                select: { id: true },
+              },
             },
           },
         },
-      },
-    });
+      });
 
     if (!reportWithSubPayments) throw new ProjectReportNotFoundError(id);
 
@@ -270,7 +283,8 @@ export class ProjectReportsService {
       (sum, e) => sum + e.amount.toNumber(),
       0,
     );
-    const profit = totalIncome * (reportWithSubPayments.profitMargin.toNumber() / 100);
+    const profit =
+      totalIncome * (reportWithSubPayments.profitMargin.toNumber() / 100);
     const corpTotal = reportWithSubPayments.corporationPayments.reduce(
       (sum, cp) => sum + cp.amount.toNumber(),
       0,
@@ -281,14 +295,32 @@ export class ProjectReportsService {
       `Profit for project ${reportWithSubPayments.projectId} in ${reportWithSubPayments.date.toDateString()}: ${profit}. Subcontractor owed: ${subcontractorPayment}.`,
     );
 
-    return toProjectReportResponse(reportWithSubPayments, profit, subcontractorPayment);
+    return toProjectReportResponse(
+      reportWithSubPayments,
+      profit,
+      subcontractorPayment,
+    );
   }
 
   async update(
     id: string,
     updateProjectReportDto: UpdateProjectReportDto,
   ): Promise<ProjectReportListItemDto> {
-    const enriched = await this.enrichCreateProjectReportDto(updateProjectReportDto);
+    const existing = await this.prismaService.projectReport.findUnique({
+      where: { id },
+      select: { projectId: true, date: true },
+    });
+
+    if (!existing) throw new ProjectReportNotFoundError(id);
+
+    const enriched = await this.enrichCreateProjectReportDto({
+      ...updateProjectReportDto,
+      projectId: existing.projectId,
+      date:
+        updateProjectReportDto.date ?? existing.date.toISOString().slice(0, 10),
+      incomeEntries: updateProjectReportDto.incomeEntries ?? [],
+      corporationPayments: updateProjectReportDto.corporationPayments ?? [],
+    } as CreateProjectReportDto);
 
     try {
       const updated = await this.prismaService.projectReport.update({
@@ -296,29 +328,33 @@ export class ProjectReportsService {
         data: {
           date: new Date(enriched.date),
           profitMargin: new Prisma.Decimal(enriched.profitMargin),
-          project: enriched.projectId
-            ? { connect: { id: enriched.projectId } }
-            : undefined,
           subcontractor: { connect: { id: enriched.subcontractorId } },
-          incomeEntries: {
-            deleteMany: {},
-            createMany: {
-              data: enriched.incomeEntries.map((e) => ({
-                amount: new Prisma.Decimal(e.amount),
-                incomeDate: e.incomeDate ? new Date(e.incomeDate) : null,
-              })),
-            },
-          },
-          corporationPayments: {
-            deleteMany: {},
-            createMany: {
-              data: enriched.corporationPayments.map((cp) => ({
-                corporationId: cp.corporationId,
-                amount: cp.amount,
-                date: cp.date,
-              })),
-            },
-          },
+          incomeEntries: updateProjectReportDto.incomeEntries
+            ? {
+                deleteMany: {},
+                createMany: {
+                  data: updateProjectReportDto.incomeEntries.map((e) => ({
+                    amount: new Prisma.Decimal(e.amount),
+                    incomeDate: e.incomeDate ? new Date(e.incomeDate) : null,
+                  })),
+                },
+              }
+            : undefined,
+          corporationPayments:
+            updateProjectReportDto.corporationPayments !== undefined
+              ? {
+                  deleteMany: {},
+                  createMany: {
+                    data: updateProjectReportDto.corporationPayments.map(
+                      (cp) => ({
+                        corporationId: cp.corporationId,
+                        amount: cp.amount,
+                        date: cp.date,
+                      }),
+                    ),
+                  },
+                }
+              : undefined,
         },
         include: REPORT_INCLUDE,
       });
@@ -341,7 +377,10 @@ export class ProjectReportsService {
           );
         }
         case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
-          throw new ProjectReportAlreadyExistsError(enriched.projectId, enriched.date);
+          throw new ProjectReportAlreadyExistsError(
+            enriched.projectId,
+            enriched.date,
+          );
         default:
           throw error;
       }
@@ -401,7 +440,9 @@ export class ProjectReportsService {
       const entry = await this.prismaService.projectReportIncome.update({
         where: { id: entryId },
         data: {
-          ...(dto.amount !== undefined && { amount: new Prisma.Decimal(dto.amount) }),
+          ...(dto.amount !== undefined && {
+            amount: new Prisma.Decimal(dto.amount),
+          }),
           ...(dto.incomeDate !== undefined && {
             incomeDate: dto.incomeDate ? new Date(dto.incomeDate) : null,
           }),
@@ -427,7 +468,9 @@ export class ProjectReportsService {
 
   async removeIncomeEntry(entryId: string): Promise<void> {
     try {
-      await this.prismaService.projectReportIncome.delete({ where: { id: entryId } });
+      await this.prismaService.projectReportIncome.delete({
+        where: { id: entryId },
+      });
       this.logger.log(`Income entry ${entryId} deleted`);
     } catch (error) {
       if (

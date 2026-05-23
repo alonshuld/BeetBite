@@ -105,7 +105,9 @@ describe('ProjectReportsService Integration Tests', () => {
         date: new Date(previousMonthDateStr),
         profitMargin: 20,
         incomeEntries: {
-          create: [{ amount: 50000, incomeDate: new Date(previousMonthDateStr) }],
+          create: [
+            { amount: 50000, incomeDate: new Date(previousMonthDateStr) },
+          ],
         },
       },
     });
@@ -140,7 +142,11 @@ describe('ProjectReportsService Integration Tests', () => {
         profitMargin: 15.5,
         incomeEntries: [{ amount: 60000, incomeDate: testDateStr }],
         corporationPayments: [
-          { corporationId: corporationIds[0], amount: 10000, date: testDateStr },
+          {
+            corporationId: corporationIds[0],
+            amount: 10000,
+            date: testDateStr,
+          },
         ],
       };
 
@@ -183,7 +189,11 @@ describe('ProjectReportsService Integration Tests', () => {
         profitMargin: 18,
         incomeEntries: [{ amount: 80000 }],
         corporationPayments: [
-          { corporationId: corporationIds[0], amount: 15000, date: testDateStr },
+          {
+            corporationId: corporationIds[0],
+            amount: 15000,
+            date: testDateStr,
+          },
           { corporationId: corp2Id, amount: 12000, date: testDateStr },
         ],
       };
@@ -222,7 +232,9 @@ describe('ProjectReportsService Integration Tests', () => {
         corporationPayments: [],
       };
 
-      await expect(service.create(createDto)).rejects.toThrow(ProjectNotFoundError);
+      await expect(service.create(createDto)).rejects.toThrow(
+        ProjectNotFoundError,
+      );
     });
 
     it('should throw SubcontractorNotFoundError when subcontractor does not exist', async () => {
@@ -256,7 +268,9 @@ describe('ProjectReportsService Integration Tests', () => {
         corporationPayments: [],
       };
 
-      await expect(service.create(createDto)).rejects.toThrow(SubcontractorNotFoundError);
+      await expect(service.create(createDto)).rejects.toThrow(
+        SubcontractorNotFoundError,
+      );
     });
 
     it('should throw ProjectReportNotFoundError when enriching with missing previous month report', async () => {
@@ -278,7 +292,9 @@ describe('ProjectReportsService Integration Tests', () => {
         corporationPayments: [],
       };
 
-      await expect(service.create(createDto)).rejects.toThrow(ProjectReportNotFoundError);
+      await expect(service.create(createDto)).rejects.toThrow(
+        ProjectReportNotFoundError,
+      );
     });
 
     it('should throw error when corporation payment references non-existent corporation', async () => {
@@ -289,12 +305,22 @@ describe('ProjectReportsService Integration Tests', () => {
         profitMargin: 18,
         incomeEntries: [{ amount: 80000 }],
         corporationPayments: [
-          { corporationId: corporationIds[0], amount: 15000, date: testDateStr },
-          { corporationId: 'non-existent-corp', amount: 12000, date: testDateStr },
+          {
+            corporationId: corporationIds[0],
+            amount: 15000,
+            date: testDateStr,
+          },
+          {
+            corporationId: 'non-existent-corp',
+            amount: 12000,
+            date: testDateStr,
+          },
         ],
       };
 
-      await expect(service.create(createDto)).rejects.toThrow(CorporationNotFoundError);
+      await expect(service.create(createDto)).rejects.toThrow(
+        CorporationNotFoundError,
+      );
     });
 
     it('should handle zero income', async () => {
@@ -356,7 +382,11 @@ describe('ProjectReportsService Integration Tests', () => {
         profitMargin: 20,
         incomeEntries: [{ amount: 100000, incomeDate: testDateStr }],
         corporationPayments: [
-          { corporationId: corporationIds[0], amount: 20000, date: testDateStr },
+          {
+            corporationId: corporationIds[0],
+            amount: 20000,
+            date: testDateStr,
+          },
         ],
       };
 
@@ -382,7 +412,8 @@ describe('ProjectReportsService Integration Tests', () => {
       const result = await service.findOne(reportId);
       const profit = 100000 * (20 / 100);
       const corporationPaymentsTotal = 20000;
-      const expectedSubcontractorPayment = 100000 - profit - corporationPaymentsTotal;
+      const expectedSubcontractorPayment =
+        100000 - profit - corporationPaymentsTotal;
       expect(result.subcontractor.payment).toBe(expectedSubcontractorPayment);
     });
 
@@ -443,7 +474,11 @@ describe('ProjectReportsService Integration Tests', () => {
         profitMargin: 25,
         incomeEntries: [{ amount: 75000 }],
         corporationPayments: [
-          { corporationId: corporationIds[0], amount: 15000, date: testDateStr },
+          {
+            corporationId: corporationIds[0],
+            amount: 15000,
+            date: testDateStr,
+          },
         ],
       };
 
@@ -462,9 +497,9 @@ describe('ProjectReportsService Integration Tests', () => {
         corporationPayments: [],
       };
 
-      await expect(service.update('non-existent-id', updateDto)).rejects.toThrow(
-        ProjectReportNotFoundError,
-      );
+      await expect(
+        service.update('non-existent-id', updateDto),
+      ).rejects.toThrow(ProjectReportNotFoundError);
     });
 
     it('should throw ProjectNotFoundError when updating with invalid projectId', async () => {
@@ -477,7 +512,9 @@ describe('ProjectReportsService Integration Tests', () => {
         corporationPayments: [],
       };
 
-      await expect(service.update(reportId, updateDto)).rejects.toThrow(ProjectNotFoundError);
+      await expect(service.update(reportId, updateDto)).rejects.toThrow(
+        ProjectNotFoundError,
+      );
     });
 
     it('should throw SubcontractorNotFoundError when updating with invalid subcontractorId', async () => {
@@ -490,7 +527,9 @@ describe('ProjectReportsService Integration Tests', () => {
         corporationPayments: [],
       };
 
-      await expect(service.update(reportId, updateDto)).rejects.toThrow(SubcontractorNotFoundError);
+      await expect(service.update(reportId, updateDto)).rejects.toThrow(
+        SubcontractorNotFoundError,
+      );
     });
 
     it('should handle partial updates with enrichment', async () => {
@@ -526,11 +565,15 @@ describe('ProjectReportsService Integration Tests', () => {
 
     it('should delete a project report', async () => {
       await service.remove(reportId);
-      await expect(service.findOne(reportId)).rejects.toThrow(ProjectReportNotFoundError);
+      await expect(service.findOne(reportId)).rejects.toThrow(
+        ProjectReportNotFoundError,
+      );
     });
 
     it('should throw ProjectReportNotFoundError when deleting non-existent report', async () => {
-      await expect(service.remove('non-existent-id')).rejects.toThrow(ProjectReportNotFoundError);
+      await expect(service.remove('non-existent-id')).rejects.toThrow(
+        ProjectReportNotFoundError,
+      );
     });
 
     it('should allow re-creation of a report after deletion', async () => {
@@ -625,8 +668,16 @@ describe('ProjectReportsService Integration Tests', () => {
         profitMargin: 30,
         incomeEntries: [{ amount: 100000 }],
         corporationPayments: [
-          { corporationId: corporationIds[0], amount: 10000, date: testDateStr },
-          { corporationId: corporationIds[1], amount: 15000, date: testDateStr },
+          {
+            corporationId: corporationIds[0],
+            amount: 10000,
+            date: testDateStr,
+          },
+          {
+            corporationId: corporationIds[1],
+            amount: 15000,
+            date: testDateStr,
+          },
           { corporationId: corporationIds[2], amount: 8000, date: testDateStr },
         ],
       };
@@ -636,10 +687,13 @@ describe('ProjectReportsService Integration Tests', () => {
 
       const totalCorporationPayments = 10000 + 15000 + 8000;
       const expectedProfit = 100000 * (30 / 100);
-      const expectedSubcontractorPayment = 100000 - expectedProfit - totalCorporationPayments;
+      const expectedSubcontractorPayment =
+        100000 - expectedProfit - totalCorporationPayments;
 
       expect(fullReport.profit).toBe(expectedProfit);
-      expect(fullReport.subcontractor.payment).toBe(expectedSubcontractorPayment);
+      expect(fullReport.subcontractor.payment).toBe(
+        expectedSubcontractorPayment,
+      );
     });
 
     it('should calculate subcontractor payment as totalIncome minus profit minus corporation payments', async () => {
@@ -667,7 +721,9 @@ describe('ProjectReportsService Integration Tests', () => {
       const corpTotal = corpPayments.reduce((sum, p) => sum + p.amount, 0);
       const expectedSubPayment = income - profit - corpTotal;
 
-      expect(Math.abs(fullReport.subcontractor.payment - expectedSubPayment)).toBeLessThan(1);
+      expect(
+        Math.abs(fullReport.subcontractor.payment - expectedSubPayment),
+      ).toBeLessThan(1);
     });
 
     it('should handle edge case where subcontractor payment equals zero', async () => {
@@ -678,7 +734,11 @@ describe('ProjectReportsService Integration Tests', () => {
         profitMargin: 50,
         incomeEntries: [{ amount: 100000 }],
         corporationPayments: [
-          { corporationId: corporationIds[0], amount: 50000, date: testDateStr },
+          {
+            corporationId: corporationIds[0],
+            amount: 50000,
+            date: testDateStr,
+          },
         ],
       };
 
@@ -697,7 +757,11 @@ describe('ProjectReportsService Integration Tests', () => {
         profitMargin: 0,
         incomeEntries: [{ amount: income }],
         corporationPayments: [
-          { corporationId: corporationIds[0], amount: 25000, date: testDateStr },
+          {
+            corporationId: corporationIds[0],
+            amount: 25000,
+            date: testDateStr,
+          },
         ],
       };
 
@@ -733,7 +797,11 @@ describe('ProjectReportsService Integration Tests', () => {
         profitMargin: 10,
         incomeEntries: [{ amount: 60000 }, { amount: 40000 }],
         corporationPayments: [
-          { corporationId: corporationIds[0], amount: 10000, date: testDateStr },
+          {
+            corporationId: corporationIds[0],
+            amount: 10000,
+            date: testDateStr,
+          },
         ],
       };
 
@@ -756,8 +824,16 @@ describe('ProjectReportsService Integration Tests', () => {
         profitMargin,
         incomeEntries: [{ amount: income }],
         corporationPayments: [
-          { corporationId: corporationIds[0], amount: 99999.99, date: testDateStr },
-          { corporationId: corporationIds[1], amount: 150000, date: testDateStr },
+          {
+            corporationId: corporationIds[0],
+            amount: 99999.99,
+            date: testDateStr,
+          },
+          {
+            corporationId: corporationIds[1],
+            amount: 150000,
+            date: testDateStr,
+          },
         ],
       };
 
@@ -768,7 +844,9 @@ describe('ProjectReportsService Integration Tests', () => {
       const expectedSubPayment = income - expectedProfit - (99999.99 + 150000);
 
       expect(Math.abs(fullReport.profit - expectedProfit)).toBeLessThan(1);
-      expect(Math.abs(fullReport.subcontractor.payment - expectedSubPayment)).toBeLessThan(1);
+      expect(
+        Math.abs(fullReport.subcontractor.payment - expectedSubPayment),
+      ).toBeLessThan(1);
     });
   });
 
@@ -816,7 +894,9 @@ describe('ProjectReportsService Integration Tests', () => {
     });
 
     it('should retrieve all reports for a given month with default pagination', async () => {
-      const result = await service.findProjectReportsInMonth({ month: testDateStr });
+      const result = await service.findProjectReportsInMonth({
+        month: testDateStr,
+      });
       expect(result.length).toBeGreaterThanOrEqual(10);
     });
 
@@ -830,8 +910,16 @@ describe('ProjectReportsService Integration Tests', () => {
     });
 
     it('should respect page number in pagination', async () => {
-      const page1 = await service.findProjectReportsInMonth({ month: testDateStr, page: 1, limit: 3 });
-      const page2 = await service.findProjectReportsInMonth({ month: testDateStr, page: 2, limit: 3 });
+      const page1 = await service.findProjectReportsInMonth({
+        month: testDateStr,
+        page: 1,
+        limit: 3,
+      });
+      const page2 = await service.findProjectReportsInMonth({
+        month: testDateStr,
+        page: 2,
+        limit: 3,
+      });
 
       if (page1.length === 3 && page2.length > 0) {
         expect(page1.map((r) => r.id)).not.toEqual(page2.map((r) => r.id));
@@ -839,33 +927,52 @@ describe('ProjectReportsService Integration Tests', () => {
     });
 
     it('should handle large limit values', async () => {
-      const result = await service.findProjectReportsInMonth({ month: testDateStr, page: 1, limit: 1000 });
+      const result = await service.findProjectReportsInMonth({
+        month: testDateStr,
+        page: 1,
+        limit: 1000,
+      });
       expect(Array.isArray(result)).toBe(true);
       expect(result.length).toBeGreaterThanOrEqual(10);
     });
 
     it('should handle page size of 1', async () => {
-      const result = await service.findProjectReportsInMonth({ month: testDateStr, page: 1, limit: 1 });
+      const result = await service.findProjectReportsInMonth({
+        month: testDateStr,
+        page: 1,
+        limit: 1,
+      });
       expect(result.length).toBeLessThanOrEqual(1);
     });
 
     it('should return empty array for page beyond available data', async () => {
-      const result = await service.findProjectReportsInMonth({ month: testDateStr, page: 9999, limit: 10 });
+      const result = await service.findProjectReportsInMonth({
+        month: testDateStr,
+        page: 9999,
+        limit: 10,
+      });
       expect(result.length).toBe(0);
     });
 
     it('should return empty for month with no reports', async () => {
       const farMonth = new Date('2030-05-01').toISOString();
-      const result = await service.findProjectReportsInMonth({ month: farMonth, page: 1, limit: 100 });
+      const result = await service.findProjectReportsInMonth({
+        month: farMonth,
+        page: 1,
+        limit: 100,
+      });
       expect(result).toEqual([]);
     });
   });
 
   describe('Previous Month Lookup - findProjectReportForPreviousMonth', () => {
     it('should find the report for the previous month', async () => {
-      const result = await service.findProjectReportForPreviousMonth(projectId, {
-        month: testDateStr,
-      });
+      const result = await service.findProjectReportForPreviousMonth(
+        projectId,
+        {
+          month: testDateStr,
+        },
+      );
 
       expect(result).toBeDefined();
       expect(result.project.id).toBe(projectId);
@@ -885,7 +992,9 @@ describe('ProjectReportsService Integration Tests', () => {
       ).id;
 
       await expect(
-        service.findProjectReportForPreviousMonth(newProjectId, { month: testDateStr }),
+        service.findProjectReportForPreviousMonth(newProjectId, {
+          month: testDateStr,
+        }),
       ).rejects.toThrow(ProjectReportNotFoundError);
     });
 
@@ -917,9 +1026,12 @@ describe('ProjectReportsService Integration Tests', () => {
         },
       });
 
-      const result = await service.findProjectReportForPreviousMonth(projectId2, {
-        month: testDateStr,
-      });
+      const result = await service.findProjectReportForPreviousMonth(
+        projectId2,
+        {
+          month: testDateStr,
+        },
+      );
 
       expect(result).toBeDefined();
       expect(result.project.id).toBe(projectId2);
@@ -1032,7 +1144,11 @@ describe('ProjectReportsService Integration Tests', () => {
         profitMargin: 15,
         incomeEntries: [{ amount: 50000 }],
         corporationPayments: [
-          { corporationId: 'non-existent-corp', amount: 10000, date: txDate.toISOString().split('T')[0] },
+          {
+            corporationId: 'non-existent-corp',
+            amount: 10000,
+            date: txDate.toISOString().split('T')[0],
+          },
         ],
       };
 

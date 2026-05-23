@@ -110,7 +110,9 @@ export class ProjectsService {
       ({ reports, _count, ...project }) => {
         projectIdToIncomesSumMap.set(
           project.id,
-          reports.flatMap((r) => r.incomeEntries).reduce((sum, e) => sum + Number(e.amount), 0),
+          reports
+            .flatMap((r) => r.incomeEntries)
+            .reduce((sum, e) => sum + Number(e.amount), 0),
         );
         projectIdToHasReportsMap.set(project.id, _count.reports > 0);
         return project;
