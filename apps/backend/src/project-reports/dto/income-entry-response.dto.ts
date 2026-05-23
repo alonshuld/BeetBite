@@ -15,7 +15,8 @@ export class IncomeEntryResponseDto {
 
   @ApiProperty({
     example: '2026-01-15T00:00:00.000Z',
-    description: 'Date when this income was received, or null if not yet received',
+    description:
+      'Date when this income was received, or null if not yet received',
     nullable: true,
   })
   incomeDate!: string | null;

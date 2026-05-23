@@ -1,14 +1,12 @@
 import { ProjectIncomeDto } from '../dto/project-income.dto';
 import { Prisma } from 'src/generated/client';
 
-export const projectReportToProjectIncome = (
-  projectReport: {
-    projectId: string;
-    profitMargin: Prisma.Decimal;
-    project: { name: string };
-    incomeEntries: { amount: Prisma.Decimal }[];
-  },
-): ProjectIncomeDto => {
+export const projectReportToProjectIncome = (projectReport: {
+  projectId: string;
+  profitMargin: Prisma.Decimal;
+  project: { name: string };
+  incomeEntries: { amount: Prisma.Decimal }[];
+}): ProjectIncomeDto => {
   const income = projectReport.incomeEntries.reduce(
     (sum, e) => sum + e.amount.toNumber(),
     0,

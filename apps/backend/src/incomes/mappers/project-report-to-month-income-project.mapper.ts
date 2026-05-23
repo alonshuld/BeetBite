@@ -14,8 +14,13 @@ export const projectReportToMonthIncomeProject = (
   totalPaidIncome: number,
 ): MonthIncomeProjectDto => {
   const estimatedAmount = report.project.estimatedAmount.toNumber();
-  const income = report.incomeEntries.reduce((sum, e) => sum + e.amount.toNumber(), 0);
-  const allReceived = report.incomeEntries.length > 0 && report.incomeEntries.every((e) => e.incomeDate !== null);
+  const income = report.incomeEntries.reduce(
+    (sum, e) => sum + e.amount.toNumber(),
+    0,
+  );
+  const allReceived =
+    report.incomeEntries.length > 0 &&
+    report.incomeEntries.every((e) => e.incomeDate !== null);
   return {
     projectId: report.projectId,
     projectName: report.project.name,

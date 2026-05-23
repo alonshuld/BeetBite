@@ -69,7 +69,8 @@ export class CreateProjectReportDto {
   @Type(() => CreateCorporationPaymentDto)
   @ValidateNested({ each: true })
   @ApiProperty({
-    description: 'A list of the payments made to corporations for their work on this project this month',
+    description:
+      'A list of the payments made to corporations for their work on this project this month',
     type: [CreateCorporationPaymentDto],
   })
   corporationPayments!: CreateCorporationPaymentDto[];

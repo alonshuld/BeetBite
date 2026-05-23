@@ -159,39 +159,45 @@ export default async function globalSetup(): Promise<void> {
     `[e2e] Direct API login test: ${testLoginRes.status} ${testLoginBody.slice(0, 200)}`,
   );
 
-  // 8. Login and save auth state
+  // 8. Get auth token and create auth state file directly
   console.log('[e2e] Saving auth state…');
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 
-  const browser = await chromium.launch();
-  const context = await browser.newContext();
-  const page = await context.newPage();
+  // Get token from direct API call (bypasses Vite proxy issues)
+  const loginRes = await fetch(
+    `http://localhost:${BACKEND_PORT}/api/v1/auth/login`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: E2E_USERNAME, password: E2E_PASSWORD }),
+    },
+  );
+  const loginData = (await loginRes.json()) as { accessToken: string };
+  const token = loginData.accessToken;
 
-  await page.goto(`http://localhost:${FRONTEND_PORT}/login`);
-  await page.waitForSelector('#username');
+  // Create auth state file with localStorage containing the token
+  // This matches what the frontend expects: localStorage['beetbite.token'] = token
+  const authState = {
+    cookies: [],
+    origins: [
+      {
+        origin: `http://localhost:${FRONTEND_PORT}`,
+        localStorage: [
+          {
+            name: 'beetbite.token',
+            value: token,
+          },
+        ],
+      },
+    ],
+  };
 
-  // Intercept API calls to debug
-  page.on('response', (res) => {
-    if (res.url().includes('/api/')) {
-      console.log(`[e2e] API ${res.status()} ${res.url()}`);
-    }
-  });
+  fs.writeFileSync(
+    path.join(AUTH_DIR, 'user.json'),
+    JSON.stringify(authState, null, 2),
+  );
 
-  await page.fill('#username', E2E_USERNAME);
-  await page.fill('#password', E2E_PASSWORD);
-  await page.click('button[type="submit"]');
-
-  // Give time to see what happens, then take screenshot before timeout
-  try {
-    await page.waitForURL(`**/reports`, { timeout: 15000 });
-  } catch (err) {
-    await page.screenshot({ path: path.join(AUTH_DIR, 'login-debug.png') });
-    console.log('[e2e] Login page content:', await page.textContent('body'));
-    throw err;
-  }
-
-  await context.storageState({ path: path.join(AUTH_DIR, 'user.json') });
-  await browser.close();
+  console.log('[e2e] Auth state saved with token in localStorage');
 
   // 9. Write state for teardown
   fs.writeFileSync(

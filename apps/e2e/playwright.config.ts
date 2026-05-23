@@ -1,4 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
+import * as path from "path";
+
+const authStatePath = path.join(__dirname, "playwright/.auth/user.json");
 
 export default defineConfig({
   testDir: "./tests",
@@ -20,7 +23,7 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "playwright/.auth/user.json",
+        storageState: authStatePath,
       },
     },
   ],

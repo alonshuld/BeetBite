@@ -22,8 +22,11 @@ const authSlice = createSlice({
       state.token = null;
       localStorage.removeItem(TOKEN_KEY);
     },
+    rehydrate(state) {
+      state.token = localStorage.getItem(TOKEN_KEY);
+    },
   },
 });
 
-export const { setCredentials, logout } = authSlice.actions;
+export const { setCredentials, logout, rehydrate } = authSlice.actions;
 export default authSlice.reducer;

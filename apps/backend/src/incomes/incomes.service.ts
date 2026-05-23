@@ -13,7 +13,9 @@ export class IncomesService {
 
   constructor(private readonly prismaService: PrismaService) {}
 
-  async getMonthIncome(monthQueryDto: MonthQueryDto): Promise<IncomeResponseDto> {
+  async getMonthIncome(
+    monthQueryDto: MonthQueryDto,
+  ): Promise<IncomeResponseDto> {
     const projectIncomes = (
       await this.prismaService.projectReport.findMany({
         where: { date: monthQueryDto.month },
@@ -27,7 +29,9 @@ export class IncomesService {
     const totalIncome = projectIncomes.reduce((sum, r) => sum + r.income, 0);
     const totalProfit = projectIncomes.reduce((sum, r) => sum + r.profit, 0);
 
-    this.logger.log(`Retrieved the income for ${String(monthQueryDto.month)}: ${totalIncome}`);
+    this.logger.log(
+      `Retrieved the income for ${String(monthQueryDto.month)}: ${totalIncome}`,
+    );
 
     return { totalIncome, totalProfit, projectIncomes };
   }

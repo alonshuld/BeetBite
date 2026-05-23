@@ -171,6 +171,7 @@ export default function ProjectReportsPage() {
 
     if (editingId !== null) {
       const dto: UpdateProjectReportDto = {
+        projectId,
         subcontractorId: subcontractorId || undefined,
         date: reportMonth + "-01",
         incomeEntries: validEntries.map((e) => ({
@@ -259,7 +260,11 @@ export default function ProjectReportsPage() {
     setNewEntryDate("");
   }
 
-  function startEditCorp(cp: { id: string; corporation: { id: string }; amount: number }) {
+  function startEditCorp(cp: {
+    id: string;
+    corporation: { id: string };
+    amount: number;
+  }) {
     setEditingCorpId(cp.id);
     setEditCorpCorpId(cp.corporation.id);
     setEditCorpAmount(String(cp.amount));
@@ -430,8 +435,7 @@ export default function ProjectReportsPage() {
                     </span>
                     {isReceived ? (
                       <span className="text-[11px] text-success">
-                        {t("received")}{" "}
-                        {formatISODate(entry.incomeDate!, lang)}
+                        {t("received")} {formatISODate(entry.incomeDate!, lang)}
                       </span>
                     ) : (
                       <span className="text-[11px] text-warning">
