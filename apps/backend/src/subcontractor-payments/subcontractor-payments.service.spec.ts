@@ -76,7 +76,7 @@ describe('SubcontractorPaymentsService', () => {
 
     it('should create a subcontractor payment', async () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
-        income: { toNumber: () => 5000 },
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
         profitMargin: { toNumber: () => 10 },
         corporationPayments: [],
       });
@@ -115,7 +115,7 @@ describe('SubcontractorPaymentsService', () => {
 
     it('should throw SubcontractorPaymentOverpaymentError when payment exceeds amount owed', async () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
-        income: { toNumber: () => 1000 },
+        incomeEntries: [{ amount: { toNumber: () => 1000 } }],
         profitMargin: { toNumber: () => 10 },
         corporationPayments: [],
       });
@@ -131,7 +131,7 @@ describe('SubcontractorPaymentsService', () => {
 
     it('should throw SubcontractorNotFoundError when subcontractor does not exist', async () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
-        income: { toNumber: () => 5000 },
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
         profitMargin: { toNumber: () => 10 },
         corporationPayments: [],
       });
@@ -371,7 +371,7 @@ describe('SubcontractorPaymentsService', () => {
     it('should throw SubcontractorPaymentOverpaymentError when updated amount exceeds amount owed', async () => {
       // amountOwed = 900. Other payments = 600. New amount = 400 → total 1000 > 900
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
-        income: { toNumber: () => 1000 },
+        incomeEntries: [{ amount: { toNumber: () => 1000 } }],
         profitMargin: { toNumber: () => 10 },
         corporationPayments: [],
       });
@@ -390,7 +390,7 @@ describe('SubcontractorPaymentsService', () => {
     it('should allow updating a payment when new amount is within owed limit', async () => {
       // amountOwed = 900. Other payments = 0. New amount = 900 → exactly at limit
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
-        income: { toNumber: () => 1000 },
+        incomeEntries: [{ amount: { toNumber: () => 1000 } }],
         profitMargin: { toNumber: () => 10 },
         corporationPayments: [],
       });
@@ -431,7 +431,7 @@ describe('SubcontractorPaymentsService', () => {
 
       // amountOwed = 1800, existing other payments = 0, new amount = 1500 → ok
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
-        income: { toNumber: () => 2000 },
+        incomeEntries: [{ amount: { toNumber: () => 2000 } }],
         profitMargin: { toNumber: () => 10 },
         corporationPayments: [],
       });
@@ -475,7 +475,7 @@ describe('SubcontractorPaymentsService', () => {
     it('should throw SubcontractorPaymentNotFoundError if payment not found', async () => {
       // amountOwed = 1800, new amount = 1500 → passes overpayment guard
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
-        income: { toNumber: () => 2000 },
+        incomeEntries: [{ amount: { toNumber: () => 2000 } }],
         profitMargin: { toNumber: () => 10 },
         corporationPayments: [],
       });

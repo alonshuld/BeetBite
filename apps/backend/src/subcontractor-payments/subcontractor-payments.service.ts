@@ -32,17 +32,16 @@ export class SubcontractorPaymentsService {
     const report = await this.prismaService.projectReport.findFirst({
       where: { subcontractorId, projectId, date: serviceDate },
       select: {
-        income: true,
         profitMargin: true,
+        incomeEntries: { select: { amount: true } },
         corporationPayments: { select: { amount: true } },
       },
     });
 
     if (!report) return 0;
 
-    const income = report.income.toNumber();
-    const afterProfit =
-      income - (report.profitMargin.toNumber() * income) / 100;
+    const income = report.incomeEntries.reduce((s, e) => s + e.amount.toNumber(), 0);
+    const afterProfit = income - (report.profitMargin.toNumber() * income) / 100;
     const corpTotal = report.corporationPayments.reduce(
       (s, p) => s + p.amount.toNumber(),
       0,
@@ -56,33 +55,23 @@ export class SubcontractorPaymentsService {
   ): Promise<number> {
     const subcontractorMonthlyProjects =
       await this.prismaService.projectReport.findMany({
-        where: {
-          subcontractorId,
-          date: serviceDate,
-        },
+        where: { subcontractorId, date: serviceDate },
         select: {
-          income: true,
           profitMargin: true,
-          corporationPayments: {
-            select: { amount: true },
-          },
+          incomeEntries: { select: { amount: true } },
+          corporationPayments: { select: { amount: true } },
         },
       });
 
     return subcontractorMonthlyProjects.reduce((total, project) => {
-      const income = project.income.toNumber();
+      const income = project.incomeEntries.reduce((s, e) => s + e.amount.toNumber(), 0);
       const profitMargin = project.profitMargin.toNumber();
-
       const afterProfit = income - (profitMargin * income) / 100;
-
       const corporationPaymentsTotal = project.corporationPayments.reduce(
         (sum, payment) => sum + payment.amount.toNumber(),
         0,
       );
-
-      const subcontractorPayment = afterProfit - corporationPaymentsTotal;
-
-      return total + subcontractorPayment;
+      return total + (afterProfit - corporationPaymentsTotal);
     }, 0);
   }
 
@@ -91,22 +80,18 @@ export class SubcontractorPaymentsService {
   ): Promise<Record<string, number>> {
     const subcontractorsMonthlyProjects =
       await this.prismaService.projectReport.findMany({
-        where: {
-          date: serviceDate,
-        },
+        where: { date: serviceDate },
         select: {
           subcontractorId: true,
-          income: true,
           profitMargin: true,
-          corporationPayments: {
-            select: { amount: true },
-          },
+          incomeEntries: { select: { amount: true } },
+          corporationPayments: { select: { amount: true } },
         },
       });
 
     const expectedTotalBySubcontractor = subcontractorsMonthlyProjects.reduce(
       (acc, project) => {
-        const income = project.income.toNumber();
+        const income = project.incomeEntries.reduce((s, e) => s + e.amount.toNumber(), 0);
         const profitMargin = project.profitMargin.toNumber();
         const afterProfit = income - (profitMargin * income) / 100;
         const corporationPaymentsTotal = project.corporationPayments.reduce(

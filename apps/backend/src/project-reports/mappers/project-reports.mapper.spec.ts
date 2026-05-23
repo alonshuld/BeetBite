@@ -5,20 +5,29 @@ import {
 } from './project-reports.mapper';
 
 describe('project-reports mapper', () => {
+  const incomeEntries = [
+    { id: 'entry-1', amount: new Prisma.Decimal('10000'), incomeDate: null },
+  ];
+
   const makeListItemInput = () => ({
     id: 'report-1',
     projectId: 'project-1',
     subcontractorId: 'sub-1',
     date: new Date('2024-05-01T00:00:00.000Z'),
     profitMargin: new Prisma.Decimal('10'),
-    income: new Prisma.Decimal('10000'),
-    incomeDate: null,
-    project: { id: 'project-1', name: 'Project 1' },
+    project: { id: 'project-1', name: 'Project 1', client: { id: 'client-1', name: 'Client 1' } },
     subcontractor: { id: 'sub-1', name: 'Sub 1' },
+    incomeEntries,
+    corporationPayments: [] as {
+      id: string;
+      amount: Prisma.Decimal;
+      corporation: { id: string; name: string };
+    }[],
   });
 
   const makeResponseInput = () => ({
     ...makeListItemInput(),
+    project: { id: 'project-1', name: 'Project 1' },
     subcontractor: {
       id: 'sub-1',
       name: 'Sub 1',
@@ -29,6 +38,7 @@ describe('project-reports mapper', () => {
       amount: Prisma.Decimal;
       corporation: { id: string; name: string };
     }[],
+    incomeEntries,
   });
 
   describe('toProjectReportListItem — FK leak prevention', () => {
@@ -46,12 +56,13 @@ describe('project-reports mapper', () => {
       const result = toProjectReportListItem(makeListItemInput());
       expect(result).toEqual({
         id: 'report-1',
-        project: { id: 'project-1', name: 'Project 1' },
+        project: { id: 'project-1', name: 'Project 1', client: { id: 'client-1', name: 'Client 1' } },
         subcontractor: { id: 'sub-1', name: 'Sub 1' },
         date: '2024-05-01T00:00:00.000Z',
         profitMargin: 10,
-        income: 10000,
-        incomeDate: undefined,
+        totalIncome: 10000,
+        incomeEntries: [{ id: 'entry-1', amount: 10000, incomeDate: null }],
+        corporationPayments: [],
       });
     });
   });
@@ -75,8 +86,8 @@ describe('project-reports mapper', () => {
         date: '2024-05-01T00:00:00.000Z',
         profitMargin: 10,
         profit: 1000,
-        income: 10000,
-        incomeDate: undefined,
+        totalIncome: 10000,
+        incomeEntries: [{ id: 'entry-1', amount: 10000, incomeDate: null }],
         subcontractor: {
           id: 'sub-1',
           name: 'Sub 1',

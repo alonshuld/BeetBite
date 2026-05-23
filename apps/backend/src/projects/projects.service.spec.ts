@@ -134,7 +134,7 @@ describe('ProjectsService', () => {
             '5000',
             'Description 1',
           ),
-          reports: [{ income: new Prisma.Decimal('2000') }],
+          reports: [{ incomeEntries: [{ amount: new Prisma.Decimal('2000') }] }],
           _count: { reports: 1 },
         },
         {
@@ -145,7 +145,7 @@ describe('ProjectsService', () => {
             '10000',
             'Description 2',
           ),
-          reports: [{ income: new Prisma.Decimal('5000') }],
+          reports: [{ incomeEntries: [{ amount: new Prisma.Decimal('5000') }] }],
           _count: { reports: 1 },
         },
       ];
@@ -161,8 +161,12 @@ describe('ProjectsService', () => {
           include: {
             client: { select: { id: true, name: true } },
             reports: {
-              where: { incomeDate: { not: null } },
-              select: { income: true },
+              select: {
+                incomeEntries: {
+                  where: { incomeDate: { not: null } },
+                  select: { amount: true },
+                },
+              },
             },
             _count: {
               select: { reports: true },
@@ -184,7 +188,7 @@ describe('ProjectsService', () => {
             '5000',
             'Description 1',
           ),
-          reports: [{ income: new Prisma.Decimal('5000') }],
+          reports: [{ incomeEntries: [{ amount: new Prisma.Decimal('5000') }] }],
           _count: { reports: 1 },
         },
       ];
@@ -202,8 +206,12 @@ describe('ProjectsService', () => {
           include: {
             client: { select: { id: true, name: true } },
             reports: {
-              where: { incomeDate: { not: null } },
-              select: { income: true },
+              select: {
+                incomeEntries: {
+                  where: { incomeDate: { not: null } },
+                  select: { amount: true },
+                },
+              },
             },
             _count: {
               select: { reports: true },
@@ -247,7 +255,7 @@ describe('ProjectsService', () => {
     it('should return correct totalPaid when project reports exist', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         ...baseProject,
-        reports: [{ income: new Prisma.Decimal('500') }],
+        reports: [{ incomeEntries: [{ amount: new Prisma.Decimal('500') }] }],
         _count: { reports: 1 },
       });
       const result = await service.findOne('clhp000000000000000000001');
@@ -258,8 +266,8 @@ describe('ProjectsService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         ...baseProject,
         reports: [
-          { income: new Prisma.Decimal('400') },
-          { income: new Prisma.Decimal('600') },
+          { incomeEntries: [{ amount: new Prisma.Decimal('400') }] },
+          { incomeEntries: [{ amount: new Prisma.Decimal('600') }] },
         ],
         _count: { reports: 2 },
       });

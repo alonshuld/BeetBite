@@ -18,6 +18,16 @@ export interface MonthlyCorporationPayments {
   total: number;
 }
 
+export interface CreateCorporationPaymentDto {
+  projectReportId: string;
+  corporationId: string;
+  amount: number;
+  date: string;
+  isFuture: boolean;
+  description?: string;
+  vatPercentage?: number;
+}
+
 export const corporationPaymentsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getCorporationPaymentsByMonth: build.query<
@@ -27,7 +37,37 @@ export const corporationPaymentsApi = baseApi.injectEndpoints({
       query: (month) => `/corporations/payments?month=${month}-01`,
       providesTags: ["CorporationPayments"],
     }),
+    createCorporationPayment: build.mutation<
+      { id: string },
+      CreateCorporationPaymentDto
+    >({
+      query: (body) => ({ url: "/corporations/payments", method: "POST", body }),
+      invalidatesTags: ["ProjectReports", "CorporationPayments"],
+    }),
+    updateCorporationPayment: build.mutation<
+      { id: string },
+      { id: string } & CreateCorporationPaymentDto
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/corporations/payments/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["ProjectReports", "CorporationPayments"],
+    }),
+    deleteCorporationPayment: build.mutation<void, string>({
+      query: (id) => ({
+        url: `/corporations/payments/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["ProjectReports", "CorporationPayments"],
+    }),
   }),
 });
 
-export const { useGetCorporationPaymentsByMonthQuery } = corporationPaymentsApi;
+export const {
+  useGetCorporationPaymentsByMonthQuery,
+  useCreateCorporationPaymentMutation,
+  useUpdateCorporationPaymentMutation,
+  useDeleteCorporationPaymentMutation,
+} = corporationPaymentsApi;

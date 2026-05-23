@@ -17,9 +17,9 @@ export default function IncomePage() {
   const { data: reports = [], isLoading } = useGetProjectReportsQuery(month);
   const { t, lang } = useLang();
 
-  const totalIncome = reports.reduce((sum, r) => sum + r.income, 0);
+  const totalIncome = reports.reduce((sum, r) => sum + r.totalIncome, 0);
   const totalProfit = reports.reduce(
-    (sum, r) => sum + r.income * (r.profitMargin / 100),
+    (sum, r) => sum + r.totalIncome * (r.profitMargin / 100),
     0,
   );
 
@@ -64,7 +64,7 @@ export default function IncomePage() {
             </thead>
             <tbody>
               {reports.map((report) => {
-                const profit = report.income * (report.profitMargin / 100);
+                const profit = report.totalIncome * (report.profitMargin / 100);
                 return (
                   <tr
                     key={report.id}
@@ -82,7 +82,7 @@ export default function IncomePage() {
                       </LinkButton>
                     </td>
                     <td className="py-3 px-4 text-right text-text rtl:text-left">
-                      {formatILS(report.income)}
+                      {formatILS(report.totalIncome)}
                     </td>
                     <td className="py-3 px-4 text-right text-text-muted rtl:text-left">
                       {report.profitMargin}%

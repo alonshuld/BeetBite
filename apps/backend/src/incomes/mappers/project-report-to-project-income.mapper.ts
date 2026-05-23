@@ -1,21 +1,24 @@
 import { ProjectIncomeDto } from '../dto/project-income.dto';
-import { ProjectReport } from 'src/generated/client';
+import { Prisma } from 'src/generated/client';
 
-/**
- * Converts a project report entity to a project income DTO.
- * @param projectReport project report with project details
- * @returns ProjectIncomeDto containing project income details
- */
 export const projectReportToProjectIncome = (
-  projectReport: ProjectReport & {
+  projectReport: {
+    projectId: string;
+    profitMargin: Prisma.Decimal;
     project: { name: string };
+    incomeEntries: { amount: Prisma.Decimal }[];
   },
-): ProjectIncomeDto => ({
-  projectId: projectReport.projectId,
-  projectName: projectReport.project.name,
-  income: projectReport.income.toNumber(),
-  profitMargin: projectReport.profitMargin.toNumber(),
-  profit:
-    (projectReport.income.toNumber() * projectReport.profitMargin.toNumber()) /
-    100,
-});
+): ProjectIncomeDto => {
+  const income = projectReport.incomeEntries.reduce(
+    (sum, e) => sum + e.amount.toNumber(),
+    0,
+  );
+  const profitMargin = projectReport.profitMargin.toNumber();
+  return {
+    projectId: projectReport.projectId,
+    projectName: projectReport.project.name,
+    income,
+    profitMargin,
+    profit: (income * profitMargin) / 100,
+  };
+};

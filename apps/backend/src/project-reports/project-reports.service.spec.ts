@@ -31,6 +31,11 @@ describe('ProjectReportsService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    projectReportIncome: {
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -55,16 +60,24 @@ describe('ProjectReportsService', () => {
     expect(service).toBeDefined();
   });
 
+  const defaultIncomeEntries = [
+    { id: 'entry-1', amount: new Prisma.Decimal('10000'), incomeDate: null },
+  ];
+
   const makeProjectReport = (overrides = {}) => ({
     id: 'report-1',
     projectId: 'project-1',
     subcontractorId: 'sub-1',
     date: new Date('2024-05-01T00:00:00.000Z'),
     profitMargin: new Prisma.Decimal('10'),
-    income: new Prisma.Decimal('10000'),
-    incomeDate: null,
-    project: { id: 'project-1', name: 'Project 1' },
+    project: { id: 'project-1', name: 'Project 1', client: { id: 'client-1', name: 'Client 1' } },
     subcontractor: { id: 'sub-1', name: 'Sub 1' },
+    incomeEntries: defaultIncomeEntries,
+    corporationPayments: [] as {
+      id: string;
+      amount: Prisma.Decimal;
+      corporation: { id: string; name: string };
+    }[],
     ...overrides,
   });
 
@@ -73,7 +86,7 @@ describe('ProjectReportsService', () => {
     subcontractorId: 'sub-1',
     date: '2024-05-01T00:00:00.000Z',
     profitMargin: 10,
-    income: 10000,
+    incomeEntries: [{ amount: 10000 }],
     corporationPayments: [],
   };
 
@@ -86,7 +99,7 @@ describe('ProjectReportsService', () => {
 
       expect(result).toMatchObject({
         id: 'report-1',
-        income: 10000,
+        totalIncome: 10000,
         profitMargin: 10,
       });
       expect(mockTx.projectReport.create).toHaveBeenCalledTimes(1);
@@ -290,15 +303,18 @@ describe('ProjectReportsService', () => {
       subcontractorId: 'sub-1',
       date: new Date('2024-05-01T00:00:00.000Z'),
       profitMargin: new Prisma.Decimal('10'),
-      income: new Prisma.Decimal('10000'),
-      incomeDate: null,
       project: { id: 'project-1', name: 'Project 1' },
       subcontractor: {
         id: 'sub-1',
         name: 'Sub 1',
         payments: [],
       },
-      corporationPayments: [],
+      incomeEntries: defaultIncomeEntries,
+      corporationPayments: [] as {
+        id: string;
+        amount: Prisma.Decimal;
+        corporation: { id: string; name: string };
+      }[],
       ...overrides,
     });
 
@@ -312,7 +328,7 @@ describe('ProjectReportsService', () => {
       expect(result.profit).toBeCloseTo(1000); // 10000 * 10 / 100
     });
 
-    it('should return correct subcontractorPayment = income - profit - Σ(corporationPayments)', async () => {
+    it('should return correct subcontractorPayment = totalIncome - profit - Σ(corporationPayments)', async () => {
       const fullReport = makeFullReport({
         corporationPayments: [
           {
@@ -333,7 +349,7 @@ describe('ProjectReportsService', () => {
 
       const result = await service.findOne('report-1');
 
-      // income=10000, profit=1000 (10%), corpPayments=2500
+      // totalIncome=10000, profit=1000 (10%), corpPayments=2500
       // subcontractorPayment = 10000 - 1000 - 2500 = 6500
       expect(result.subcontractor.payment).toBeCloseTo(6500);
     });
@@ -356,7 +372,7 @@ describe('ProjectReportsService', () => {
       );
     });
 
-    it('should handle profitMargin: 0 — subcontractorPayment equals income minus corp payments', async () => {
+    it('should handle profitMargin: 0 — subcontractorPayment equals totalIncome minus corp payments', async () => {
       const fullReport = makeFullReport({
         profitMargin: new Prisma.Decimal('0'),
         corporationPayments: [
@@ -422,7 +438,7 @@ describe('ProjectReportsService', () => {
       subcontractorId: 'sub-1',
       date: '2024-05-01T00:00:00.000Z',
       profitMargin: 10,
-      income: 10000,
+      incomeEntries: [{ amount: 10000 }],
       corporationPayments: [
         {
           corporationId: 'corp-1',

@@ -1,61 +1,76 @@
 import { Prisma, ProjectReport } from 'src/generated/client';
 import { ProjectReportListItemDto } from '../dto/project-report-list-item.dto';
 import { ProjectReportResponseDto } from '../dto/project-report-response.dto';
+import { IncomeEntryResponseDto } from '../dto/income-entry-response.dto';
 
-/**
- * Converts the given project report to a project report list item DTO
- * @param projectReport The project report from the database that contains embedded project and
- * subcontractor information.
- * @returns A project report list item DTO.
- */
+type IncomeEntryRaw = {
+  id: string;
+  amount: Prisma.Decimal;
+  incomeDate: Date | null;
+};
+
+type CorporationPaymentRaw = {
+  id: string;
+  amount: Prisma.Decimal;
+  corporation: { id: string; name: string };
+};
+
+function mapIncomeEntries(entries: IncomeEntryRaw[]): IncomeEntryResponseDto[] {
+  return entries.map((e) => ({
+    id: e.id,
+    amount: e.amount.toNumber(),
+    incomeDate: e.incomeDate?.toISOString() ?? null,
+  }));
+}
+
+function sumIncomeEntries(entries: IncomeEntryRaw[]): number {
+  return entries.reduce((sum, e) => sum + e.amount.toNumber(), 0);
+}
+
 export const toProjectReportListItem = (
-  projectReport: ProjectReport & {
-    project: { id: string; name: string };
+  projectReport: Omit<ProjectReport, 'income' | 'incomeDate'> & {
+    project: { id: string; name: string; client: { id: string; name: string } };
     subcontractor: { id: string; name: string };
+    incomeEntries: IncomeEntryRaw[];
+    corporationPayments: CorporationPaymentRaw[];
   },
-): ProjectReportListItemDto => ({
-  id: projectReport.id,
-  project: projectReport.project,
-  subcontractor: projectReport.subcontractor,
-  date: projectReport.date.toISOString(),
-  profitMargin: projectReport.profitMargin.toNumber(),
-  income: projectReport.income.toNumber(),
-  incomeDate: projectReport.incomeDate?.toISOString(),
-});
+): ProjectReportListItemDto => {
+  const entries = mapIncomeEntries(projectReport.incomeEntries);
+  return {
+    id: projectReport.id,
+    project: projectReport.project,
+    subcontractor: projectReport.subcontractor,
+    date: projectReport.date.toISOString(),
+    profitMargin: projectReport.profitMargin.toNumber(),
+    totalIncome: sumIncomeEntries(projectReport.incomeEntries),
+    incomeEntries: entries,
+    corporationPayments: projectReport.corporationPayments.map((cp) => ({
+      id: cp.id,
+      amount: cp.amount.toNumber(),
+      corporation: cp.corporation,
+    })),
+  };
+};
 
-/**
- * Converts the given list of project reports to a project report list item DTOs list.
- * @param projectReports The project reports list from the database that contains embedded project and
- * subcontractor information.
- * @returns A project report list item DTO list.
- */
 export const toProjectReportList = (
-  projectReports: (ProjectReport & {
-    project: { id: string; name: string };
+  projectReports: (Omit<ProjectReport, 'income' | 'incomeDate'> & {
+    project: { id: string; name: string; client: { id: string; name: string } };
     subcontractor: { id: string; name: string };
+    incomeEntries: IncomeEntryRaw[];
+    corporationPayments: CorporationPaymentRaw[];
   })[],
 ): ProjectReportListItemDto[] => projectReports.map(toProjectReportListItem);
 
-/**
- * Converts the given project report to a project report response DTO with enriched fields.
- * @param projectReport The project report from the database that contains embedded relationship parameters.
- * @param profit The calculated profit for the project report.
- * @param subcontractorPayment The calculated amount the subcontractor is owed for their work.
- * @returns A project report response DTO.
- */
 export const toProjectReportResponse = (
-  projectReport: ProjectReport & {
+  projectReport: Omit<ProjectReport, 'income' | 'incomeDate'> & {
     project: { id: string; name: string };
     subcontractor: {
       id: string;
       name: string;
       payments: { id: string }[];
     };
-    corporationPayments: {
-      id: string;
-      amount: Prisma.Decimal;
-      corporation: { id: string; name: string };
-    }[];
+    corporationPayments: CorporationPaymentRaw[];
+    incomeEntries: IncomeEntryRaw[];
   },
   profit: number,
   subcontractorPayment: number,
@@ -65,17 +80,16 @@ export const toProjectReportResponse = (
   date: projectReport.date.toISOString(),
   profitMargin: projectReport.profitMargin.toNumber(),
   profit,
-  income: projectReport.income.toNumber(),
-  incomeDate: projectReport.incomeDate?.toISOString(),
+  totalIncome: sumIncomeEntries(projectReport.incomeEntries),
+  incomeEntries: mapIncomeEntries(projectReport.incomeEntries),
   subcontractor: {
     id: projectReport.subcontractor.id,
     name: projectReport.subcontractor.name,
     payment: subcontractorPayment,
   },
-  corporationPayments: projectReport.corporationPayments.map(
-    (corporationPay) => ({
-      ...corporationPay,
-      amount: corporationPay.amount.toNumber(),
-    }),
-  ),
+  corporationPayments: projectReport.corporationPayments.map((cp) => ({
+    id: cp.id,
+    amount: cp.amount.toNumber(),
+    corporation: cp.corporation,
+  })),
 });

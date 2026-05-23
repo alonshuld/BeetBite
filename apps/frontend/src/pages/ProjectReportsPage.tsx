@@ -1,14 +1,23 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   useGetProjectReportsQuery,
   useGetProjectReportQuery,
   useUpdateProjectReportMutation,
   useCreateProjectReportMutation,
+  useAddIncomeEntryMutation,
+  useUpdateIncomeEntryMutation,
+  useDeleteIncomeEntryMutation,
   type ProjectReportDetail,
+  type IncomeEntry,
   type CreateProjectReportDto,
   type UpdateProjectReportDto,
 } from "@/api/endpoints/project-reports";
+import {
+  useCreateCorporationPaymentMutation,
+  useUpdateCorporationPaymentMutation,
+  useDeleteCorporationPaymentMutation,
+} from "@/api/endpoints/corporation-payments";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
@@ -33,6 +42,11 @@ interface CorpPaymentDraft {
   date: string;
 }
 
+interface IncomeEntryDraft {
+  amount: string;
+  incomeDate: string;
+}
+
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -45,10 +59,13 @@ function todayYM(): string {
 export default function ProjectReportsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t, lang } = useLang();
   const projectId = id!;
 
-  const [month, setMonth] = useState(todayYM);
+  const [month, setMonth] = useState(
+    () => searchParams.get("month") ?? todayYM(),
+  );
 
   const { data: monthReports = [], isLoading } =
     useGetProjectReportsQuery(month);
@@ -59,6 +76,16 @@ export default function ProjectReportsPage() {
     useCreateProjectReportMutation();
   const [updateReport, { isLoading: updating }] =
     useUpdateProjectReportMutation();
+  const [addIncomeEntry, { isLoading: addingEntry }] =
+    useAddIncomeEntryMutation();
+  const [updateIncomeEntry, { isLoading: updatingEntry }] =
+    useUpdateIncomeEntryMutation();
+  const [deleteIncomeEntry] = useDeleteIncomeEntryMutation();
+  const [createCorp, { isLoading: addingCorp }] =
+    useCreateCorporationPaymentMutation();
+  const [updateCorp, { isLoading: updatingCorp }] =
+    useUpdateCorporationPaymentMutation();
+  const [deleteCorp] = useDeleteCorporationPaymentMutation();
 
   const project = projects.find((p) => p.id === projectId);
   const projectName = project?.name ?? `Project ${projectId}`;
@@ -78,21 +105,40 @@ export default function ProjectReportsPage() {
     { skip: !currentListReport },
   );
 
+  // Edit modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [subcontractorId, setSubcontractorId] = useState("");
   const [reportMonth, setReportMonth] = useState(month);
-  const [income, setIncome] = useState("");
-  const [incomeDate, setIncomeDate] = useState(todayISO());
+  const [incomeEntries, setIncomeEntries] = useState<IncomeEntryDraft[]>([
+    { amount: "", incomeDate: "" },
+  ]);
   const [profitMarginPercent, setProfitMarginPercent] = useState("");
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
+
+  // Inline income entry editing state
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [editEntryAmount, setEditEntryAmount] = useState("");
+  const [editEntryDate, setEditEntryDate] = useState("");
+  const [addingNewEntry, setAddingNewEntry] = useState(false);
+  const [newEntryAmount, setNewEntryAmount] = useState("");
+  const [newEntryDate, setNewEntryDate] = useState("");
+
+  // Inline corp payment editing state
+  const [editingCorpId, setEditingCorpId] = useState<string | null>(null);
+  const [editCorpCorpId, setEditCorpCorpId] = useState("");
+  const [editCorpAmount, setEditCorpAmount] = useState("");
+  const [editCorpDate, setEditCorpDate] = useState("");
+  const [addingNewCorp, setAddingNewCorp] = useState(false);
+  const [newCorpCorpId, setNewCorpCorpId] = useState("");
+  const [newCorpAmount, setNewCorpAmount] = useState("");
+  const [newCorpDate, setNewCorpDate] = useState(todayISO);
 
   function openAdd() {
     setEditingId(null);
     setSubcontractorId("");
     setReportMonth(month);
-    setIncome("");
-    setIncomeDate(todayISO());
+    setIncomeEntries([{ amount: "", incomeDate: "" }]);
     setProfitMarginPercent("");
     setCorpPayments([]);
     setModalOpen(true);
@@ -102,20 +148,19 @@ export default function ProjectReportsPage() {
     setEditingId(report.id);
     setSubcontractorId(report.subcontractor.id);
     setReportMonth(report.date.slice(0, 7));
-    setIncome(String(report.income));
-    setIncomeDate(report.incomeDate ?? "");
-    setProfitMarginPercent(String(report.profitMargin));
-    setCorpPayments(
-      report.corporationPayments.map((cp) => ({
-        corporationId: cp.corporation.id,
-        amount: String(cp.amount),
-        date: todayISO(),
+    setIncomeEntries(
+      report.incomeEntries.map((e) => ({
+        amount: String(e.amount),
+        incomeDate: e.incomeDate ? e.incomeDate.slice(0, 10) : "",
       })),
     );
+    setProfitMarginPercent(String(report.profitMargin));
+    setCorpPayments([]);
     setModalOpen(true);
   }
 
   async function handleSave() {
+    const validEntries = incomeEntries.filter((e) => e.amount !== "");
     const corpPaymentsDto = corpPayments
       .filter((cp) => cp.corporationId !== "")
       .map((cp) => ({
@@ -128,8 +173,10 @@ export default function ProjectReportsPage() {
       const dto: UpdateProjectReportDto = {
         subcontractorId: subcontractorId || undefined,
         date: reportMonth + "-01",
-        income: Number(income),
-        incomeDate: incomeDate || undefined,
+        incomeEntries: validEntries.map((e) => ({
+          amount: Number(e.amount),
+          incomeDate: e.incomeDate || undefined,
+        })),
         profitMargin: Number(profitMarginPercent) || undefined,
         corporationPayments: corpPaymentsDto,
       };
@@ -139,14 +186,33 @@ export default function ProjectReportsPage() {
         projectId,
         subcontractorId: subcontractorId || undefined,
         date: reportMonth + "-01",
-        income: Number(income),
-        incomeDate: incomeDate || undefined,
+        incomeEntries: validEntries.map((e) => ({
+          amount: Number(e.amount),
+          incomeDate: e.incomeDate || undefined,
+        })),
         profitMargin: Number(profitMarginPercent) || undefined,
         corporationPayments: corpPaymentsDto,
       };
       await createReport(dto);
     }
     setModalOpen(false);
+  }
+
+  function addIncomeEntryDraft() {
+    setIncomeEntries((prev) => [...prev, { amount: "", incomeDate: "" }]);
+  }
+
+  function removeIncomeEntryDraft(idx: number) {
+    setIncomeEntries((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function updateIncomeEntryDraft(
+    idx: number,
+    patch: Partial<IncomeEntryDraft>,
+  ) {
+    setIncomeEntries((prev) =>
+      prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)),
+    );
   }
 
   function addCorpPayment() {
@@ -164,6 +230,68 @@ export default function ProjectReportsPage() {
     setCorpPayments((prev) =>
       prev.map((cp, i) => (i === idx ? { ...cp, ...patch } : cp)),
     );
+  }
+
+  function startEditEntry(entry: IncomeEntry) {
+    setEditingEntryId(entry.id);
+    setEditEntryAmount(String(entry.amount));
+    setEditEntryDate(entry.incomeDate ? entry.incomeDate.slice(0, 10) : "");
+  }
+
+  async function saveEntryEdit(entryId: string) {
+    await updateIncomeEntry({
+      id: entryId,
+      amount: Number(editEntryAmount) || undefined,
+      incomeDate: editEntryDate || null,
+    });
+    setEditingEntryId(null);
+  }
+
+  async function saveNewEntry() {
+    if (!currentReport || !newEntryAmount) return;
+    await addIncomeEntry({
+      reportId: currentReport.id,
+      amount: Number(newEntryAmount),
+      incomeDate: newEntryDate || undefined,
+    });
+    setAddingNewEntry(false);
+    setNewEntryAmount("");
+    setNewEntryDate("");
+  }
+
+  function startEditCorp(cp: { id: string; corporation: { id: string }; amount: number }) {
+    setEditingCorpId(cp.id);
+    setEditCorpCorpId(cp.corporation.id);
+    setEditCorpAmount(String(cp.amount));
+    setEditCorpDate(todayISO());
+  }
+
+  async function saveCorpEdit(cpId: string) {
+    if (!currentReport) return;
+    await updateCorp({
+      id: cpId,
+      projectReportId: currentReport.id,
+      corporationId: editCorpCorpId,
+      amount: Number(editCorpAmount),
+      date: editCorpDate,
+      isFuture: false,
+    });
+    setEditingCorpId(null);
+  }
+
+  async function saveNewCorp() {
+    if (!currentReport || !newCorpCorpId || !newCorpAmount) return;
+    await createCorp({
+      projectReportId: currentReport.id,
+      corporationId: newCorpCorpId,
+      amount: Number(newCorpAmount),
+      date: newCorpDate,
+      isFuture: false,
+    });
+    setAddingNewCorp(false);
+    setNewCorpCorpId("");
+    setNewCorpAmount("");
+    setNewCorpDate(todayISO());
   }
 
   const saving = creating || updating;
@@ -187,9 +315,9 @@ export default function ProjectReportsPage() {
             ← {t("projectReports")}
           </ButtonGhost>
           <h1 className="font-serif text-[26px] text-text">{projectName}</h1>
-          {project?.clientId && (
+          {project?.description && (
             <p className="text-text-muted text-sm mt-0.5">
-              {project.description && project.description}
+              {project.description}
             </p>
           )}
         </div>
@@ -250,26 +378,146 @@ export default function ProjectReportsPage() {
           />
         ) : (
           <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-3">
-            <div className="flex justify-between items-center">
-              <div className="flex flex-col">
-                <span className="text-xs text-text-muted">
-                  {t("clientIncome")}
-                </span>
-                {currentReport.incomeDate ? (
-                  <span className="text-[11px] text-success">
-                    {t("received")}{" "}
-                    {formatISODate(currentReport.incomeDate, lang)}
-                  </span>
-                ) : (
-                  <span className="text-[11px] text-warning">
-                    {t("paymentPending")}
-                  </span>
-                )}
+            {/* Income entries */}
+            {currentReport.incomeEntries.map((entry) => {
+              const isReceived = Boolean(entry.incomeDate);
+
+              if (editingEntryId === entry.id) {
+                return (
+                  <div key={entry.id} className="flex gap-2 items-end">
+                    <Input
+                      label={t("incomeILS")}
+                      type="number"
+                      min={0}
+                      value={editEntryAmount}
+                      onChange={(e) => setEditEntryAmount(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Input
+                      label={t("incomeDate")}
+                      type="date"
+                      value={editEntryDate}
+                      onChange={(e) => setEditEntryDate(e.target.value)}
+                      className="flex-1"
+                    />
+                    <div className="flex gap-1 mb-[1px]">
+                      <ButtonPrimary
+                        onClick={() => void saveEntryEdit(entry.id)}
+                        className="text-xs py-1 px-3"
+                        disabled={updatingEntry}
+                      >
+                        {t("save")}
+                      </ButtonPrimary>
+                      <ButtonGhost
+                        onClick={() => setEditingEntryId(null)}
+                        className="text-xs py-1 px-3"
+                      >
+                        {t("cancel")}
+                      </ButtonGhost>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={entry.id}
+                  className="flex justify-between items-center"
+                >
+                  <div className="flex flex-col">
+                    <span className="text-xs text-text-muted">
+                      {t("clientIncome")}
+                    </span>
+                    {isReceived ? (
+                      <span className="text-[11px] text-success">
+                        {t("received")}{" "}
+                        {formatISODate(entry.incomeDate!, lang)}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-warning">
+                        {t("paymentPending")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-text font-semibold">
+                      ₪{entry.amount.toLocaleString("he-IL")}
+                    </span>
+                    <ButtonGhost
+                      onClick={() => startEditEntry(entry)}
+                      className="text-xs py-0.5 px-2"
+                    >
+                      {t("edit")}
+                    </ButtonGhost>
+                    <ButtonDanger
+                      onClick={() => void deleteIncomeEntry(entry.id)}
+                      className="text-xs py-0.5 px-2"
+                    >
+                      {t("remove")}
+                    </ButtonDanger>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Add new income entry inline */}
+            {addingNewEntry ? (
+              <div className="flex gap-2 items-end">
+                <Input
+                  label={t("incomeILS")}
+                  type="number"
+                  min={0}
+                  value={newEntryAmount}
+                  onChange={(e) => setNewEntryAmount(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  label={t("incomeDate")}
+                  type="date"
+                  value={newEntryDate}
+                  onChange={(e) => setNewEntryDate(e.target.value)}
+                  className="flex-1"
+                />
+                <div className="flex gap-1 mb-[1px]">
+                  <ButtonPrimary
+                    onClick={() => void saveNewEntry()}
+                    className="text-xs py-1 px-3"
+                    disabled={addingEntry || !newEntryAmount}
+                  >
+                    {t("add")}
+                  </ButtonPrimary>
+                  <ButtonGhost
+                    onClick={() => {
+                      setAddingNewEntry(false);
+                      setNewEntryAmount("");
+                      setNewEntryDate("");
+                    }}
+                    className="text-xs py-1 px-3"
+                  >
+                    {t("cancel")}
+                  </ButtonGhost>
+                </div>
               </div>
-              <span className="text-text font-semibold">
-                ₪{currentReport.income.toLocaleString("he-IL")}
-              </span>
-            </div>
+            ) : (
+              <ButtonGhost
+                onClick={() => setAddingNewEntry(true)}
+                className="text-xs py-1 px-3 self-start"
+              >
+                + {t("addIncome")}
+              </ButtonGhost>
+            )}
+
+            {/* Total income if multiple entries */}
+            {currentReport.incomeEntries.length > 1 && (
+              <div className="flex justify-between items-center border-t border-border pt-1">
+                <span className="text-xs text-text-muted font-medium">
+                  {t("totalIncome")}
+                </span>
+                <span className="text-text font-semibold">
+                  ₪{currentReport.totalIncome.toLocaleString("he-IL")}
+                </span>
+              </div>
+            )}
 
             <div className="flex justify-between items-center">
               <span className="text-xs text-text-muted">
@@ -280,16 +528,142 @@ export default function ProjectReportsPage() {
               </span>
             </div>
 
-            {currentReport.corporationPayments.map((cp) => (
-              <div key={cp.id} className="flex justify-between items-center">
-                <span className="text-xs text-text-muted">
-                  {cp.corporation.name}
-                </span>
-                <span className="text-warning font-medium">
-                  − ₪{cp.amount.toLocaleString("he-IL")}
-                </span>
+            {/* Corp payments with inline edit/delete */}
+            {currentReport.corporationPayments.map((cp) => {
+              if (editingCorpId === cp.id) {
+                return (
+                  <div key={cp.id} className="flex gap-2 items-end">
+                    <Select
+                      value={editCorpCorpId}
+                      onChange={(e) => setEditCorpCorpId(e.target.value)}
+                      className="flex-1"
+                    >
+                      <option value="">— {t("corporation")} —</option>
+                      {corporations.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </Select>
+                    <Input
+                      label={t("amountILS")}
+                      type="number"
+                      min={0}
+                      value={editCorpAmount}
+                      onChange={(e) => setEditCorpAmount(e.target.value)}
+                      className="w-28"
+                    />
+                    <Input
+                      label={t("date")}
+                      type="date"
+                      value={editCorpDate}
+                      onChange={(e) => setEditCorpDate(e.target.value)}
+                      className="w-36"
+                    />
+                    <div className="flex gap-1 mb-[1px]">
+                      <ButtonPrimary
+                        onClick={() => void saveCorpEdit(cp.id)}
+                        className="text-xs py-1 px-3"
+                        disabled={updatingCorp}
+                      >
+                        {t("save")}
+                      </ButtonPrimary>
+                      <ButtonGhost
+                        onClick={() => setEditingCorpId(null)}
+                        className="text-xs py-1 px-3"
+                      >
+                        {t("cancel")}
+                      </ButtonGhost>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={cp.id} className="flex justify-between items-center">
+                  <span className="text-xs text-text-muted">
+                    {cp.corporation.name}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-warning font-medium">
+                      − ₪{cp.amount.toLocaleString("he-IL")}
+                    </span>
+                    <ButtonGhost
+                      onClick={() => startEditCorp(cp)}
+                      className="text-xs py-0.5 px-2"
+                    >
+                      {t("edit")}
+                    </ButtonGhost>
+                    <ButtonDanger
+                      onClick={() => void deleteCorp(cp.id)}
+                      className="text-xs py-0.5 px-2"
+                    >
+                      {t("remove")}
+                    </ButtonDanger>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Add new corp payment inline */}
+            {addingNewCorp ? (
+              <div className="flex gap-2 items-end">
+                <Select
+                  value={newCorpCorpId}
+                  onChange={(e) => setNewCorpCorpId(e.target.value)}
+                  className="flex-1"
+                >
+                  <option value="">— {t("corporation")} —</option>
+                  {corporations.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  label={t("amountILS")}
+                  type="number"
+                  min={0}
+                  value={newCorpAmount}
+                  onChange={(e) => setNewCorpAmount(e.target.value)}
+                  className="w-28"
+                />
+                <Input
+                  label={t("date")}
+                  type="date"
+                  value={newCorpDate}
+                  onChange={(e) => setNewCorpDate(e.target.value)}
+                  className="w-36"
+                />
+                <div className="flex gap-1 mb-[1px]">
+                  <ButtonPrimary
+                    onClick={() => void saveNewCorp()}
+                    className="text-xs py-1 px-3"
+                    disabled={addingCorp || !newCorpCorpId || !newCorpAmount}
+                  >
+                    {t("add")}
+                  </ButtonPrimary>
+                  <ButtonGhost
+                    onClick={() => {
+                      setAddingNewCorp(false);
+                      setNewCorpCorpId("");
+                      setNewCorpAmount("");
+                      setNewCorpDate(todayISO());
+                    }}
+                    className="text-xs py-1 px-3"
+                  >
+                    {t("cancel")}
+                  </ButtonGhost>
+                </div>
               </div>
-            ))}
+            ) : (
+              <ButtonGhost
+                onClick={() => setAddingNewCorp(true)}
+                className="text-xs py-1 px-3 self-start"
+              >
+                + {t("corporationPayments")}
+              </ButtonGhost>
+            )}
 
             <div className="border-t border-border" />
 
@@ -345,23 +719,6 @@ export default function ProjectReportsPage() {
             />
 
             <Input
-              label={t("incomeILS")}
-              type="number"
-              min={0}
-              value={income}
-              onChange={(e) => setIncome(e.target.value)}
-            />
-          </FormRow>
-
-          <FormRow>
-            <Input
-              label={t("incomeDate")}
-              type="date"
-              value={incomeDate}
-              onChange={(e) => setIncomeDate(e.target.value)}
-            />
-
-            <Input
               label={t("profitMarginPct")}
               type="number"
               min={0}
@@ -374,66 +731,117 @@ export default function ProjectReportsPage() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
-                {t("corporationPayments")}
+                {t("incomeEntries")}
               </span>
               <ButtonGhost
-                onClick={addCorpPayment}
+                onClick={addIncomeEntryDraft}
                 className="text-xs py-1 px-3"
               >
-                + {t("add")}
+                + {t("addIncome")}
               </ButtonGhost>
             </div>
 
-            {corpPayments.map((cp, i) => (
+            {incomeEntries.map((entry, i) => (
               <div
                 key={i}
-                className="flex flex-col gap-2 p-3 rounded bg-surface-2 border border-border"
+                className="flex gap-2 items-end p-3 rounded bg-surface-2 border border-border"
               >
-                <div className="grid grid-cols-3 gap-2">
-                  <Select
-                    value={cp.corporationId}
-                    onChange={(e) =>
-                      updateCorpPayment(i, {
-                        corporationId: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">— {t("corporation")} —</option>
-                    {corporations.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </Select>
-                  <Input
-                    placeholder={t("amountILS")}
-                    type="number"
-                    min={0}
-                    value={cp.amount}
-                    onChange={(e) =>
-                      updateCorpPayment(i, { amount: e.target.value })
-                    }
-                  />
-                  <Input
-                    label={t("date")}
-                    type="date"
-                    value={cp.date}
-                    onChange={(e) =>
-                      updateCorpPayment(i, { date: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="flex justify-end">
+                <Input
+                  label={t("incomeILS")}
+                  type="number"
+                  min={0}
+                  value={entry.amount}
+                  onChange={(e) =>
+                    updateIncomeEntryDraft(i, { amount: e.target.value })
+                  }
+                  className="flex-1"
+                />
+                <Input
+                  label={t("incomeDate")}
+                  type="date"
+                  value={entry.incomeDate}
+                  onChange={(e) =>
+                    updateIncomeEntryDraft(i, { incomeDate: e.target.value })
+                  }
+                  className="flex-1"
+                />
+                {incomeEntries.length > 1 && (
                   <ButtonDanger
-                    onClick={() => removeCorpPayment(i)}
-                    className="text-xs py-1 px-3"
+                    onClick={() => removeIncomeEntryDraft(i)}
+                    className="text-xs py-1 px-3 mb-[1px]"
                   >
                     {t("remove")}
                   </ButtonDanger>
-                </div>
+                )}
               </div>
             ))}
           </div>
+
+          {editingId === null && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+                  {t("corporationPayments")}
+                </span>
+                <ButtonGhost
+                  onClick={addCorpPayment}
+                  className="text-xs py-1 px-3"
+                >
+                  + {t("add")}
+                </ButtonGhost>
+              </div>
+
+              {corpPayments.map((cp, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col gap-2 p-3 rounded bg-surface-2 border border-border"
+                >
+                  <div className="grid grid-cols-3 gap-2">
+                    <Select
+                      value={cp.corporationId}
+                      onChange={(e) =>
+                        updateCorpPayment(i, {
+                          corporationId: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">— {t("corporation")} —</option>
+                      {corporations.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </Select>
+                    <Input
+                      placeholder={t("amountILS")}
+                      type="number"
+                      min={0}
+                      value={cp.amount}
+                      onChange={(e) =>
+                        updateCorpPayment(i, { amount: e.target.value })
+                      }
+                    />
+                    <Input
+                      label={t("date")}
+                      type="date"
+                      value={cp.date}
+                      onChange={(e) =>
+                        updateCorpPayment(i, { date: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <ButtonDanger
+                      onClick={() => removeCorpPayment(i)}
+                      className="text-xs py-1 px-3"
+                    >
+                      {t("remove")}
+                    </ButtonDanger>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </FormModal>
     </div>

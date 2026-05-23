@@ -1,13 +1,20 @@
 import { baseApi } from "@/api/baseApi";
 
+export interface IncomeEntry {
+  id: string;
+  amount: number;
+  incomeDate: string | null;
+}
+
 // Matches backend ProjectReportListItemDto
 export interface ProjectReport {
   id: string;
-  date: string; // ISO "2024-06-01T00:00:00.000Z"
-  income: number;
-  incomeDate?: string;
+  date: string;
   profitMargin: number;
-  project: { id: string; name: string };
+  totalIncome: number;
+  incomeEntries: IncomeEntry[];
+  corporationPayments: CorporationPaymentRow[];
+  project: { id: string; name: string; client: { id: string; name: string } };
   subcontractor: { id: string; name: string };
 }
 
@@ -21,10 +28,10 @@ export interface CorporationPaymentRow {
 export interface ProjectReportDetail {
   id: string;
   date: string;
-  income: number;
-  incomeDate?: string;
   profitMargin: number;
   profit: number;
+  totalIncome: number;
+  incomeEntries: IncomeEntry[];
   project: { id: string; name: string };
   subcontractor: { id: string; name: string; payment: number };
   corporationPayments: CorporationPaymentRow[];
@@ -35,8 +42,7 @@ export interface CreateProjectReportDto {
   projectId: string;
   subcontractorId?: string;
   date: string; // ISO date "2024-06-01"
-  income: number;
-  incomeDate?: string;
+  incomeEntries: { amount: number; incomeDate?: string }[];
   profitMargin?: number;
   corporationPayments: {
     corporationId: string;
@@ -46,6 +52,16 @@ export interface CreateProjectReportDto {
 }
 
 export type UpdateProjectReportDto = Partial<CreateProjectReportDto>;
+
+export interface AddIncomeEntryDto {
+  amount: number;
+  incomeDate?: string;
+}
+
+export interface UpdateIncomeEntryDto {
+  amount?: number;
+  incomeDate?: string | null;
+}
 
 export const projectReportsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
@@ -76,6 +92,35 @@ export const projectReportsApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/projects/reports/${id}`, method: "DELETE" }),
       invalidatesTags: ["ProjectReports", "Projects"],
     }),
+    addIncomeEntry: build.mutation<
+      IncomeEntry,
+      { reportId: string } & AddIncomeEntryDto
+    >({
+      query: ({ reportId, ...body }) => ({
+        url: `/projects/reports/${reportId}/income-entries`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["ProjectReports", "Projects"],
+    }),
+    updateIncomeEntry: build.mutation<
+      IncomeEntry,
+      { id: string } & UpdateIncomeEntryDto
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/projects/reports/income-entries/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["ProjectReports", "Projects"],
+    }),
+    deleteIncomeEntry: build.mutation<void, string>({
+      query: (id) => ({
+        url: `/projects/reports/income-entries/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["ProjectReports", "Projects"],
+    }),
   }),
 });
 
@@ -85,4 +130,7 @@ export const {
   useCreateProjectReportMutation,
   useUpdateProjectReportMutation,
   useDeleteProjectReportMutation,
+  useAddIncomeEntryMutation,
+  useUpdateIncomeEntryMutation,
+  useDeleteIncomeEntryMutation,
 } = projectReportsApi;

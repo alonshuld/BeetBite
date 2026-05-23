@@ -20,23 +20,38 @@ import { ProjectReportNotFoundError } from './errors/project-report-not-found.ex
 import { UpdateProjectReportDto } from './dto/update-project-report.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { CorporationNotFoundError } from 'src/corporations/errors/corporation-not-found.error';
+import { IncomeEntryResponseDto } from './dto/income-entry-response.dto';
+import { UpdateIncomeEntryDto } from './dto/update-income-entry.dto';
 
-/**
- * Service that provides project report related business logic.
- * @param prismaService PrismaService for database interactions.
- */
+const REPORT_INCLUDE = {
+  project: {
+    select: {
+      id: true,
+      name: true,
+      client: { select: { id: true, name: true } },
+    },
+  },
+  subcontractor: {
+    select: { id: true, name: true },
+  },
+  incomeEntries: {
+    select: { id: true, amount: true, incomeDate: true },
+  },
+  corporationPayments: {
+    select: {
+      id: true,
+      amount: true,
+      corporation: { select: { id: true, name: true } },
+    },
+  },
+} as const;
+
 @Injectable()
 export class ProjectReportsService {
   private readonly logger = new Logger(ProjectReportsService.name);
 
   constructor(private readonly prismaService: PrismaService) {}
 
-  /**
-   * Enriches the given CreateProjectReportDto object with fields from the previous month's report if
-   * it exists and the fields were not provided.
-   * @param createProjectReportDto The DTO to enrich with the previous month report's fields.
-   * @returns An enriched DTO that contains all the necessary values.
-   */
   private async enrichCreateProjectReportDto(
     createProjectReportDto: CreateProjectReportDto,
   ): Promise<
@@ -48,16 +63,13 @@ export class ProjectReportsService {
       createProjectReportDto.subcontractorId !== undefined
     )
       return createProjectReportDto as CreateProjectReportDto &
-        Required<
-          Pick<CreateProjectReportDto, 'subcontractorId' | 'profitMargin'>
-        >;
+        Required<Pick<CreateProjectReportDto, 'subcontractorId' | 'profitMargin'>>;
 
     const previousMonthDate = new Date(createProjectReportDto.date);
     previousMonthDate.setUTCMonth(previousMonthDate.getUTCMonth() - 1);
 
     this.logger.debug(
-      `Checking project's ${createProjectReportDto.projectId} report from
-${previousMonthDate.toDateString()} to find the subcontractor ID and profit margins...`,
+      `Checking project's ${createProjectReportDto.projectId} report from ${previousMonthDate.toDateString()} to find the subcontractor ID and profit margins...`,
     );
 
     const previousMonthProjectReport =
@@ -81,11 +93,6 @@ ${previousMonthDate.toDateString()} to find the subcontractor ID and profit marg
       );
     }
 
-    this.logger
-      .debug(`Got the following fields from the project ${createProjectReportDto.projectId} report
-made in ${previousMonthDate.toDateString()}: Subcontractor ID - ${previousMonthProjectReport.subcontractorId},
-Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
-
     return {
       ...createProjectReportDto,
       profitMargin:
@@ -97,114 +104,68 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
     };
   }
 
-  /**
-   * Creates a new project report.
-   * @param createProjectReportDto The DTO containing the project report details.
-   * @returns The created project.
-   */
   async create(
     createProjectReportDto: CreateProjectReportDto,
   ): Promise<ProjectReportListItemDto> {
-    const enrichedCreateProjectReportDto =
-      await this.enrichCreateProjectReportDto(createProjectReportDto);
+    const enriched = await this.enrichCreateProjectReportDto(createProjectReportDto);
 
     try {
-      const createdProjectReport = await this.prismaService.$transaction(
-        async (tx) => {
-          const createdProjectReport = await tx.projectReport.create({
-            data: {
-              date: new Date(enrichedCreateProjectReportDto.date),
-              income: new Prisma.Decimal(enrichedCreateProjectReportDto.income),
-              incomeDate:
-                enrichedCreateProjectReportDto.incomeDate &&
-                new Date(enrichedCreateProjectReportDto.incomeDate),
-              profitMargin: new Prisma.Decimal(
-                enrichedCreateProjectReportDto.profitMargin,
-              ),
-              project: {
-                connect: {
-                  id: enrichedCreateProjectReportDto.projectId,
-                },
-              },
-              subcontractor: {
-                connect: {
-                  id: enrichedCreateProjectReportDto.subcontractorId,
-                },
-              },
-              corporationPayments: {
-                createMany: {
-                  data: enrichedCreateProjectReportDto.corporationPayments.map(
-                    (corporationPay) => ({
-                      corporationId: corporationPay.corporationId,
-                      amount: corporationPay.amount,
-                      date: corporationPay.date,
-                    }),
-                  ),
-                },
+      const created = await this.prismaService.$transaction(async (tx) => {
+        const report = await tx.projectReport.create({
+          data: {
+            date: new Date(enriched.date),
+            profitMargin: new Prisma.Decimal(enriched.profitMargin),
+            project: { connect: { id: enriched.projectId } },
+            subcontractor: { connect: { id: enriched.subcontractorId } },
+            incomeEntries: {
+              createMany: {
+                data: enriched.incomeEntries.map((e) => ({
+                  amount: new Prisma.Decimal(e.amount),
+                  incomeDate: e.incomeDate ? new Date(e.incomeDate) : null,
+                })),
               },
             },
-            include: {
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-              subcontractor: {
-                select: {
-                  id: true,
-                  name: true,
-                },
+            corporationPayments: {
+              createMany: {
+                data: enriched.corporationPayments.map((cp) => ({
+                  corporationId: cp.corporationId,
+                  amount: cp.amount,
+                  date: cp.date,
+                })),
               },
             },
-          });
+          },
+          include: REPORT_INCLUDE,
+        });
+        return report;
+      });
 
-          return createdProjectReport;
-        },
-      );
-      this.logger.log(`Project report created: ${createdProjectReport.id}`);
-
-      return toProjectReportListItem(createdProjectReport);
+      this.logger.log(`Project report created: ${created.id}`);
+      return toProjectReportListItem(created);
     } catch (error) {
-      if (!(error instanceof PrismaClientKnownRequestError)) {
-        throw error;
-      }
+      if (!(error instanceof PrismaClientKnownRequestError)) throw error;
 
       switch (error.code) {
         case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
           throw new CorporationNotFoundError();
         case PRISMA_ERROR_CODES.NOT_FOUND: {
           const model = (error.meta?.model as string) ?? '';
-
           if (model.toLowerCase().includes('project'))
-            throw new ProjectNotFoundError(
-              enrichedCreateProjectReportDto.projectId,
-            );
+            throw new ProjectNotFoundError(enriched.projectId);
           if (model.toLowerCase().includes('subcontractor'))
-            throw new SubcontractorNotFoundError(
-              enrichedCreateProjectReportDto.subcontractorId,
-            );
-
+            throw new SubcontractorNotFoundError(enriched.subcontractorId);
           throw new EntityNotFoundError(
             'Could not find either the existing project or subcontractor for the given project report',
           );
         }
         case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
-          throw new ProjectReportAlreadyExistsError(
-            enrichedCreateProjectReportDto.projectId,
-            enrichedCreateProjectReportDto.date,
-          );
+          throw new ProjectReportAlreadyExistsError(enriched.projectId, enriched.date);
         default:
           throw error;
       }
     }
   }
 
-  /**
-   * Finds all project reports in the given month with pagination.
-   * @param paginatedMonthQueryDto The pagination and month query parameters.
-   * @returns A list of projects reports.
-   */
   async findProjectReportsInMonth(
     paginatedMonthQueryDto: PaginatedMonthQueryDto,
   ): Promise<ProjectReportListItemDto[]> {
@@ -212,38 +173,16 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
     const limit = paginatedMonthQueryDto.limit ?? PAGINATION_DEFAULTS.LIMIT;
 
     const projectReports = await this.prismaService.projectReport.findMany({
-      where: {
-        date: paginatedMonthQueryDto.month,
-      },
+      where: { date: paginatedMonthQueryDto.month },
       skip: Math.max(0, (page - 1) * limit),
       take: Math.max(1, limit),
-      include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        subcontractor: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
+      include: REPORT_INCLUDE,
     });
 
     this.logger.log(`Retrieved ${projectReports.length} project reports`);
-
     return toProjectReportList(projectReports);
   }
 
-  /**
-   * Retrieves the project report of the previous given month for the given project.
-   * @param projectId The ID of the project whose previous report is to be retrieved.
-   * @param monthQueryDto The month whose previous month's project report is to be retrieved.
-   * @returns The project report of the given project in the previous month.
-   */
   async findProjectReportForPreviousMonth(
     projectId: string,
     monthQueryDto: MonthQueryDto,
@@ -257,76 +196,29 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
 
     const projectReport = await this.prismaService.projectReport.findUnique({
       where: {
-        projectId_date: {
-          projectId,
-          date: previousMonthDate,
-        },
+        projectId_date: { projectId, date: previousMonthDate },
       },
-      include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        subcontractor: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
+      include: REPORT_INCLUDE,
     });
 
     if (!projectReport)
-      throw new ProjectReportNotFoundError(
-        projectId,
-        previousMonthDate.toISOString(),
-      );
+      throw new ProjectReportNotFoundError(projectId, previousMonthDate.toISOString());
 
     this.logger.log(`Project report retrieved: ${projectReport.id}`);
-
     return toProjectReportListItem(projectReport);
   }
 
-  /**
-   * Finds the project report with the given ID.
-   * @param id The ID of the project report to retrieve.
-   * @returns An enriched project report with the given ID.
-   */
   async findOne(id: string): Promise<ProjectReportResponseDto> {
-    const projectReportDate = await this.prismaService.projectReport.findUnique(
-      {
-        where: {
-          id,
-        },
-        select: {
-          date: true,
-        },
-      },
-    );
-
-    if (!projectReportDate) throw new ProjectReportNotFoundError(id);
-
     const projectReport = await this.prismaService.projectReport.findUnique({
       where: { id },
       include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        project: { select: { id: true, name: true } },
+        incomeEntries: { select: { id: true, amount: true, incomeDate: true } },
         corporationPayments: {
           select: {
             id: true,
             amount: true,
-            corporation: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
+            corporation: { select: { id: true, name: true } },
           },
         },
         subcontractor: {
@@ -334,12 +226,8 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
             id: true,
             name: true,
             payments: {
-              where: {
-                serviceDate: projectReportDate.date,
-              },
-              select: {
-                id: true,
-              },
+              where: { serviceDate: undefined },
+              select: { id: true },
             },
           },
         },
@@ -348,142 +236,121 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
 
     if (!projectReport) throw new ProjectReportNotFoundError(id);
 
+    // Re-fetch with correct serviceDate filter
+    const reportWithSubPayments = await this.prismaService.projectReport.findUnique({
+      where: { id },
+      include: {
+        project: { select: { id: true, name: true } },
+        incomeEntries: { select: { id: true, amount: true, incomeDate: true } },
+        corporationPayments: {
+          select: {
+            id: true,
+            amount: true,
+            corporation: { select: { id: true, name: true } },
+          },
+        },
+        subcontractor: {
+          select: {
+            id: true,
+            name: true,
+            payments: {
+              where: { serviceDate: projectReport.date },
+              select: { id: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!reportWithSubPayments) throw new ProjectReportNotFoundError(id);
+
     this.logger.log(`Project report retrieved: ${id}`);
 
-    const profit =
-      projectReport.income.toNumber() *
-      (projectReport.profitMargin.toNumber() / 100);
-    const corporationPaymentsTotal = projectReport.corporationPayments.reduce(
-      (sum, corporationPay) => sum + corporationPay.amount.toNumber(),
+    const totalIncome = reportWithSubPayments.incomeEntries.reduce(
+      (sum, e) => sum + e.amount.toNumber(),
       0,
     );
-
-    const subcontractorPayment =
-      projectReport.income.toNumber() - profit - corporationPaymentsTotal;
+    const profit = totalIncome * (reportWithSubPayments.profitMargin.toNumber() / 100);
+    const corpTotal = reportWithSubPayments.corporationPayments.reduce(
+      (sum, cp) => sum + cp.amount.toNumber(),
+      0,
+    );
+    const subcontractorPayment = totalIncome - profit - corpTotal;
 
     this.logger.log(
-      `The profit for project ${projectReport.projectId} in ${projectReport.date.toDateString()}
- is ${profit}. The subcontractor ${projectReport.subcontractorId} is owed ${subcontractorPayment}.`,
+      `Profit for project ${reportWithSubPayments.projectId} in ${reportWithSubPayments.date.toDateString()}: ${profit}. Subcontractor owed: ${subcontractorPayment}.`,
     );
 
-    return toProjectReportResponse(projectReport, profit, subcontractorPayment);
+    return toProjectReportResponse(reportWithSubPayments, profit, subcontractorPayment);
   }
 
-  /**
-   * Updates the project report with the given ID.
-   * @param id The ID of an existing project report to update.
-   * @param updateProjectReportDto The DTO containing updated project report parameters.
-   * @returns The updated project report.
-   */
   async update(
     id: string,
     updateProjectReportDto: UpdateProjectReportDto,
   ): Promise<ProjectReportListItemDto> {
-    const enrichedCreateProjectReportDto =
-      await this.enrichCreateProjectReportDto(updateProjectReportDto);
+    const enriched = await this.enrichCreateProjectReportDto(updateProjectReportDto);
 
     try {
-      const updatedProjectReport =
-        await this.prismaService.projectReport.update({
-          where: {
-            id: id,
-          },
-          data: {
-            date: new Date(enrichedCreateProjectReportDto.date),
-            income: new Prisma.Decimal(enrichedCreateProjectReportDto.income),
-            incomeDate:
-              enrichedCreateProjectReportDto.incomeDate &&
-              new Date(enrichedCreateProjectReportDto.incomeDate),
-            profitMargin: new Prisma.Decimal(
-              enrichedCreateProjectReportDto.profitMargin,
-            ),
-            project: {
-              connect: {
-                id: enrichedCreateProjectReportDto.projectId,
-              },
-            },
-            subcontractor: {
-              connect: {
-                id: enrichedCreateProjectReportDto.subcontractorId,
-              },
-            },
-            corporationPayments: {
-              deleteMany: {},
-              createMany: {
-                data: enrichedCreateProjectReportDto.corporationPayments.map(
-                  (corporationPay) => ({
-                    corporationId: corporationPay.corporationId,
-                    amount: corporationPay.amount,
-                    date: corporationPay.date,
-                  }),
-                ),
-              },
+      const updated = await this.prismaService.projectReport.update({
+        where: { id },
+        data: {
+          date: new Date(enriched.date),
+          profitMargin: new Prisma.Decimal(enriched.profitMargin),
+          project: enriched.projectId
+            ? { connect: { id: enriched.projectId } }
+            : undefined,
+          subcontractor: { connect: { id: enriched.subcontractorId } },
+          incomeEntries: {
+            deleteMany: {},
+            createMany: {
+              data: enriched.incomeEntries.map((e) => ({
+                amount: new Prisma.Decimal(e.amount),
+                incomeDate: e.incomeDate ? new Date(e.incomeDate) : null,
+              })),
             },
           },
-          include: {
-            project: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-            subcontractor: {
-              select: {
-                id: true,
-                name: true,
-              },
+          corporationPayments: {
+            deleteMany: {},
+            createMany: {
+              data: enriched.corporationPayments.map((cp) => ({
+                corporationId: cp.corporationId,
+                amount: cp.amount,
+                date: cp.date,
+              })),
             },
           },
-        });
+        },
+        include: REPORT_INCLUDE,
+      });
       this.logger.log(`Project report ${id} updated`);
-
-      return toProjectReportListItem(updatedProjectReport);
+      return toProjectReportListItem(updated);
     } catch (error) {
-      if (!(error instanceof PrismaClientKnownRequestError)) {
-        throw error;
-      }
+      if (!(error instanceof PrismaClientKnownRequestError)) throw error;
 
       switch (error.code) {
         case PRISMA_ERROR_CODES.NOT_FOUND: {
           const model = (error.meta?.model as string) ?? '';
-
           if (model.toLowerCase().includes('projectreport'))
             throw new ProjectReportNotFoundError(id);
-
           if (model.toLowerCase().includes('project'))
-            throw new ProjectNotFoundError(
-              enrichedCreateProjectReportDto.projectId,
-            );
+            throw new ProjectNotFoundError(enriched.projectId);
           if (model.toLowerCase().includes('subcontractor'))
-            throw new SubcontractorNotFoundError(
-              enrichedCreateProjectReportDto.subcontractorId,
-            );
-
+            throw new SubcontractorNotFoundError(enriched.subcontractorId);
           throw new EntityNotFoundError(
             'Could not find either the existing project or subcontractor for the given project report',
           );
         }
         case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
-          throw new ProjectReportAlreadyExistsError(
-            enrichedCreateProjectReportDto.projectId,
-            enrichedCreateProjectReportDto.date,
-          );
+          throw new ProjectReportAlreadyExistsError(enriched.projectId, enriched.date);
         default:
           throw error;
       }
     }
   }
 
-  /**
-   * Removes a project report by its ID.
-   * @param id The ID of the project report to remove.
-   */
   async remove(id: string): Promise<void> {
     try {
-      await this.prismaService.projectReport.delete({
-        where: { id },
-      });
-
+      await this.prismaService.projectReport.delete({ where: { id } });
       this.logger.log(`Project report deleted: ${id}`);
     } catch (error) {
       if (
@@ -491,6 +358,83 @@ Profit margin - ${previousMonthProjectReport.profitMargin.toNumber()}`);
         error.code === PRISMA_ERROR_CODES.NOT_FOUND
       ) {
         throw new ProjectReportNotFoundError(id);
+      }
+      throw error;
+    }
+  }
+
+  // Income entry CRUD
+
+  async addIncomeEntry(
+    reportId: string,
+    amount: number,
+    incomeDate?: string,
+  ): Promise<IncomeEntryResponseDto> {
+    // Verify report exists
+    const report = await this.prismaService.projectReport.findUnique({
+      where: { id: reportId },
+      select: { id: true },
+    });
+    if (!report) throw new ProjectReportNotFoundError(reportId);
+
+    const entry = await this.prismaService.projectReportIncome.create({
+      data: {
+        projectReportId: reportId,
+        amount: new Prisma.Decimal(amount),
+        incomeDate: incomeDate ? new Date(incomeDate) : null,
+      },
+    });
+
+    this.logger.log(`Income entry ${entry.id} added to report ${reportId}`);
+    return {
+      id: entry.id,
+      amount: entry.amount.toNumber(),
+      incomeDate: entry.incomeDate?.toISOString() ?? null,
+    };
+  }
+
+  async updateIncomeEntry(
+    entryId: string,
+    dto: UpdateIncomeEntryDto,
+  ): Promise<IncomeEntryResponseDto> {
+    try {
+      const entry = await this.prismaService.projectReportIncome.update({
+        where: { id: entryId },
+        data: {
+          ...(dto.amount !== undefined && { amount: new Prisma.Decimal(dto.amount) }),
+          ...(dto.incomeDate !== undefined && {
+            incomeDate: dto.incomeDate ? new Date(dto.incomeDate) : null,
+          }),
+        },
+      });
+
+      this.logger.log(`Income entry ${entryId} updated`);
+      return {
+        id: entry.id,
+        amount: entry.amount.toNumber(),
+        incomeDate: entry.incomeDate?.toISOString() ?? null,
+      };
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_ERROR_CODES.NOT_FOUND
+      ) {
+        throw new EntityNotFoundError(`Income entry ${entryId} not found`);
+      }
+      throw error;
+    }
+  }
+
+  async removeIncomeEntry(entryId: string): Promise<void> {
+    try {
+      await this.prismaService.projectReportIncome.delete({ where: { id: entryId } });
+      this.logger.log(`Income entry ${entryId} deleted`);
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_ERROR_CODES.NOT_FOUND
+      ) {
+        throw new EntityNotFoundError(`Income entry ${entryId} not found`);
       }
       throw error;
     }

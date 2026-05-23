@@ -201,7 +201,8 @@ export default function ProjectsPage() {
 
   const totalRemaining = projects.reduce(
     (sum, p) =>
-      sum + Math.max(0, p.estimatedAmount - (p.paymentProgress?.totalPaid ?? 0)),
+      sum +
+      Math.max(0, p.estimatedAmount - (p.paymentProgress?.totalPaid ?? 0)),
     0,
   );
 
@@ -235,7 +236,9 @@ export default function ProjectsPage() {
         </div>
         <span className="text-sm text-text-muted">
           {t("totalRemaining")}:{" "}
-          <span className="font-bold text-base text-text">{formatILS(totalRemaining)}</span>
+          <span className="font-bold text-base text-text">
+            {formatILS(totalRemaining)}
+          </span>
         </span>
       </div>
 
