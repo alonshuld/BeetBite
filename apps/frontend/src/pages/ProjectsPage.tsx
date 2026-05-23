@@ -95,6 +95,9 @@ export default function ProjectsPage() {
     future: false,
     closed: false,
   });
+  const [progressSort, setProgressSort] = useState<"none" | "asc" | "desc">(
+    "none",
+  );
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
@@ -104,13 +107,27 @@ export default function ProjectsPage() {
     setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
-  const filtered = projects.filter((p) => {
-    const status = projectStatus(p);
-    if (status === "active" && filters.active) return true;
-    if (status === "future" && filters.future) return true;
-    if (status === "closed" && filters.closed) return true;
-    return false;
-  });
+  const filtered = projects
+    .filter((p) => {
+      const status = projectStatus(p);
+      if (status === "active" && filters.active) return true;
+      if (status === "future" && filters.future) return true;
+      if (status === "closed" && filters.closed) return true;
+      return false;
+    })
+    .slice()
+    .sort((a, b) => {
+      if (progressSort === "none") return 0;
+      const pctA = completionPct(a);
+      const pctB = completionPct(b);
+      return progressSort === "asc" ? pctA - pctB : pctB - pctA;
+    });
+
+  function cycleProgressSort() {
+    setProgressSort((prev) =>
+      prev === "none" ? "asc" : prev === "asc" ? "desc" : "none",
+    );
+  }
 
   function openAdd() {
     setEditing(null);
@@ -236,7 +253,30 @@ export default function ProjectsPage() {
                   {t("estimated")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                  {t("completion")}
+                  <div className="flex items-center gap-1.5">
+                    {t("completion")}
+                    <button
+                      onClick={cycleProgressSort}
+                      title={
+                        progressSort === "none"
+                          ? t("sortByProgressAsc")
+                          : progressSort === "asc"
+                            ? t("sortByProgressDesc")
+                            : t("sortByProgressNone")
+                      }
+                      className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] border transition-colors ${
+                        progressSort !== "none"
+                          ? "bg-beet text-white border-beet"
+                          : "bg-transparent text-text-muted border-border hover:bg-surface-2"
+                      }`}
+                    >
+                      {progressSort === "asc"
+                        ? "↑"
+                        : progressSort === "desc"
+                          ? "↓"
+                          : "⇅"}
+                    </button>
+                  </div>
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
                   {t("status")}
