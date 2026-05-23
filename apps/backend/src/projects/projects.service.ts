@@ -19,8 +19,12 @@ import { ProjectAlreadyExistsError } from './errors/project-already-exists.excep
 
 const PAID_REPORTS_INCLUDE = {
   reports: {
-    where: { incomeDate: { not: null } },
-    select: { income: true },
+    select: {
+      incomeEntries: {
+        where: { incomeDate: { not: null } },
+        select: { amount: true },
+      },
+    },
   },
   _count: {
     select: { reports: true },
@@ -106,7 +110,7 @@ export class ProjectsService {
       ({ reports, _count, ...project }) => {
         projectIdToIncomesSumMap.set(
           project.id,
-          reports.reduce((sum, r) => sum + Number(r.income), 0),
+          reports.flatMap((r) => r.incomeEntries).reduce((sum, e) => sum + Number(e.amount), 0),
         );
         projectIdToHasReportsMap.set(project.id, _count.reports > 0);
         return project;
@@ -138,7 +142,9 @@ export class ProjectsService {
     }
 
     const { reports, _count, ...project } = projectWithReports;
-    const incomesSum = reports.reduce((sum, r) => sum + Number(r.income), 0);
+    const incomesSum = reports
+      .flatMap((r) => r.incomeEntries)
+      .reduce((sum, e) => sum + Number(e.amount), 0);
 
     this.logger.log(`Project retrieved: ${id}`);
     return toProjectResponse(project, incomesSum, _count.reports > 0);

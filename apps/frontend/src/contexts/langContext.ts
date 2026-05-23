@@ -163,6 +163,9 @@ export const translations = {
     incomeILS: "Income (₪)",
     incomeDate: "Income Date",
     profitMarginPct: "Profit Margin %",
+    incomeEntries: "Income Entries",
+    addIncome: "Add Income",
+    totalSubcontractorPayments: "Total Sub Payments",
     // ProjectReportsPage
     totalPaidByClient: "Total Paid by Client",
     noReportThisMonth: "No report for this month",
@@ -335,6 +338,9 @@ export const translations = {
     incomeILS: "הכנסה (₪)",
     incomeDate: "תאריך הכנסה",
     profitMarginPct: "מרווח רווח %",
+    incomeEntries: "הכנסות",
+    addIncome: "הוסף הכנסה",
+    totalSubcontractorPayments: 'סה"כ תשלומי קבלן',
     // ProjectReportsPage
     totalPaidByClient: "סך שולם על ידי לקוח",
     noReportThisMonth: "אין דוח לחודש זה",

@@ -1,11 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { NestedProjectDto } from './nested-project.dto';
+import { NestedProjectWithClientDto } from './nested-project-with-client.dto';
 import { NestedSubcontractorDto } from './nested-subcontractor.dto';
+import { IncomeEntryResponseDto } from './income-entry-response.dto';
+import { NestedCorporationPaymentDto } from './nested-corporation-payment.dto';
 
-/**
- * Represents the paraemters of a project report returned as part of a list, containing
- * less parameters.
- */
 export class ProjectReportListItemDto {
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
@@ -14,10 +12,10 @@ export class ProjectReportListItemDto {
   id!: string;
 
   @ApiProperty({
-    description: "Information on the report's project",
-    type: NestedProjectDto,
+    description: "Information on the report's project (including client)",
+    type: NestedProjectWithClientDto,
   })
-  project!: NestedProjectDto;
+  project!: NestedProjectWithClientDto;
 
   @ApiProperty({
     description: "Information on the report's subcontractor",
@@ -40,16 +38,19 @@ export class ProjectReportListItemDto {
 
   @ApiProperty({
     example: 100000,
-    description:
-      'The amount of money the client paid for the project that month',
+    description: 'Total income computed from all income entries',
   })
-  income!: number;
+  totalIncome!: number;
 
   @ApiProperty({
-    example: '2026-01-10T00:00:00.000Z',
-    description:
-      'The exact date the client actually made the payment (if at all)',
-    format: 'ISO-8601',
+    description: 'Individual income entries for this report',
+    type: [IncomeEntryResponseDto],
   })
-  incomeDate?: string;
+  incomeEntries!: IncomeEntryResponseDto[];
+
+  @ApiProperty({
+    description: 'Corporation payments for this report',
+    type: [NestedCorporationPaymentDto],
+  })
+  corporationPayments!: NestedCorporationPaymentDto[];
 }

@@ -2,10 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 import { NestedCorporationPaymentDto } from './nested-corporation-payment.dto';
 import { NestedProjectDto } from './nested-project.dto';
 import { NestedSubcontractorWithPaymentDto } from './nested-subcontractor-with-payment.dto';
+import { IncomeEntryResponseDto } from './income-entry-response.dto';
 
-/**
- * Represents a full enriched project report response.
- */
 export class ProjectReportResponseDto {
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
@@ -40,29 +38,24 @@ export class ProjectReportResponseDto {
 
   @ApiProperty({
     example: 100000,
-    description:
-      'The amount of money the client paid for the project that month',
+    description: 'Total income computed from all income entries',
   })
-  income!: number;
+  totalIncome!: number;
 
   @ApiProperty({
-    example: '2026-01-10T00:00:00.000Z',
-    description:
-      'The exact date the client actually made the payment (if at all)',
-    format: 'ISO-8601',
+    description: 'Individual income entries for this report',
+    type: [IncomeEntryResponseDto],
   })
-  incomeDate?: string;
+  incomeEntries!: IncomeEntryResponseDto[];
 
   @ApiProperty({
-    description:
-      'The payments made to corporations for their work on the project that month',
+    description: 'The payments made to corporations for their work on the project that month',
     type: [NestedCorporationPaymentDto],
   })
   corporationPayments!: NestedCorporationPaymentDto[];
 
   @ApiProperty({
-    description:
-      "Subcontractor information for the given month's project report",
+    description: "Subcontractor information for the given month's project report",
     type: NestedSubcontractorWithPaymentDto,
   })
   subcontractor!: NestedSubcontractorWithPaymentDto;

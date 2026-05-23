@@ -7,51 +7,27 @@ import { MonthlyIncomeDto } from './dto/monthly-income.dto';
 import { MonthIncomeProjectDto } from './dto/month-income-project.dto';
 import { projectReportToMonthIncomeProject } from './mappers/project-report-to-month-income-project.mapper';
 
-/**
- * Service providing income business logic.
- * @param prismaService PrismaService for database interactions
- */
 @Injectable()
 export class IncomesService {
   private readonly logger = new Logger(IncomesService.name);
 
   constructor(private readonly prismaService: PrismaService) {}
 
-  /**
-   * Get the total income, total profit, and project incomes
-   * @param date The date of the income report
-   * @returns The income response DTO
-   */
-  async getMonthIncome(
-    monthQueryDto: MonthQueryDto,
-  ): Promise<IncomeResponseDto> {
+  async getMonthIncome(monthQueryDto: MonthQueryDto): Promise<IncomeResponseDto> {
     const projectIncomes = (
       await this.prismaService.projectReport.findMany({
-        where: {
-          date: monthQueryDto.month,
-        },
+        where: { date: monthQueryDto.month },
         include: {
-          project: {
-            select: {
-              name: true,
-            },
-          },
+          project: { select: { name: true } },
+          incomeEntries: { select: { amount: true } },
         },
       })
     ).map((report) => projectReportToProjectIncome(report));
 
-    const totalIncome = projectIncomes.reduce(
-      (sum, report) => sum + report.income,
-      0,
-    );
-    const totalProfit = projectIncomes.reduce(
-      (sum, report) => sum + report.profit,
-      0,
-    );
+    const totalIncome = projectIncomes.reduce((sum, r) => sum + r.income, 0);
+    const totalProfit = projectIncomes.reduce((sum, r) => sum + r.profit, 0);
 
-    this.logger.log(
-      `Retrieved the income for ${monthQueryDto.month}: ${totalIncome}`,
-    );
+    this.logger.log(`Retrieved the income for ${String(monthQueryDto.month)}: ${totalIncome}`);
 
     return { totalIncome, totalProfit, projectIncomes };
   }
@@ -66,16 +42,20 @@ export class IncomesService {
             client: { select: { name: true } },
           },
         },
+        incomeEntries: { select: { amount: true, incomeDate: true } },
       },
       orderBy: { date: 'asc' },
     });
 
     const paidIncomeByProject = new Map<string, number>();
     for (const r of allReports) {
-      if (r.incomeDate !== null) {
+      const paidAmount = r.incomeEntries
+        .filter((e) => e.incomeDate !== null)
+        .reduce((sum, e) => sum + e.amount.toNumber(), 0);
+      if (paidAmount > 0) {
         paidIncomeByProject.set(
           r.projectId,
-          (paidIncomeByProject.get(r.projectId) ?? 0) + r.income.toNumber(),
+          (paidIncomeByProject.get(r.projectId) ?? 0) + paidAmount,
         );
       }
     }

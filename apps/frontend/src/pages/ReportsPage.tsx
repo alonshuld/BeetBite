@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import {
   useGetProjectReportsQuery,
@@ -10,6 +10,10 @@ import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
+import {
+  useCreateCorporationPaymentMutation,
+  useDeleteCorporationPaymentMutation,
+} from "@/api/endpoints/corporation-payments";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import {
   ButtonPrimary,
@@ -23,11 +27,17 @@ import {
 import { FormModal } from "@/components/organisms/Modal";
 import { FormRow } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
+import { formatISODate } from "@/utils/formatMonth";
 
 interface CorpPaymentDraft {
   corporationId: string;
   amount: string;
   date: string;
+}
+
+interface IncomeEntryDraft {
+  amount: string;
+  incomeDate: string;
 }
 
 function todayISO(): string {
@@ -43,7 +53,9 @@ function prevYearMonth(month: string): string {
 export default function ReportsPage() {
   const { month } = useOutletContext<{ month: string }>();
   const navigate = useNavigate();
-  const { t } = useLang();
+  const { t, lang } = useLang();
+
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   const { data: reports = [], isLoading } = useGetProjectReportsQuery(month);
   const { data: prevReports = [] } = useGetProjectReportsQuery(
@@ -55,16 +67,48 @@ export default function ReportsPage() {
   const { data: corporations = [] } = useGetCorporationsQuery();
   const [createReport, { isLoading: saving }] =
     useCreateProjectReportMutation();
+  const [createCorp] = useCreateCorporationPaymentMutation();
+  const [deleteCorp] = useDeleteCorporationPaymentMutation();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [clientId, setClientId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [subcontractorId, setSubcontractorId] = useState("");
   const [reportMonth, setReportMonth] = useState(month);
-  const [income, setIncome] = useState("");
-  const [incomeDate, setIncomeDate] = useState(todayISO());
+  const [incomeEntries, setIncomeEntries] = useState<IncomeEntryDraft[]>([
+    { amount: "", incomeDate: "" },
+  ]);
   const [profitMarginPercent, setProfitMarginPercent] = useState("");
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
+
+  const clientsInReports = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>();
+    reports.forEach((r) => {
+      map.set(r.project.client.id, r.project.client);
+    });
+    return Array.from(map.values());
+  }, [reports]);
+
+  const selectedClientReports = useMemo(
+    () =>
+      selectedClientId
+        ? reports.filter((r) => r.project.client.id === selectedClientId)
+        : [],
+    [reports, selectedClientId],
+  );
+
+  const totalSubcontractorPayments = useMemo(
+    () =>
+      selectedClientReports.reduce((sum, r) => {
+        const profit = r.totalIncome * (r.profitMargin / 100);
+        const corpTotal = r.corporationPayments.reduce(
+          (s, cp) => s + cp.amount,
+          0,
+        );
+        return sum + (r.totalIncome - profit - corpTotal);
+      }, 0),
+    [selectedClientReports],
+  );
 
   const filteredProjects = clientId
     ? projects.filter((p) => p.clientId === clientId)
@@ -95,12 +139,11 @@ export default function ReportsPage() {
   }
 
   function openModal() {
-    setClientId("");
+    setClientId(selectedClientId ?? "");
     setProjectId("");
     setSubcontractorId("");
     setReportMonth(month);
-    setIncome("");
-    setIncomeDate(todayISO());
+    setIncomeEntries([{ amount: "", incomeDate: "" }]);
     setProfitMarginPercent("");
     setCorpPayments([]);
     setModalOpen(true);
@@ -108,12 +151,16 @@ export default function ReportsPage() {
 
   async function handleSave() {
     if (!projectId) return;
+    const validEntries = incomeEntries.filter((e) => e.amount !== "");
+    if (validEntries.length === 0) return;
     const dto: CreateProjectReportDto = {
       projectId,
       subcontractorId: subcontractorId || undefined,
       date: reportMonth + "-01",
-      income: Number(income),
-      incomeDate: incomeDate || undefined,
+      incomeEntries: validEntries.map((e) => ({
+        amount: Number(e.amount),
+        incomeDate: e.incomeDate || undefined,
+      })),
       profitMargin: Number(profitMarginPercent) || undefined,
       corporationPayments: corpPayments
         .filter((cp) => cp.corporationId !== "")
@@ -125,6 +172,20 @@ export default function ReportsPage() {
     };
     await createReport(dto);
     setModalOpen(false);
+  }
+
+  function addIncomeEntry() {
+    setIncomeEntries((prev) => [...prev, { amount: "", incomeDate: "" }]);
+  }
+
+  function removeIncomeEntry(idx: number) {
+    setIncomeEntries((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function updateIncomeEntry(idx: number, patch: Partial<IncomeEntryDraft>) {
+    setIncomeEntries((prev) =>
+      prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)),
+    );
   }
 
   function addCorpPayment() {
@@ -152,34 +213,108 @@ export default function ReportsPage() {
     );
   }
 
+  const selectedClientName =
+    clientsInReports.find((c) => c.id === selectedClientId)?.name ??
+    clients.find((c) => c.id === selectedClientId)?.name ??
+    "";
+
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title={t("projectReports")}
-        actions={
-          <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
-        }
-      />
+      {selectedClientId === null ? (
+        <>
+          <PageHeader
+            title={t("projectReports")}
+            actions={
+              <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
+            }
+          />
 
-      {reports.length === 0 ? (
-        <EmptyState
-          title={t("noData")}
-          action={
-            <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
-          }
-        />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {reports.map((report) => (
-            <ReportCard
-              key={report.id}
-              report={report}
-              onClick={() =>
-                void navigate(`/reports/projects/${report.project.id}`)
+          {clientsInReports.length === 0 ? (
+            <EmptyState
+              title={t("noData")}
+              action={
+                <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
               }
             />
-          ))}
-        </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {clientsInReports.map((client) => (
+                <ClientCard
+                  key={client.id}
+                  client={client}
+                  reportCount={
+                    reports.filter((r) => r.project.client.id === client.id)
+                      .length
+                  }
+                  onClick={() => setSelectedClientId(client.id)}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <ButtonGhost
+                onClick={() => setSelectedClientId(null)}
+                className="text-xs py-1 px-3"
+              >
+                ← {t("clients")}
+              </ButtonGhost>
+              <h1 className="font-serif text-[26px] text-text">
+                {selectedClientName}
+              </h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-text-muted">
+                {t("totalSubcontractorPayments")}:{" "}
+                <span className="text-text font-semibold">
+                  ₪{totalSubcontractorPayments.toLocaleString("he-IL")}
+                </span>
+              </div>
+              <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
+            </div>
+          </div>
+
+          {selectedClientReports.length === 0 ? (
+            <EmptyState
+              title={t("noData")}
+              action={
+                <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
+              }
+            />
+          ) : (
+            <div className="flex flex-col gap-4">
+              {selectedClientReports.map((report) => (
+                <ProjectSheet
+                  key={report.id}
+                  report={report}
+                  lang={lang}
+                  month={month}
+                  corporations={corporations}
+                  onNavigate={() =>
+                    void navigate(
+                      `/reports/projects/${report.project.id}?month=${month}`,
+                    )
+                  }
+                  onAddCorp={(corpId, amount, date) =>
+                    void createCorp({
+                      projectReportId: report.id,
+                      corporationId: corpId,
+                      amount,
+                      date,
+                      isFuture: false,
+                    })
+                  }
+                  onDeleteCorp={(corpPaymentId) =>
+                    void deleteCorp(corpPaymentId)
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <FormModal
@@ -248,24 +383,6 @@ export default function ReportsPage() {
             />
           </FormRow>
 
-          <FormRow>
-            <Input
-              id="report-income"
-              label={t("incomeILS")}
-              type="number"
-              min={0}
-              value={income}
-              onChange={(e) => setIncome(e.target.value)}
-            />
-
-            <Input
-              label={t("incomeDate")}
-              type="date"
-              value={incomeDate}
-              onChange={(e) => setIncomeDate(e.target.value)}
-            />
-          </FormRow>
-
           <Input
             id="report-profit-margin"
             label={t("profitMarginPct")}
@@ -275,6 +392,55 @@ export default function ReportsPage() {
             value={profitMarginPercent}
             onChange={(e) => setProfitMarginPercent(e.target.value)}
           />
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+                {t("incomeEntries")}
+              </span>
+              <ButtonGhost
+                onClick={addIncomeEntry}
+                className="text-xs py-1 px-3"
+              >
+                + {t("addIncome")}
+              </ButtonGhost>
+            </div>
+
+            {incomeEntries.map((entry, i) => (
+              <div
+                key={i}
+                className="flex gap-2 items-end p-3 rounded bg-surface-2 border border-border"
+              >
+                <Input
+                  label={t("incomeILS")}
+                  type="number"
+                  min={0}
+                  value={entry.amount}
+                  onChange={(e) =>
+                    updateIncomeEntry(i, { amount: e.target.value })
+                  }
+                  className="flex-1"
+                />
+                <Input
+                  label={t("incomeDate")}
+                  type="date"
+                  value={entry.incomeDate}
+                  onChange={(e) =>
+                    updateIncomeEntry(i, { incomeDate: e.target.value })
+                  }
+                  className="flex-1"
+                />
+                {incomeEntries.length > 1 && (
+                  <ButtonDanger
+                    onClick={() => removeIncomeEntry(i)}
+                    className="text-xs py-1 px-3 mb-[1px]"
+                  >
+                    {t("remove")}
+                  </ButtonDanger>
+                )}
+              </div>
+            ))}
+          </div>
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
@@ -343,46 +509,207 @@ export default function ReportsPage() {
   );
 }
 
-interface ReportCardProps {
-  report: ProjectReport;
+interface ClientCardProps {
+  client: { id: string; name: string };
+  reportCount: number;
   onClick: () => void;
 }
 
-function ReportCard({ report, onClick }: ReportCardProps) {
+function ClientCard({ client, reportCount, onClick }: ClientCardProps) {
   const { t } = useLang();
-  const isReceived = Boolean(report.incomeDate);
-  const subAmount = report.income * (1 - report.profitMargin / 100);
-
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-surface rounded-[var(--radius)] border border-border p-4 flex flex-col gap-3 transition-colors hover:border-beet/40 hover:bg-surface-2 active:scale-[0.99]"
+      className="w-full text-left bg-surface rounded-[var(--radius)] border border-border p-4 flex flex-col gap-2 transition-colors hover:border-beet/40 hover:bg-surface-2 active:scale-[0.99]"
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="font-medium text-text text-sm">{report.project.name}</p>
-        <Badge variant={isReceived ? "green" : "yellow"}>
-          {isReceived ? t("received") : t("pending")}
-        </Badge>
+      <p className="font-medium text-text">{client.name}</p>
+      <p className="text-text-muted text-sm">
+        {reportCount} {t("projectReports").toLowerCase()}
+      </p>
+    </button>
+  );
+}
+
+interface Corporation {
+  id: string;
+  name: string;
+}
+
+interface ProjectSheetProps {
+  report: ProjectReport;
+  lang: string;
+  month: string;
+  corporations: Corporation[];
+  onNavigate: () => void;
+  onAddCorp: (corporationId: string, amount: number, date: string) => void;
+  onDeleteCorp: (corpPaymentId: string) => void;
+}
+
+function ProjectSheet({
+  report,
+  lang,
+  corporations,
+  onNavigate,
+  onAddCorp,
+  onDeleteCorp,
+}: ProjectSheetProps) {
+  const { t } = useLang();
+
+  const [addingCorp, setAddingCorp] = useState(false);
+  const [newCorpId, setNewCorpId] = useState("");
+  const [newCorpAmount, setNewCorpAmount] = useState("");
+  const [newCorpDate, setNewCorpDate] = useState(todayISO());
+
+  const profit = report.totalIncome * (report.profitMargin / 100);
+  const corpTotal = report.corporationPayments.reduce(
+    (s, cp) => s + cp.amount,
+    0,
+  );
+  const subPayment = report.totalIncome - profit - corpTotal;
+
+  function submitAddCorp() {
+    if (!newCorpId || !newCorpAmount) return;
+    onAddCorp(newCorpId, Number(newCorpAmount), newCorpDate);
+    setAddingCorp(false);
+    setNewCorpId("");
+    setNewCorpAmount("");
+    setNewCorpDate(todayISO());
+  }
+
+  return (
+    <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-2">
+      <div className="flex items-center justify-between mb-1">
+        <button
+          onClick={onNavigate}
+          className="font-medium text-text hover:text-beet hover:underline transition-colors text-left"
+        >
+          {report.project.name}
+        </button>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <div className="flex justify-between text-sm">
-          <span className="text-text-muted">{t("income")}</span>
-          <span className="text-text font-medium">
-            ₪{report.income.toLocaleString("he-IL")}
+      {report.incomeEntries.map((entry) => {
+        const isReceived = Boolean(entry.incomeDate);
+        return (
+          <div
+            key={entry.id}
+            className="flex justify-between items-center text-sm"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-text-muted">{t("income")}</span>
+              <Badge variant={isReceived ? "green" : "yellow"}>
+                {isReceived
+                  ? `${t("received")} ${formatISODate(entry.incomeDate!, lang as "en" | "he")}`
+                  : t("pending")}
+              </Badge>
+            </div>
+            <span className="text-text font-medium">
+              ₪{entry.amount.toLocaleString("he-IL")}
+            </span>
+          </div>
+        );
+      })}
+
+      {report.incomeEntries.length > 1 && (
+        <div className="flex justify-between items-center text-sm border-t border-border pt-1">
+          <span className="text-text-muted font-medium">
+            {t("totalIncome")}
+          </span>
+          <span className="text-text font-semibold">
+            ₪{report.totalIncome.toLocaleString("he-IL")}
           </span>
         </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-text-muted">{t("profitMargin")}</span>
-          <span className="text-text">{report.profitMargin}%</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-text-muted">{report.subcontractor.name}</span>
-          <span className="text-text">
-            ₪{subAmount.toLocaleString("he-IL")}
-          </span>
-        </div>
+      )}
+
+      <div className="flex justify-between items-center text-sm">
+        <span className="text-text-muted">
+          {t("profit")} ({report.profitMargin}%)
+        </span>
+        <span className="text-success font-medium">
+          ₪{Math.round(profit).toLocaleString("he-IL")}
+        </span>
       </div>
-    </button>
+
+      {report.corporationPayments.map((cp) => (
+        <div
+          key={cp.id}
+          className="flex justify-between items-center text-sm group"
+        >
+          <span className="text-text-muted">{cp.corporation.name}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-warning font-medium">
+              − ₪{cp.amount.toLocaleString("he-IL")}
+            </span>
+            <ButtonDanger
+              onClick={() => onDeleteCorp(cp.id)}
+              className="text-xs py-0 px-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              ×
+            </ButtonDanger>
+          </div>
+        </div>
+      ))}
+
+      {addingCorp ? (
+        <div className="flex gap-2 items-end p-2 bg-surface-2 rounded border border-border mt-1">
+          <Select
+            value={newCorpId}
+            onChange={(e) => setNewCorpId(e.target.value)}
+            className="flex-1"
+          >
+            <option value="">— {t("corporation")} —</option>
+            {corporations.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+          <Input
+            placeholder={t("amountILS")}
+            type="number"
+            min={0}
+            value={newCorpAmount}
+            onChange={(e) => setNewCorpAmount(e.target.value)}
+            className="w-28"
+          />
+          <Input
+            type="date"
+            value={newCorpDate}
+            onChange={(e) => setNewCorpDate(e.target.value)}
+            className="w-36"
+          />
+          <ButtonPrimary
+            onClick={submitAddCorp}
+            disabled={!newCorpId || !newCorpAmount}
+            className="text-xs py-1 px-3 mb-[1px]"
+          >
+            {t("add")}
+          </ButtonPrimary>
+          <ButtonGhost
+            onClick={() => setAddingCorp(false)}
+            className="text-xs py-1 px-3 mb-[1px]"
+          >
+            {t("cancel")}
+          </ButtonGhost>
+        </div>
+      ) : (
+        <ButtonGhost
+          onClick={() => setAddingCorp(true)}
+          className="text-xs py-0.5 px-2 self-start text-text-muted hover:text-text"
+        >
+          + {t("corporationPayments")}
+        </ButtonGhost>
+      )}
+
+      <div className="border-t border-border my-1" />
+
+      <div className="flex justify-between items-center text-sm">
+        <span className="text-text font-medium">
+          {report.subcontractor.name}
+        </span>
+        <span className="text-text font-semibold">
+          ₪{Math.round(subPayment).toLocaleString("he-IL")}
+        </span>
+      </div>
+    </div>
   );
 }

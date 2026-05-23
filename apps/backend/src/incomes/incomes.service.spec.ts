@@ -48,8 +48,7 @@ describe('IncomesService', () => {
           projectId: 'p1',
           clientId: 'c1',
           date: new Date('2024-05-01T00:00:00.000Z'),
-          // Mock the Decimal object behavior
-          income: { toNumber: () => 1000.0 },
+          incomeEntries: [{ amount: { toNumber: () => 1000.0 } }],
           profitMargin: { toNumber: () => 5.5 },
           project: { id: 'p1', name: 'Project 1' },
         },
@@ -58,7 +57,7 @@ describe('IncomesService', () => {
           projectId: 'p2',
           clientId: 'c2',
           date: new Date('2024-05-01T00:00:00.000Z'),
-          income: { toNumber: () => 2000.0 },
+          incomeEntries: [{ amount: { toNumber: () => 2000.0 } }],
           profitMargin: { toNumber: () => 7.5 },
           project: { id: 'p2', name: 'Project 2' },
         },
@@ -94,7 +93,10 @@ describe('IncomesService', () => {
 
       expect(mockPrismaService.projectReport.findMany).toHaveBeenCalledWith({
         where: { date: '2024-05-01T00:00:00.000Z' },
-        include: { project: { select: { name: true } } },
+        include: {
+          project: { select: { name: true } },
+          incomeEntries: { select: { amount: true } },
+        },
       });
     });
 
@@ -112,7 +114,10 @@ describe('IncomesService', () => {
 
       expect(mockPrismaService.projectReport.findMany).toHaveBeenCalledWith({
         where: { date: '2024-05-01T00:00:00.000Z' },
-        include: { project: { select: { name: true } } },
+        include: {
+          project: { select: { name: true } },
+          incomeEntries: { select: { amount: true } },
+        },
       });
     });
   });

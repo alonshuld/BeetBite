@@ -57,15 +57,25 @@ model ProjectReport {
   subcontractorId String
   date            DateTime  @db.Date
   profitMargin    Decimal   @db.Decimal(5, 2)
-  income          Decimal   @db.Decimal(12, 2)
-  incomeDate      DateTime? @db.Date
 
-  project             Project              @relation(fields: [projectId], references: [id])
-  subcontractor       Subcontractor        @relation(fields: [subcontractorId], references: [id])
+  project             Project               @relation(fields: [projectId], references: [id])
+  subcontractor       Subcontractor         @relation(fields: [subcontractorId], references: [id])
   corporationPayments CorporationPayment[]
+  incomeEntries       ProjectReportIncome[]
 
   @@unique([projectId, date])
   @@map("project_reports")
+}
+
+model ProjectReportIncome {
+  id              String        @id @default(cuid())
+  projectReportId String
+  amount          Decimal       @db.Decimal(12, 2)
+  incomeDate      DateTime?     @db.Date
+
+  projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
+
+  @@map("project_report_incomes")
 }
 
 model CorporationPayment {
