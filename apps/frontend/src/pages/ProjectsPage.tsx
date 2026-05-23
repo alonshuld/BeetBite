@@ -274,7 +274,7 @@ export default function ProjectsPage() {
                         </span>
                         <div className="h-[6px] w-full rounded-full bg-surface-3 overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-success transition-all"
+                            className={`h-full rounded-full transition-all ${pct <= 40 ? "bg-success" : pct <= 70 ? "bg-warning" : "bg-danger"}`}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
