@@ -123,6 +123,7 @@ export const translations = {
     done: "Done",
     // Column headers
     estimated: "Estimated",
+    remaining: "Remaining",
     subcontractor: "Subcontractor",
     // Page subtitles
     manageClientsSubtitle: "Manage your client database",
@@ -294,6 +295,7 @@ export const translations = {
     done: "בוצע",
     // Column headers
     estimated: "משוער",
+    remaining: "יתרה לקבלה",
     subcontractor: "קבלן משנה",
     // Page subtitles
     manageClientsSubtitle: "נהל את מאגר הלקוחות שלך",

@@ -253,6 +253,9 @@ export default function ProjectsPage() {
                   {t("estimated")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                  {t("remaining")}
+                </th>
+                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
                   <div className="flex items-center gap-1.5">
                     {t("completion")}
                     <button
@@ -306,6 +309,15 @@ export default function ProjectsPage() {
                     </td>
                     <td className="py-3 px-4 text-text">
                       {formatILS(project.estimatedAmount)}
+                    </td>
+                    <td className="py-3 px-4 text-text">
+                      {formatILS(
+                        Math.max(
+                          0,
+                          project.estimatedAmount -
+                            (project.paymentProgress?.totalPaid ?? 0),
+                        ),
+                      )}
                     </td>
                     <td className="py-3 px-4 min-w-[100px]">
                       <div className="flex flex-col gap-1">
