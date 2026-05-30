@@ -129,7 +129,7 @@ dbTest.describe('Projects CRUD', () => {
         subcontractorId: subcontractor.id,
         date: new Date('2026-01-01'),
         profitMargin: 10,
-        income: 10000,
+        incomeEntries: { create: [{ amount: 10000 }] },
       },
     });
 
