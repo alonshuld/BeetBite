@@ -23,6 +23,8 @@ export interface CorporationPaymentRow {
   id: string;
   corporation: { id: string; name: string };
   amount: number;
+  vatPercentage?: number | null;
+  effectiveTotal?: number;
 }
 
 export interface ProjectReportDetail {
@@ -48,6 +50,7 @@ export interface CreateProjectReportDto {
     corporationId: string;
     amount: number;
     date: string;
+    vatPercentage?: number;
   }[];
 }
 

@@ -11,6 +11,9 @@ type CorporationWithPayments = Prisma.CorporationGetPayload<{
         id: true;
         amount: true;
         date: true;
+        vatPercentage: true;
+        isFuture: true;
+        description: true;
         projectReport: {
           select: {
             id: true;
@@ -35,16 +38,26 @@ type CorporationWithPayments = Prisma.CorporationGetPayload<{
 export const toMonthlyCorporationPaymentsResponse = (
   corporation: CorporationWithPayments,
 ): MonthlyCorporationPaymentsResponseDto => {
-  const projectPayments = corporation.payments.map((payment) => ({
-    id: payment.id,
-    projectReport: {
-      id: payment.projectReport.id,
-      projectId: payment.projectReport.project.id,
-      projectName: payment.projectReport.project.name,
-    },
-    amount: payment.amount.toNumber(),
-    date: payment.date?.toISOString() ?? null,
-  }));
+  const projectPayments = corporation.payments.map((payment) => {
+    const amount = payment.amount.toNumber();
+    const vatPercentage = payment.vatPercentage?.toNumber() ?? null;
+    const vatAmount = vatPercentage ? amount * (vatPercentage / 100) : 0;
+    return {
+      id: payment.id,
+      projectReport: {
+        id: payment.projectReport.id,
+        projectId: payment.projectReport.project.id,
+        projectName: payment.projectReport.project.name,
+      },
+      amount,
+      date: payment.date?.toISOString() ?? null,
+      vatPercentage,
+      vatAmount,
+      effectiveTotal: amount + vatAmount,
+      isFuture: payment.isFuture,
+      description: payment.description,
+    };
+  });
 
   return {
     corporation: {

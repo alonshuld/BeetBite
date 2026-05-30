@@ -4,6 +4,7 @@ import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
 import {
   useGetSubcontractorPaymentsQuery,
   useCreateSubcontractorPaymentMutation,
+  useUpdateSubcontractorPaymentMutation,
 } from "@/api/endpoints/subcontractor-payments";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { FormGroup } from "@/components/molecules/FormGroup";
@@ -44,6 +45,7 @@ export default function SubcontractorPaymentsPage() {
     useGetSubcontractorPaymentsQuery(month);
   const [createPayment, { isLoading: saving }] =
     useCreateSubcontractorPaymentMutation();
+  const [updatePayment] = useUpdateSubcontractorPaymentMutation();
   const { t, lang } = useLang();
 
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
@@ -258,6 +260,30 @@ export default function SubcontractorPaymentsPage() {
                         <span className="text-success font-semibold">
                           {formatILS(p.amount)}
                         </span>
+                        <button
+                          onClick={() =>
+                            void updatePayment({
+                              id: p.id,
+                              isPaid: !p.isPaid,
+                            })
+                          }
+                          className="text-xs px-3 py-1 rounded-full border transition-colors"
+                          style={
+                            p.isPaid
+                              ? {
+                                  background: "var(--success)",
+                                  color: "var(--surface)",
+                                  borderColor: "var(--success)",
+                                }
+                              : {
+                                  background: "transparent",
+                                  color: "var(--text-muted)",
+                                  borderColor: "var(--border)",
+                                }
+                          }
+                        >
+                          {p.isPaid ? t("paid") : t("unpaid")}
+                        </button>
                       </div>
                     ))}
                   </div>

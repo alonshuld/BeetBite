@@ -7,6 +7,7 @@ describe('subcontractor-payment mapper', () => {
     projectId: 'project-1',
     serviceDate: new Date('2024-05-01T00:00:00.000Z'),
     amount: new Prisma.Decimal('1000'),
+    isPaid: false,
     subcontractor: { id: 'sub-1', name: 'Sub 1' },
   });
 

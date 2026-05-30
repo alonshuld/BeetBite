@@ -1,10 +1,15 @@
 import { baseApi } from "@/api/baseApi";
 
-interface CorporationPaymentEntry {
+export interface CorporationPaymentEntry {
   id: string;
   projectReport: { id: string; projectId: string; projectName: string };
   amount: number;
   date: string | null;
+  vatPercentage: number | null;
+  vatAmount?: number;
+  effectiveTotal?: number;
+  isFuture?: boolean;
+  description: string | null;
 }
 
 export interface CorporationPaymentsGroup {
@@ -66,6 +71,25 @@ export const corporationPaymentsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["ProjectReports", "CorporationPayments"],
     }),
+    patchCorporationPaymentVat: build.mutation<
+      { id: string },
+      { entry: CorporationPaymentEntry; corporationId: string; vatPercentage: number | null }
+    >({
+      query: ({ entry, corporationId, vatPercentage }) => ({
+        url: `/corporations/payments/${entry.id}`,
+        method: "PUT",
+        body: {
+          projectReportId: entry.projectReport.id,
+          corporationId,
+          amount: entry.amount,
+          date: entry.date ?? new Date().toISOString(),
+          isFuture: entry.isFuture ?? false,
+          description: entry.description ?? undefined,
+          vatPercentage: vatPercentage ?? undefined,
+        },
+      }),
+      invalidatesTags: ["ProjectReports", "CorporationPayments"],
+    }),
   }),
 });
 
@@ -74,4 +98,5 @@ export const {
   useCreateCorporationPaymentMutation,
   useUpdateCorporationPaymentMutation,
   useDeleteCorporationPaymentMutation,
+  usePatchCorporationPaymentVatMutation,
 } = corporationPaymentsApi;

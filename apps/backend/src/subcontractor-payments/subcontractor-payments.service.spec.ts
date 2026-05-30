@@ -103,6 +103,7 @@ describe('SubcontractorPaymentsService', () => {
           projectId: true,
           serviceDate: true,
           amount: true,
+          isPaid: true,
           subcontractor: {
             select: {
               id: true,
@@ -462,6 +463,7 @@ describe('SubcontractorPaymentsService', () => {
           projectId: true,
           serviceDate: true,
           amount: true,
+          isPaid: true,
           subcontractor: {
             select: {
               id: true,

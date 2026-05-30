@@ -98,6 +98,8 @@ describe('CorporationPaymentsService', () => {
         description: null,
         isFuture: false,
         vatPercentage: null,
+        vatAmount: 0,
+        effectiveTotal: 1000,
         projectReport: {
           id: mockPayment.projectReport.id,
           projectId: mockPayment.projectReport.projectId,
@@ -191,6 +193,9 @@ describe('CorporationPaymentsService', () => {
           id: 'payment-1',
           amount: { toNumber: () => 1000 },
           date: new Date('2023-01-10'),
+          vatPercentage: null,
+          isFuture: false,
+          description: null,
           corporation: {
             id: 'corp-1',
             name: 'Corp 1',
@@ -208,6 +213,9 @@ describe('CorporationPaymentsService', () => {
           id: 'payment-2',
           amount: { toNumber: () => 500 },
           date: new Date('2023-01-20'),
+          vatPercentage: null,
+          isFuture: false,
+          description: null,
           projectReportId: 'report-2',
           corporationId: 'corp-1',
           corporation: {
@@ -251,6 +259,11 @@ describe('CorporationPaymentsService', () => {
             },
             amount: 1000,
             date: payments[0].date.toISOString(),
+            vatPercentage: null,
+            vatAmount: 0,
+            effectiveTotal: 1000,
+            isFuture: false,
+            description: null,
           },
           {
             id: 'payment-2',
@@ -261,6 +274,11 @@ describe('CorporationPaymentsService', () => {
             },
             amount: 500,
             date: payments[1].date.toISOString(),
+            vatPercentage: null,
+            vatAmount: 0,
+            effectiveTotal: 500,
+            isFuture: false,
+            description: null,
           },
         ],
         total: 1500,
@@ -283,6 +301,9 @@ describe('CorporationPaymentsService', () => {
               id: true,
               amount: true,
               date: true,
+              vatPercentage: true,
+              isFuture: true,
+              description: true,
               projectReport: {
                 select: {
                   id: true,
@@ -326,6 +347,9 @@ describe('CorporationPaymentsService', () => {
               id: 'payment-1',
               amount: { toNumber: (): number => 1000 },
               date: new Date('2023-01-10'),
+              vatPercentage: null,
+              isFuture: false,
+              description: null,
               projectReportId: 'report-1',
               projectReport: {
                 id: 'report-1',
@@ -346,6 +370,9 @@ describe('CorporationPaymentsService', () => {
               id: 'payment-2',
               amount: { toNumber: (): number => 500 },
               date: new Date('2023-01-20'),
+              vatPercentage: null,
+              isFuture: false,
+              description: null,
               projectReportId: 'report-2',
               projectReport: {
                 id: 'report-2',
@@ -397,6 +424,9 @@ describe('CorporationPaymentsService', () => {
               id: true,
               amount: true,
               date: true,
+              vatPercentage: true,
+              isFuture: true,
+              description: true,
               projectReport: {
                 select: {
                   id: true,
@@ -479,6 +509,8 @@ describe('CorporationPaymentsService', () => {
         description: null,
         isFuture: false,
         vatPercentage: null,
+        vatAmount: 0,
+        effectiveTotal: 1500,
         projectReport: {
           id: mockUpdatedPayment.projectReport.id,
           projectId: mockUpdatedPayment.projectReport.projectId,

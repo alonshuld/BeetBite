@@ -8,8 +8,10 @@ type SubcontractorWithPayments = Prisma.SubcontractorGetPayload<{
     payments: {
       select: {
         id: true;
+        projectId: true;
         serviceDate: true;
         amount: true;
+        isPaid: true;
       };
     };
   };
@@ -33,7 +35,9 @@ export const toMonthlySubcontractorPaymentsResponse = (
     amountPaid,
     payments: subcontractorWithPayments.payments.map((payment) => ({
       id: payment.id,
+      projectId: payment.projectId,
       amount: payment.amount.toNumber(),
+      isPaid: payment.isPaid,
     })),
   };
 };

@@ -9,8 +9,10 @@ describe('monthly-subcontractor-payments mapper', () => {
 
   const makePayment = (amount: number) => ({
     id: `payment-${amount}`,
+    projectId: 'project-1',
     serviceDate,
     amount: new Prisma.Decimal(String(amount)),
+    isPaid: false,
   });
 
   const makeInput = (

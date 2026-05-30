@@ -29,7 +29,6 @@ const SCREEN_LABELS: Record<
   "/clients": "clients",
   "/subcontractors": "subcontractors",
   "/corporations": "corporations",
-  "/simulator": "profitSimulator",
 };
 
 export function TopHeader({

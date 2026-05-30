@@ -23,20 +23,29 @@ type CorporationPaymentWithMinimalRelations = Pick<
  */
 export const toCorporationPaymentResponseDto = (
   corporationPayment: CorporationPaymentWithMinimalRelations,
-): CorporationPaymentResponseDto => ({
-  id: corporationPayment.id,
-  amount: corporationPayment.amount.toNumber(),
-  date: corporationPayment.date?.toISOString() ?? null,
-  description: corporationPayment.description,
-  isFuture: corporationPayment.isFuture,
-  vatPercentage: corporationPayment.vatPercentage?.toNumber() ?? null,
-  projectReport: {
-    id: corporationPayment.projectReport.id,
-    projectId: corporationPayment.projectReport.projectId,
-    projectName: corporationPayment.projectReport.project.name,
-  },
-  corporation: {
-    id: corporationPayment.corporation.id,
-    name: corporationPayment.corporation.name,
-  },
-});
+): CorporationPaymentResponseDto => {
+  const amount = corporationPayment.amount.toNumber();
+  const vatPercentage = corporationPayment.vatPercentage?.toNumber() ?? null;
+  const vatAmount = vatPercentage ? amount * (vatPercentage / 100) : 0;
+  const effectiveTotal = amount + vatAmount;
+
+  return {
+    id: corporationPayment.id,
+    amount,
+    date: corporationPayment.date?.toISOString() ?? null,
+    description: corporationPayment.description,
+    isFuture: corporationPayment.isFuture,
+    vatPercentage,
+    vatAmount,
+    effectiveTotal,
+    projectReport: {
+      id: corporationPayment.projectReport.id,
+      projectId: corporationPayment.projectReport.projectId,
+      projectName: corporationPayment.projectReport.project.name,
+    },
+    corporation: {
+      id: corporationPayment.corporation.id,
+      name: corporationPayment.corporation.name,
+    },
+  };
+};

@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import { useLang } from "@/contexts/useLang";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { logout } from "@/features/auth/authSlice";
@@ -35,7 +35,6 @@ const OVERVIEW_ITEMS: NavItem[] = [
     labelKey: "subcontractorPayments",
     icon: "👷",
   },
-  { path: "/income-per-month", labelKey: "incomePerMonth", icon: "📅" },
 ];
 
 const MANAGEMENT_ITEMS: NavItem[] = [
@@ -43,10 +42,6 @@ const MANAGEMENT_ITEMS: NavItem[] = [
   { path: "/clients", labelKey: "clients", icon: "👤" },
   { path: "/subcontractors", labelKey: "subcontractors", icon: "🔧" },
   { path: "/corporations", labelKey: "corporations", icon: "🏛️" },
-];
-
-const TOOLS_ITEMS: NavItem[] = [
-  { path: "/simulator", labelKey: "profitSimulator", icon: "🧮" },
 ];
 
 function NavSection({
@@ -117,12 +112,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           ${open ? "translate-x-0" : "ltr:-translate-x-full rtl:translate-x-full"}
         `}
       >
-        <div className="flex items-center gap-2.5 px-4 py-4 border-b border-border shrink-0">
+        <Link
+          to="/"
+          onClick={onClose}
+          className="flex items-center gap-2.5 px-4 py-4 border-b border-border shrink-0 hover:bg-surface-2 transition-colors"
+        >
           <div className="w-8 h-8 rounded flex items-center justify-center text-base bg-beet shrink-0">
             🫀
           </div>
           <span className="font-serif text-[19px] text-text">BeetBite</span>
-        </div>
+        </Link>
 
         <nav className="flex-1 overflow-y-auto px-2 py-3">
           <NavSection
@@ -133,11 +132,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <NavSection
             label={t("management")}
             items={MANAGEMENT_ITEMS}
-            onClose={onClose}
-          />
-          <NavSection
-            label={t("tools")}
-            items={TOOLS_ITEMS}
             onClose={onClose}
           />
         </nav>

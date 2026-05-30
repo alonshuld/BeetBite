@@ -166,6 +166,10 @@ export const translations = {
     incomeEntries: "Income Entries",
     addIncome: "Add Income",
     totalSubcontractorPayments: "Total Sub Payments",
+    vatPct: "VAT %",
+    receivedIncome: "Received",
+    pendingIncome: "Pending",
+    noIncomeThisMonth: "No income recorded this month",
     // ProjectReportsPage
     totalPaidByClient: "Total Paid by Client",
     noReportThisMonth: "No report for this month",
@@ -341,6 +345,10 @@ export const translations = {
     incomeEntries: "הכנסות",
     addIncome: "הוסף הכנסה",
     totalSubcontractorPayments: 'סה"כ תשלומי קבלן',
+    vatPct: "מע״מ %",
+    receivedIncome: "התקבל",
+    pendingIncome: "ממתין",
+    noIncomeThisMonth: "אין הכנסות רשומות החודש",
     // ProjectReportsPage
     totalPaidByClient: "סך שולם על ידי לקוח",
     noReportThisMonth: "אין דוח לחודש זה",

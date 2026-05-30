@@ -32,4 +32,10 @@ export class SubcontractorPaymentResponseDto {
     description: 'The amount of the payment in cents',
   })
   amount!: number;
+
+  @ApiProperty({
+    example: false,
+    description: 'Whether the payment has been marked as paid',
+  })
+  isPaid!: boolean;
 }
