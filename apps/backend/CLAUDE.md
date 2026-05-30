@@ -68,7 +68,6 @@ Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` →
 | `corporations` | Corporations that receive payments from project reports |
 | `subcontractors` | Workers assigned to project reports |
 | `subcontractor-payments` | Track partial payments made to subcontractors per service month; enforces overpayment guard against computed amount owed per project; exposes `GET /by-client?month=` aggregation endpoint |
-| `incomes` | Income-related queries |
 | `prisma` | Singleton `PrismaService` extending `PrismaClient` with `@prisma/adapter-pg` |
 
 ### Authentication
