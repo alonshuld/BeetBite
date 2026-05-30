@@ -109,7 +109,11 @@ describe('CorporationPaymentsService', () => {
         },
       });
       expect(mockPrismaService.corporationPayment.create).toHaveBeenCalledWith({
-        data: { ...createDto, vatPercentage: 18 },
+        data: {
+          ...createDto,
+          date: new Date(createDto.date),
+          vatPercentage: 18,
+        },
         select: {
           id: true,
           amount: true,
@@ -487,7 +491,11 @@ describe('CorporationPaymentsService', () => {
       });
       expect(mockPrismaService.corporationPayment.update).toHaveBeenCalledWith({
         where: { id: 'payment-1' },
-        data: { ...updateDto, vatPercentage: 18 },
+        data: {
+          ...updateDto,
+          date: new Date(updateDto.date),
+          vatPercentage: 18,
+        },
         select: {
           id: true,
           amount: true,

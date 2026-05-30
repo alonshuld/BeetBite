@@ -1,15 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsISO8601,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsString,
   Min,
 } from 'class-validator';
 
-/**
- * Represents the parameters required to register a new corporation payment.
- */
 export class CreateCorporationPaymentDto {
   @IsString()
   @IsNotEmpty()
@@ -29,9 +27,10 @@ export class CreateCorporationPaymentDto {
   amount!: number;
 
   @IsISO8601()
-  @ApiProperty({
+  @IsOptional()
+  @ApiPropertyOptional({
     example: '2026-01-01',
     description: 'The exact date the payment was made to the corporation',
   })
-  date!: string;
+  date?: string;
 }

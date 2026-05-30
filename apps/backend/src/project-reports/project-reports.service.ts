@@ -134,7 +134,7 @@ export class ProjectReportsService {
                 data: enriched.corporationPayments.map((cp) => ({
                   corporationId: cp.corporationId,
                   amount: cp.amount,
-                  date: cp.date,
+                  date: cp.date ? new Date(cp.date) : null,
                 })),
               },
             },
@@ -320,7 +320,7 @@ export class ProjectReportsService {
         updateProjectReportDto.date ?? existing.date.toISOString().slice(0, 10),
       incomeEntries: updateProjectReportDto.incomeEntries ?? [],
       corporationPayments: updateProjectReportDto.corporationPayments ?? [],
-    } as CreateProjectReportDto);
+    });
 
     try {
       const updated = await this.prismaService.projectReport.update({
@@ -349,7 +349,7 @@ export class ProjectReportsService {
                       (cp) => ({
                         corporationId: cp.corporationId,
                         amount: cp.amount,
-                        date: cp.date,
+                        date: cp.date ? new Date(cp.date) : null,
                       }),
                     ),
                   },
