@@ -1161,4 +1161,414 @@ describe('ProjectReportsService Integration Tests', () => {
       expect(existingReports).toHaveLength(0);
     });
   });
+
+  // ============================================================
+  // ENRICHMENT EDGE CASES
+  // ============================================================
+
+  describe('Enrichment Edge Cases', () => {
+    it('should respect explicitly-provided profitMargin of 0 (not fall through to previous month)', async () => {
+      // Bug guard: enrichment used || instead of ??, causing 0 to be treated as falsy
+      // and overridden by previous month's profitMargin. Fix: use ??.
+      const createDto: CreateProjectReportDto = {
+        projectId,
+        // no subcontractorId → must enrich from previous month
+        date: testDateStr,
+        profitMargin: 0, // explicit zero — must NOT be overridden
+        incomeEntries: [{ amount: 60000 }],
+        corporationPayments: [],
+      };
+
+      const result = await service.create(createDto);
+      expect(result.profitMargin).toBe(0);
+      // subcontractorId should come from previous month
+      expect(result.subcontractor.id).toBe(subcontractorId);
+    });
+
+    it('should inherit only profitMargin when only subcontractorId is provided', async () => {
+      const anotherSubId = (
+        await prismaService.subcontractor.create({
+          data: { name: `Explicit Sub ${Date.now()}` },
+        })
+      ).id;
+
+      // Previous month has profitMargin 20. Provide a different subcontractorId but omit profitMargin.
+      const createDto: CreateProjectReportDto = {
+        projectId,
+        subcontractorId: anotherSubId, // explicit
+        date: testDateStr,
+        // no profitMargin → should inherit 20 from previous month
+        incomeEntries: [{ amount: 70000 }],
+        corporationPayments: [],
+      };
+
+      const result = await service.create(createDto);
+      expect(result.subcontractor.id).toBe(anotherSubId);
+      expect(result.profitMargin).toBe(20); // from previous month
+    });
+
+    it('should inherit only subcontractorId when only non-zero profitMargin is provided', async () => {
+      // Previous month has subcontractorId. Provide profitMargin but omit subcontractorId.
+      const createDto: CreateProjectReportDto = {
+        projectId,
+        // no subcontractorId → should inherit from previous month
+        date: testDateStr,
+        profitMargin: 30, // explicit non-zero
+        incomeEntries: [{ amount: 70000 }],
+        corporationPayments: [],
+      };
+
+      const result = await service.create(createDto);
+      expect(result.profitMargin).toBe(30);
+      expect(result.subcontractor.id).toBe(subcontractorId); // from previous month
+    });
+
+    it('should skip previous-month lookup entirely when both fields are provided', async () => {
+      const anotherSubId = (
+        await prismaService.subcontractor.create({
+          data: { name: `Explicit Sub 2 ${Date.now()}` },
+        })
+      ).id;
+
+      const newProjectId = (
+        await prismaService.project.create({
+          data: {
+            name: `No Prev Report Project ${Date.now()}`,
+            clientId,
+            estimatedAmount: 100000,
+            description: '',
+          },
+        })
+      ).id;
+
+      // No previous month report exists for newProjectId, but both fields are provided → should not throw
+      const createDto: CreateProjectReportDto = {
+        projectId: newProjectId,
+        subcontractorId: anotherSubId,
+        date: testDateStr,
+        profitMargin: 25,
+        incomeEntries: [{ amount: 50000 }],
+        corporationPayments: [],
+      };
+
+      await expect(service.create(createDto)).resolves.toBeDefined();
+    });
+  });
+
+  // ============================================================
+  // UPDATE: CORPORATION PAYMENT REPLACEMENT
+  // ============================================================
+
+  describe('Update: Corporation Payment Replacement', () => {
+    let reportId: string;
+
+    beforeEach(async () => {
+      const result = await service.create({
+        projectId,
+        subcontractorId,
+        date: testDateStr,
+        profitMargin: 15,
+        incomeEntries: [{ amount: 80000 }],
+        corporationPayments: [
+          {
+            corporationId: corporationIds[0],
+            amount: 10000,
+            date: testDateStr,
+          },
+          { corporationId: corporationIds[1], amount: 8000, date: testDateStr },
+        ],
+      });
+      reportId = result.id;
+    });
+
+    it('should replace (not accumulate) corporation payments on update', async () => {
+      await service.update(reportId, {
+        projectId,
+        subcontractorId,
+        date: testDateStr,
+        profitMargin: 15,
+        incomeEntries: [{ amount: 80000 }],
+        corporationPayments: [
+          {
+            corporationId: corporationIds[0],
+            amount: 12000,
+            date: testDateStr,
+          },
+        ],
+      });
+
+      const report = await prismaService.projectReport.findUnique({
+        where: { id: reportId },
+        include: { corporationPayments: true },
+      });
+
+      // Must have exactly 1 corp payment, not 3 (2 old + 1 new)
+      expect(report?.corporationPayments).toHaveLength(1);
+      expect(report?.corporationPayments[0].amount.toNumber()).toBe(12000);
+    });
+
+    it('should allow removing all corporation payments via update with empty array', async () => {
+      await service.update(reportId, {
+        projectId,
+        subcontractorId,
+        date: testDateStr,
+        profitMargin: 15,
+        incomeEntries: [{ amount: 80000 }],
+        corporationPayments: [],
+      });
+
+      const report = await prismaService.projectReport.findUnique({
+        where: { id: reportId },
+        include: { corporationPayments: true },
+      });
+
+      expect(report?.corporationPayments).toHaveLength(0);
+    });
+
+    it('should allow adding more corporation payments via update', async () => {
+      await service.update(reportId, {
+        projectId,
+        subcontractorId,
+        date: testDateStr,
+        profitMargin: 15,
+        incomeEntries: [{ amount: 80000 }],
+        corporationPayments: [
+          {
+            corporationId: corporationIds[0],
+            amount: 10000,
+            date: testDateStr,
+          },
+          { corporationId: corporationIds[1], amount: 8000, date: testDateStr },
+          { corporationId: corporationIds[2], amount: 5000, date: testDateStr },
+        ],
+      });
+
+      const report = await prismaService.projectReport.findUnique({
+        where: { id: reportId },
+        include: { corporationPayments: true },
+      });
+
+      expect(report?.corporationPayments).toHaveLength(3);
+    });
+  });
+
+  // ============================================================
+  // INCOMEDATE LIFECYCLE (UNPAID → PAID)
+  // ============================================================
+
+  describe('incomeDate Lifecycle', () => {
+    it('should create report with null incomeDate (income not yet received)', async () => {
+      const result = await service.create({
+        projectId,
+        subcontractorId,
+        date: testDateStr,
+        profitMargin: 20,
+        incomeEntries: [{ amount: 50000 }],
+        // no incomeDate → null
+        corporationPayments: [],
+      });
+
+      const rawEntry = await prismaService.projectReportIncome.findFirst({
+        where: { projectReportId: result.id },
+      });
+      expect(rawEntry?.incomeDate).toBeNull();
+    });
+
+    it('should update report to set incomeDate (mark income as received)', async () => {
+      const created = await service.create({
+        projectId,
+        subcontractorId,
+        date: testDateStr,
+        profitMargin: 20,
+        incomeEntries: [{ amount: 50000 }],
+        corporationPayments: [],
+      });
+
+      await service.update(created.id, {
+        projectId,
+        subcontractorId,
+        date: testDateStr,
+        profitMargin: 20,
+        incomeEntries: [{ amount: 50000, incomeDate: testDateStr }],
+        corporationPayments: [],
+      });
+
+      const rawEntry = await prismaService.projectReportIncome.findFirst({
+        where: { projectReportId: created.id },
+      });
+
+      expect(rawEntry?.incomeDate).not.toBeNull();
+    });
+
+    it('should not count unpaid report income in project totalPaid', async () => {
+      // Create report with no incomeDate (unpaid)
+      await service.create({
+        projectId,
+        subcontractorId,
+        date: testDateStr,
+        profitMargin: 20,
+        incomeEntries: [{ amount: 50000 }],
+        corporationPayments: [],
+      });
+
+      const paidEntries = await prismaService.projectReportIncome.findMany({
+        where: {
+          projectReport: { projectId },
+          incomeDate: { not: null },
+        },
+        select: { amount: true },
+      });
+
+      const totalPaid = paidEntries.reduce(
+        (sum, e) => sum + e.amount.toNumber(),
+        0,
+      );
+
+      // Only the previous-month seed report (which has incomeDate set) should count
+      // The new unpaid report must NOT be included
+      expect(totalPaid).toBe(50000); // from the beforeEach seed report only
+    });
+
+    it('should count paid report income in project totalPaid after incomeDate is set', async () => {
+      const created = await service.create({
+        projectId,
+        subcontractorId,
+        date: testDateStr,
+        profitMargin: 20,
+        incomeEntries: [{ amount: 75000 }],
+        corporationPayments: [],
+      });
+
+      // Mark as paid
+      await service.update(created.id, {
+        projectId,
+        subcontractorId,
+        date: testDateStr,
+        profitMargin: 20,
+        incomeEntries: [{ amount: 75000, incomeDate: testDateStr }],
+        corporationPayments: [],
+      });
+
+      const paidEntries = await prismaService.projectReportIncome.findMany({
+        where: {
+          projectReport: { projectId },
+          incomeDate: { not: null },
+        },
+        select: { amount: true },
+      });
+
+      const totalPaid = paidEntries.reduce(
+        (sum, e) => sum + e.amount.toNumber(),
+        0,
+      );
+
+      // Seed report (50000) + newly paid report (75000)
+      expect(totalPaid).toBe(125000);
+    });
+  });
+
+  // ============================================================
+  // MONTH ISOLATION
+  // ============================================================
+
+  describe('Month Isolation in findProjectReportsInMonth', () => {
+    const janDateStr = new Date('2026-01-15').toISOString();
+    const febDateStr = new Date('2026-02-15').toISOString();
+    const marDateStr = new Date('2026-03-15').toISOString();
+
+    beforeEach(async () => {
+      // Create separate projects + prev-month seeds for each month
+      for (const [serviceDate, prevDate] of [
+        [janDateStr, new Date('2025-12-15').toISOString()],
+        [febDateStr, janDateStr],
+        [marDateStr, febDateStr],
+      ] as [string, string][]) {
+        const proj = (
+          await prismaService.project.create({
+            data: {
+              name: `Isolation Project ${serviceDate} ${Date.now()}`,
+              clientId,
+              estimatedAmount: 100000,
+              description: '',
+            },
+          })
+        ).id;
+
+        const sub = (
+          await prismaService.subcontractor.create({
+            data: { name: `Isolation Sub ${serviceDate} ${Date.now()}` },
+          })
+        ).id;
+
+        // Seed previous month so enrichment works
+        await prismaService.projectReport.create({
+          data: {
+            projectId: proj,
+            subcontractorId: sub,
+            date: new Date(prevDate),
+            profitMargin: 20,
+            incomeEntries: { create: [{ amount: 40000 }] },
+          },
+        });
+
+        await service.create({
+          projectId: proj,
+          subcontractorId: sub,
+          date: serviceDate,
+          profitMargin: 20,
+          incomeEntries: [{ amount: 50000 }],
+          corporationPayments: [],
+        });
+      }
+    });
+
+    it('should return only January reports when querying January', async () => {
+      // Use the correct flat PaginatedMonthQueryDto shape: { month, page?, limit? }
+      const results = await service.findProjectReportsInMonth({
+        month: janDateStr,
+        page: 1,
+        limit: 100,
+      });
+
+      expect(results.length).toBeGreaterThan(0);
+      // All returned reports must have the Jan date
+      for (const r of results) {
+        expect(r.date).toBe(janDateStr);
+      }
+    });
+
+    it('should not bleed February reports into January query', async () => {
+      const jan = await service.findProjectReportsInMonth({
+        month: janDateStr,
+        page: 1,
+        limit: 100,
+      });
+
+      const feb = await service.findProjectReportsInMonth({
+        month: febDateStr,
+        page: 1,
+        limit: 100,
+      });
+
+      expect(jan.length).toBeGreaterThan(0);
+      expect(feb.length).toBeGreaterThan(0);
+
+      const janIds = new Set(jan.map((r) => r.id));
+      const febIds = new Set(feb.map((r) => r.id));
+
+      for (const id of febIds) {
+        expect(janIds.has(id)).toBe(false);
+      }
+    });
+
+    it('should return empty for a month with no reports', async () => {
+      const result = await service.findProjectReportsInMonth({
+        month: new Date('2030-07-01').toISOString(),
+        page: 1,
+        limit: 100,
+      });
+
+      expect(result).toEqual([]);
+    });
+  });
 });
