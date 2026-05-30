@@ -22,6 +22,18 @@ export default tseslint.config(
   ...tseslint.configs.recommendedTypeChecked,
   eslintPluginPrettierRecommended,
   {
+    files: ['playwright.config.ts', 'e2e/**/*.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+    rules: {
+      // playwright.config.ts runs in Node — process.env is valid; browser tsconfig lacks @types/node
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+    },
+  },
+  {
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
@@ -33,7 +45,7 @@ export default tseslint.config(
       sourceType: 'module',
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['postcss.config.js', 'tailwind.config.ts', 'scripts/codegen.mjs', 'vite.config.e2e.ts', 'vitest.config.ts'],
+          allowDefaultProject: ['postcss.config.js', 'tailwind.config.ts', 'scripts/codegen.mjs', 'vite.config.e2e.ts', 'vitest.config.ts', 'playwright.config.ts'],
         },
         tsconfigRootDir: import.meta.dirname,
       },
