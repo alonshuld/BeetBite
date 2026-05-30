@@ -253,7 +253,7 @@ dbTest.describe('Project Reports — create via modal', () => {
 
     await page.getByRole('button', { name: 'Save' }).click();
 
-    await expect(page.getByText('Reports Corp')).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText('Reports Corp', { exact: true })).toBeVisible({ timeout: 8000 });
     await expect(page.getByText(/− ₪15,000/)).toBeVisible();
   });
 
@@ -285,8 +285,8 @@ dbTest.describe('Project Reports — create via modal', () => {
 
     await page.getByRole('button', { name: 'Save' }).click();
 
-    await expect(page.getByText('Reports Corp')).toBeVisible({ timeout: 8000 });
-    await expect(page.getByText('Reports Corp 2')).toBeVisible();
+    await expect(page.getByText('Reports Corp', { exact: true }).first()).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText('Reports Corp 2').first()).toBeVisible();
     await expect(page.getByText(/− ₪18,000/)).toBeVisible();
     await expect(page.getByText(/− ₪12,000/)).toBeVisible();
   });
@@ -377,15 +377,17 @@ dbTest.describe('Project Reports — previous month inheritance', () => {
     const modal = getModal(page);
     await expect(modal).toBeVisible();
 
-    // Profit margin should be prefilled from April
-    const marginInput = modal.locator('input[type="number"]').nth(0);
-    await expect(marginInput).toHaveValue('18');
+    // Select the subcontractor manually (backend will inherit if omitted; select it anyway)
+    await modal.locator('select').first().selectOption({ label: 'Reports Sub' });
+    // Fill income (required); leave profit margin empty so backend inherits from April
+    await modal.locator('input[type="number"]').nth(1).fill('50000');
 
-    // Subcontractor should be preselected
-    const subSelect = modal.locator('select').first();
-    const subValue = await subSelect.inputValue();
-    expect(subValue).toBeTruthy();
-    expect(subValue).not.toBe('');
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    // Backend inherited profitMargin 18 from April → profit = 50000 * 0.18 = 9000
+    await expect(page.getByText(/₪9,000/)).toBeVisible({ timeout: 8000 });
+    // Subcontractor name appears in the report
+    await expect(page.getByText('Reports Sub')).toBeVisible();
   });
 });
 
@@ -470,7 +472,7 @@ dbTest.describe('Project Reports — inline income entry operations', () => {
 
     // Both entries visible, total = 45000
     await expect(page.getByText(/Total Income/i)).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText(/₪45,000/)).toBeVisible();
+    await expect(page.getByText(/₪45,000/).first()).toBeVisible();
   });
 
   dbTest('edit income entry inline → updates displayed amount', async ({
@@ -563,7 +565,7 @@ dbTest.describe('Project Reports — inline corporation payment operations', () 
     // Submit inline form
     await page.getByRole('button', { name: /^Add$/i }).last().click();
 
-    await expect(page.getByText('Reports Corp')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Reports Corp', { exact: true })).toBeVisible({ timeout: 5000 });
     await expect(page.getByText(/− ₪12,000/)).toBeVisible();
 
     void corporation;
@@ -623,13 +625,13 @@ dbTest.describe('Project Reports — inline corporation payment operations', () 
     await page.goto(`${BASE}/reports/projects/${project.id}`);
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByText('Reports Corp')).toBeVisible();
+    await expect(page.getByText('Reports Corp', { exact: true })).toBeVisible();
     await expect(page.getByText(/− ₪10,000/)).toBeVisible();
 
     // "Remove" buttons: nth(0) = income entry Remove, nth(1) = corp payment Remove
     await page.getByRole('button', { name: 'Remove' }).nth(1).click();
 
-    await expect(page.getByText('Reports Corp')).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Reports Corp', { exact: true })).not.toBeVisible({ timeout: 5000 });
     await expect(page.getByText(/− ₪10,000/)).not.toBeVisible();
   });
 });

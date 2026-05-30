@@ -23,8 +23,7 @@ dbTest.describe('Subcontractor Payments', () => {
         subcontractorId: subcontractor.id,
         date: new Date('2026-05-01'),
         profitMargin: 10,
-        income: 50000,
-        incomeDate: new Date('2026-05-15'),
+        incomeEntries: { create: [{ amount: 50000, incomeDate: new Date('2026-05-15') }] },
       },
     });
   });
