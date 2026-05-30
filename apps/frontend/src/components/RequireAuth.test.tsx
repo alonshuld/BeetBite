@@ -1,11 +1,17 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { Provider } from "react-redux";
 import { makeStore } from "@/test/renderWithProviders";
 import RequireAuth from "./RequireAuth";
 
+const TOKEN_KEY = "beetbite.token";
+
+beforeEach(() => localStorage.clear());
+afterEach(() => localStorage.clear());
+
 function renderRequireAuth(token: string | null, initialPath = "/protected") {
+  if (token) localStorage.setItem(TOKEN_KEY, token);
   const store = makeStore({ auth: { token } });
   return render(
     <Provider store={store}>
