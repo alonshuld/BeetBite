@@ -6,7 +6,6 @@ import RequireAuth from "@/components/RequireAuth";
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const ReportsPage = lazy(() => import("@/pages/ReportsPage"));
 const ProjectReportsPage = lazy(() => import("@/pages/ProjectReportsPage"));
-const IncomePage = lazy(() => import("@/pages/IncomePage"));
 const CorporationPaymentsPage = lazy(
   () => import("@/pages/CorporationPaymentsPage"),
 );
@@ -17,7 +16,6 @@ const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
 const ClientsPage = lazy(() => import("@/pages/ClientsPage"));
 const SubcontractorsPage = lazy(() => import("@/pages/SubcontractorsPage"));
 const CorporationsPage = lazy(() => import("@/pages/CorporationsPage"));
-const IncomePerMonthPage = lazy(() => import("@/pages/IncomePerMonthPage"));
 const ProfitSimulatorPage = lazy(() => import("@/pages/ProfitSimulatorPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 const ErrorPage = lazy(() => import("@/pages/ErrorPage"));
@@ -47,7 +45,6 @@ export const router = createBrowserRouter([
             path: "reports/projects/:id",
             element: wrap(ProjectReportsPage),
           },
-          { path: "income", element: wrap(IncomePage) },
           {
             path: "corporation-payments",
             element: wrap(CorporationPaymentsPage),
@@ -60,7 +57,6 @@ export const router = createBrowserRouter([
           { path: "clients", element: wrap(ClientsPage) },
           { path: "subcontractors", element: wrap(SubcontractorsPage) },
           { path: "corporations", element: wrap(CorporationsPage) },
-          { path: "income-per-month", element: wrap(IncomePerMonthPage) },
           { path: "simulator", element: wrap(ProfitSimulatorPage) },
         ],
       },

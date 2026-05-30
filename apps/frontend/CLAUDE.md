@@ -89,8 +89,6 @@ Data router via `createBrowserRouter`. All authenticated routes are wrapped in `
 | `/` | redirect → `/reports` |
 | `/reports` | ReportsPage |
 | `/reports/projects/:id` | ProjectReportsPage |
-| `/income` | IncomePage |
-| `/income-per-month` | IncomePerMonthPage |
 | `/corporation-payments` | CorporationPaymentsPage |
 | `/subcontractor-payments` | SubcontractorPaymentsPage |
 | `/projects` | ProjectsPage |

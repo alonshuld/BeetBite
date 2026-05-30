@@ -8,7 +8,6 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ClientsModule } from './clients/clients.module';
 import { SubcontractorsModule } from './subcontractors/subcontractors.module';
 import { ProjectsModule } from './projects/projects.module';
-import { IncomesModule } from './incomes/incomes.module';
 import { SubcontractorPaymentsModule } from './subcontractor-payments/subcontractor-payments.module';
 import { ProjectReportsModule } from './project-reports/project-reports.module';
 import { CorporationPaymentsModule } from './corporation-payments/corporation-payments.module';
@@ -34,7 +33,6 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     SubcontractorsModule,
     ProjectReportsModule,
     ProjectsModule,
-    IncomesModule,
   ],
   providers: [
     {
