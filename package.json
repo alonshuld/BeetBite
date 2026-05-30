@@ -13,7 +13,7 @@
     "format:check": "pnpm -r format:check",
     "prepare": "pnpm exec husky",
     "postinstall": "pnpm --filter backend exec prisma generate",
-    "infra:up": "docker compose up db backend -d",
+    "infra:up": "docker compose up db backend -d --force-recreate",
     "infra:down": "docker compose stop db backend",
     "test:e2e": "pnpm --filter e2e exec playwright test"
   },

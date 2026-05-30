@@ -14,6 +14,7 @@ import { CorporationPaymentsModule } from './corporation-payments/corporation-pa
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { IncomeModule } from './income/income.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     SubcontractorsModule,
     ProjectReportsModule,
     ProjectsModule,
+    IncomeModule,
   ],
   providers: [
     {

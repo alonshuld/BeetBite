@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { NestedCorporationDto } from './nested-corporation.dto';
 import { NestedProjectReportDto } from './nested-project-report.dto';
 
@@ -57,4 +57,16 @@ export class CorporationPaymentResponseDto {
     nullable: true,
   })
   vatPercentage!: number | null;
+
+  @ApiPropertyOptional({
+    example: 900,
+    description: 'VAT amount derived from amount * vatPercentage / 100',
+  })
+  vatAmount?: number;
+
+  @ApiPropertyOptional({
+    example: 5900,
+    description: 'Effective total (amount + VAT amount)',
+  })
+  effectiveTotal?: number;
 }

@@ -12,6 +12,7 @@ type IncomeEntryRaw = {
 type CorporationPaymentRaw = {
   id: string;
   amount: Prisma.Decimal;
+  vatPercentage: Prisma.Decimal | null;
   corporation: { id: string; name: string };
 };
 
@@ -44,11 +45,19 @@ export const toProjectReportListItem = (
     profitMargin: projectReport.profitMargin.toNumber(),
     totalIncome: sumIncomeEntries(projectReport.incomeEntries),
     incomeEntries: entries,
-    corporationPayments: projectReport.corporationPayments.map((cp) => ({
-      id: cp.id,
-      amount: cp.amount.toNumber(),
-      corporation: cp.corporation,
-    })),
+    corporationPayments: projectReport.corporationPayments.map((cp) => {
+      const amount = cp.amount.toNumber();
+      const vatPercentage = cp.vatPercentage?.toNumber() ?? null;
+      const vatAmount = vatPercentage ? amount * (vatPercentage / 100) : 0;
+      return {
+        id: cp.id,
+        amount,
+        vatPercentage,
+        vatAmount,
+        effectiveTotal: amount + vatAmount,
+        corporation: cp.corporation,
+      };
+    }),
   };
 };
 

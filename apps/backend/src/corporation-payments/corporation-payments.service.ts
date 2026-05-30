@@ -163,6 +163,9 @@ export class CorporationPaymentsService {
             id: true,
             amount: true,
             date: true,
+            vatPercentage: true,
+            isFuture: true,
+            description: true,
             projectReport: {
               select: {
                 id: true,
@@ -221,6 +224,9 @@ export class CorporationPaymentsService {
             id: true,
             amount: true,
             date: true,
+            vatPercentage: true,
+            isFuture: true,
+            description: true,
             projectReport: {
               select: {
                 id: true,

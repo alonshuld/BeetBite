@@ -25,6 +25,7 @@ describe('project-reports mapper', () => {
     corporationPayments: [] as {
       id: string;
       amount: Prisma.Decimal;
+      vatPercentage: Prisma.Decimal | null;
       corporation: { id: string; name: string };
     }[],
   });
@@ -40,6 +41,7 @@ describe('project-reports mapper', () => {
     corporationPayments: [] as {
       id: string;
       amount: Prisma.Decimal;
+      vatPercentage: Prisma.Decimal | null;
       corporation: { id: string; name: string };
     }[],
     incomeEntries,

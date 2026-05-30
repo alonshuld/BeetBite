@@ -16,7 +16,7 @@ const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
 const ClientsPage = lazy(() => import("@/pages/ClientsPage"));
 const SubcontractorsPage = lazy(() => import("@/pages/SubcontractorsPage"));
 const CorporationsPage = lazy(() => import("@/pages/CorporationsPage"));
-const ProfitSimulatorPage = lazy(() => import("@/pages/ProfitSimulatorPage"));
+const MonthlyIncomePage = lazy(() => import("@/pages/MonthlyIncomePage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 const ErrorPage = lazy(() => import("@/pages/ErrorPage"));
 
@@ -57,7 +57,8 @@ export const router = createBrowserRouter([
           { path: "clients", element: wrap(ClientsPage) },
           { path: "subcontractors", element: wrap(SubcontractorsPage) },
           { path: "corporations", element: wrap(CorporationsPage) },
-          { path: "simulator", element: wrap(ProfitSimulatorPage) },
+          { path: "income", element: wrap(MonthlyIncomePage) },
+          { path: "simulator", element: <Navigate to="/reports" replace /> },
         ],
       },
     ],

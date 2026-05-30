@@ -5,7 +5,12 @@ export interface SubcontractorMonthlyData {
   serviceDate: string;
   amountOwed: number;
   amountPaid: number;
-  payments: { id: string; amount: number }[];
+  payments: {
+    id: string;
+    projectId: string;
+    amount: number;
+    isPaid: boolean;
+  }[];
 }
 
 export interface CreateSubcontractorPaymentDto {
@@ -15,12 +20,21 @@ export interface CreateSubcontractorPaymentDto {
   amount: number;
 }
 
+export interface UpdateSubcontractorPaymentDto {
+  subcontractorId: string;
+  projectId: string;
+  serviceDate: string;
+  amount: number;
+  isPaid?: boolean;
+}
+
 export interface SubcontractorPaymentResponse {
   id: string;
   subcontractor: { id: string; name: string };
   projectId: string;
   serviceDate: string;
   amount: number;
+  isPaid: boolean;
 }
 
 export const subcontractorPaymentsApi = baseApi.injectEndpoints({
@@ -40,10 +54,22 @@ export const subcontractorPaymentsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["SubcontractorPayments"],
     }),
+    updateSubcontractorPayment: build.mutation<
+      SubcontractorPaymentResponse,
+      { id: string; isPaid?: boolean } & Partial<UpdateSubcontractorPaymentDto>
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/subcontractors/payments/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["SubcontractorPayments"],
+    }),
   }),
 });
 
 export const {
   useGetSubcontractorPaymentsQuery,
   useCreateSubcontractorPaymentMutation,
+  useUpdateSubcontractorPaymentMutation,
 } = subcontractorPaymentsApi;

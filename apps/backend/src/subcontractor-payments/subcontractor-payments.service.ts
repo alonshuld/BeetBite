@@ -164,6 +164,7 @@ export class SubcontractorPaymentsService {
               projectId: true,
               serviceDate: true,
               amount: true,
+              isPaid: true,
               subcontractor: {
                 select: {
                   id: true,
@@ -209,8 +210,10 @@ export class SubcontractorPaymentsService {
             where: { serviceDate },
             select: {
               id: true,
+              projectId: true,
               serviceDate: true,
               amount: true,
+              isPaid: true,
             },
           },
         },
@@ -257,8 +260,10 @@ export class SubcontractorPaymentsService {
               },
               select: {
                 id: true,
+                projectId: true,
                 serviceDate: true,
                 amount: true,
+                isPaid: true,
               },
             },
           },
@@ -311,40 +316,50 @@ export class SubcontractorPaymentsService {
     id: string,
     updateSubcontractorPaymentDto: UpdateSubcontractorPaymentDto,
   ): Promise<SubcontractorPaymentResponseDto> {
-    const serviceDate = new Date(updateSubcontractorPaymentDto.serviceDate);
+    const isPaidOnlyUpdate = updateSubcontractorPaymentDto.amount === undefined;
 
     try {
       const subcontractorPayment = await this.prismaService.$transaction(
         async (tx) => {
-          const [amountOwed, existingPayments] = await Promise.all([
-            this.calculateProjectExpectedTotal(
-              updateSubcontractorPaymentDto.subcontractorId,
-              updateSubcontractorPaymentDto.projectId,
-              serviceDate,
-            ),
-            tx.subcontractorPayment.findMany({
-              where: {
-                subcontractorId: updateSubcontractorPaymentDto.subcontractorId,
-                projectId: updateSubcontractorPaymentDto.projectId,
-                serviceDate,
-                NOT: { id },
-              },
-              select: { amount: true },
-            }),
-          ]);
-
-          const amountPaid = existingPayments.reduce(
-            (sum, p) => sum + p.amount.toNumber(),
-            0,
-          );
-
-          if (amountPaid + updateSubcontractorPaymentDto.amount > amountOwed) {
-            throw new SubcontractorPaymentOverpaymentError(
-              amountOwed,
-              amountPaid,
-              updateSubcontractorPaymentDto.amount,
-              id,
+          if (!isPaidOnlyUpdate) {
+            const serviceDate = new Date(
+              updateSubcontractorPaymentDto.serviceDate!,
             );
+
+            const [amountOwed, existingPayments] = await Promise.all([
+              this.calculateProjectExpectedTotal(
+                updateSubcontractorPaymentDto.subcontractorId!,
+                updateSubcontractorPaymentDto.projectId!,
+                serviceDate,
+              ),
+              tx.subcontractorPayment.findMany({
+                where: {
+                  subcontractorId:
+                    updateSubcontractorPaymentDto.subcontractorId,
+                  projectId: updateSubcontractorPaymentDto.projectId,
+                  serviceDate,
+                  NOT: { id },
+                },
+                select: { amount: true },
+              }),
+            ]);
+
+            const amountPaid = existingPayments.reduce(
+              (sum, p) => sum + p.amount.toNumber(),
+              0,
+            );
+
+            if (
+              amountPaid + updateSubcontractorPaymentDto.amount! >
+              amountOwed
+            ) {
+              throw new SubcontractorPaymentOverpaymentError(
+                amountOwed,
+                amountPaid,
+                updateSubcontractorPaymentDto.amount!,
+                id,
+              );
+            }
           }
 
           return tx.subcontractorPayment.update({
@@ -355,6 +370,7 @@ export class SubcontractorPaymentsService {
               projectId: true,
               serviceDate: true,
               amount: true,
+              isPaid: true,
               subcontractor: {
                 select: {
                   id: true,

@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { NestedProjectReportDto } from './nested-project-report.dto';
 
 /**
@@ -31,4 +31,36 @@ export class NestedProjectPaymentDto {
     nullable: true,
   })
   date!: string | null;
+
+  @ApiProperty({
+    example: 18,
+    description: 'VAT percentage applied to this payment',
+    nullable: true,
+  })
+  vatPercentage!: number | null;
+
+  @ApiProperty({
+    example: 900,
+    description: 'VAT amount derived from vatPercentage × amount',
+  })
+  vatAmount!: number;
+
+  @ApiProperty({
+    example: 5900,
+    description: 'Total amount including VAT',
+  })
+  effectiveTotal!: number;
+
+  @ApiProperty({
+    example: false,
+    description: 'Whether this payment is for a future service',
+  })
+  isFuture!: boolean;
+
+  @ApiPropertyOptional({
+    example: 'Invoice #123',
+    description: 'Optional description for this payment',
+    nullable: true,
+  })
+  description!: string | null;
 }

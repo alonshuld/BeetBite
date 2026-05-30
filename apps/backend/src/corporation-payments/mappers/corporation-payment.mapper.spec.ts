@@ -41,6 +41,8 @@ describe('corporation-payment mapper', () => {
         description: null,
         isFuture: false,
         vatPercentage: null,
+        vatAmount: 0,
+        effectiveTotal: 1000,
         projectReport: {
           id: 'report-1',
           projectId: 'project-1',

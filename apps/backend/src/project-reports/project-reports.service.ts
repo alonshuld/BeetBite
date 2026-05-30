@@ -41,6 +41,7 @@ const REPORT_INCLUDE = {
     select: {
       id: true,
       amount: true,
+      vatPercentage: true,
       corporation: { select: { id: true, name: true } },
     },
   },
@@ -259,6 +260,7 @@ export class ProjectReportsService {
             select: {
               id: true,
               amount: true,
+              vatPercentage: true,
               corporation: { select: { id: true, name: true } },
             },
           },

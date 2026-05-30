@@ -14,7 +14,10 @@ type SubcontractorPaymentWithSubcontractor = Omit<
 export const toSubcontractorPaymentResponse = (
   subcontractorPayment: SubcontractorPaymentWithSubcontractor,
 ): SubcontractorPaymentResponseDto => ({
-  ...subcontractorPayment,
+  id: subcontractorPayment.id,
+  projectId: subcontractorPayment.projectId,
+  subcontractor: subcontractorPayment.subcontractor,
   serviceDate: subcontractorPayment.serviceDate.toISOString(),
   amount: subcontractorPayment.amount.toNumber(),
+  isPaid: subcontractorPayment.isPaid,
 });

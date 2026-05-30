@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import {
   useGetProjectReportsQuery,
   useGetProjectReportQuery,
@@ -21,7 +21,6 @@ import {
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
-import { MonthPicker } from "@/components/molecules/MonthPicker";
 import { StatCard } from "@/components/molecules/StatCard";
 import {
   ButtonGhost,
@@ -51,21 +50,13 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function todayYM(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
 export default function ProjectReportsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { t, lang } = useLang();
   const projectId = id!;
 
-  const [month, setMonth] = useState(
-    () => searchParams.get("month") ?? todayYM(),
-  );
+  const { month } = useOutletContext<{ month: string }>();
 
   const { data: monthReports = [], isLoading } =
     useGetProjectReportsQuery(month);
@@ -314,7 +305,11 @@ export default function ProjectReportsPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <ButtonGhost
-            onClick={() => void navigate("/reports")}
+            onClick={() =>
+              void navigate(
+                `/reports${project?.clientId ? `?clientId=${project.clientId}` : ""}`,
+              )
+            }
             className="mb-2 text-xs py-1 px-3"
           >
             ← {t("projectReports")}
@@ -326,7 +321,6 @@ export default function ProjectReportsPage() {
             </p>
           )}
         </div>
-        <MonthPicker value={month} onChange={setMonth} />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -585,9 +579,20 @@ export default function ProjectReportsPage() {
 
               return (
                 <div key={cp.id} className="flex justify-between items-center">
-                  <span className="text-xs text-text-muted">
-                    {cp.corporation.name}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-text-muted">
+                      {cp.corporation.name}
+                    </span>
+                    {cp.vatPercentage != null && cp.vatPercentage > 0 && (
+                      <span className="text-[11px] text-text-muted">
+                        ₪{cp.amount.toLocaleString("he-IL")} +{" "}
+                        {cp.vatPercentage}% VAT = ₪
+                        {(cp.effectiveTotal ?? cp.amount).toLocaleString(
+                          "he-IL",
+                        )}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="text-warning font-medium">
                       − ₪{cp.amount.toLocaleString("he-IL")}
@@ -671,7 +676,7 @@ export default function ProjectReportsPage() {
 
             <div className="border-t border-border" />
 
-            <div className="bg-success/10 border border-success/30 rounded p-3 flex justify-between items-center">
+            <div className="bg-success/10 rounded p-3 flex justify-between items-center">
               <div className="flex flex-col">
                 <span className="text-xs text-success font-semibold uppercase tracking-wide">
                   {t("subcontractorPayment")}

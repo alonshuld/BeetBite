@@ -1,5 +1,9 @@
-import { useState, useMemo } from "react";
-import { useOutletContext, useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import {
+  useOutletContext,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import {
   useGetProjectReportsQuery,
   useCreateProjectReportMutation,
@@ -49,6 +53,7 @@ function prevYearMonth(month: string): string {
 export default function ReportsPage() {
   const { month } = useOutletContext<{ month: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t, lang } = useLang();
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -63,6 +68,8 @@ export default function ReportsPage() {
   const { data: corporations = [] } = useGetCorporationsQuery();
   const [createReport, { isLoading: saving }] =
     useCreateProjectReportMutation();
+
+  const [simMargin, setSimMargin] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [clientId, setClientId] = useState("");
@@ -82,6 +89,15 @@ export default function ReportsPage() {
     });
     return Array.from(map.values());
   }, [reports]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const clientIdParam = searchParams.get("clientId");
+    if (clientIdParam && clientsInReports.some((c) => c.id === clientIdParam)) {
+      setSelectedClientId(clientIdParam);
+      setSearchParams({}, { replace: true });
+    }
+  }, [isLoading, clientsInReports, searchParams, setSearchParams]);
 
   const selectedClientReports = useMemo(
     () =>
@@ -279,21 +295,85 @@ export default function ReportsPage() {
               }
             />
           ) : (
-            <div className="flex flex-col gap-4">
-              {selectedClientReports.map((report) => (
-                <ProjectSheet
-                  key={report.id}
-                  report={report}
-                  lang={lang}
-                  month={month}
-                  onNavigate={() =>
-                    void navigate(
-                      `/reports/projects/${report.project.id}?month=${month}`,
-                    )
-                  }
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {selectedClientReports.map((report) => (
+                  <ProjectSheet
+                    key={report.id}
+                    report={report}
+                    lang={lang}
+                    month={month}
+                    onNavigate={() =>
+                      void navigate(
+                        `/reports/projects/${report.project.id}?month=${month}`,
+                      )
+                    }
+                  />
+                ))}
+              </div>
+              <div className="border border-border rounded-[var(--radius)] p-4 flex flex-col gap-3">
+                <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
+                  {t("profitSimulator")}
+                </h3>
+                <div className="flex items-end gap-3">
+                  <Input
+                    label={t("profitMarginPct")}
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={simMargin}
+                    onChange={(e) => setSimMargin(e.target.value)}
+                    className="w-32"
+                  />
+                </div>
+                {simMargin !== "" &&
+                  (() => {
+                    const margin = Number(simMargin);
+                    const totalIncome = selectedClientReports.reduce(
+                      (s, r) => s + r.totalIncome,
+                      0,
+                    );
+                    const corpTotal = selectedClientReports.reduce(
+                      (s, r) =>
+                        s +
+                        r.corporationPayments.reduce(
+                          (cs, cp) => cs + cp.amount,
+                          0,
+                        ),
+                      0,
+                    );
+                    const profit = totalIncome * (margin / 100);
+                    const subPay = totalIncome - profit - corpTotal;
+                    return (
+                      <div className="flex flex-col gap-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-text-muted">{t("income")}</span>
+                          <span className="text-text font-medium">
+                            ₪{Math.round(totalIncome).toLocaleString("he-IL")}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-text-muted">
+                            {t("profit")} ({margin}%)
+                          </span>
+                          <span className="text-success font-medium">
+                            ₪{Math.round(profit).toLocaleString("he-IL")}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-text-muted">
+                            {t("subcontractorPayment")}
+                          </span>
+                          <span className="text-text font-medium">
+                            ₪{Math.round(subPay).toLocaleString("he-IL")}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+              </div>
+            </>
           )}
         </>
       )}
@@ -441,7 +521,7 @@ export default function ReportsPage() {
                 key={i}
                 className="flex flex-col gap-2 p-3 rounded bg-surface-2 border border-border"
               >
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2 items-end">
                   <Select
                     value={cp.corporationId}
                     onChange={(e) =>
@@ -529,7 +609,7 @@ function ProjectSheet({ report, lang, onNavigate }: ProjectSheetProps) {
   const subPayment = report.totalIncome - profit - corpTotal;
 
   return (
-    <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-2">
+    <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-2 h-full">
       <div className="flex items-center justify-between mb-1">
         <button
           onClick={onNavigate}
