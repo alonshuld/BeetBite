@@ -437,6 +437,13 @@ describe('ProjectReportsService', () => {
   });
 
   describe('update', () => {
+    beforeEach(() => {
+      mockPrismaService.projectReport.findUnique.mockResolvedValue({
+        projectId: 'project-1',
+        date: new Date('2024-05-01T00:00:00.000Z'),
+      });
+    });
+
     const updateDto = {
       projectId: 'project-1',
       subcontractorId: 'sub-1',

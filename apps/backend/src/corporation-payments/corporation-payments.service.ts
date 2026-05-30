@@ -58,6 +58,9 @@ export class CorporationPaymentsService {
     try {
       const data = {
         ...createCorporationPaymentDto,
+        date: createCorporationPaymentDto.date
+          ? new Date(createCorporationPaymentDto.date)
+          : null,
         vatPercentage:
           !createCorporationPaymentDto.isFuture &&
           createCorporationPaymentDto.vatPercentage === undefined
@@ -254,6 +257,9 @@ export class CorporationPaymentsService {
     try {
       const data = {
         ...updateCorporationPaymentDto,
+        date: updateCorporationPaymentDto.date
+          ? new Date(updateCorporationPaymentDto.date)
+          : null,
         vatPercentage:
           !updateCorporationPaymentDto.isFuture &&
           updateCorporationPaymentDto.vatPercentage === undefined

@@ -95,7 +95,7 @@ model CorporationPayment {
 }
 
 model SubcontractorPayment {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   subcontractorId String
   projectId       String
   serviceDate     DateTime @db.Date
