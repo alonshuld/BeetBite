@@ -48,6 +48,9 @@ export default function SubcontractorPaymentsPage() {
   const [updatePayment] = useUpdateSubcontractorPaymentMutation();
   const { t, lang } = useLang();
 
+  const [pendingToggles, setPendingToggles] = useState<Map<string, boolean>>(
+    new Map(),
+  );
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalProjectId, setModalProjectId] = useState("");
@@ -252,40 +255,57 @@ export default function SubcontractorPaymentsPage() {
                   </p>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    {paymentsForSelected.map((p) => (
-                      <div
-                        key={p.id}
-                        className="flex items-center justify-between px-4 py-3 bg-surface border border-border rounded"
-                      >
-                        <span className="text-success font-semibold">
-                          {formatILS(p.amount)}
-                        </span>
-                        <button
-                          onClick={() =>
-                            void updatePayment({
-                              id: p.id,
-                              isPaid: !p.isPaid,
-                            })
-                          }
-                          className="text-xs px-3 py-1 rounded-full border transition-colors"
-                          style={
-                            p.isPaid
-                              ? {
-                                  background: "var(--success)",
-                                  color: "var(--surface)",
-                                  borderColor: "var(--success)",
-                                }
-                              : {
-                                  background: "transparent",
-                                  color: "var(--text-muted)",
-                                  borderColor: "var(--border)",
-                                }
-                          }
+                    {paymentsForSelected.map((p) => {
+                      const effectiveIsPaid = pendingToggles.has(p.id)
+                        ? pendingToggles.get(p.id)!
+                        : p.isPaid;
+                      const isPending = pendingToggles.has(p.id);
+                      const handleToggle = () => {
+                        setPendingToggles(
+                          (prev) => new Map(prev).set(p.id, !effectiveIsPaid),
+                        );
+                        updatePayment({
+                          id: p.id,
+                          isPaid: !effectiveIsPaid,
+                        }).finally(() => {
+                          setPendingToggles((prev) => {
+                            const m = new Map(prev);
+                            m.delete(p.id);
+                            return m;
+                          });
+                        });
+                      };
+                      return (
+                        <div
+                          key={p.id}
+                          className="flex items-center justify-between px-4 py-3 bg-surface border border-border rounded"
                         >
-                          {p.isPaid ? t("paid") : t("unpaid")}
-                        </button>
-                      </div>
-                    ))}
+                          <span className="text-success font-semibold">
+                            {formatILS(p.amount)}
+                          </span>
+                          <button
+                            onClick={handleToggle}
+                            disabled={isPending}
+                            className={`text-xs px-3 py-1 rounded-full border transition-colors${isPending ? " opacity-70 cursor-default" : ""}`}
+                            style={
+                              effectiveIsPaid
+                                ? {
+                                    background: "var(--success)",
+                                    color: "var(--surface)",
+                                    borderColor: "var(--success)",
+                                  }
+                                : {
+                                    background: "transparent",
+                                    color: "var(--text-muted)",
+                                    borderColor: "var(--border)",
+                                  }
+                            }
+                          >
+                            {effectiveIsPaid ? t("paid") : t("unpaid")}
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
