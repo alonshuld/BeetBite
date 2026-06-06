@@ -1,24 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
 import {
   useGetSubcontractorPaymentsQuery,
   useCreateSubcontractorPaymentMutation,
-  useUpdateSubcontractorPaymentMutation,
   useDeleteSubcontractorPaymentMutation,
 } from "@/api/endpoints/subcontractor-payments";
 import { PageHeader } from "@/components/molecules/PageHeader";
-import { FormGroup } from "@/components/molecules/FormGroup";
 import { Input } from "@/components/atoms/Input";
-import { Select } from "@/components/atoms/Select";
-import {
-  Badge,
-  ButtonPrimary,
-  ButtonIcon,
-  ButtonDanger,
-  EmptyState,
-} from "@/components/atoms";
-import { FormModal, ConfirmModal } from "@/components/organisms/Modal";
+import { Badge, EmptyState } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
 import { formatYM } from "@/utils/formatMonth";
 
@@ -28,72 +18,35 @@ function formatILS(n: number): string {
 
 type PaymentStatus = "Paid" | "Partial" | "Unpaid";
 
-function paymentStatus(
-  instalments: { isPaid: boolean; amount: number }[],
-  totalOwed: number,
-): PaymentStatus {
-  if (instalments.length === 0) return "Unpaid";
-  const paidCount = instalments.filter((p) => p.isPaid).length;
-  if (paidCount === 0) return "Unpaid";
-  const totalPaid = instalments.reduce((s, p) => s + p.amount, 0);
-  if (
-    paidCount === instalments.length &&
-    Math.round(totalPaid) >= Math.round(totalOwed)
-  )
-    return "Paid";
-  return "Partial";
-}
-
 const STATUS_VARIANT: Record<PaymentStatus, "green" | "yellow" | "red"> = {
   Paid: "green",
   Partial: "yellow",
   Unpaid: "red",
 };
 
+function projectStatus(paid: number, owed: number): PaymentStatus {
+  if (paid <= 0) return "Unpaid";
+  if (Math.round(paid) >= Math.round(owed)) return "Paid";
+  return "Partial";
+}
+
 export default function SubcontractorPaymentsPage() {
   const { month } = useOutletContext<{ month: string }>();
   const { data: monthReports = [] } = useGetProjectReportsQuery(month);
   const { data: monthlyPayments = [] } =
     useGetSubcontractorPaymentsQuery(month);
-  const [createPayment, { isLoading: saving }] =
-    useCreateSubcontractorPaymentMutation();
-  const [updatePayment] = useUpdateSubcontractorPaymentMutation();
+  const [createPayment] = useCreateSubcontractorPaymentMutation();
   const [deletePayment] = useDeleteSubcontractorPaymentMutation();
   const { t, lang } = useLang();
 
-  const [deletePaymentTarget, setDeletePaymentTarget] = useState<string | null>(
-    null,
-  );
-
-  async function handleDeletePayment() {
-    if (!deletePaymentTarget) return;
-    const result = await deletePayment(deletePaymentTarget);
-    if (!("error" in result)) setDeletePaymentTarget(null);
-  }
-
-  const [pendingToggles, setPendingToggles] = useState<Map<string, boolean>>(
-    new Map(),
-  );
-  useEffect(() => {
-    if (pendingToggles.size === 0) return;
-    setPendingToggles((prev) => {
-      if (prev.size === 0) return prev;
-      const allPayments = monthlyPayments.flatMap((mp) => mp.payments);
-      const next = new Map(prev);
-      let changed = false;
-      for (const payment of allPayments) {
-        if (next.has(payment.id) && next.get(payment.id) === payment.isPaid) {
-          next.delete(payment.id);
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [monthlyPayments]);
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalProjectId, setModalProjectId] = useState("");
-  const [modalAmount, setModalAmount] = useState("");
+  const [partialOpen, setPartialOpen] = useState<Record<string, boolean>>({});
+  const [partialValues, setPartialValues] = useState<Record<string, string>>(
+    {},
+  );
+  const [pendingProject, setPendingProject] = useState<Record<string, boolean>>(
+    {},
+  );
 
   interface SubCard {
     subId: string;
@@ -156,30 +109,76 @@ export default function SubcontractorPaymentsPage() {
   );
   const paymentsForSelected = selectedMonthlyData?.payments ?? [];
 
-  const projectsForSelectedSub = selectedCard?.projectBreakdown ?? [];
-
-  function openModal() {
-    setModalProjectId(
-      projectsForSelectedSub.length > 0
-        ? String(projectsForSelectedSub[0].projectId)
-        : "",
+  const paidPerProject = new Map<string, number>();
+  for (const p of paymentsForSelected) {
+    paidPerProject.set(
+      p.projectId,
+      (paidPerProject.get(p.projectId) ?? 0) + p.amount,
     );
-    setModalAmount("");
-    setModalOpen(true);
   }
 
-  async function handleAddPayment() {
-    if (!selectedSubId || !modalProjectId || !modalAmount) return;
-    const amount = parseFloat(modalAmount);
-    if (isNaN(amount) || amount <= 0) return;
+  async function handleSetUnpaid(projectId: string) {
+    const toDelete = paymentsForSelected.filter(
+      (p) => p.projectId === projectId,
+    );
+    if (toDelete.length === 0) return;
+    setPendingProject((prev) => ({ ...prev, [projectId]: true }));
+    for (const p of toDelete) await deletePayment(p.id);
+    setPendingProject((prev) => ({ ...prev, [projectId]: false }));
+    setPartialOpen((prev) => ({ ...prev, [projectId]: false }));
+  }
+
+  async function handleSetPaid(projectId: string, owed: number) {
+    setPendingProject((prev) => ({ ...prev, [projectId]: true }));
+    const toDelete = paymentsForSelected.filter(
+      (p) => p.projectId === projectId,
+    );
+    for (const p of toDelete) await deletePayment(p.id);
     await createPayment({
-      subcontractorId: selectedSubId,
-      projectId: modalProjectId,
+      subcontractorId: selectedSubId!,
+      projectId,
+      serviceDate: month + "-01",
+      amount: owed,
+    });
+    setPendingProject((prev) => ({ ...prev, [projectId]: false }));
+    setPartialOpen((prev) => ({ ...prev, [projectId]: false }));
+  }
+
+  async function handleSetPartial(projectId: string) {
+    const amount = parseFloat(partialValues[projectId] ?? "");
+    if (isNaN(amount) || amount <= 0) return;
+    setPendingProject((prev) => ({ ...prev, [projectId]: true }));
+    const toDelete = paymentsForSelected.filter(
+      (p) => p.projectId === projectId,
+    );
+    for (const p of toDelete) await deletePayment(p.id);
+    await createPayment({
+      subcontractorId: selectedSubId!,
+      projectId,
       serviceDate: month + "-01",
       amount,
     });
-    setModalOpen(false);
+    setPendingProject((prev) => ({ ...prev, [projectId]: false }));
+    setPartialOpen((prev) => ({ ...prev, [projectId]: false }));
   }
+
+  const aggregateStatus: PaymentStatus = selectedCard
+    ? (() => {
+        const statuses = selectedCard.projectBreakdown.map((pb) =>
+          projectStatus(paidPerProject.get(pb.projectId) ?? 0, pb.owed),
+        );
+        if (statuses.every((s) => s === "Paid")) return "Paid";
+        if (statuses.every((s) => s === "Unpaid")) return "Unpaid";
+        return "Partial";
+      })()
+    : "Unpaid";
+
+  const totalAmountClass =
+    aggregateStatus === "Paid"
+      ? "text-success"
+      : aggregateStatus === "Partial"
+        ? "text-warning"
+        : "text-danger";
 
   return (
     <div className="flex flex-col gap-5">
@@ -196,13 +195,32 @@ export default function SubcontractorPaymentsPage() {
         />
       ) : (
         <div className="flex gap-5 max-[768px]:flex-col">
+          {/* Sidebar */}
           <div className="flex flex-col gap-2 w-72 shrink-0 max-[768px]:w-full">
             {cards.map((card) => {
               const cardPayments =
-                monthlyPayments.find(
-                  (mp) => mp.subcontractor.id === card.subId,
-                )?.payments ?? [];
-              const status = paymentStatus(cardPayments, card.totalOwed);
+                monthlyPayments.find((mp) => mp.subcontractor.id === card.subId)
+                  ?.payments ?? [];
+              const cardPaidPerProject = new Map<string, number>();
+              for (const p of cardPayments) {
+                cardPaidPerProject.set(
+                  p.projectId,
+                  (cardPaidPerProject.get(p.projectId) ?? 0) + p.amount,
+                );
+              }
+              const cardStatuses = card.projectBreakdown.map((pb) =>
+                projectStatus(
+                  cardPaidPerProject.get(pb.projectId) ?? 0,
+                  pb.owed,
+                ),
+              );
+              const cardStatus: PaymentStatus = cardStatuses.every(
+                (s) => s === "Paid",
+              )
+                ? "Paid"
+                : cardStatuses.every((s) => s === "Unpaid")
+                  ? "Unpaid"
+                  : "Partial";
               const isActive = selectedSubId === card.subId;
               return (
                 <button
@@ -218,8 +236,13 @@ export default function SubcontractorPaymentsPage() {
                     <span className="font-medium text-text text-sm">
                       {card.subName}
                     </span>
-                    <Badge variant={STATUS_VARIANT[status]}>
-                      {t(status.toLowerCase() as "paid" | "partial" | "unpaid")}
+                    <Badge variant={STATUS_VARIANT[cardStatus]}>
+                      {t(
+                        cardStatus.toLowerCase() as
+                          | "paid"
+                          | "partial"
+                          | "unpaid",
+                      )}
                     </Badge>
                   </div>
                   <p className="text-[11px] text-text-muted mb-1">
@@ -241,136 +264,224 @@ export default function SubcontractorPaymentsPage() {
             })}
           </div>
 
+          {/* Main panel */}
           {selectedCard ? (
-            <div className="flex-1 flex flex-col gap-5">
-              <div>
-                <h2 className="font-serif text-xl text-text mb-3">
-                  {selectedCard.subName} — Projects
-                </h2>
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                        {t("project")}
-                      </th>
-                      <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
-                        {t("amountOwed")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedCard.projectBreakdown.map((pb) => (
-                      <tr key={pb.projectId} className="border-b border-border">
-                        <td className="py-2 px-3 text-text">
-                          {pb.projectName}
-                        </td>
-                        <td className="py-2 px-3 text-right text-success font-medium rtl:text-left">
-                          {formatILS(pb.owed)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t-2 border-border">
-                      <td className="py-2 px-3 font-semibold text-text">
-                        {t("totalOwed")}
-                      </td>
-                      <td className="py-2 px-3 text-right font-bold text-success rtl:text-left">
-                        {formatILS(selectedCard.totalOwed)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+            <div className="flex-1">
+              <h2 className="font-serif text-xl text-text mb-3">
+                {selectedCard.subName} — Projects
+              </h2>
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                      {t("project")}
+                    </th>
+                    <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
+                      {t("amountOwed")}
+                    </th>
+                    <th className="py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted text-center">
+                      {t("paid")}?
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedCard.projectBreakdown.map((pb) => {
+                    const paid = paidPerProject.get(pb.projectId) ?? 0;
+                    const status = projectStatus(paid, pb.owed);
+                    const remaining = pb.owed - paid;
+                    const isPending = pendingProject[pb.projectId] ?? false;
+                    const isPartialOpen = partialOpen[pb.projectId] ?? false;
 
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-serif text-xl text-text">
-                    {t("paymentInstalments")}
-                  </h2>
-                  <ButtonIcon onClick={openModal} title={t("addInstalment")}>
-                    +
-                  </ButtonIcon>
-                </div>
-                {paymentsForSelected.length === 0 ? (
-                  <p className="text-text-muted text-sm">
-                    {t("noPaymentsYet")}{" "}
-                    <button
-                      onClick={openModal}
-                      className="text-beet-bright hover:underline text-sm"
-                    >
-                      {t("addFirstInstalment")}
-                    </button>
-                  </p>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {paymentsForSelected.map((p) => {
-                      const effectiveIsPaid = pendingToggles.has(p.id)
-                        ? pendingToggles.get(p.id)!
-                        : p.isPaid;
-                      const isPending = pendingToggles.has(p.id);
-                      const handleToggle = () => {
-                        setPendingToggles((prev) =>
-                          new Map(prev).set(p.id, !effectiveIsPaid),
-                        );
-                        void updatePayment({
-                          id: p.id,
-                          isPaid: !effectiveIsPaid,
-                        });
-                      };
-                      return (
-                        <div
-                          key={p.id}
-                          className="flex items-center justify-between px-4 py-3 bg-surface border border-border rounded"
+                    return (
+                      <>
+                        <tr
+                          key={pb.projectId}
+                          className="border-b border-border"
                         >
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-success font-semibold">
-                              {formatILS(p.amount)}
-                            </span>
-                            <span className="text-[11px] text-text-muted">
-                              {selectedCard.projectBreakdown.find(
-                                (pb) => pb.projectId === p.projectId,
-                              )?.projectName ?? p.projectId}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={handleToggle}
-                              disabled={isPending}
-                              className={`text-xs px-3 py-1 rounded-full border transition-colors${isPending ? " opacity-70 cursor-default" : ""}`}
-                              style={
-                                effectiveIsPaid
-                                  ? {
-                                      background: "var(--success)",
-                                      color: "var(--surface)",
-                                      borderColor: "var(--success)",
-                                    }
-                                  : {
-                                      background: "transparent",
-                                      color: "var(--text-muted)",
-                                      borderColor: "var(--border)",
-                                    }
-                              }
+                          <td className="py-3 px-3 text-text">
+                            <div>{pb.projectName}</div>
+                            {status === "Partial" && (
+                              <div
+                                className="text-[11px] mt-0.5"
+                                style={{ color: "var(--warning)" }}
+                              >
+                                {t("remaining")}: {formatILS(remaining)}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 text-right font-medium rtl:text-left">
+                            <span
+                              style={{
+                                color:
+                                  status === "Paid"
+                                    ? "var(--success)"
+                                    : status === "Partial"
+                                      ? "var(--warning)"
+                                      : "var(--danger)",
+                              }}
                             >
-                              {effectiveIsPaid ? t("paid") : t("unpaid")}
-                            </button>
-                            <ButtonDanger
-                              onClick={() => setDeletePaymentTarget(p.id)}
-                              className="text-xs py-0.5 px-2"
-                            >
-                              ×
-                            </ButtonDanger>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                              {formatILS(pb.owed)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center justify-center gap-1.5">
+                              {/* Red X — Unpaid */}
+                              <button
+                                disabled={isPending}
+                                onClick={() =>
+                                  void handleSetUnpaid(pb.projectId)
+                                }
+                                title={t("unpaid")}
+                                className="w-8 h-8 rounded-full border text-xs font-bold transition-colors disabled:opacity-50"
+                                style={
+                                  status === "Unpaid"
+                                    ? {
+                                        background: "var(--danger)",
+                                        borderColor: "var(--danger)",
+                                        color: "white",
+                                      }
+                                    : {
+                                        background: "transparent",
+                                        borderColor: "var(--border)",
+                                        color: "var(--text-muted)",
+                                      }
+                                }
+                              >
+                                ✕
+                              </button>
 
-              <ButtonPrimary onClick={openModal}>
-                + {t("addInstalment")}
-              </ButtonPrimary>
+                              {/* Green V — Paid */}
+                              <button
+                                disabled={isPending}
+                                onClick={() =>
+                                  void handleSetPaid(pb.projectId, pb.owed)
+                                }
+                                title={t("paid")}
+                                className="w-8 h-8 rounded-full border text-xs font-bold transition-colors disabled:opacity-50"
+                                style={
+                                  status === "Paid"
+                                    ? {
+                                        background: "var(--success)",
+                                        borderColor: "var(--success)",
+                                        color: "white",
+                                      }
+                                    : {
+                                        background: "transparent",
+                                        borderColor: "var(--border)",
+                                        color: "var(--text-muted)",
+                                      }
+                                }
+                              >
+                                ✓
+                              </button>
+
+                              {/* Yellow ~ — Partial */}
+                              <button
+                                disabled={isPending}
+                                onClick={() =>
+                                  setPartialOpen((prev) => ({
+                                    ...prev,
+                                    [pb.projectId]: !isPartialOpen,
+                                  }))
+                                }
+                                title={t("partial")}
+                                className="w-8 h-8 rounded-full border text-xs font-bold transition-colors disabled:opacity-50"
+                                style={
+                                  status === "Partial"
+                                    ? {
+                                        background: "var(--warning)",
+                                        borderColor: "var(--warning)",
+                                        color: "white",
+                                      }
+                                    : {
+                                        background: "transparent",
+                                        borderColor: "var(--border)",
+                                        color: "var(--text-muted)",
+                                      }
+                                }
+                              >
+                                〜
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* Partial amount input row */}
+                        {isPartialOpen && (
+                          <tr
+                            key={`${pb.projectId}-partial`}
+                            className="border-b border-border bg-surface"
+                          >
+                            <td colSpan={3} className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-40">
+                                  <Input
+                                    id={`partial-${pb.projectId}`}
+                                    label=""
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    max={pb.owed}
+                                    value={partialValues[pb.projectId] ?? ""}
+                                    onChange={(e) =>
+                                      setPartialValues((prev) => ({
+                                        ...prev,
+                                        [pb.projectId]: e.target.value,
+                                      }))
+                                    }
+                                    placeholder={`0 – ${pb.owed}`}
+                                  />
+                                </div>
+                                <button
+                                  disabled={
+                                    isPending ||
+                                    !(
+                                      parseFloat(
+                                        partialValues[pb.projectId] ?? "",
+                                      ) > 0
+                                    )
+                                  }
+                                  onClick={() =>
+                                    void handleSetPartial(pb.projectId)
+                                  }
+                                  className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                                  style={{ background: "var(--warning)" }}
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setPartialOpen((prev) => ({
+                                      ...prev,
+                                      [pb.projectId]: false,
+                                    }))
+                                  }
+                                  className="px-2 py-1.5 rounded text-xs text-text-muted border border-border hover:bg-surface-2 transition-colors"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border">
+                    <td className="py-2 px-3 font-semibold text-text">
+                      {t("totalOwed")}
+                    </td>
+                    <td
+                      className={`py-2 px-3 text-right font-bold rtl:text-left ${totalAmountClass}`}
+                    >
+                      {formatILS(selectedCard.totalOwed)}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
@@ -381,53 +492,6 @@ export default function SubcontractorPaymentsPage() {
           )}
         </div>
       )}
-
-      <FormModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={() => void handleAddPayment()}
-        title={t("addInstalment")}
-        loading={saving}
-      >
-        <FormGroup>
-          <Select
-            id="inst-project"
-            label={t("project")}
-            value={modalProjectId}
-            onChange={(e) => setModalProjectId(e.target.value)}
-          >
-            <option value="">{t("selectProjectPlaceholder")}</option>
-            {projectsForSelectedSub.map((pb) => (
-              <option key={pb.projectId} value={pb.projectId}>
-                {pb.projectName}
-              </option>
-            ))}
-          </Select>
-        </FormGroup>
-        <FormGroup>
-          <Input
-            id="inst-amount"
-            label={t("amountILS")}
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={modalAmount}
-            onChange={(e) => {
-              setModalAmount(e.target.value);
-            }}
-            placeholder="0"
-            required
-          />
-        </FormGroup>
-      </FormModal>
-
-      <ConfirmModal
-        open={!!deletePaymentTarget}
-        onClose={() => setDeletePaymentTarget(null)}
-        onConfirm={() => void handleDeletePayment()}
-        title={t("deletePrefix") + " " + t("addInstalment") + "?"}
-        message={t("cannotBeUndone")}
-      />
     </div>
   );
 }

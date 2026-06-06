@@ -73,7 +73,11 @@ export const corporationPaymentsApi = baseApi.injectEndpoints({
     }),
     patchCorporationPaymentVat: build.mutation<
       { id: string },
-      { entry: CorporationPaymentEntry; corporationId: string; vatPercentage: number | null }
+      {
+        entry: CorporationPaymentEntry;
+        corporationId: string;
+        vatPercentage: number | null;
+      }
     >({
       query: ({ entry, corporationId, vatPercentage }) => ({
         url: `/corporations/payments/${entry.id}`,

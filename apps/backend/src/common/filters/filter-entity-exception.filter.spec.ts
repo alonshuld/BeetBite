@@ -9,14 +9,14 @@ import { EntityNotFoundError } from '../errors/entity-not-found.error';
 describe('EntityExceptionFilter', () => {
   let filter: EntityExceptionFilter;
 
-  let mockJson: jest.Mock;
+  let mockJson: jest.Mock<void, [Record<string, unknown>]>;
   let mockStatus: jest.Mock;
   let mockHost: ArgumentsHost;
 
   beforeEach(() => {
     filter = new EntityExceptionFilter();
 
-    mockJson = jest.fn();
+    mockJson = jest.fn<void, [Record<string, unknown>]>();
     mockStatus = jest.fn().mockReturnValue({ json: mockJson });
 
     mockHost = {
@@ -143,13 +143,10 @@ describe('EntityExceptionFilter', () => {
     it('should always include timestamp, path, and method', () => {
       filter.catch(new EntityNotFoundError('Not found'), mockHost);
 
-      expect(mockJson).toHaveBeenCalledWith(
-        expect.objectContaining({
-          timestamp: expect.any(String),
-          path: '/api/v1/test',
-          method: 'DELETE',
-        }),
-      );
+      const responseBody = mockJson.mock.calls[0][0];
+      expect(typeof responseBody['timestamp']).toBe('string');
+      expect(responseBody['path']).toBe('/api/v1/test');
+      expect(responseBody['method']).toBe('DELETE');
     });
   });
 });

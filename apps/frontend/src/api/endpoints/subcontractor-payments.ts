@@ -66,7 +66,10 @@ export const subcontractorPaymentsApi = baseApi.injectEndpoints({
       invalidatesTags: ["SubcontractorPayments"],
     }),
     deleteSubcontractorPayment: build.mutation<void, string>({
-      query: (id) => ({ url: `/subcontractors/payments/${id}`, method: "DELETE" }),
+      query: (id) => ({
+        url: `/subcontractors/payments/${id}`,
+        method: "DELETE",
+      }),
       invalidatesTags: ["SubcontractorPayments"],
     }),
   }),

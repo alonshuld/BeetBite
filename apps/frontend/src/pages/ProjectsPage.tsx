@@ -169,13 +169,13 @@ export default function ProjectsPage() {
     const result = editing
       ? await updateProject({ id: editing.id, ...payload })
       : await createProject(payload);
-    if (!('error' in result)) closeForm();
+    if (!("error" in result)) closeForm();
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
     const result = await deleteProject(deleteTarget.id);
-    if (!('error' in result)) setDeleteTarget(null);
+    if (!("error" in result)) setDeleteTarget(null);
   }
 
   async function handleToggleDone(project: Project) {

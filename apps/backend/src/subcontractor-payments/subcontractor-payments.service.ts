@@ -167,8 +167,9 @@ export class SubcontractorPaymentsService {
           // 2. amountPaid is the sum of Decimal values converted to JS floats; accumulation
           //    error (e.g. 10 × 100.10 = 1001.0000000000001) could tip the comparison.
           if (
-            Math.round((amountPaid + createSubcontractorPaymentDto.amount) * 100) >
-            Math.round(amountOwed * 100)
+            Math.round(
+              (amountPaid + createSubcontractorPaymentDto.amount) * 100,
+            ) > Math.round(amountOwed * 100)
           ) {
             throw new SubcontractorPaymentOverpaymentError(
               amountOwed,

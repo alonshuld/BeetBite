@@ -33,7 +33,7 @@ function VatInput({
   function handleSave() {
     const parsed = value === "" ? null : Number(value);
     if (parsed !== null && (isNaN(parsed) || parsed < 0)) return;
-    patchVat({ entry, corporationId, vatPercentage: parsed });
+    void patchVat({ entry, corporationId, vatPercentage: parsed });
   }
 
   return (
@@ -68,10 +68,17 @@ export default function CorporationPaymentsPage() {
   const groups = data?.corporationsPayments ?? [];
 
   const allPayments = groups.flatMap((g) =>
-    g.projectPayments.map((pp) => ({ pp, corporationId: g.corporation.id, corporationName: g.corporation.name })),
+    g.projectPayments.map((pp) => ({
+      pp,
+      corporationId: g.corporation.id,
+      corporationName: g.corporation.name,
+    })),
   );
 
-  const grandTotal = allPayments.reduce((sum, { pp }) => sum + (pp.effectiveTotal ?? pp.amount), 0);
+  const grandTotal = allPayments.reduce(
+    (sum, { pp }) => sum + (pp.effectiveTotal ?? pp.amount),
+    0,
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -112,7 +119,10 @@ export default function CorporationPaymentsPage() {
             </thead>
             <tbody>
               {allPayments.map(({ pp, corporationId, corporationName }) => (
-                <tr key={pp.id} className="border-b border-border hover:bg-surface-2 transition-colors">
+                <tr
+                  key={pp.id}
+                  className="border-b border-border hover:bg-surface-2 transition-colors"
+                >
                   <td className="py-3 px-4 text-text font-medium">
                     {corporationName}
                   </td>

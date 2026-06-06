@@ -107,9 +107,9 @@ describe("SubcontractorPaymentsPage", () => {
 
   it("shows Unpaid when there are no instalments", () => {
     renderPage();
-    const card = screen.getByText("Bob the Builder").closest(
-      "button",
-    ) as HTMLElement;
+    const card = screen
+      .getByText("Bob the Builder")
+      .closest("button") as HTMLElement;
     expect(within(card).getByText("Unpaid")).toBeInTheDocument();
   });
 
@@ -121,9 +121,9 @@ describe("SubcontractorPaymentsPage", () => {
       ),
     );
     renderPage();
-    const card = screen.getByText("Bob the Builder").closest(
-      "button",
-    ) as HTMLElement;
+    const card = screen
+      .getByText("Bob the Builder")
+      .closest("button") as HTMLElement;
     expect(within(card).getByText("Partial")).toBeInTheDocument();
   });
 
@@ -138,9 +138,9 @@ describe("SubcontractorPaymentsPage", () => {
       ),
     );
     renderPage();
-    const card = screen.getByText("Bob the Builder").closest(
-      "button",
-    ) as HTMLElement;
+    const card = screen
+      .getByText("Bob the Builder")
+      .closest("button") as HTMLElement;
     expect(within(card).getByText("Partial")).toBeInTheDocument();
   });
 
@@ -152,9 +152,9 @@ describe("SubcontractorPaymentsPage", () => {
       ),
     );
     renderPage();
-    const card = screen.getByText("Bob the Builder").closest(
-      "button",
-    ) as HTMLElement;
+    const card = screen
+      .getByText("Bob the Builder")
+      .closest("button") as HTMLElement;
     expect(within(card).getByText("Paid")).toBeInTheDocument();
   });
 

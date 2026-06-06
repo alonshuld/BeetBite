@@ -236,6 +236,5 @@ describe('CorporationsService', () => {
         CorporationNotFoundError,
       );
     });
-
   });
 });

@@ -207,7 +207,10 @@ export class ProjectsService {
           case PRISMA_ERROR_CODES.NOT_FOUND:
             throw new ProjectNotFoundError(id);
           case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
-            throw new EntityHasRelatedRecordsError('project', 'reports or payments');
+            throw new EntityHasRelatedRecordsError(
+              'project',
+              'reports or payments',
+            );
         }
       }
       throw error;

@@ -90,18 +90,18 @@ describe("MonthlyIncomePage", () => {
 
   it("renders the grand total summing all clients (income 8,000 / profit 1,600)", () => {
     renderPage();
-    const totalRow = screen.getByText("Grand Total").closest(
-      "div",
-    ) as HTMLElement;
+    const totalRow = screen
+      .getByText("Grand Total")
+      .closest("div") as HTMLElement;
     expect(within(totalRow).getByText("₪8,000")).toBeInTheDocument();
     expect(within(totalRow).getByText("₪1,600")).toBeInTheDocument();
   });
 
   it("keeps the grand total outside the scrollable list (sticky footer)", () => {
     const { container } = renderPage();
-    const footer = screen.getByText("Grand Total").closest(
-      "div",
-    ) as HTMLElement;
+    const footer = screen
+      .getByText("Grand Total")
+      .closest("div") as HTMLElement;
     // Footer carries the shrink-0 class so it is not part of the scroll area.
     expect(footer.className).toContain("shrink-0");
     // The scrollable list region exists and is a different element.
