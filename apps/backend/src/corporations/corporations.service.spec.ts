@@ -6,7 +6,6 @@ import { Prisma } from '../generated/client';
 import { PRISMA_ERROR_CODES } from '../common/constants';
 import { CorporationAlreadyExistsError } from './errors/corporation-already-exists.error';
 import { CorporationNotFoundError } from './errors/corporation-not-found.error';
-import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 describe('CorporationsService', () => {
@@ -238,16 +237,5 @@ describe('CorporationsService', () => {
       );
     });
 
-    it('should throw EntityHasRelatedRecordsError when corporation has related payments (P2003)', async () => {
-      const error = new Prisma.PrismaClientKnownRequestError('', {
-        code: PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED,
-        clientVersion: '1.0.0',
-      });
-      mockPrismaService.corporation.delete.mockRejectedValue(error);
-
-      await expect(service.remove('clh0000000000000000000001')).rejects.toThrow(
-        EntityHasRelatedRecordsError,
-      );
-    });
   });
 });

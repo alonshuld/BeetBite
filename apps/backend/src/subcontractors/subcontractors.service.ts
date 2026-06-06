@@ -12,7 +12,6 @@ import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { SubcontractorAlreadyExistsError } from './errors/subcontractor-already-exists.error';
 import { PaginationQueryDto } from 'src/common/pagination-query.dto';
 import { SubcontractorNotFoundError } from './errors/subcontractor-not-found';
-import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
 
 /**
  * Service providing subcontractor business logic.
@@ -138,16 +137,11 @@ export class SubcontractorsService {
 
       this.logger.log(`Subcontractor deleted: ${id}`);
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        switch (error.code) {
-          case PRISMA_ERROR_CODES.NOT_FOUND:
-            throw new SubcontractorNotFoundError(id);
-          case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
-            throw new EntityHasRelatedRecordsError(
-              'subcontractor',
-              'project reports or payments',
-            );
-        }
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === PRISMA_ERROR_CODES.NOT_FOUND
+      ) {
+        throw new SubcontractorNotFoundError(id);
       }
       throw error;
     }

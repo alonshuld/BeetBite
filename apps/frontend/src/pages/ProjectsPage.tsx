@@ -166,18 +166,16 @@ export default function ProjectsPage() {
       estimatedAmount: amount,
       clientId: form.clientId,
     };
-    if (editing) {
-      await updateProject({ id: editing.id, ...payload });
-    } else {
-      await createProject(payload);
-    }
-    closeForm();
+    const result = editing
+      ? await updateProject({ id: editing.id, ...payload })
+      : await createProject(payload);
+    if (!('error' in result)) closeForm();
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await deleteProject(deleteTarget.id);
-    setDeleteTarget(null);
+    const result = await deleteProject(deleteTarget.id);
+    if (!('error' in result)) setDeleteTarget(null);
   }
 
   async function handleToggleDone(project: Project) {

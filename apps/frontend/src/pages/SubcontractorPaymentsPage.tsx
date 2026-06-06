@@ -5,6 +5,7 @@ import {
   useGetSubcontractorPaymentsQuery,
   useCreateSubcontractorPaymentMutation,
   useUpdateSubcontractorPaymentMutation,
+  useDeleteSubcontractorPaymentMutation,
 } from "@/api/endpoints/subcontractor-payments";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { FormGroup } from "@/components/molecules/FormGroup";
@@ -14,9 +15,10 @@ import {
   Badge,
   ButtonPrimary,
   ButtonIcon,
+  ButtonDanger,
   EmptyState,
 } from "@/components/atoms";
-import { FormModal } from "@/components/organisms/Modal";
+import { FormModal, ConfirmModal } from "@/components/organisms/Modal";
 import { useLang } from "@/contexts/useLang";
 import { formatYM } from "@/utils/formatMonth";
 
@@ -56,7 +58,18 @@ export default function SubcontractorPaymentsPage() {
   const [createPayment, { isLoading: saving }] =
     useCreateSubcontractorPaymentMutation();
   const [updatePayment] = useUpdateSubcontractorPaymentMutation();
+  const [deletePayment] = useDeleteSubcontractorPaymentMutation();
   const { t, lang } = useLang();
+
+  const [deletePaymentTarget, setDeletePaymentTarget] = useState<string | null>(
+    null,
+  );
+
+  async function handleDeletePayment() {
+    if (!deletePaymentTarget) return;
+    const result = await deletePayment(deletePaymentTarget);
+    if (!("error" in result)) setDeletePaymentTarget(null);
+  }
 
   const [pendingToggles, setPendingToggles] = useState<Map<string, boolean>>(
     new Map(),
@@ -320,26 +333,34 @@ export default function SubcontractorPaymentsPage() {
                               )?.projectName ?? p.projectId}
                             </span>
                           </div>
-                          <button
-                            onClick={handleToggle}
-                            disabled={isPending}
-                            className={`text-xs px-3 py-1 rounded-full border transition-colors${isPending ? " opacity-70 cursor-default" : ""}`}
-                            style={
-                              effectiveIsPaid
-                                ? {
-                                    background: "var(--success)",
-                                    color: "var(--surface)",
-                                    borderColor: "var(--success)",
-                                  }
-                                : {
-                                    background: "transparent",
-                                    color: "var(--text-muted)",
-                                    borderColor: "var(--border)",
-                                  }
-                            }
-                          >
-                            {effectiveIsPaid ? t("paid") : t("unpaid")}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={handleToggle}
+                              disabled={isPending}
+                              className={`text-xs px-3 py-1 rounded-full border transition-colors${isPending ? " opacity-70 cursor-default" : ""}`}
+                              style={
+                                effectiveIsPaid
+                                  ? {
+                                      background: "var(--success)",
+                                      color: "var(--surface)",
+                                      borderColor: "var(--success)",
+                                    }
+                                  : {
+                                      background: "transparent",
+                                      color: "var(--text-muted)",
+                                      borderColor: "var(--border)",
+                                    }
+                              }
+                            >
+                              {effectiveIsPaid ? t("paid") : t("unpaid")}
+                            </button>
+                            <ButtonDanger
+                              onClick={() => setDeletePaymentTarget(p.id)}
+                              className="text-xs py-0.5 px-2"
+                            >
+                              ×
+                            </ButtonDanger>
+                          </div>
                         </div>
                       );
                     })}
@@ -399,6 +420,14 @@ export default function SubcontractorPaymentsPage() {
           />
         </FormGroup>
       </FormModal>
+
+      <ConfirmModal
+        open={!!deletePaymentTarget}
+        onClose={() => setDeletePaymentTarget(null)}
+        onConfirm={() => void handleDeletePayment()}
+        title={t("deletePrefix") + " " + t("addInstalment") + "?"}
+        message={t("cannotBeUndone")}
+      />
     </div>
   );
 }

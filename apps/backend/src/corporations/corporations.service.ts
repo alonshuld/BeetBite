@@ -12,7 +12,6 @@ import {
 import { PAGINATION_DEFAULTS, PRISMA_ERROR_CODES } from 'src/common/constants';
 import { CorporationNotFoundError } from './errors/corporation-not-found.error';
 import { CorporationAlreadyExistsError } from './errors/corporation-already-exists.error';
-import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
 
 /**
  * Service providing corporation business logic.
@@ -135,13 +134,11 @@ export class CorporationsService {
 
       this.logger.log(`Corporation deleted: ${id}`);
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        switch (error.code) {
-          case PRISMA_ERROR_CODES.NOT_FOUND:
-            throw new CorporationNotFoundError(id);
-          case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
-            throw new EntityHasRelatedRecordsError('corporation', 'payments');
-        }
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === PRISMA_ERROR_CODES.NOT_FOUND
+      ) {
+        throw new CorporationNotFoundError(id);
       }
       throw error;
     }

@@ -16,7 +16,7 @@ export interface UpdateClientDto {
 export const clientsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getClients: build.query<Client[], void>({
-      query: () => "/clients",
+      query: () => ({ url: "/clients", params: { limit: 1000 } }),
       providesTags: ["Clients"],
     }),
     createClient: build.mutation<Client, CreateClientDto>({
