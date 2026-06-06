@@ -10,6 +10,7 @@ import { ProjectAlreadyExistsError } from './errors/project-already-exists.excep
 import { ClientNotFoundError } from '../clients/errors/client-not-found.exception';
 import { ProjectsQueryDto } from './dto/projects-query.dto';
 import { Prisma } from 'src/generated/client';
+import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -378,6 +379,19 @@ describe('ProjectsService', () => {
 
       await expect(service.remove('clhp000000000000000000001')).rejects.toThrow(
         ProjectNotFoundError,
+      );
+    });
+
+    it('should throw EntityHasRelatedRecordsError when project has related records (P2003)', async () => {
+      const error = new PrismaClientKnownRequestError('', {
+        code: PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED,
+        clientVersion: '1.0.0',
+      });
+
+      mockPrismaService.project.delete.mockRejectedValue(error);
+
+      await expect(service.remove('clhp000000000000000000001')).rejects.toThrow(
+        EntityHasRelatedRecordsError,
       );
     });
   });

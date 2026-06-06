@@ -26,7 +26,8 @@ export default function MonthlyIncomePage() {
   const grandTotalProfit = items.reduce((sum, i) => sum + i.totalProfit, 0);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex flex-col gap-5 flex-1 min-h-0 overflow-y-auto pb-4">
       <PageHeader title={t("monthlyIncome")} subtitle={formatYM(month, lang)} />
 
       {items.length === 0 ? (
@@ -93,18 +94,22 @@ export default function MonthlyIncomePage() {
             ))}
           </div>
 
-          <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex items-center justify-between">
-            <span className="font-semibold text-text">{t("grandTotal")}</span>
-            <div className="flex items-center gap-4">
-              <span className="text-success font-bold">
-                {formatILS(grandTotalIncome)}
-              </span>
-              <span className="text-beet-bright font-bold">
-                {formatILS(grandTotalProfit)}
-              </span>
-            </div>
-          </div>
         </>
+      )}
+      </div>
+
+      {items.length > 0 && (
+        <div className="bg-surface border border-border rounded-[var(--radius)] p-4 mt-4 flex items-center justify-between shrink-0">
+          <span className="font-semibold text-text">{t("grandTotal")}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-success font-bold">
+              {formatILS(grandTotalIncome)}
+            </span>
+            <span className="text-beet-bright font-bold">
+              {formatILS(grandTotalProfit)}
+            </span>
+          </div>
+        </div>
       )}
     </div>
   );

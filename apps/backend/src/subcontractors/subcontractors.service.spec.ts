@@ -7,6 +7,7 @@ import { SubcontractorAlreadyExistsError } from './errors/subcontractor-already-
 import { CreateSubcontractorDto } from './dto/create-subcontractor.dto';
 import { PaginationQueryDto } from 'src/common/pagination-query.dto';
 import { SubcontractorNotFoundError } from './errors/subcontractor-not-found';
+import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
 
 describe('SubcontractorsService', () => {
   let service: SubcontractorsService;
@@ -233,7 +234,7 @@ describe('SubcontractorsService', () => {
       mockPrismaService.subcontractor.delete.mockRejectedValue(prismaError);
 
       await expect(service.remove('clh0000000000000000000001')).rejects.toThrow(
-        prismaError,
+        EntityHasRelatedRecordsError,
       );
     });
   });
@@ -370,7 +371,7 @@ describe('SubcontractorsService', () => {
 
         await expect(
           integrationService.remove('sub-with-payments'),
-        ).rejects.toThrow(prismaError);
+        ).rejects.toThrow(EntityHasRelatedRecordsError);
       });
     });
 

@@ -98,6 +98,14 @@ describe("ClientsPage", () => {
     expect(screen.getByText(/permanently delete/i)).toBeInTheDocument();
   });
 
+  it("warns that deleting a client cascades to related records", async () => {
+    renderClientsPage();
+    await userEvent.click(screen.getAllByTitle("Delete")[0]);
+    expect(
+      screen.getByText(/related projects, reports, and payments/i),
+    ).toBeInTheDocument();
+  });
+
   it("shows loading state", () => {
     vi.mocked(useGetClientsQuery).mockReturnValue({
       data: [],

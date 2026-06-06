@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
 import {
@@ -26,9 +26,19 @@ function formatILS(n: number): string {
 
 type PaymentStatus = "Paid" | "Partial" | "Unpaid";
 
-function paymentStatus(owed: number, paid: number): PaymentStatus {
-  if (paid <= 0) return "Unpaid";
-  if (paid >= owed) return "Paid";
+function paymentStatus(
+  instalments: { isPaid: boolean; amount: number }[],
+  totalOwed: number,
+): PaymentStatus {
+  if (instalments.length === 0) return "Unpaid";
+  const paidCount = instalments.filter((p) => p.isPaid).length;
+  if (paidCount === 0) return "Unpaid";
+  const totalPaid = instalments.reduce((s, p) => s + p.amount, 0);
+  if (
+    paidCount === instalments.length &&
+    Math.round(totalPaid) >= Math.round(totalOwed)
+  )
+    return "Paid";
   return "Partial";
 }
 
@@ -51,6 +61,22 @@ export default function SubcontractorPaymentsPage() {
   const [pendingToggles, setPendingToggles] = useState<Map<string, boolean>>(
     new Map(),
   );
+  useEffect(() => {
+    if (pendingToggles.size === 0) return;
+    setPendingToggles((prev) => {
+      if (prev.size === 0) return prev;
+      const allPayments = monthlyPayments.flatMap((mp) => mp.payments);
+      const next = new Map(prev);
+      let changed = false;
+      for (const payment of allPayments) {
+        if (next.has(payment.id) && next.get(payment.id) === payment.isPaid) {
+          next.delete(payment.id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [monthlyPayments]);
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalProjectId, setModalProjectId] = useState("");
@@ -71,8 +97,14 @@ export default function SubcontractorPaymentsPage() {
   const subMap = new Map<string, SubCard>();
   for (const report of monthReports) {
     const sub = report.subcontractor;
+    const corpTotal = report.corporationPayments.reduce(
+      (s, cp) => s + cp.amount,
+      0,
+    );
     const owed =
-      report.totalIncome - report.totalIncome * (report.profitMargin / 100);
+      report.totalIncome -
+      report.totalIncome * (report.profitMargin / 100) -
+      corpTotal;
     const existing = subMap.get(sub.id);
     const entry = {
       projectId: report.project.id,
@@ -153,7 +185,11 @@ export default function SubcontractorPaymentsPage() {
         <div className="flex gap-5 max-[768px]:flex-col">
           <div className="flex flex-col gap-2 w-72 shrink-0 max-[768px]:w-full">
             {cards.map((card) => {
-              const status = paymentStatus(card.totalOwed, card.totalPaid);
+              const cardPayments =
+                monthlyPayments.find(
+                  (mp) => mp.subcontractor.id === card.subId,
+                )?.payments ?? [];
+              const status = paymentStatus(cardPayments, card.totalOwed);
               const isActive = selectedSubId === card.subId;
               return (
                 <button
@@ -261,18 +297,12 @@ export default function SubcontractorPaymentsPage() {
                         : p.isPaid;
                       const isPending = pendingToggles.has(p.id);
                       const handleToggle = () => {
-                        setPendingToggles(
-                          (prev) => new Map(prev).set(p.id, !effectiveIsPaid),
+                        setPendingToggles((prev) =>
+                          new Map(prev).set(p.id, !effectiveIsPaid),
                         );
-                        updatePayment({
+                        void updatePayment({
                           id: p.id,
                           isPaid: !effectiveIsPaid,
-                        }).finally(() => {
-                          setPendingToggles((prev) => {
-                            const m = new Map(prev);
-                            m.delete(p.id);
-                            return m;
-                          });
                         });
                       };
                       return (
@@ -280,9 +310,16 @@ export default function SubcontractorPaymentsPage() {
                           key={p.id}
                           className="flex items-center justify-between px-4 py-3 bg-surface border border-border rounded"
                         >
-                          <span className="text-success font-semibold">
-                            {formatILS(p.amount)}
-                          </span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-success font-semibold">
+                              {formatILS(p.amount)}
+                            </span>
+                            <span className="text-[11px] text-text-muted">
+                              {selectedCard.projectBreakdown.find(
+                                (pb) => pb.projectId === p.projectId,
+                              )?.projectName ?? p.projectId}
+                            </span>
+                          </div>
                           <button
                             onClick={handleToggle}
                             disabled={isPending}

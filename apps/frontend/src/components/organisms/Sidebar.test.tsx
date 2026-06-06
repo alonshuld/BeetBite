@@ -42,7 +42,8 @@ describe("Sidebar", () => {
     renderSidebar();
     expect(screen.getByText("Overview")).toBeInTheDocument();
     expect(screen.getByText("Management")).toBeInTheDocument();
-    expect(screen.getByText("Tools")).toBeInTheDocument();
+    // "Tools" section was removed from the sidebar; only Overview and Management remain
+    expect(screen.queryByText("Tools")).not.toBeInTheDocument();
   });
 
   it("renders sign out button", () => {

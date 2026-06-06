@@ -182,6 +182,89 @@ describe('CorporationPaymentsService', () => {
         CorporationPaymentAlreadyExistsError,
       );
     });
+
+    it('should default vatPercentage to 18 only when the payment is not future and no VAT is supplied', async () => {
+      mockPrismaService.corporationPayment.create.mockResolvedValue(
+        mockPayment,
+      );
+
+      await service.create({ ...createDto, isFuture: false });
+
+      expect(mockPrismaService.corporationPayment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ vatPercentage: 18 }) as Record<
+            string,
+            unknown
+          >,
+        }),
+      );
+    });
+
+    it('should NOT default vatPercentage for a future payment', async () => {
+      mockPrismaService.corporationPayment.create.mockResolvedValue({
+        ...mockPayment,
+        isFuture: true,
+      });
+
+      await service.create({ ...createDto, isFuture: true });
+
+      expect(mockPrismaService.corporationPayment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ vatPercentage: undefined }) as Record<
+            string,
+            unknown
+          >,
+        }),
+      );
+    });
+
+    it('should preserve an explicitly supplied vatPercentage instead of overriding it with 18', async () => {
+      mockPrismaService.corporationPayment.create.mockResolvedValue(
+        mockPayment,
+      );
+
+      await service.create({ ...createDto, isFuture: false, vatPercentage: 9 });
+
+      expect(mockPrismaService.corporationPayment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ vatPercentage: 9 }) as Record<
+            string,
+            unknown
+          >,
+        }),
+      );
+    });
+
+    it('should preserve an explicit vatPercentage of 0 (not treat it as missing)', async () => {
+      mockPrismaService.corporationPayment.create.mockResolvedValue(
+        mockPayment,
+      );
+
+      await service.create({ ...createDto, isFuture: false, vatPercentage: 0 });
+
+      expect(mockPrismaService.corporationPayment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ vatPercentage: 0 }) as Record<
+            string,
+            unknown
+          >,
+        }),
+      );
+    });
+
+    it('should expose computed vatAmount and effectiveTotal in the response', async () => {
+      mockPrismaService.corporationPayment.create.mockResolvedValue({
+        ...mockPayment,
+        amount: { toNumber: () => 1000 },
+        vatPercentage: { toNumber: () => 18 },
+      });
+
+      const result = await service.create(createDto);
+
+      expect(result.vatPercentage).toBe(18);
+      expect(result.vatAmount).toBeCloseTo(180); // 1000 * 18%
+      expect(result.effectiveTotal).toBeCloseTo(1180);
+    });
   });
 
   describe('findOne', () => {

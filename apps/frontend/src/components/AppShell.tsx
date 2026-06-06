@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Outlet, useSearchParams } from "react-router-dom";
 import { Sidebar } from "@/components/organisms/Sidebar";
 import { TopHeader } from "@/components/organisms/TopHeader";
+import { setErrorListener } from "@/api/errorEmitter";
+import { useToast } from "@/contexts/useToast";
 
 const MONTH_KEY = "beetbite.month";
 
@@ -14,9 +16,32 @@ function getInitialMonth(): string {
   return localStorage.getItem(MONTH_KEY) ?? todayYM();
 }
 
+function isValidMonth(value: string | null): value is string {
+  return value != null && /^\d{4}-\d{2}$/.test(value);
+}
+
 export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [month, setMonthState] = useState(getInitialMonth);
+  const [searchParams] = useSearchParams();
+  const urlMonth = searchParams.get("month");
+  const [month, setMonthState] = useState(() =>
+    isValidMonth(urlMonth) ? urlMonth : getInitialMonth(),
+  );
+  const { toast } = useToast();
+
+  useEffect(() => {
+    setErrorListener((msg) => toast(msg, "error"));
+    return () => setErrorListener(null);
+  }, [toast]);
+
+  // A `?month=YYYY-MM` query param (e.g. from a project-report deep link) takes
+  // precedence over the persisted month so the linked month is shown.
+  useEffect(() => {
+    if (isValidMonth(urlMonth)) {
+      setMonthState(urlMonth);
+      localStorage.setItem(MONTH_KEY, urlMonth);
+    }
+  }, [urlMonth]);
 
   function setMonth(ym: string) {
     localStorage.setItem(MONTH_KEY, ym);

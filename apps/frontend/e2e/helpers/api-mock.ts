@@ -19,8 +19,13 @@ export interface RouteOverrides {
 
 /**
  * Registers all API routes the ProjectReportsPage needs.
- * Call this AFTER any per-test page.route() overrides — Playwright
- * matches in registration order (first match wins).
+ *
+ * IMPORTANT: Playwright matches routes in REVERSE registration order — the most
+ * recently registered handler is tried first. Therefore generic/catch-all
+ * routes must be registered BEFORE more specific ones (so the specific route,
+ * registered later, wins). For the same reason, per-test overrides must be
+ * registered AFTER calling this function (or via the `overrides` param) so they
+ * take precedence over the defaults below.
  */
 export async function setupPageRoutes(
   page: Page,
@@ -50,49 +55,29 @@ export async function setupPageRoutes(
     route.fulfill({ json: mockCorporations }),
   );
 
-  // Monthly reports list
+  // --- Monthly reports list (generic first, specific last) ---
+  // Catch-all for any month → no report.
+  await page.route(`${BASE}/projects/reports?month=*`, (route) =>
+    route.fulfill({ json: [] }),
+  );
+  // Explicitly-empty month.
+  await page.route(`${BASE}/projects/reports?month=2025-12-01`, (route) =>
+    route.fulfill({ json: [] }),
+  );
+  // The test month → the seeded report list (registered last so it wins).
   await page.route(`${BASE}/projects/reports?month=${TEST_MONTH}-01`, (route) =>
     route.fulfill({ json: reportList }),
   );
 
-  // Empty month — returns no report for the test project
-  await page.route(`${BASE}/projects/reports?month=2025-12-01`, (route) =>
-    route.fulfill({ json: [] }),
-  );
-
-  // Catch-all for other months
-  await page.route(`${BASE}/projects/reports?month=*`, (route) =>
-    route.fulfill({ json: [] }),
-  );
-
-  // Report detail
+  // Report detail — GET returns the detail shape. Non-GET (PUT/DELETE) calls
+  // route.fallback() so a per-test mutation override (registered earlier, i.e.
+  // lower priority) receives the request. Mutation routes are intentionally NOT
+  // registered here: only the capture tests exercise mutations and each supplies
+  // its own handler, so registering generics would shadow those overrides.
   await page.route(`${BASE}/projects/reports/${REPORT_ID}`, (route) =>
-    route.fulfill({ json: reportDetail }),
-  );
-
-  // Mutations — return 200 OK; tests that care about the body should
-  // register a specific route override BEFORE calling setupPageRoutes.
-  await page.route(`${BASE}/projects/reports`, (route) =>
-    route.fulfill({ json: mockReportList[0] }),
-  );
-  await page.route(`${BASE}/projects/reports/${REPORT_ID}`, (route) =>
-    route.fulfill({ json: mockReportList[0] }),
-  );
-  await page.route(
-    `${BASE}/projects/reports/${REPORT_ID}/income-entries`,
-    (route) =>
-      route.fulfill({
-        json: { id: "new-entry", amount: 10000, incomeDate: null },
-      }),
-  );
-  await page.route(`${BASE}/projects/reports/income-entries/*`, (route) =>
-    route.fulfill({ json: {} }),
-  );
-  await page.route(`${BASE}/corporations/payments`, (route) =>
-    route.fulfill({ json: { id: "new-corp-pay" } }),
-  );
-  await page.route(`${BASE}/corporations/payments/*`, (route) =>
-    route.fulfill({ json: {} }),
+    route.request().method() === "GET"
+      ? route.fulfill({ json: reportDetail })
+      : route.fallback(),
   );
 }
 

@@ -7,6 +7,7 @@ import {
 } from "@reduxjs/toolkit/query/react";
 import { logout } from "@/features/auth/authSlice";
 import type { RootState } from "@/app/store";
+import { emitApiError } from "@/api/errorEmitter";
 
 const baseQuery = fetchBaseQuery({
   baseUrl: "/api/v1",
@@ -25,8 +26,20 @@ const baseQueryWithReauth: BaseQueryFn<
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
   const result = await baseQuery(args, api, extraOptions);
-  if (result.error?.status === 401) {
-    api.dispatch(logout());
+  if (result.error) {
+    if (result.error.status === 401) {
+      api.dispatch(logout());
+    } else {
+      let message: string;
+      if (result.error.status === "FETCH_ERROR") {
+        message = "Network error. Check your connection.";
+      } else {
+        message =
+          (result.error.data as { message?: string } | undefined)?.message ??
+          "An unexpected error occurred.";
+      }
+      emitApiError(message);
+    }
   }
   return result;
 };

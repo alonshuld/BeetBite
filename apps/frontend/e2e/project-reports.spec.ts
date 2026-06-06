@@ -130,8 +130,8 @@ test("clicking Edit on income entry shows inline form pre-filled", async ({
 }) => {
   await loadPage(page);
   // Click the first Edit button in the income entries area
-  await page.getByRole("button", { name: /edit/i }).first().click();
-  const amountInput = page.getByLabel(/income.*ils/i);
+  await page.getByRole("button", { name: /edit/i }).nth(1).click();
+  const amountInput = page.getByLabel(/income.*₪/i);
   await expect(amountInput).toBeVisible();
   await expect(amountInput).toHaveValue("30000");
 });
@@ -157,8 +157,8 @@ test("saving income entry edit fires PUT with updated body", async ({
   await setupPageRoutes(page);
   await page.goto(projectReportsUrl());
 
-  await page.getByRole("button", { name: /edit/i }).first().click();
-  const amountInput = page.getByLabel(/income.*ils/i);
+  await page.getByRole("button", { name: /edit/i }).nth(1).click();
+  const amountInput = page.getByLabel(/income.*₪/i);
   await amountInput.fill("35000");
   await page.getByRole("button", { name: /save/i }).first().click();
 
@@ -169,13 +169,13 @@ test("cancelling income entry edit dismisses the inline form", async ({
   page,
 }) => {
   await loadPage(page);
-  await page.getByRole("button", { name: /edit/i }).first().click();
-  await expect(page.getByLabel(/income.*ils/i)).toBeVisible();
+  await page.getByRole("button", { name: /edit/i }).nth(1).click();
+  await expect(page.getByLabel(/income.*₪/i)).toBeVisible();
   await page
     .getByRole("button", { name: /cancel/i })
     .first()
     .click();
-  await expect(page.getByLabel(/income.*ils/i)).not.toBeVisible();
+  await expect(page.getByLabel(/income.*₪/i)).not.toBeVisible();
 });
 
 // ---------------------------------------------------------------------------
@@ -219,7 +219,7 @@ test("clicking add income shows empty inline form", async ({ page }) => {
     .getByRole("button", { name: /add.*income|addIncome|\+.*income/i })
     .last()
     .click();
-  await expect(page.getByLabel(/income.*ils/i)).toBeVisible();
+  await expect(page.getByLabel(/income.*₪/i)).toBeVisible();
 });
 
 test("saving new income entry fires POST with correct reportId", async ({
@@ -245,7 +245,7 @@ test("saving new income entry fires POST with correct reportId", async ({
     .getByRole("button", { name: /add.*income|addIncome|\+.*income/i })
     .last()
     .click();
-  await page.getByLabel(/income.*ils/i).fill("10000");
+  await page.getByLabel(/income.*₪/i).fill("10000");
   await page.getByRole("button", { name: /^add$/i }).last().click();
 
   expect(capturedUrl).toContain(REPORT_ID);
@@ -258,13 +258,13 @@ test("cancelling new income entry form clears it", async ({ page }) => {
     .getByRole("button", { name: /add.*income|addIncome|\+.*income/i })
     .last()
     .click();
-  await expect(page.getByLabel(/income.*ils/i)).toBeVisible();
+  await expect(page.getByLabel(/income.*₪/i)).toBeVisible();
   // Cancel button inside the inline form
   await page
     .getByRole("button", { name: /cancel/i })
     .last()
     .click();
-  await expect(page.getByLabel(/income.*ils/i)).not.toBeVisible();
+  await expect(page.getByLabel(/income.*₪/i)).not.toBeVisible();
 });
 
 // ---------------------------------------------------------------------------
@@ -289,7 +289,7 @@ test("clicking Edit on corp payment shows inline form", async ({ page }) => {
   const editButtons = page.getByRole("button", { name: /edit/i });
   // Corp payment Edit is the last Edit in the list
   await editButtons.last().click();
-  await expect(page.getByLabel(/amount.*ils/i)).toBeVisible();
+  await expect(page.getByLabel(/amount.*₪/i)).toBeVisible();
 });
 
 test("saving corp payment edit fires PUT", async ({ page }) => {
@@ -310,7 +310,7 @@ test("saving corp payment edit fires PUT", async ({ page }) => {
   await page.goto(projectReportsUrl());
 
   await page.getByRole("button", { name: /edit/i }).last().click();
-  await page.getByLabel(/amount.*ils/i).fill("9000");
+  await page.getByLabel(/amount.*₪/i).fill("9000");
   await page.getByRole("button", { name: /save/i }).last().click();
 
   expect(putCalled).toBe(true);
@@ -319,12 +319,12 @@ test("saving corp payment edit fires PUT", async ({ page }) => {
 test("cancelling corp payment edit dismisses the form", async ({ page }) => {
   await loadPage(page);
   await page.getByRole("button", { name: /edit/i }).last().click();
-  await expect(page.getByLabel(/amount.*ils/i)).toBeVisible();
+  await expect(page.getByLabel(/amount.*₪/i)).toBeVisible();
   await page
     .getByRole("button", { name: /cancel/i })
     .last()
     .click();
-  await expect(page.getByLabel(/amount.*ils/i)).not.toBeVisible();
+  await expect(page.getByLabel(/amount.*₪/i)).not.toBeVisible();
 });
 
 // ---------------------------------------------------------------------------
@@ -368,8 +368,9 @@ test("clicking add corp payment button shows inline form with corporation select
     .getByRole("button", { name: /corporation|corp.*payment/i })
     .last()
     .click();
-  // The corporation select should appear
-  await expect(page.getByRole("option", { name: "FloorCo" })).toBeVisible();
+  // The corporation select should appear. Native <select> options are not
+  // "visible" while the dropdown is collapsed, so assert it is attached.
+  await expect(page.getByRole("option", { name: "FloorCo" })).toBeAttached();
 });
 
 test("saving new corp payment fires POST to /corporations/payments", async ({
@@ -395,7 +396,7 @@ test("saving new corp payment fires POST to /corporations/payments", async ({
     .last()
     .click();
   await page.getByRole("combobox").last().selectOption("corp-1");
-  await page.getByLabel(/amount.*ils/i).fill("5000");
+  await page.getByLabel(/amount.*₪/i).fill("5000");
   await page.getByRole("button", { name: /^add$/i }).last().click();
 
   expect(postCalled).toBe(true);

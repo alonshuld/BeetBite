@@ -118,25 +118,57 @@ export class ClientsService {
   }
 
   /**
-   * Removes a client by its ID.
+   * Removes a client by its ID, manually cascading all related records.
    * @param id ID of the client to remove
    * @returns void
    */
   async remove(id: string): Promise<void> {
-    try {
-      await this.prismaService.client.delete({
-        where: { id },
+    const client = await this.prismaService.client.findUnique({
+      where: { id },
+    });
+
+    if (!client) {
+      throw new ClientNotFoundError(id);
+    }
+
+    await this.prismaService.$transaction(async (tx) => {
+      const projects = await tx.project.findMany({
+        where: { clientId: id },
+        select: { id: true },
+      });
+      const projectIds = projects.map((p) => p.id);
+
+      const reports = await tx.projectReport.findMany({
+        where: { projectId: { in: projectIds } },
+        select: { id: true },
+      });
+      const reportIds = reports.map((r) => r.id);
+
+      await tx.projectReportIncome.deleteMany({
+        where: { projectReportId: { in: reportIds } },
       });
 
-      this.logger.log(`Client deleted: ${id}`);
-    } catch (error) {
-      if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code === PRISMA_ERROR_CODES.NOT_FOUND
-      ) {
-        throw new ClientNotFoundError(id);
-      }
-      throw error;
-    }
+      await tx.corporationPayment.deleteMany({
+        where: { projectReportId: { in: reportIds } },
+      });
+
+      await tx.projectReport.deleteMany({
+        where: { projectId: { in: projectIds } },
+      });
+
+      await tx.subcontractorPayment.deleteMany({
+        where: { projectId: { in: projectIds } },
+      });
+
+      await tx.project.deleteMany({
+        where: { clientId: id },
+      });
+
+      await tx.client.delete({
+        where: { id },
+      });
+    });
+
+    this.logger.log(`Client deleted: ${id}`);
   }
 }

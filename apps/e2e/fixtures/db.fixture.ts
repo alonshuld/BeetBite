@@ -67,6 +67,14 @@ const testWithAuth = test.extend({
       }
     }
 
+    // Pin the global month picker so monthly views are deterministic and do not
+    // drift with the real system clock. The app otherwise defaults the month to
+    // "today", which would hide the fixed seed data (dated 2026-05) once the real
+    // date moves past May 2026. All seeds use 2026-05 (current) / 2026-04 (prev).
+    await page.addInitScript(() => {
+      localStorage.setItem('beetbite.month', '2026-05');
+    });
+
     await use(page);
   },
 });

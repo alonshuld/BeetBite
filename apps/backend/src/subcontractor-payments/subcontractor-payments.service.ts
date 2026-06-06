@@ -50,7 +50,10 @@ export class SubcontractorPaymentsService {
       (s, p) => s + p.amount.toNumber(),
       0,
     );
-    return afterProfit - corpTotal;
+    // The subcontractor receives whatever is left after profit and corporation
+    // payments. When corporation payments exceed that remainder the subcontractor
+    // is owed nothing, never a negative amount, so floor the result at zero.
+    return Math.max(0, afterProfit - corpTotal);
   }
 
   private async calculateSubcontractorExpectedTotal(
@@ -78,7 +81,9 @@ export class SubcontractorPaymentsService {
         (sum, payment) => sum + payment.amount.toNumber(),
         0,
       );
-      return total + (afterProfit - corporationPaymentsTotal);
+      // Floor each project at zero so one project's overage cannot cancel out
+      // amounts legitimately owed on the subcontractor's other projects.
+      return total + Math.max(0, afterProfit - corporationPaymentsTotal);
     }, 0);
   }
 
@@ -108,7 +113,12 @@ export class SubcontractorPaymentsService {
           (sum, payment) => sum + payment.amount.toNumber(),
           0,
         );
-        const subcontractorPayment = afterProfit - corporationPaymentsTotal;
+        // Floor each project at zero so one project's overage cannot cancel out
+        // amounts legitimately owed on the subcontractor's other projects.
+        const subcontractorPayment = Math.max(
+          0,
+          afterProfit - corporationPaymentsTotal,
+        );
 
         acc[project.subcontractorId] =
           (acc[project.subcontractorId] ?? 0) + subcontractorPayment;
@@ -149,7 +159,17 @@ export class SubcontractorPaymentsService {
             0,
           );
 
-          if (amountPaid + createSubcontractorPaymentDto.amount > amountOwed) {
+          // Compare in integer cents to avoid two floating-point hazards:
+          // 1. amountOwed is computed from Decimal fields via JS floats; multiplying by 100
+          //    before rounding preserves cents-level precision (e.g. 7988.4400000000005 → 798844).
+          //    Math.round(amountOwed) alone would truncate to 7988, incorrectly blocking a
+          //    valid payment of 7988 when 0.44 was already paid.
+          // 2. amountPaid is the sum of Decimal values converted to JS floats; accumulation
+          //    error (e.g. 10 × 100.10 = 1001.0000000000001) could tip the comparison.
+          if (
+            Math.round((amountPaid + createSubcontractorPaymentDto.amount) * 100) >
+            Math.round(amountOwed * 100)
+          ) {
             throw new SubcontractorPaymentOverpaymentError(
               amountOwed,
               amountPaid,
@@ -350,8 +370,9 @@ export class SubcontractorPaymentsService {
             );
 
             if (
-              amountPaid + updateSubcontractorPaymentDto.amount! >
-              amountOwed
+              Math.round(
+                (amountPaid + updateSubcontractorPaymentDto.amount!) * 100,
+              ) > Math.round(amountOwed * 100)
             ) {
               throw new SubcontractorPaymentOverpaymentError(
                 amountOwed,
