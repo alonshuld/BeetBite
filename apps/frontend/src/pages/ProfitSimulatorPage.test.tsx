@@ -87,10 +87,7 @@ describe("ProfitSimulatorPage", () => {
 
   it("lists the selected client's projects with their saved margin", async () => {
     renderPage();
-    await userEvent.selectOptions(
-      screen.getByLabelText("Client"),
-      "c1",
-    );
+    await userEvent.selectOptions(screen.getByLabelText("Client"), "c1");
     expect(screen.getByText("Tower Block")).toBeInTheDocument();
     // Saved margin comes from the project's last report (25%), not the baseline.
     expect(screen.getByText(/25\.0%/)).toBeInTheDocument();

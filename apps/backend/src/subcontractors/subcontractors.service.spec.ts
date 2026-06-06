@@ -224,7 +224,6 @@ describe('SubcontractorsService', () => {
         SubcontractorNotFoundError,
       );
     });
-
   });
 
   describe('Integration Tests with Payments', () => {
@@ -343,7 +342,6 @@ describe('SubcontractorsService', () => {
         expect(result.id).toBe('sub-with-payments');
         expect(result.name).toBe('Subcontractor With Payments');
       });
-
     });
 
     describe('workflow tests - subcontractor lifecycle with payments', () => {

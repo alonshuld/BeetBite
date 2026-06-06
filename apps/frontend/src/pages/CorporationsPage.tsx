@@ -57,13 +57,13 @@ export default function CorporationsPage() {
     const result = editing
       ? await updateCorporation({ id: editing.id, name: name.trim() })
       : await createCorporation({ name: name.trim() });
-    if (!('error' in result)) closeForm();
+    if (!("error" in result)) closeForm();
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
     const result = await deleteCorporation(deleteTarget.id);
-    if (!('error' in result)) setDeleteTarget(null);
+    if (!("error" in result)) setDeleteTarget(null);
   }
 
   return (

@@ -57,13 +57,13 @@ export default function SubcontractorsPage() {
     const result = editing
       ? await updateSubcontractor({ id: editing.id, name: name.trim() })
       : await createSubcontractor({ name: name.trim() });
-    if (!('error' in result)) closeForm();
+    if (!("error" in result)) closeForm();
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
     const result = await deleteSubcontractor(deleteTarget.id);
-    if (!('error' in result)) setDeleteTarget(null);
+    if (!("error" in result)) setDeleteTarget(null);
   }
 
   return (

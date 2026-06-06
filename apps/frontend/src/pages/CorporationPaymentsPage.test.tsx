@@ -182,7 +182,9 @@ describe("CorporationPaymentsPage", () => {
       const input = screen.getByRole("spinbutton");
       await userEvent.clear(input);
       await userEvent.type(input, "20");
-      expect(screen.getByRole("button", { name: "Save VAT" })).not.toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Save VAT" }),
+      ).not.toBeDisabled();
     });
 
     it("clicking enabled save button calls patchVat mutation", async () => {

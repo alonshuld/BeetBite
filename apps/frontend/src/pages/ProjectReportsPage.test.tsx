@@ -130,7 +130,9 @@ describe("ProjectReportsPage", () => {
     vi.mocked(useCreateProjectReportMutation).mockReturnValue(mut());
     vi.mocked(useAddIncomeEntryMutation).mockReturnValue(mut());
     vi.mocked(useUpdateIncomeEntryMutation).mockReturnValue(mut());
-    vi.mocked(useDeleteIncomeEntryMutation).mockReturnValue(mut(deleteEntrySpy));
+    vi.mocked(useDeleteIncomeEntryMutation).mockReturnValue(
+      mut(deleteEntrySpy),
+    );
     vi.mocked(useCreateCorporationPaymentMutation).mockReturnValue(mut());
     vi.mocked(useUpdateCorporationPaymentMutation).mockReturnValue(mut());
     vi.mocked(useDeleteCorporationPaymentMutation).mockReturnValue(mut());
@@ -181,9 +183,7 @@ describe("ProjectReportsPage", () => {
 
   it("reveals the inline add-income form", async () => {
     renderPage();
-    await userEvent.click(
-      screen.getByRole("button", { name: /add income/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /add income/i }));
     // Two income amount inputs would appear (existing none in edit), at least the
     // inline new-entry save button shows.
     expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();

@@ -35,7 +35,11 @@ const mockReports = [
   {
     id: "r1",
     date: "2025-03-01",
-    project: { id: "p1", name: "Tower Block", client: { id: "c1", name: "Acme Corp" } },
+    project: {
+      id: "p1",
+      name: "Tower Block",
+      client: { id: "c1", name: "Acme Corp" },
+    },
     subcontractor: { id: "s1", name: "Bob the Builder" },
     totalIncome: 10000,
     profitMargin: 20,

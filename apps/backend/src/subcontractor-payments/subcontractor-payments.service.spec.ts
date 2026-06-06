@@ -646,9 +646,9 @@ describe('SubcontractorPaymentsService', () => {
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
-      await expect(
-        service.create({ ...createDto, amount: 1 }),
-      ).rejects.toThrow(SubcontractorPaymentOverpaymentError);
+      await expect(service.create({ ...createDto, amount: 1 })).rejects.toThrow(
+        SubcontractorPaymentOverpaymentError,
+      );
     });
   });
 
