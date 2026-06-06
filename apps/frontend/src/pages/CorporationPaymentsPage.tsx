@@ -26,25 +26,37 @@ function VatInput({
   );
   const [patchVat] = usePatchCorporationPaymentVatMutation();
 
-  function handleBlur() {
+  const originalStr =
+    entry.vatPercentage != null ? String(entry.vatPercentage) : "";
+  const isDirty = value !== originalStr;
+
+  function handleSave() {
     const parsed = value === "" ? null : Number(value);
-    if (parsed === entry.vatPercentage) return;
     if (parsed !== null && (isNaN(parsed) || parsed < 0)) return;
     patchVat({ entry, corporationId, vatPercentage: parsed });
   }
 
   return (
-    <input
-      type="number"
-      min={0}
-      max={100}
-      step={0.1}
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={handleBlur}
-      placeholder="—"
-      className="w-20 rounded border border-border bg-surface px-2 py-1 text-right text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary rtl:text-left"
-    />
+    <div className="flex items-center gap-1">
+      <input
+        type="number"
+        min={0}
+        max={100}
+        step={0.1}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="—"
+        className="w-20 rounded border border-border bg-surface px-2 py-1 text-right text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary rtl:text-left"
+      />
+      <button
+        onClick={handleSave}
+        disabled={!isDirty}
+        className="flex h-6 w-6 items-center justify-center rounded bg-primary text-white text-xs font-bold transition-opacity disabled:pointer-events-none disabled:opacity-0"
+        aria-label="Save VAT"
+      >
+        ✓
+      </button>
+    </div>
   );
 }
 

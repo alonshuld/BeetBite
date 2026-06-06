@@ -166,7 +166,7 @@ export default function ClientsPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => void handleDelete()}
         title={`${t("deletePrefix")} "${deleteTarget?.name}"?`}
-        message={`${t("permanentlyDelete")} "${deleteTarget?.name}". ${t("cannotBeUndone")}`}
+        message={`${t("permanentlyDelete")} "${deleteTarget?.name}". ${t("clientDeleteCascadeWarning")} ${t("cannotBeUndone")}`}
         loading={deleting}
       />
     </div>

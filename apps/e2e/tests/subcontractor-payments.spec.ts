@@ -50,7 +50,7 @@ dbTest.describe('Subcontractor Payments', () => {
     await page.getByRole('button', { name: /save/i }).click();
 
     // After save, modal closes and total paid should update
-    await expect(page.locator('[role="dialog"], .fixed.inset-0')).not.toBeVisible({
+    await expect(page.getByRole('dialog')).not.toBeVisible({
       timeout: 5000,
     });
 
@@ -80,13 +80,15 @@ dbTest.describe('Subcontractor Payments', () => {
     await page.fill('#inst-amount', '50000');
     await page.getByRole('button', { name: /save/i }).click();
 
-    // Modal closes after save attempt
-    await expect(page.locator('[role="dialog"], .fixed.inset-0')).not.toBeVisible({
-      timeout: 5000,
-    });
+    // Backend rejects the overpayment (400) and the app surfaces the error in a
+    // toast. Its presence is the proof of rejection (the toast auto-dismisses
+    // after 3s, so assert it promptly).
+    await expect(
+      page.getByText(/would exceed amount owed/i),
+    ).toBeVisible({ timeout: 5000 });
 
-    // Backend rejected overpayment — paid amount of 50000 must NOT appear
-    await expect(page.getByText(/50,000|50000/)).not.toBeVisible({ timeout: 3000 });
+    // The card still shows the amount owed (45,000) and never records the payment.
+    await expect(page.getByText(/₪45,000/).first()).toBeVisible();
   });
 
   dbTest('multiple partial payments up to limit are accepted', async ({
@@ -105,7 +107,7 @@ dbTest.describe('Subcontractor Payments', () => {
     await page.selectOption('#inst-project', { label: 'SubPay Project' });
     await page.fill('#inst-amount', '20000');
     await page.getByRole('button', { name: /save/i }).click();
-    await expect(page.locator('[role="dialog"], .fixed.inset-0')).not.toBeVisible({
+    await expect(page.getByRole('dialog')).not.toBeVisible({
       timeout: 5000,
     });
 
@@ -114,7 +116,7 @@ dbTest.describe('Subcontractor Payments', () => {
     await page.selectOption('#inst-project', { label: 'SubPay Project' });
     await page.fill('#inst-amount', '20000');
     await page.getByRole('button', { name: /save/i }).click();
-    await expect(page.locator('[role="dialog"], .fixed.inset-0')).not.toBeVisible({
+    await expect(page.getByRole('dialog')).not.toBeVisible({
       timeout: 5000,
     });
 

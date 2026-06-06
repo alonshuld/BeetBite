@@ -25,7 +25,7 @@ model Project {
   description     String
   isDone          Boolean  @default(false)
 
-  client               Client                 @relation(fields: [clientId], references: [id])
+  client               Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
   reports              ProjectReport[]
   subcontractorPayments SubcontractorPayment[]
 
@@ -58,7 +58,7 @@ model ProjectReport {
   date            DateTime  @db.Date
   profitMargin    Decimal   @db.Decimal(5, 2)
 
-  project             Project               @relation(fields: [projectId], references: [id])
+  project             Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
   subcontractor       Subcontractor         @relation(fields: [subcontractorId], references: [id])
   corporationPayments CorporationPayment[]
   incomeEntries       ProjectReportIncome[]
@@ -88,7 +88,7 @@ model CorporationPayment {
   isFuture        Boolean   @default(false)
   vatPercentage   Decimal?  @db.Decimal(5, 2)
 
-  projectReport ProjectReport @relation(fields: [projectReportId], references: [id])
+  projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
   corporation   Corporation   @relation(fields: [corporationId], references: [id])
 
   @@map("corporation_payments")
@@ -103,7 +103,7 @@ model SubcontractorPayment {
   isPaid          Boolean  @default(false)
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id])
-  project       Project       @relation(fields: [projectId], references: [id])
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("subcontractor_payments")
 }

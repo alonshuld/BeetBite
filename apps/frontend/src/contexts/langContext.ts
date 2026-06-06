@@ -117,6 +117,8 @@ export const translations = {
     // Delete confirmation
     deletePrefix: "Delete",
     permanentlyDelete: "This will permanently delete",
+    clientDeleteCascadeWarning:
+      "All related projects, reports, and payments will also be permanently deleted.",
     cannotBeUndone: "This action cannot be undone.",
     // Actions
     remove: "Remove",
@@ -297,6 +299,8 @@ export const translations = {
     // Delete confirmation
     deletePrefix: "מחק",
     permanentlyDelete: "פעולה זו תמחק לצמיתות את",
+    clientDeleteCascadeWarning:
+      "כל הפרויקטים, הדוחות והתשלומים הקשורים יימחקו גם הם לצמיתות.",
     cannotBeUndone: "לא ניתן לבטל פעולה זו.",
     // Actions
     remove: "הסר",

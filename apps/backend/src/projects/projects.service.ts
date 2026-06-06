@@ -16,6 +16,7 @@ import { ClientNotFoundError } from '../clients/errors/client-not-found.exceptio
 import { Prisma } from 'src/generated/client';
 import { ProjectsQueryDto } from './dto/projects-query.dto';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
+import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
 
 const PAID_REPORTS_INCLUDE = {
   reports: {
@@ -201,11 +202,13 @@ export class ProjectsService {
 
       this.logger.log(`Project deleted: ${id}`);
     } catch (error) {
-      if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code === PRISMA_ERROR_CODES.NOT_FOUND
-      ) {
-        throw new ProjectNotFoundError(id);
+      if (error instanceof PrismaClientKnownRequestError) {
+        switch (error.code) {
+          case PRISMA_ERROR_CODES.NOT_FOUND:
+            throw new ProjectNotFoundError(id);
+          case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
+            throw new EntityHasRelatedRecordsError('project', 'reports or payments');
+        }
       }
       throw error;
     }
