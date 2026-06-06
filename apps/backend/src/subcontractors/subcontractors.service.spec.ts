@@ -7,7 +7,6 @@ import { SubcontractorAlreadyExistsError } from './errors/subcontractor-already-
 import { CreateSubcontractorDto } from './dto/create-subcontractor.dto';
 import { PaginationQueryDto } from 'src/common/pagination-query.dto';
 import { SubcontractorNotFoundError } from './errors/subcontractor-not-found';
-import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
 
 describe('SubcontractorsService', () => {
   let service: SubcontractorsService;
@@ -226,17 +225,6 @@ describe('SubcontractorsService', () => {
       );
     });
 
-    it('should handle foreign key constraint when subcontractor has associated payments', async () => {
-      const prismaError = new Prisma.PrismaClientKnownRequestError('', {
-        code: PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED,
-        clientVersion: '1.0.0',
-      });
-      mockPrismaService.subcontractor.delete.mockRejectedValue(prismaError);
-
-      await expect(service.remove('clh0000000000000000000001')).rejects.toThrow(
-        EntityHasRelatedRecordsError,
-      );
-    });
   });
 
   describe('Integration Tests with Payments', () => {
@@ -356,23 +344,6 @@ describe('SubcontractorsService', () => {
         expect(result.name).toBe('Subcontractor With Payments');
       });
 
-      it('should handle error when trying to delete subcontractor with existing payments', async () => {
-        const prismaError = new Prisma.PrismaClientKnownRequestError(
-          'Foreign key constraint failed on the field: `SubcontractorPayment_subcontractorId_fkey`',
-          {
-            code: PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED,
-            clientVersion: '1.0.0',
-          },
-        );
-
-        integrationMockPrismaService.subcontractor.delete.mockRejectedValue(
-          prismaError,
-        );
-
-        await expect(
-          integrationService.remove('sub-with-payments'),
-        ).rejects.toThrow(EntityHasRelatedRecordsError);
-      });
     });
 
     describe('workflow tests - subcontractor lifecycle with payments', () => {

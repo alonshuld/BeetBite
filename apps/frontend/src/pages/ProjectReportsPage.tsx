@@ -5,6 +5,7 @@ import {
   useGetProjectReportQuery,
   useUpdateProjectReportMutation,
   useCreateProjectReportMutation,
+  useDeleteProjectReportMutation,
   useAddIncomeEntryMutation,
   useUpdateIncomeEntryMutation,
   useDeleteIncomeEntryMutation,
@@ -30,7 +31,7 @@ import {
   Input,
   Select,
 } from "@/components/atoms";
-import { FormModal } from "@/components/organisms/Modal";
+import { FormModal, ConfirmModal } from "@/components/organisms/Modal";
 import { FormRow } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
 import { formatYM, formatISODate } from "@/utils/formatMonth";
@@ -77,6 +78,8 @@ export default function ProjectReportsPage() {
   const [updateCorp, { isLoading: updatingCorp }] =
     useUpdateCorporationPaymentMutation();
   const [deleteCorp] = useDeleteCorporationPaymentMutation();
+  const [deleteReport, { isLoading: deletingReport }] =
+    useDeleteProjectReportMutation();
 
   const project = projects.find((p) => p.id === projectId);
   const projectName = project?.name ?? `Project ${projectId}`;
@@ -95,6 +98,14 @@ export default function ProjectReportsPage() {
     currentListReport?.id ?? "",
     { skip: !currentListReport },
   );
+
+  const [deleteReportOpen, setDeleteReportOpen] = useState(false);
+
+  async function handleDeleteReport() {
+    if (!currentReport) return;
+    const result = await deleteReport(currentReport.id);
+    if (!("error" in result)) setDeleteReportOpen(false);
+  }
 
   // Edit modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -355,12 +366,20 @@ export default function ProjectReportsPage() {
             {t("reportLabel")} — {formatYM(month, lang)}
           </h2>
           {currentReport ? (
-            <ButtonGhost
-              onClick={() => openEdit(currentReport)}
-              className="text-xs py-1 px-3"
-            >
-              {t("edit")}
-            </ButtonGhost>
+            <div className="flex items-center gap-2">
+              <ButtonGhost
+                onClick={() => openEdit(currentReport)}
+                className="text-xs py-1 px-3"
+              >
+                {t("edit")}
+              </ButtonGhost>
+              <ButtonDanger
+                onClick={() => setDeleteReportOpen(true)}
+                className="text-xs py-1 px-3"
+              >
+                {t("delete")}
+              </ButtonDanger>
+            </div>
           ) : (
             <ButtonPrimary onClick={openAdd} className="text-xs py-1.5 px-3">
               + {t("add")}
@@ -853,6 +872,21 @@ export default function ProjectReportsPage() {
           )}
         </div>
       </FormModal>
+
+      <ConfirmModal
+        open={deleteReportOpen}
+        onClose={() => setDeleteReportOpen(false)}
+        onConfirm={() => void handleDeleteReport()}
+        title={t("deletePrefix") + " " + t("projectReports") + "?"}
+        message={
+          t("permanentlyDelete") +
+          " " +
+          t("projectReports") +
+          ". " +
+          t("cannotBeUndone")
+        }
+        loading={deletingReport}
+      />
     </div>
   );
 }

@@ -54,18 +54,16 @@ export default function SubcontractorsPage() {
 
   async function handleSave() {
     if (!name.trim()) return;
-    if (editing) {
-      await updateSubcontractor({ id: editing.id, name: name.trim() });
-    } else {
-      await createSubcontractor({ name: name.trim() });
-    }
-    closeForm();
+    const result = editing
+      ? await updateSubcontractor({ id: editing.id, name: name.trim() })
+      : await createSubcontractor({ name: name.trim() });
+    if (!('error' in result)) closeForm();
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await deleteSubcontractor(deleteTarget.id);
-    setDeleteTarget(null);
+    const result = await deleteSubcontractor(deleteTarget.id);
+    if (!('error' in result)) setDeleteTarget(null);
   }
 
   return (

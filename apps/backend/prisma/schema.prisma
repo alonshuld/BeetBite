@@ -59,7 +59,7 @@ model ProjectReport {
   profitMargin    Decimal   @db.Decimal(5, 2)
 
   project             Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  subcontractor       Subcontractor         @relation(fields: [subcontractorId], references: [id])
+  subcontractor       Subcontractor         @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
   corporationPayments CorporationPayment[]
   incomeEntries       ProjectReportIncome[]
 
@@ -89,7 +89,7 @@ model CorporationPayment {
   vatPercentage   Decimal?  @db.Decimal(5, 2)
 
   projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
-  corporation   Corporation   @relation(fields: [corporationId], references: [id])
+  corporation   Corporation   @relation(fields: [corporationId], references: [id], onDelete: Cascade)
 
   @@map("corporation_payments")
 }
@@ -102,7 +102,7 @@ model SubcontractorPayment {
   amount          Decimal  @db.Decimal(12, 2)
   isPaid          Boolean  @default(false)
 
-  subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id])
+  subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
   project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("subcontractor_payments")

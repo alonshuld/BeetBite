@@ -16,7 +16,7 @@ export interface UpdateCorporationDto {
 export const corporationsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getCorporations: build.query<Corporation[], void>({
-      query: () => "/corporations",
+      query: () => ({ url: "/corporations", params: { limit: 1000 } }),
       providesTags: ["Corporations"],
     }),
     createCorporation: build.mutation<Corporation, CreateCorporationDto>({

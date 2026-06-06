@@ -51,18 +51,16 @@ export default function ClientsPage() {
 
   async function handleSave() {
     if (!name.trim()) return;
-    if (editing) {
-      await updateClient({ id: editing.id, name: name.trim() });
-    } else {
-      await createClient({ name: name.trim() });
-    }
-    closeForm();
+    const result = editing
+      ? await updateClient({ id: editing.id, name: name.trim() })
+      : await createClient({ name: name.trim() });
+    if (!('error' in result)) closeForm();
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await deleteClient(deleteTarget.id);
-    setDeleteTarget(null);
+    const result = await deleteClient(deleteTarget.id);
+    if (!('error' in result)) setDeleteTarget(null);
   }
 
   return (

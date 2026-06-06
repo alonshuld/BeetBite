@@ -16,7 +16,7 @@ export interface UpdateSubcontractorDto {
 export const subcontractorsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getSubcontractors: build.query<Subcontractor[], void>({
-      query: () => "/subcontractors",
+      query: () => ({ url: "/subcontractors", params: { limit: 1000 } }),
       providesTags: ["Subcontractors"],
     }),
     createSubcontractor: build.mutation<Subcontractor, CreateSubcontractorDto>({

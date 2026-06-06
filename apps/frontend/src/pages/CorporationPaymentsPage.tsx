@@ -51,7 +51,7 @@ function VatInput({
       <button
         onClick={handleSave}
         disabled={!isDirty}
-        className="flex h-6 w-6 items-center justify-center rounded bg-primary text-white text-xs font-bold transition-opacity disabled:pointer-events-none disabled:opacity-0"
+        className="flex h-6 w-6 items-center justify-center rounded bg-beet text-white text-xs font-bold transition-opacity disabled:pointer-events-none disabled:opacity-0"
         aria-label="Save VAT"
       >
         ✓
