@@ -18,6 +18,7 @@ export const translations = {
     overview: "Overview",
     management: "Management",
     tools: "Tools",
+    settings: "Settings",
     // Auth
     username: "Username",
     password: "Password",
@@ -190,6 +191,21 @@ export const translations = {
     errorDescription: "An unexpected error occurred. Please reload the page.",
     reload: "Reload",
     signOut: "Sign out",
+    // Company settings
+    companySettings: "Company Settings",
+    companySettingsSubtitle: "Your company profile — used on exported reports",
+    companyNamePlaceholder: "Company name",
+    companyDescriptionPlaceholder: "Company description",
+    logo: "Logo",
+    signature: "Signature",
+    clickToUpload: "Click to upload",
+    invalidImageType: "Please upload a PNG, JPG, or WEBP image",
+    imageTooLarge: "Image is too large (max 3MB)",
+    onboardingHeading: "Welcome to BeetBite",
+    onboardingSubtitle:
+      "Tell us about your company — you can always fill this in later",
+    skipForNow: "Skip for now",
+    saveAndContinue: "Save & Continue",
   },
   he: {
     // Nav
@@ -206,6 +222,7 @@ export const translations = {
     overview: "סקירה",
     management: "ניהול",
     tools: "כלים",
+    settings: "הגדרות",
     // Auth
     username: "שם משתמש",
     password: "סיסמה",
@@ -372,6 +389,21 @@ export const translations = {
     errorDescription: "אירעה שגיאה בלתי צפויה. אנא טען מחדש את הדף.",
     reload: "טען מחדש",
     signOut: "התנתק",
+    // Company settings
+    companySettings: "פרטי החברה",
+    companySettingsSubtitle: "פרופיל החברה שלך — ישמש בדוחות מיוצאים",
+    companyNamePlaceholder: "שם החברה",
+    companyDescriptionPlaceholder: "תיאור החברה",
+    logo: "לוגו",
+    signature: "חתימה",
+    clickToUpload: "לחץ להעלאה",
+    invalidImageType: "אנא העלה תמונת PNG, JPG או WEBP",
+    imageTooLarge: "התמונה גדולה מדי (עד 3MB)",
+    onboardingHeading: "ברוכים הבאים ל-BeetBite",
+    onboardingSubtitle:
+      "ספרו לנו על החברה שלכם — תמיד ניתן למלא זאת מאוחר יותר",
+    skipForNow: "דלג לעת עתה",
+    saveAndContinue: "שמור והמשך",
   },
 } as const;
 

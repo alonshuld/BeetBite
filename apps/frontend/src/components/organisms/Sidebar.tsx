@@ -44,6 +44,10 @@ const MANAGEMENT_ITEMS: NavItem[] = [
   { path: "/corporations", labelKey: "corporations", icon: "🏛️" },
 ];
 
+const SETTINGS_ITEMS: NavItem[] = [
+  { path: "/settings/company", labelKey: "companySettings", icon: "⚙️" },
+];
+
 function NavSection({
   label,
   items,
@@ -132,6 +136,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <NavSection
             label={t("management")}
             items={MANAGEMENT_ITEMS}
+            onClose={onClose}
+          />
+          <NavSection
+            label={t("settings")}
+            items={SETTINGS_ITEMS}
             onClose={onClose}
           />
         </nav>
