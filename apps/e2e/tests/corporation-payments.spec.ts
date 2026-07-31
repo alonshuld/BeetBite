@@ -22,7 +22,7 @@ dbTest.describe('Corporation Payments Page', () => {
       },
     });
     const subcontractor = await db.subcontractor.create({
-      data: { name: 'CorpPay Sub' },
+      data: { name: 'CorpPay Sub', companyNumber: '515222001' },
     });
     const corporation = await db.corporation.create({
       data: { name: 'CorpPay Corp' },
