@@ -68,6 +68,7 @@ Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` →
 | `corporations` | Corporations that receive payments from project reports |
 | `subcontractors` | Workers assigned to project reports |
 | `subcontractor-payments` | Track partial payments made to subcontractors per service month; enforces overpayment guard against computed amount owed per project; exposes `GET /by-client?month=` aggregation endpoint |
+| `company-settings` | Contractor's own profile (singleton) — `GET`/`PUT /company-settings`, no create/delete, no domain errors (fixed-id upsert can't conflict) |
 | `prisma` | Singleton `PrismaService` extending `PrismaClient` with `@prisma/adapter-pg` |
 
 ### Authentication
@@ -92,10 +93,15 @@ Key entity fields (see `prisma/schema.prisma` for the full schema):
 | `ProjectReport` | `incomeDate?` (nullable — null means income not yet received); unique on `(projectId, date)` |
 | `CorporationPayment` | `date?` (nullable payment date); `description?` (optional String); `isFuture` (Boolean, default false — true means not yet invoiced); `vatPercentage?` (Decimal — only applicable when `isFuture` is false, defaults to 18%) |
 | `SubcontractorPayment` | `projectId` (String — required, payment must be assigned to a project); `serviceDate` (Date — the service month's start date, required); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, projectId, serviceDate)` allowed; no `paymentDate` — all payments are always considered paid |
+| `CompanySettings` | Singleton — `id` fixed via `@default("company-settings")`, always upserted by that literal id (no lookup needed to know if it exists). Every other field is optional (`name`, `description`, `companyNumber`, `logo`, `signature`) since onboarding is skippable. `logo`/`signature` are base64 data-URL strings (`@Matches` regex restricts to png/jpg/webp, `@MaxLength(4_000_000)` caps size) — no multer, no disk/S3 storage. `GET` returns `null` when the row has never been created; the frontend's `OnboardingGate` treats that as "show onboarding" |
 
 ### Prisma client
 
 The generated Prisma client lives in `src/generated/` (not `node_modules`). Import from `src/generated/client`, not from `@prisma/client`. After schema changes, regenerate with `pnpx prisma generate`.
+
+### Build output
+
+`nest-cli.json` sets `deleteOutDir: true`, and `tsconfig.build.json` points `tsBuildInfoFile` at `./dist/tsconfig.build.tsbuildinfo` — keep the incremental cache **inside** `dist`. If it ever ends up outside `dist` again, `deleteOutDir` wipes the compiled output on every run but leaves the stale cache behind, so TypeScript believes nothing changed and skips re-emitting — `nest build`/`nest start --watch` then fail with `Cannot find module '.../dist/main'` on every run after the first.
 
 ### Validation
 

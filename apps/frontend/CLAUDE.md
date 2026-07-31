@@ -43,10 +43,11 @@ src/
       authSlice.ts          # JWT token in localStorage (key: beetbite.token)
   components/
     atoms/                  # Primitive UI: Button variants, Badge, Input, Select, Textarea, Toggle, Divider, EmptyState, SearchInput, StatCard, MonthPicker, FormGroup, LangToggle, PageHeader, ThemeToggle
-    molecules/              # Composed but stateless: (currently flat — files in atoms/ re-exported via index)
-    organisms/              # Modal (+ ConfirmModal + FormModal), Sidebar, TopHeader
+    molecules/              # Composed but stateless: (currently flat — files in atoms/ re-exported via index), + ImageUploadField (file input → base64 data URL, preview, remove)
+    organisms/              # Modal (+ ConfirmModal + FormModal), Sidebar, TopHeader, CompanySettingsForm (shared by onboarding + settings pages)
     AppShell.tsx            # Sidebar + TopHeader + <Outlet />
     RequireAuth.tsx         # Redirects to /login when unauthenticated
+    OnboardingGate.tsx      # Redirects to /onboarding once, only if company settings don't exist yet
     ErrorBoundary.tsx       # Catches render errors
   contexts/
     LangContext.tsx         # LangProvider — persists to localStorage (beetbite.lang)
@@ -81,11 +82,12 @@ Re-run `pnpm codegen` whenever backend DTOs change. The backend must be running 
 
 ## Routing
 
-Data router via `createBrowserRouter`. All authenticated routes are wrapped in `RequireAuth` (redirects to `/login`) and rendered inside `AppShell`. Pages are `React.lazy`-loaded.
+Data router via `createBrowserRouter`. All authenticated routes are wrapped in `RequireAuth` (redirects to `/login`). Below that, `/onboarding` is a sibling route rendered full-screen (no `AppShell`, no gate); everything else is wrapped in `OnboardingGate` (redirects to `/onboarding` once, only when `GET /company-settings` returns `null`, i.e. never configured — not a permanent block, just a one-time nudge) and then `AppShell`. Pages are `React.lazy`-loaded.
 
 | Path | Page |
 |---|---|
 | `/login` | LoginPage (public) |
+| `/onboarding` | OnboardingPage (full-screen, no sidebar; "Skip for now" or "Save & Continue") |
 | `/` | redirect → `/reports` |
 | `/reports` | ReportsPage |
 | `/reports/projects/:id` | ProjectReportsPage |
@@ -95,6 +97,7 @@ Data router via `createBrowserRouter`. All authenticated routes are wrapped in `
 | `/clients` | ClientsPage |
 | `/subcontractors` | SubcontractorsPage |
 | `/corporations` | CorporationsPage |
+| `/settings/company` | SettingsCompanyPage |
 | `/simulator` | ProfitSimulatorPage |
 | `*` | NotFoundPage |
 
@@ -143,6 +146,8 @@ Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`, `setLang`) is provided at 
 
 **Tools**: Profit Margin Simulator
 
+**Settings**: Company Settings (`/settings/company`)
+
 \* Income Per Month does not use the global month picker — exclude from `OVERVIEW_SCREENS`.
 
 ## Key design decisions
@@ -156,6 +161,7 @@ Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`, `setLang`) is provided at 
 - **Date display in reports**: month + year only (`MMM YYYY`), no day. Use `formatISODate(iso, lang)` — locale-aware.
 - **MonthPicker**: click the label to open a popover with a year `<select>` (±10 years) and a 3×4 month button grid. No prev/next arrows. Month names in the picker also respect `lang` via `MONTH_NAMES[lang]` arrays defined in the component.
 - **Profit Simulator**: read-only, no API writes. Uses already-loaded RTK Query data.
+- **Company Settings onboarding**: `OnboardingGate` checks `useGetCompanySettingsQuery()`; `data === null` (RTK Query's default json handler turns an empty response body into `null` — this is how the backend signals "not configured yet") means redirect to `/onboarding`. Both "Skip for now" and "Save & Continue" call the same `PUT /company-settings` (even with an empty body), so the row always ends up existing afterward and the redirect never fires again. Logo/signature are read via `FileReader.readAsDataURL` into base64 strings — no upload endpoint.
 
 ## Path alias
 
