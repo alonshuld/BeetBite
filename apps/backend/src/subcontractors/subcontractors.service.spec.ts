@@ -42,10 +42,14 @@ describe('SubcontractorsService', () => {
   });
 
   describe('create', () => {
-    const createDto: CreateSubcontractorDto = { name: 'Test Subcontractor' };
+    const createDto: CreateSubcontractorDto = {
+      name: 'Test Subcontractor',
+      companyNumber: '515123456',
+    };
     const mockSubcontractor = {
       id: 'clh0000000000000000000001',
       name: 'Test Subcontractor',
+      companyNumber: '515123456',
     };
 
     it('should create a subcontractor', async () => {
@@ -58,6 +62,7 @@ describe('SubcontractorsService', () => {
       expect(result).toEqual({
         id: mockSubcontractor.id,
         name: mockSubcontractor.name,
+        companyNumber: mockSubcontractor.companyNumber,
       });
       expect(mockPrismaService.subcontractor.create).toHaveBeenCalledWith({
         data: createDto,
@@ -65,9 +70,24 @@ describe('SubcontractorsService', () => {
     });
 
     it('should throw SubcontractorExistsError on duplicate name', async () => {
-      mockPrismaService.subcontractor.create.mockResolvedValue(createDto);
+      const error = new Prisma.PrismaClientKnownRequestError('', {
+        code: PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED,
+        clientVersion: '1.0.0',
+        meta: { target: ['name'] },
+      });
+      mockPrismaService.subcontractor.create.mockRejectedValue(error);
 
-      const error = new SubcontractorAlreadyExistsError(createDto.name);
+      await expect(service.create(createDto)).rejects.toThrow(
+        SubcontractorAlreadyExistsError,
+      );
+    });
+
+    it('should throw SubcontractorExistsError on duplicate company number', async () => {
+      const error = new Prisma.PrismaClientKnownRequestError('', {
+        code: PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED,
+        clientVersion: '1.0.0',
+        meta: { target: ['companyNumber'] },
+      });
       mockPrismaService.subcontractor.create.mockRejectedValue(error);
 
       await expect(service.create(createDto)).rejects.toThrow(
@@ -159,12 +179,16 @@ describe('SubcontractorsService', () => {
   });
 
   describe('update', () => {
-    const updateDto: CreateSubcontractorDto = { name: 'Updated Subcontractor' };
+    const updateDto: CreateSubcontractorDto = {
+      name: 'Updated Subcontractor',
+      companyNumber: '515123456',
+    };
 
     it('should update a subcontractor', async () => {
       const mockSubcontractor = {
         id: 'clh0000000000000000000001',
         name: 'Updated Subcontractor',
+        companyNumber: '515123456',
       };
 
       mockPrismaService.subcontractor.update.mockResolvedValue(
@@ -179,6 +203,7 @@ describe('SubcontractorsService', () => {
       expect(result).toEqual({
         id: mockSubcontractor.id,
         name: mockSubcontractor.name,
+        companyNumber: mockSubcontractor.companyNumber,
       });
       expect(mockPrismaService.subcontractor.update).toHaveBeenCalledWith({
         where: { id: 'clh0000000000000000000001' },
@@ -196,6 +221,19 @@ describe('SubcontractorsService', () => {
       await expect(
         service.update('clh0000000000000000000001', updateDto),
       ).rejects.toThrow(SubcontractorNotFoundError);
+    });
+
+    it('should throw SubcontractorExistsError on duplicate company number', async () => {
+      const error = new Prisma.PrismaClientKnownRequestError('', {
+        code: PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED,
+        clientVersion: '1.0.0',
+        meta: { target: ['companyNumber'] },
+      });
+      mockPrismaService.subcontractor.update.mockRejectedValue(error);
+
+      await expect(
+        service.update('clh0000000000000000000001', updateDto),
+      ).rejects.toThrow(SubcontractorAlreadyExistsError);
     });
   });
 
@@ -262,10 +300,14 @@ describe('SubcontractorsService', () => {
 
     describe('subcontractor and payment relationship validation', () => {
       it('should create subcontractor successfully', async () => {
-        const createDto = { name: 'New Subcontractor' };
+        const createDto = {
+          name: 'New Subcontractor',
+          companyNumber: '515123456',
+        };
         const mockSubcontractor = {
           id: 'sub-new',
           name: 'New Subcontractor',
+          companyNumber: '515123456',
         };
 
         integrationMockPrismaService.subcontractor.create.mockResolvedValue(
@@ -350,6 +392,7 @@ describe('SubcontractorsService', () => {
         const newSubcontractor = {
           id: 'sub-workflow',
           name: 'Workflow Subcontractor',
+          companyNumber: '515123456',
         };
 
         integrationMockPrismaService.subcontractor.create.mockResolvedValue(
@@ -358,6 +401,7 @@ describe('SubcontractorsService', () => {
 
         const createdSubcontractor = await integrationService.create({
           name: 'Workflow Subcontractor',
+          companyNumber: '515123456',
         });
         expect(createdSubcontractor.id).toBe('sub-workflow');
 

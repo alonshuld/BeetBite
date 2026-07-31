@@ -112,21 +112,21 @@ async function seedMockData(): Promise<void> {
 
   // ── Subcontractors (15) ───────────────────────────────────────────────────
   const subcontractors = await Promise.all([
-    prisma.subcontractor.create({ data: { name: 'Moshe Cohen' } }),      // 0
-    prisma.subcontractor.create({ data: { name: 'Avi Levi' } }),          // 1
-    prisma.subcontractor.create({ data: { name: 'Yossi Mizrahi' } }),     // 2
-    prisma.subcontractor.create({ data: { name: 'David Peretz' } }),      // 3
-    prisma.subcontractor.create({ data: { name: 'Shlomo Ben-David' } }),  // 4
-    prisma.subcontractor.create({ data: { name: 'Rami Dahan' } }),        // 5
-    prisma.subcontractor.create({ data: { name: 'Eli Rosenblum' } }),     // 6
-    prisma.subcontractor.create({ data: { name: 'Gabriel Schwartz' } }), // 7
-    prisma.subcontractor.create({ data: { name: 'Yaniv Goldman' } }),     // 8
-    prisma.subcontractor.create({ data: { name: 'Noam Shalit' } }),       // 9
-    prisma.subcontractor.create({ data: { name: 'Arik Barkai' } }),       // 10
-    prisma.subcontractor.create({ data: { name: 'Itay Nir' } }),          // 11
-    prisma.subcontractor.create({ data: { name: 'Uri Zuckerman' } }),     // 12
-    prisma.subcontractor.create({ data: { name: 'Moti Berkman' } }),      // 13
-    prisma.subcontractor.create({ data: { name: 'Tal Golan' } }),         // 14
+    prisma.subcontractor.create({ data: { name: 'Moshe Cohen', companyNumber: '515000001' } }),      // 0
+    prisma.subcontractor.create({ data: { name: 'Avi Levi', companyNumber: '515000002' } }),          // 1
+    prisma.subcontractor.create({ data: { name: 'Yossi Mizrahi', companyNumber: '515000003' } }),     // 2
+    prisma.subcontractor.create({ data: { name: 'David Peretz', companyNumber: '515000004' } }),      // 3
+    prisma.subcontractor.create({ data: { name: 'Shlomo Ben-David', companyNumber: '515000005' } }),  // 4
+    prisma.subcontractor.create({ data: { name: 'Rami Dahan', companyNumber: '515000006' } }),        // 5
+    prisma.subcontractor.create({ data: { name: 'Eli Rosenblum', companyNumber: '515000007' } }),     // 6
+    prisma.subcontractor.create({ data: { name: 'Gabriel Schwartz', companyNumber: '515000008' } }), // 7
+    prisma.subcontractor.create({ data: { name: 'Yaniv Goldman', companyNumber: '515000009' } }),     // 8
+    prisma.subcontractor.create({ data: { name: 'Noam Shalit', companyNumber: '515000010' } }),       // 9
+    prisma.subcontractor.create({ data: { name: 'Arik Barkai', companyNumber: '515000011' } }),       // 10
+    prisma.subcontractor.create({ data: { name: 'Itay Nir', companyNumber: '515000012' } }),          // 11
+    prisma.subcontractor.create({ data: { name: 'Uri Zuckerman', companyNumber: '515000013' } }),     // 12
+    prisma.subcontractor.create({ data: { name: 'Moti Berkman', companyNumber: '515000014' } }),      // 13
+    prisma.subcontractor.create({ data: { name: 'Tal Golan', companyNumber: '515000015' } }),         // 14
   ]);
 
   // ── Corporations (12) ─────────────────────────────────────────────────────

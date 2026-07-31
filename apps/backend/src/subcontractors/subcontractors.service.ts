@@ -45,7 +45,13 @@ export class SubcontractorsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED
       ) {
-        throw new SubcontractorAlreadyExistsError(createSubcontractorDto.name);
+        const field = this.conflictingField(error);
+        throw new SubcontractorAlreadyExistsError(
+          field === 'companyNumber'
+            ? createSubcontractorDto.companyNumber
+            : createSubcontractorDto.name,
+          field,
+        );
       }
       throw error;
     }
@@ -115,14 +121,32 @@ export class SubcontractorsService {
         switch (error.code) {
           case PRISMA_ERROR_CODES.NOT_FOUND:
             throw new SubcontractorNotFoundError(id);
-          case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
+          case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED: {
+            const field = this.conflictingField(error);
             throw new SubcontractorAlreadyExistsError(
-              updateSubcontractorDto.name,
+              field === 'companyNumber'
+                ? updateSubcontractorDto.companyNumber
+                : updateSubcontractorDto.name,
+              field,
             );
+          }
         }
       }
       throw error;
     }
+  }
+
+  /**
+   * Determines which unique field triggered a Prisma unique-constraint violation.
+   * @param error The Prisma unique-constraint error.
+   * @returns 'companyNumber' if that field conflicted, otherwise 'name'.
+   */
+  private conflictingField(
+    error: Prisma.PrismaClientKnownRequestError,
+  ): 'name' | 'companyNumber' {
+    const target = error.meta?.target;
+    const targetFields = Array.isArray(target) ? target : [];
+    return targetFields.includes('companyNumber') ? 'companyNumber' : 'name';
   }
 
   /**

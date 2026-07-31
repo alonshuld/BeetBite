@@ -6,10 +6,11 @@ import { EntityAlreadyExistsError } from 'src/common/errors/entity-already-exist
 export class SubcontractorAlreadyExistsError extends EntityAlreadyExistsError {
   /**
    * SubcontractorAlreadyExistsError constructor
-   * @param subcontractorId The ID of the subcontractor that already exists
+   * @param value The conflicting field value
+   * @param field The name of the field that already exists (defaults to 'name')
    */
-  constructor(subcontractorId: string) {
-    super(`Subcontractor with ID ${subcontractorId} already exists`);
+  constructor(value: string, field: string = 'name') {
+    super(`Subcontractor with ${field} ${value} already exists`);
     this.name = 'SubcontractorAlreadyExistsError';
   }
 }

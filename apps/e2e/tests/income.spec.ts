@@ -10,7 +10,7 @@ dbTest.describe('Monthly Income', () => {
   }) => {
     const client = await db.client.create({ data: { name: 'Income Client' } });
     const subcontractor = await db.subcontractor.create({
-      data: { name: 'Income Worker' },
+      data: { name: 'Income Worker', companyNumber: '515222005' },
     });
     const project = await db.project.create({
       data: {
@@ -45,7 +45,9 @@ dbTest.describe('Monthly Income', () => {
   });
 
   dbTest('grand total sums every client for the month', async ({ page, db }) => {
-    const sub = await db.subcontractor.create({ data: { name: 'GT Worker' } });
+    const sub = await db.subcontractor.create({
+      data: { name: 'GT Worker', companyNumber: '515222006' },
+    });
     for (const [name, amount] of [
       ['Client A', 40000],
       ['Client B', 60000],

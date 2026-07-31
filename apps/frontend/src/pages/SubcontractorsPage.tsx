@@ -29,6 +29,7 @@ export default function SubcontractorsPage() {
   const [editing, setEditing] = useState<Subcontractor | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Subcontractor | null>(null);
   const [name, setName] = useState("");
+  const [companyNumber, setCompanyNumber] = useState("");
 
   const filtered = subcontractors.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()),
@@ -37,12 +38,14 @@ export default function SubcontractorsPage() {
   function openAdd() {
     setEditing(null);
     setName("");
+    setCompanyNumber("");
     setFormOpen(true);
   }
 
   function openEdit(sub: Subcontractor) {
     setEditing(sub);
     setName(sub.name);
+    setCompanyNumber(sub.companyNumber);
     setFormOpen(true);
   }
 
@@ -50,13 +53,18 @@ export default function SubcontractorsPage() {
     setFormOpen(false);
     setEditing(null);
     setName("");
+    setCompanyNumber("");
   }
 
   async function handleSave() {
-    if (!name.trim()) return;
+    if (!name.trim() || !/^\d{9}$/.test(companyNumber)) return;
     const result = editing
-      ? await updateSubcontractor({ id: editing.id, name: name.trim() })
-      : await createSubcontractor({ name: name.trim() });
+      ? await updateSubcontractor({
+          id: editing.id,
+          name: name.trim(),
+          companyNumber,
+        })
+      : await createSubcontractor({ name: name.trim(), companyNumber });
     if (!("error" in result)) closeForm();
   }
 
@@ -108,6 +116,9 @@ export default function SubcontractorsPage() {
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
                   {t("name")}
                 </th>
+                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                  {t("companyNumberLabel")}
+                </th>
                 <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
                   {t("actions")}
                 </th>
@@ -120,6 +131,7 @@ export default function SubcontractorsPage() {
                   className="border-b border-border hover:bg-surface-2 transition-colors"
                 >
                   <td className="py-3 px-4 text-text">{sub.name}</td>
+                  <td className="py-3 px-4 text-text">{sub.companyNumber}</td>
                   <td className="py-3 px-4">
                     <div className="flex items-center justify-end gap-2 rtl:justify-start">
                       <ButtonIcon
@@ -161,6 +173,20 @@ export default function SubcontractorsPage() {
               placeholder={t("subcontractorNamePlaceholder")}
               required
               autoFocus
+            />
+          </FormGroup>
+          <FormGroup>
+            <Input
+              id="sub-company-number"
+              label={t("companyNumberLabel")}
+              value={companyNumber}
+              onChange={(e) =>
+                setCompanyNumber(e.target.value.replace(/\D/g, "").slice(0, 9))
+              }
+              placeholder={t("companyNumberPlaceholder")}
+              inputMode="numeric"
+              maxLength={9}
+              required
             />
           </FormGroup>
         </FormRow>

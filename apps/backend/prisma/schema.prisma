@@ -33,8 +33,9 @@ model Project {
 }
 
 model Subcontractor {
-  id   String @id @default(cuid())
-  name String @unique
+  id            String @id @default(cuid())
+  name          String @unique
+  companyNumber String @unique
 
   reports  ProjectReport[]
   payments SubcontractorPayment[]
