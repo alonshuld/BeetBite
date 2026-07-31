@@ -17,6 +17,8 @@ Each month, the contractor keeps a **profit margin** percentage of the income, t
 
 **SubcontractorPayments** track partial payments made to a subcontractor for a given service month. Multiple partial payments per month are allowed. The amount owed is computed from project reports at read time; the service rejects any payment that would cause the total paid to exceed that amount.
 
+**Company Settings** is a singleton record holding the contractor's own profile — name, description, company registration number, logo, and signature (images stored as base64 data URLs, no file upload infra). On first login, if it doesn't exist yet, the user is nudged to an onboarding screen to fill it in; this is a soft, skippable nudge (not a blocking gate) and the data is editable anytime after from a Settings page. None of these fields are required to use the app — a future PDF-export feature will require name + company number before exporting, but that's enforced by export, not here.
+
 Users manually enter clients, projects, corporations, and subcontractors once, then create a project report each month per project. The system derives all financial insights (profits, payments, income totals, project payment progress) from these reports.
 
 ## Monorepo structure

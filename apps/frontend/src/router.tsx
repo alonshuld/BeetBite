@@ -2,8 +2,11 @@ import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import AppShell from "@/components/AppShell";
 import RequireAuth from "@/components/RequireAuth";
+import OnboardingGate from "@/components/OnboardingGate";
 
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
+const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"));
+const SettingsCompanyPage = lazy(() => import("@/pages/SettingsCompanyPage"));
 const ReportsPage = lazy(() => import("@/pages/ReportsPage"));
 const ProjectReportsPage = lazy(() => import("@/pages/ProjectReportsPage"));
 const CorporationPaymentsPage = lazy(
@@ -36,29 +39,42 @@ export const router = createBrowserRouter([
     element: <RequireAuth />,
     errorElement: wrap(ErrorPage),
     children: [
+      { path: "onboarding", element: wrap(OnboardingPage) },
       {
-        element: <AppShell />,
+        element: <OnboardingGate />,
         children: [
-          { index: true, element: <Navigate to="/reports" replace /> },
-          { path: "reports", element: wrap(ReportsPage) },
           {
-            path: "reports/projects/:id",
-            element: wrap(ProjectReportsPage),
+            element: <AppShell />,
+            children: [
+              { index: true, element: <Navigate to="/reports" replace /> },
+              { path: "reports", element: wrap(ReportsPage) },
+              {
+                path: "reports/projects/:id",
+                element: wrap(ProjectReportsPage),
+              },
+              {
+                path: "corporation-payments",
+                element: wrap(CorporationPaymentsPage),
+              },
+              {
+                path: "subcontractor-payments",
+                element: wrap(SubcontractorPaymentsPage),
+              },
+              { path: "projects", element: wrap(ProjectsPage) },
+              { path: "clients", element: wrap(ClientsPage) },
+              { path: "subcontractors", element: wrap(SubcontractorsPage) },
+              { path: "corporations", element: wrap(CorporationsPage) },
+              { path: "income", element: wrap(MonthlyIncomePage) },
+              {
+                path: "settings/company",
+                element: wrap(SettingsCompanyPage),
+              },
+              {
+                path: "simulator",
+                element: <Navigate to="/reports" replace />,
+              },
+            ],
           },
-          {
-            path: "corporation-payments",
-            element: wrap(CorporationPaymentsPage),
-          },
-          {
-            path: "subcontractor-payments",
-            element: wrap(SubcontractorPaymentsPage),
-          },
-          { path: "projects", element: wrap(ProjectsPage) },
-          { path: "clients", element: wrap(ClientsPage) },
-          { path: "subcontractors", element: wrap(SubcontractorsPage) },
-          { path: "corporations", element: wrap(CorporationsPage) },
-          { path: "income", element: wrap(MonthlyIncomePage) },
-          { path: "simulator", element: <Navigate to="/reports" replace /> },
         ],
       },
     ],

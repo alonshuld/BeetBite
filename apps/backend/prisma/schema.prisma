@@ -118,3 +118,15 @@ model User {
 
   @@map("users")
 }
+
+model CompanySettings {
+  id            String   @id @default("company-settings")
+  name          String?
+  description   String?
+  companyNumber String?
+  logo          String?
+  signature     String?
+  updatedAt     DateTime @updatedAt
+
+  @@map("company_settings")
+}

@@ -15,6 +15,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { IncomeModule } from './income/income.module';
+import { CompanySettingsModule } from './company-settings/company-settings.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { IncomeModule } from './income/income.module';
     ProjectReportsModule,
     ProjectsModule,
     IncomeModule,
+    CompanySettingsModule,
   ],
   providers: [
     {
