@@ -8,6 +8,10 @@ export interface CompanySettingsFormValue {
   name: string;
   description: string;
   companyNumber: string;
+  phone: string;
+  email: string;
+  addressStreet: string;
+  addressCity: string;
   logo: string | null;
   signature: string | null;
 }
@@ -60,6 +64,52 @@ export function CompanySettingsForm({
           maxLength={9}
         />
       </FormGroup>
+      <FormRow>
+        <FormGroup>
+          <Input
+            id="company-phone"
+            type="tel"
+            label={t("phoneLabel")}
+            value={value.phone}
+            onChange={(e) => onChange({ ...value, phone: e.target.value })}
+            placeholder={t("phonePlaceholder")}
+          />
+        </FormGroup>
+        <FormGroup>
+          <Input
+            id="company-email"
+            type="email"
+            label={t("emailLabel")}
+            value={value.email}
+            onChange={(e) => onChange({ ...value, email: e.target.value })}
+            placeholder={t("emailPlaceholder")}
+          />
+        </FormGroup>
+      </FormRow>
+      <FormRow>
+        <FormGroup>
+          <Input
+            id="company-address-street"
+            label={t("addressStreetLabel")}
+            value={value.addressStreet}
+            onChange={(e) =>
+              onChange({ ...value, addressStreet: e.target.value })
+            }
+            placeholder={t("addressStreetPlaceholder")}
+          />
+        </FormGroup>
+        <FormGroup>
+          <Input
+            id="company-address-city"
+            label={t("addressCityLabel")}
+            value={value.addressCity}
+            onChange={(e) =>
+              onChange({ ...value, addressCity: e.target.value })
+            }
+            placeholder={t("addressCityPlaceholder")}
+          />
+        </FormGroup>
+      </FormRow>
       <FormRow>
         <FormGroup>
           <ImageUploadField

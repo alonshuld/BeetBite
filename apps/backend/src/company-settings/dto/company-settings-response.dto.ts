@@ -31,6 +31,34 @@ export class CompanySettingsResponseDto {
   companyNumber!: string | null;
 
   @ApiProperty({
+    example: '+972501234567',
+    description: 'Phone number of the contractor company',
+    nullable: true,
+  })
+  phone!: string | null;
+
+  @ApiProperty({
+    example: 'info@acme-construction.com',
+    description: 'Email address of the contractor company',
+    nullable: true,
+  })
+  email!: string | null;
+
+  @ApiProperty({
+    example: '12 Herzl St.',
+    description: 'Street address of the contractor company',
+    nullable: true,
+  })
+  addressStreet!: string | null;
+
+  @ApiProperty({
+    example: 'Tel Aviv',
+    description: 'City of the contractor company',
+    nullable: true,
+  })
+  addressCity!: string | null;
+
+  @ApiProperty({
     example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
     description: 'Base64 data URL of the company logo image',
     nullable: true,

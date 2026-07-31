@@ -124,6 +124,10 @@ model CompanySettings {
   name          String?
   description   String?
   companyNumber String?
+  phone         String?
+  email         String?
+  addressStreet String?
+  addressCity   String?
   logo          String?
   signature     String?
   updatedAt     DateTime @updatedAt

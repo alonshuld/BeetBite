@@ -5,6 +5,10 @@ export interface CompanySettings {
   name: string | null;
   description: string | null;
   companyNumber: string | null;
+  phone: string | null;
+  email: string | null;
+  addressStreet: string | null;
+  addressCity: string | null;
   logo: string | null;
   signature: string | null;
   updatedAt: string;
@@ -14,6 +18,10 @@ export interface UpsertCompanySettingsDto {
   name?: string | null;
   description?: string | null;
   companyNumber?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  addressStreet?: string | null;
+  addressCity?: string | null;
   logo?: string | null;
   signature?: string | null;
 }
