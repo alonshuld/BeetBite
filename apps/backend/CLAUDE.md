@@ -87,6 +87,7 @@ Key entity fields (see `prisma/schema.prisma` for the full schema):
 
 | Entity | Notable fields |
 | --- | --- |
+| `Subcontractor` | `name` (unique); `companyNumber` (unique String, exactly 9 digits — Israeli company registration number, validated via `@IsNumberString({ no_symbols: true }) @Length(9, 9)`) |
 | `Project` | `estimatedAmount` (Decimal), `description` (required String), `isDone` (Boolean, default false — marks project as closed) |
 | `ProjectReport` | `incomeDate?` (nullable — null means income not yet received); unique on `(projectId, date)` |
 | `CorporationPayment` | `date?` (nullable payment date); `description?` (optional String); `isFuture` (Boolean, default false — true means not yet invoiced); `vatPercentage?` (Decimal — only applicable when `isFuture` is false, defaults to 18%) |
@@ -113,6 +114,8 @@ Each module defines its own typed errors (e.g. `ProjectNotFoundError`, `ClientNo
 Services catch `PrismaClientKnownRequestError` and re-throw the appropriate domain error using the codes in `src/common/constants.ts` (`P2002` unique, `P2003` FK, `P2025` not found).
 
 `SubcontractorPaymentOverpaymentError` (extends `BadRequestException`) accepts an optional `paymentId` fourth argument — pass it on `update` so the error message identifies which payment triggered the violation.
+
+`SubcontractorAlreadyExistsError` accepts an optional `field` second argument (defaults to `'name'`) — `subcontractors.service.ts` inspects the Prisma unique-constraint error's `meta.target` to pass `'companyNumber'` when that field (rather than `name`) triggered the conflict.
 
 ### Mappers
 

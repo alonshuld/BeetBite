@@ -12,4 +12,11 @@ export class SubcontractorResponseDto {
     description: 'Name of the subcontractor',
   })
   name!: string;
+
+  @ApiProperty({
+    example: '515123456',
+    description:
+      'Israeli company registration number of the private company, 9 digits',
+  })
+  companyNumber!: string;
 }

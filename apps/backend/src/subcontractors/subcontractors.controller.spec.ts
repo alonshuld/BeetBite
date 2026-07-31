@@ -39,10 +39,14 @@ describe('SubcontractorsController', () => {
 
   describe('create', () => {
     it('should create a subcontractor', async () => {
-      const createDto: CreateSubcontractorDto = { name: 'Test Subcontractor' };
+      const createDto: CreateSubcontractorDto = {
+        name: 'Test Subcontractor',
+        companyNumber: '515123456',
+      };
       const expectedResult: SubcontractorResponseDto = {
         id: 'clh0000000000000000000001',
         name: 'Test Subcontractor',
+        companyNumber: '515123456',
       };
 
       mockSubcontractorService.create.mockResolvedValue(expectedResult);
@@ -56,15 +60,34 @@ describe('SubcontractorsController', () => {
     it('should throw if subcontractor name already exists', async () => {
       const createDto: CreateSubcontractorDto = {
         name: 'Duplicate Subcontractor',
+        companyNumber: '515123456',
       };
 
       mockSubcontractorService.create.mockRejectedValue(
         new SubcontractorAlreadyExistsError(createDto.name),
       );
 
-      await expect(
-        controller.create({ name: 'Duplicate Subcontractor' }),
-      ).rejects.toThrow(SubcontractorAlreadyExistsError);
+      await expect(controller.create(createDto)).rejects.toThrow(
+        SubcontractorAlreadyExistsError,
+      );
+    });
+
+    it('should throw if subcontractor company number already exists', async () => {
+      const createDto: CreateSubcontractorDto = {
+        name: 'Another Subcontractor',
+        companyNumber: '515123456',
+      };
+
+      mockSubcontractorService.create.mockRejectedValue(
+        new SubcontractorAlreadyExistsError(
+          createDto.companyNumber,
+          'companyNumber',
+        ),
+      );
+
+      await expect(controller.create(createDto)).rejects.toThrow(
+        SubcontractorAlreadyExistsError,
+      );
     });
 
     it('should throw if subcontractor name is invalid', async () => {
@@ -72,15 +95,25 @@ describe('SubcontractorsController', () => {
         new Error('Invalid name'),
       );
 
-      await expect(controller.create({ name: '' })).rejects.toThrow(Error);
+      await expect(
+        controller.create({ name: '', companyNumber: '515123456' }),
+      ).rejects.toThrow(Error);
     });
   });
 
   describe('findAll', () => {
     it('should return all subcontractors', async () => {
       const expectedResult: SubcontractorResponseDto[] = [
-        { id: 'clh0000000000000000000001', name: 'Subcontractor 1' },
-        { id: 'clh0000000000000000000002', name: 'Subcontractor 2' },
+        {
+          id: 'clh0000000000000000000001',
+          name: 'Subcontractor 1',
+          companyNumber: '515123456',
+        },
+        {
+          id: 'clh0000000000000000000002',
+          name: 'Subcontractor 2',
+          companyNumber: '515123457',
+        },
       ];
 
       mockSubcontractorService.findAll.mockResolvedValue(expectedResult);
@@ -93,8 +126,16 @@ describe('SubcontractorsController', () => {
 
     it('should forward pagination parameters', async () => {
       const expectedResult: SubcontractorResponseDto[] = [
-        { id: 'clh0000000000000000000001', name: 'Subcontractor 1' },
-        { id: 'clh0000000000000000000002', name: 'Subcontractor 2' },
+        {
+          id: 'clh0000000000000000000001',
+          name: 'Subcontractor 1',
+          companyNumber: '515123456',
+        },
+        {
+          id: 'clh0000000000000000000002',
+          name: 'Subcontractor 2',
+          companyNumber: '515123457',
+        },
       ];
 
       mockSubcontractorService.findAll.mockResolvedValue(expectedResult);
@@ -129,10 +170,14 @@ describe('SubcontractorsController', () => {
 
   describe('update', () => {
     it('should update a subcontractor', async () => {
-      const updateDto = { name: 'Updated Subcontractor' };
+      const updateDto = {
+        name: 'Updated Subcontractor',
+        companyNumber: '515123456',
+      };
       const expectedResult: SubcontractorResponseDto = {
         id: 'clh0000000000000000000001',
         name: 'Updated Subcontractor',
+        companyNumber: '515123456',
       };
 
       mockSubcontractorService.update.mockResolvedValue(expectedResult);
@@ -150,7 +195,10 @@ describe('SubcontractorsController', () => {
     });
 
     it('should throw if subcontractor not found', async () => {
-      const updateDto = { name: 'Nonexistent Subcontractor' };
+      const updateDto = {
+        name: 'Nonexistent Subcontractor',
+        companyNumber: '515123456',
+      };
 
       mockSubcontractorService.update.mockRejectedValue(
         new SubcontractorNotFoundError('clh0000000000000000000001'),
@@ -162,7 +210,7 @@ describe('SubcontractorsController', () => {
     });
 
     it('should throw if subcontractor name is invalid', async () => {
-      const updateDto = { name: '' };
+      const updateDto = { name: '', companyNumber: '515123456' };
 
       mockSubcontractorService.update.mockRejectedValue(
         new Error('Invalid name'),
@@ -174,10 +222,31 @@ describe('SubcontractorsController', () => {
     });
 
     it('should throw if subcontractor name already exists', async () => {
-      const updateDto = { name: 'Existing Subcontractor' };
+      const updateDto = {
+        name: 'Existing Subcontractor',
+        companyNumber: '515123456',
+      };
 
       mockSubcontractorService.update.mockRejectedValue(
         new SubcontractorAlreadyExistsError(updateDto.name),
+      );
+
+      await expect(
+        controller.update('clh0000000000000000000001', updateDto),
+      ).rejects.toThrow(SubcontractorAlreadyExistsError);
+    });
+
+    it('should throw if subcontractor company number already exists', async () => {
+      const updateDto = {
+        name: 'Existing Subcontractor',
+        companyNumber: '515123456',
+      };
+
+      mockSubcontractorService.update.mockRejectedValue(
+        new SubcontractorAlreadyExistsError(
+          updateDto.companyNumber,
+          'companyNumber',
+        ),
       );
 
       await expect(
@@ -191,6 +260,7 @@ describe('SubcontractorsController', () => {
       const expectedResult: SubcontractorResponseDto = {
         id: 'clh0000000000000000000001',
         name: 'Subcontractor 1',
+        companyNumber: '515123456',
       };
 
       mockSubcontractorService.findOne.mockResolvedValue(expectedResult);

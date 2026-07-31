@@ -78,7 +78,10 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
 
     subcontractorId = (
       await prismaService.subcontractor.create({
-        data: { name: `SubPay Test Sub ${Date.now()}` },
+        data: {
+          name: `SubPay Test Sub ${Date.now()}`,
+          companyNumber: String(Date.now()).slice(-9),
+        },
       })
     ).id;
 
@@ -345,7 +348,10 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
     it('should return all subcontractors who have SubcontractorPayment records in the month', async () => {
       const sub2Id = (
         await prismaService.subcontractor.create({
-          data: { name: `SubPay Multi Sub ${Date.now()}` },
+          data: {
+            name: `SubPay Multi Sub ${Date.now()}`,
+            companyNumber: String(Date.now()).slice(-9),
+          },
         })
       ).id;
 
