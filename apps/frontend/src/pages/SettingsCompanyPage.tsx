@@ -15,6 +15,10 @@ const BLANK_VALUE: CompanySettingsFormValue = {
   name: "",
   description: "",
   companyNumber: "",
+  phone: "",
+  email: "",
+  addressStreet: "",
+  addressCity: "",
   logo: null,
   signature: null,
 };
@@ -34,6 +38,10 @@ export default function SettingsCompanyPage() {
       name: data.name ?? "",
       description: data.description ?? "",
       companyNumber: data.companyNumber ?? "",
+      phone: data.phone ?? "",
+      email: data.email ?? "",
+      addressStreet: data.addressStreet ?? "",
+      addressCity: data.addressCity ?? "",
       logo: data.logo,
       signature: data.signature,
     });
@@ -44,6 +52,10 @@ export default function SettingsCompanyPage() {
       name: value.name.trim() || null,
       description: value.description.trim() || null,
       companyNumber: value.companyNumber || null,
+      phone: value.phone.trim() || null,
+      email: value.email.trim() || null,
+      addressStreet: value.addressStreet.trim() || null,
+      addressCity: value.addressCity.trim() || null,
       logo: value.logo,
       signature: value.signature,
     });

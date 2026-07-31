@@ -12,6 +12,10 @@ const BLANK_VALUE: CompanySettingsFormValue = {
   name: "",
   description: "",
   companyNumber: "",
+  phone: "",
+  email: "",
+  addressStreet: "",
+  addressCity: "",
   logo: null,
   signature: null,
 };
@@ -36,6 +40,10 @@ export default function OnboardingPage() {
       name: value.name.trim() || null,
       description: value.description.trim() || null,
       companyNumber: value.companyNumber || null,
+      phone: value.phone.trim() || null,
+      email: value.email.trim() || null,
+      addressStreet: value.addressStreet.trim() || null,
+      addressCity: value.addressCity.trim() || null,
       logo: value.logo,
       signature: value.signature,
     });

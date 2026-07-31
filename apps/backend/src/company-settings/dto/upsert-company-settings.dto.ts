@@ -3,6 +3,8 @@ import {
   IsOptional,
   IsString,
   IsNumberString,
+  IsEmail,
+  IsPhoneNumber,
   Length,
   MaxLength,
   Matches,
@@ -47,6 +49,49 @@ export class UpsertCompanySettingsDto {
     nullable: true,
   })
   companyNumber?: string | null;
+
+  @IsOptional()
+  @IsPhoneNumber()
+  @ApiProperty({
+    example: '+972501234567',
+    description: 'Phone number of the contractor company',
+    required: false,
+    nullable: true,
+  })
+  phone?: string | null;
+
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(255)
+  @ApiProperty({
+    example: 'info@acme-construction.com',
+    description: 'Email address of the contractor company',
+    required: false,
+    nullable: true,
+  })
+  email?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  @ApiProperty({
+    example: '12 Herzl St.',
+    description: 'Street address of the contractor company',
+    required: false,
+    nullable: true,
+  })
+  addressStreet?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  @ApiProperty({
+    example: 'Tel Aviv',
+    description: 'City of the contractor company',
+    required: false,
+    nullable: true,
+  })
+  addressCity?: string | null;
 
   @IsOptional()
   @IsString()
