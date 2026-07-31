@@ -85,7 +85,10 @@ describe('ProjectReportsService Integration Tests', () => {
 
     subcontractorId = (
       await prismaService.subcontractor.create({
-        data: { name: `Test Subcontractor ${Date.now()}` },
+        data: {
+          name: `Test Subcontractor ${Date.now()}`,
+          companyNumber: String(Date.now()).slice(-9),
+        },
       })
     ).id;
 
@@ -859,7 +862,10 @@ describe('ProjectReportsService Integration Tests', () => {
       for (let i = 0; i < 10; i++) {
         const subId = (
           await prismaService.subcontractor.create({
-            data: { name: `Sub Pag ${i} ${Date.now()}` },
+            data: {
+              name: `Sub Pag ${i} ${Date.now()}`,
+              companyNumber: `${String(Date.now()).slice(-8)}${i}`,
+            },
           })
         ).id;
 
@@ -1012,7 +1018,10 @@ describe('ProjectReportsService Integration Tests', () => {
 
       const subId = (
         await prismaService.subcontractor.create({
-          data: { name: `Sub CrossYear ${Date.now()}` },
+          data: {
+            name: `Sub CrossYear ${Date.now()}`,
+            companyNumber: String(Date.now()).slice(-9),
+          },
         })
       ).id;
 
@@ -1188,7 +1197,10 @@ describe('ProjectReportsService Integration Tests', () => {
     it('should inherit only profitMargin when only subcontractorId is provided', async () => {
       const anotherSubId = (
         await prismaService.subcontractor.create({
-          data: { name: `Explicit Sub ${Date.now()}` },
+          data: {
+            name: `Explicit Sub ${Date.now()}`,
+            companyNumber: String(Date.now()).slice(-9),
+          },
         })
       ).id;
 
@@ -1226,7 +1238,10 @@ describe('ProjectReportsService Integration Tests', () => {
     it('should skip previous-month lookup entirely when both fields are provided', async () => {
       const anotherSubId = (
         await prismaService.subcontractor.create({
-          data: { name: `Explicit Sub 2 ${Date.now()}` },
+          data: {
+            name: `Explicit Sub 2 ${Date.now()}`,
+            companyNumber: String(Date.now()).slice(-9),
+          },
         })
       ).id;
 
@@ -1496,7 +1511,10 @@ describe('ProjectReportsService Integration Tests', () => {
 
         const sub = (
           await prismaService.subcontractor.create({
-            data: { name: `Isolation Sub ${serviceDate} ${Date.now()}` },
+            data: {
+              name: `Isolation Sub ${serviceDate} ${Date.now()}`,
+              companyNumber: String(Date.now()).slice(-9),
+            },
           })
         ).id;
 

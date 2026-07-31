@@ -3,14 +3,17 @@ import { baseApi } from "@/api/baseApi";
 export interface Subcontractor {
   id: string;
   name: string;
+  companyNumber: string;
 }
 
 export interface CreateSubcontractorDto {
   name: string;
+  companyNumber: string;
 }
 
 export interface UpdateSubcontractorDto {
   name: string;
+  companyNumber: string;
 }
 
 export const subcontractorsApi = baseApi.injectEndpoints({

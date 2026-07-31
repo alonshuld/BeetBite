@@ -19,8 +19,8 @@ import {
 } from "@/api/endpoints/subcontractors";
 
 const mockSubcontractors = [
-  { id: "s1", name: "Smith Builders" },
-  { id: "s2", name: "Jones Electric" },
+  { id: "s1", name: "Smith Builders", companyNumber: "515123456" },
+  { id: "s2", name: "Jones Electric", companyNumber: "515123457" },
 ];
 
 const noopMutation = vi
@@ -81,11 +81,12 @@ describe("SubcontractorsPage", () => {
     expect(screen.getByText("Add Subcontractor")).toBeInTheDocument();
   });
 
-  it("opens edit modal with subcontractor name prefilled", async () => {
+  it("opens edit modal with subcontractor fields prefilled", async () => {
     renderSubcontractorsPage();
     await userEvent.click(screen.getAllByTitle("Edit")[0]);
     expect(screen.getByText("Edit Subcontractor")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Smith Builders")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("515123456")).toBeInTheDocument();
   });
 
   it("shows empty state when no subcontractors", () => {

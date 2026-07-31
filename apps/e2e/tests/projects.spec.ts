@@ -93,7 +93,7 @@ dbTest.describe('Projects CRUD', () => {
       where: { name: 'E2E Test Client' },
     });
     const subcontractor = await db.subcontractor.create({
-      data: { name: 'E2E Sub' },
+      data: { name: 'E2E Sub', companyNumber: '515222002' },
     });
 
     const activeProject = await db.project.create({

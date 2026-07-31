@@ -6,7 +6,7 @@ dbTest.describe('Subcontractor Payments', () => {
   dbTest.beforeEach(async ({ db }) => {
     const client = await db.client.create({ data: { name: 'SubPay Client' } });
     const subcontractor = await db.subcontractor.create({
-      data: { name: 'SubPay Worker' },
+      data: { name: 'SubPay Worker', companyNumber: '515222003' },
     });
     const project = await db.project.create({
       data: {

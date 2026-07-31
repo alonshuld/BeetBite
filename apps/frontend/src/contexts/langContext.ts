@@ -155,6 +155,8 @@ export const translations = {
     // Form labels / placeholders
     clientNamePlaceholder: "Client name",
     subcontractorNamePlaceholder: "Subcontractor name",
+    companyNumberLabel: "Company Number",
+    companyNumberPlaceholder: "9-digit company number",
     corporationNamePlaceholder: "Corporation name",
     projectNamePlaceholder: "Project name",
     projectDescriptionPlaceholder: "Project description",
@@ -336,6 +338,8 @@ export const translations = {
     // Form labels / placeholders
     clientNamePlaceholder: "שם הלקוח",
     subcontractorNamePlaceholder: "שם קבלן המשנה",
+    companyNumberLabel: "מספר ח.פ",
+    companyNumberPlaceholder: "מספר בן 9 ספרות",
     corporationNamePlaceholder: "שם החברה",
     projectNamePlaceholder: "שם הפרויקט",
     projectDescriptionPlaceholder: "תיאור הפרויקט",

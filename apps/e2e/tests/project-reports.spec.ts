@@ -15,7 +15,7 @@ async function seedBaseData(db: ReturnType<typeof Object>) {
     },
   });
   const subcontractor = await db.subcontractor.create({
-    data: { name: 'Reports Sub' },
+    data: { name: 'Reports Sub', companyNumber: '515222004' },
   });
   const corporation = await db.corporation.create({
     data: { name: 'Reports Corp' },
