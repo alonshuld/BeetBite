@@ -148,7 +148,5 @@ vite.config.ts.timestamp-*
 
 .vscode/
 
-migrations/
-
 .agents/
 .claude/
