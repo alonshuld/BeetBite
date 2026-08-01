@@ -10,4 +10,5 @@ onlyBuiltDependencies:
   - cpu-features
   - prisma
   - protobufjs
+  - puppeteer
   - ssh2

@@ -18,6 +18,7 @@ import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dt
 import { ProjectReportNotFoundError } from 'src/project-reports/errors/project-report-not-found.exception';
 import { CorporationNotFoundError } from 'src/corporations/errors/corporation-not-found.error';
 import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
+import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 
 /**
  * Service responsible for managing corporation payments, including creating, fetching, updating, and deleting payments. It interacts with the database through PrismaService and handles various error scenarios related to corporation payments.
@@ -26,7 +27,10 @@ import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
 export class CorporationPaymentsService {
   private readonly logger = new Logger(CorporationPaymentsService.name);
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly vatRatesService: VatRatesService,
+  ) {}
 
   /**
    * Calculates the start and end dates for a given month string in the format 'YYYY-MM'. The start date is set to the first day of the month, and the end date is set to the last day of the month.
@@ -56,16 +60,23 @@ export class CorporationPaymentsService {
     createCorporationPaymentDto: CreateCorporationPaymentDto,
   ): Promise<CorporationPaymentResponseDto> {
     try {
+      const defaultVatPercentage =
+        !createCorporationPaymentDto.isFuture &&
+        createCorporationPaymentDto.vatPercentage === undefined
+          ? await this.vatRatesService.resolveForMonth(
+              createCorporationPaymentDto.date,
+            )
+          : undefined;
+
       const data = {
         ...createCorporationPaymentDto,
         date: createCorporationPaymentDto.date
           ? new Date(createCorporationPaymentDto.date)
           : null,
         vatPercentage:
-          !createCorporationPaymentDto.isFuture &&
-          createCorporationPaymentDto.vatPercentage === undefined
-            ? 18
-            : createCorporationPaymentDto.vatPercentage,
+          createCorporationPaymentDto.vatPercentage ??
+          defaultVatPercentage ??
+          undefined,
       };
 
       const corporationPayment =
@@ -261,16 +272,23 @@ export class CorporationPaymentsService {
     updateCorporationPaymentDto: UpdateCorporationPaymentDto,
   ): Promise<CorporationPaymentResponseDto> {
     try {
+      const defaultVatPercentage =
+        !updateCorporationPaymentDto.isFuture &&
+        updateCorporationPaymentDto.vatPercentage === undefined
+          ? await this.vatRatesService.resolveForMonth(
+              updateCorporationPaymentDto.date,
+            )
+          : undefined;
+
       const data = {
         ...updateCorporationPaymentDto,
         date: updateCorporationPaymentDto.date
           ? new Date(updateCorporationPaymentDto.date)
           : null,
         vatPercentage:
-          !updateCorporationPaymentDto.isFuture &&
-          updateCorporationPaymentDto.vatPercentage === undefined
-            ? 18
-            : updateCorporationPaymentDto.vatPercentage,
+          updateCorporationPaymentDto.vatPercentage ??
+          defaultVatPercentage ??
+          undefined,
       };
 
       const updatedCorporationPayment =
