@@ -46,6 +46,7 @@ const MANAGEMENT_ITEMS: NavItem[] = [
 
 const SETTINGS_ITEMS: NavItem[] = [
   { path: "/settings/company", labelKey: "companySettings", icon: "⚙️" },
+  { path: "/settings/vat", labelKey: "vatRate", icon: "🧾" },
 ];
 
 function NavSection({

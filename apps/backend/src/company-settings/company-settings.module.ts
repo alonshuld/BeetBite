@@ -5,5 +5,6 @@ import { CompanySettingsController } from './company-settings.controller';
 @Module({
   controllers: [CompanySettingsController],
   providers: [CompanySettingsService],
+  exports: [CompanySettingsService],
 })
 export class CompanySettingsModule {}
