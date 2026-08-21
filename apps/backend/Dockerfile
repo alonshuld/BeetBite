@@ -1,5 +1,11 @@
 FROM node:22-alpine
 RUN corepack enable && corepack prepare pnpm@11.1.2 --activate
+# Puppeteer (PDF export) needs a system Chromium on Alpine — its own bundled
+# Chromium is glibc-only and won't run under musl. font-noto-hebrew is required
+# for Hebrew PDFs to render actual glyphs instead of tofu boxes.
+RUN apk add --no-cache chromium font-noto font-noto-hebrew ttf-freefont
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 WORKDIR /app
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./

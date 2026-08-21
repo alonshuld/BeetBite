@@ -300,6 +300,42 @@ describe('ProjectReportsService', () => {
     });
   });
 
+  describe('findForSubcontractorAndClientInMonth', () => {
+    it('should filter by subcontractor, client, and month', async () => {
+      const mockReports = [makeProjectReport()];
+      mockPrismaService.projectReport.findMany.mockResolvedValue(mockReports);
+
+      const result = await service.findForSubcontractorAndClientInMonth(
+        'sub-1',
+        'client-1',
+        '2024-05-01T00:00:00.000Z',
+      );
+
+      expect(result).toHaveLength(1);
+      expect(mockPrismaService.projectReport.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            subcontractorId: 'sub-1',
+            date: '2024-05-01T00:00:00.000Z',
+            project: { clientId: 'client-1' },
+          },
+        }),
+      );
+    });
+
+    it('should return an empty array when nothing matches', async () => {
+      mockPrismaService.projectReport.findMany.mockResolvedValue([]);
+
+      const result = await service.findForSubcontractorAndClientInMonth(
+        'sub-1',
+        'client-1',
+        '2024-05-01T00:00:00.000Z',
+      );
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('findOne', () => {
     const makeFullReport = (overrides = {}) => ({
       id: 'report-1',

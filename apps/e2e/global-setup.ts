@@ -63,7 +63,7 @@ export default async function globalSetup(): Promise<void> {
   });
 
   // 3. Seed admin user via Prisma
-  console.log('[e2e] Seeding admin user…');
+  console.log('[e2e] Seeding admin user + company settings…');
   // Import backend's generated Prisma client
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { PrismaClient } = require(path.join(
@@ -80,6 +80,19 @@ export default async function globalSetup(): Promise<void> {
     where: { username: E2E_USERNAME },
     update: { passwordHash },
     create: { username: E2E_USERNAME, passwordHash },
+  });
+
+  // Company settings must exist, otherwise OnboardingGate redirects every
+  // authenticated route to /onboarding and no page under test ever renders.
+  // The PDF export also requires name + companyNumber to be filled in.
+  await prisma.companySettings.upsert({
+    where: { id: 'company-settings' },
+    update: {},
+    create: {
+      id: 'company-settings',
+      name: 'E2E Contractor Ltd.',
+      companyNumber: '515000001',
+    },
   });
   await prisma.$disconnect();
 

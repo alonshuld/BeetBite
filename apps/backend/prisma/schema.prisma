@@ -102,6 +102,7 @@ model SubcontractorPayment {
   serviceDate     DateTime @db.Date
   amount          Decimal  @db.Decimal(12, 2)
   isPaid          Boolean  @default(false)
+  tag             String?
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
   project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -117,6 +118,15 @@ model User {
   updatedAt    DateTime @updatedAt
 
   @@map("users")
+}
+
+model VatRate {
+  id             String   @id @default(cuid())
+  effectiveMonth DateTime @unique @db.Date
+  percentage     Decimal  @db.Decimal(5, 2)
+  createdAt      DateTime @default(now())
+
+  @@map("vat_rates")
 }
 
 model CompanySettings {

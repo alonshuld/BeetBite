@@ -7,6 +7,7 @@ import OnboardingGate from "@/components/OnboardingGate";
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"));
 const SettingsCompanyPage = lazy(() => import("@/pages/SettingsCompanyPage"));
+const SettingsVatPage = lazy(() => import("@/pages/SettingsVatPage"));
 const ReportsPage = lazy(() => import("@/pages/ReportsPage"));
 const ProjectReportsPage = lazy(() => import("@/pages/ProjectReportsPage"));
 const CorporationPaymentsPage = lazy(
@@ -68,6 +69,10 @@ export const router = createBrowserRouter([
               {
                 path: "settings/company",
                 element: wrap(SettingsCompanyPage),
+              },
+              {
+                path: "settings/vat",
+                element: wrap(SettingsVatPage),
               },
               {
                 path: "simulator",
