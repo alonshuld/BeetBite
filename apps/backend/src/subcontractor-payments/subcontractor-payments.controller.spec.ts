@@ -13,6 +13,7 @@ describe('SubcontractorPaymentsController', () => {
     findSubcontractorPaymentsInMonth: jest.fn(),
     findSubcontractorMonthlyPayments: jest.fn(),
     findByClient: jest.fn(),
+    findDistinctTags: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
   };
@@ -177,6 +178,28 @@ describe('SubcontractorPaymentsController', () => {
       expect(
         mockSubcontractorPaymentsService.findByClient,
       ).toHaveBeenCalledWith({ month: '2024-06' });
+    });
+  });
+
+  describe('findTags', () => {
+    it('should return the tags previously used on payments', async () => {
+      mockSubcontractorPaymentsService.findDistinctTags.mockResolvedValue([
+        'Materials',
+        'Labor',
+      ]);
+
+      const result = await controller.findTags();
+
+      expect(result).toEqual(['Materials', 'Labor']);
+      expect(
+        mockSubcontractorPaymentsService.findDistinctTags,
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return an empty list when nothing is tagged', async () => {
+      mockSubcontractorPaymentsService.findDistinctTags.mockResolvedValue([]);
+
+      expect(await controller.findTags()).toEqual([]);
     });
   });
 

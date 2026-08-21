@@ -67,7 +67,7 @@ Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` →
 | `project-reports` | Monthly financial reports per project, including corporation payments |
 | `corporations` | Corporations that receive payments from project reports |
 | `subcontractors` | Workers assigned to project reports |
-| `subcontractor-payments` | Track partial payments made to subcontractors per service month; enforces overpayment guard against computed amount owed per project; exposes `GET /by-client?month=` aggregation endpoint |
+| `subcontractor-payments` | Track partial payments made to subcontractors per service month; enforces overpayment guard against computed amount owed per project; exposes `GET /by-client?month=` aggregation endpoint and `GET /subcontractor-payments/tags` (distinct tags, most recent first) for tag autocomplete |
 | `company-settings` | Contractor's own profile (singleton) — `GET`/`PUT /company-settings`, no create/delete, no domain errors (fixed-id upsert can't conflict) |
 | `prisma` | Singleton `PrismaService` extending `PrismaClient` with `@prisma/adapter-pg` |
 
@@ -92,7 +92,7 @@ Key entity fields (see `prisma/schema.prisma` for the full schema):
 | `Project` | `estimatedAmount` (Decimal), `description` (required String), `isDone` (Boolean, default false — marks project as closed) |
 | `ProjectReport` | `incomeDate?` (nullable — null means income not yet received); unique on `(projectId, date)` |
 | `CorporationPayment` | `date?` (nullable payment date); `description?` (optional String); `isFuture` (Boolean, default false — true means not yet invoiced); `vatPercentage?` (Decimal — only applicable when `isFuture` is false, defaults to 18%) |
-| `SubcontractorPayment` | `projectId` (String — required, payment must be assigned to a project); `serviceDate` (Date — the service month's start date, required); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, projectId, serviceDate)` allowed; no `paymentDate` — all payments are always considered paid |
+| `SubcontractorPayment` | `projectId` (String — required, payment must be assigned to a project); `serviceDate` (Date — the service month's start date, required); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, projectId, serviceDate)` allowed; no `paymentDate` — all payments are always considered paid; `tag` (optional String, max 100 — short free-text label describing what the payment covers, trimmed to `null` when blank, surfaced on the account-approval PDF) |
 | `CompanySettings` | Singleton — `id` fixed via `@default("company-settings")`, always upserted by that literal id (no lookup needed to know if it exists). Every other field is optional (`name`, `description`, `companyNumber`, `phone`, `email`, `addressStreet`, `addressCity`, `logo`, `signature`) since onboarding is skippable. `phone` validated via `@IsPhoneNumber()` (no region arg — any region, requires `+` intl calling code prefix); `email` via `@IsEmail()`. `logo`/`signature` are base64 data-URL strings (`@Matches` regex restricts to png/jpg/webp, `@MaxLength(4_000_000)` caps size) — no multer, no disk/S3 storage. `GET` returns `null` when the row has never been created; the frontend's `OnboardingGate` treats that as "show onboarding" |
 
 ### Prisma client

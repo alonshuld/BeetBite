@@ -4,6 +4,7 @@ import { CompanySettingsService } from 'src/company-settings/company-settings.se
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 import { ProjectReportsService } from 'src/project-reports/project-reports.service';
 import { SubcontractorsService } from 'src/subcontractors/subcontractors.service';
+import { SubcontractorPaymentsService } from 'src/subcontractor-payments/subcontractor-payments.service';
 import { ExportProjectReportsPdfDto } from './dto/export-project-reports-pdf.dto';
 import { CompanySettingsIncompleteError } from './errors/company-settings-incomplete.error';
 import { VatRateNotConfiguredError } from './errors/vat-rate-not-configured.error';
@@ -27,6 +28,7 @@ export class PdfExportService {
     private readonly vatRatesService: VatRatesService,
     private readonly projectReportsService: ProjectReportsService,
     private readonly subcontractorsService: SubcontractorsService,
+    private readonly subcontractorPaymentsService: SubcontractorPaymentsService,
   ) {}
 
   async exportProjectReportsPdf(
@@ -56,15 +58,22 @@ export class PdfExportService {
       );
     }
 
-    const subcontractor = await this.subcontractorsService.findOne(
-      dto.subcontractorId,
-    );
+    const [subcontractor, tagsByProject] = await Promise.all([
+      this.subcontractorsService.findOne(dto.subcontractorId),
+      this.subcontractorPaymentsService.findTagsByProject(
+        dto.subcontractorId,
+        dto.month,
+      ),
+    ]);
 
     const rows: ReportApprovalRow[] = reports.map((report) => {
       const profitAmount = report.totalIncome * (report.profitMargin / 100);
       const afterProfitAmount = report.totalIncome - profitAmount;
+      const tags = tagsByProject[report.project.id] ?? [];
       return {
         projectName: report.project.name,
+        // A project can carry several partial payments, each with its own tag.
+        tag: tags.length > 0 ? tags.join(' · ') : null,
         approvedAmount: report.totalIncome,
         invoiceInclVat: report.totalIncome * (1 + vatPercentage / 100),
         profitMarginPercent: report.profitMargin,

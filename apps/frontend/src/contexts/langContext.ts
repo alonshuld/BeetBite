@@ -102,6 +102,8 @@ export const translations = {
     addFirstInstalment: "Add first instalment",
     selectSubcontractor: "Select a subcontractor to view details",
     selectProjectPlaceholder: "— Select project —",
+    tag: "Tag",
+    tagPlaceholder: "e.g. Materials",
     // Profit simulator
     profitSimulatorSubtitle:
       "Preview how margin changes affect totals — nothing is saved",
@@ -328,6 +330,8 @@ export const translations = {
     addFirstInstalment: "הוסף תשלום ראשון",
     selectSubcontractor: "בחר קבלן משנה לצפייה בפרטים",
     selectProjectPlaceholder: "— בחר פרויקט —",
+    tag: "תיאור",
+    tagPlaceholder: "לדוגמה: חומרים",
     // Profit simulator
     profitSimulatorSubtitle: "תצוגה מקדימה: שינויי מרווח על הסכומים — לא נשמר",
     selectClientPlaceholder: "— בחר לקוח —",

@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { normalizeToMonthStart } from 'src/common/utils/date.utils';
@@ -56,4 +57,14 @@ export class UpdateSubcontractorPaymentDto {
     description: 'Whether the payment has been marked as paid',
   })
   isPaid?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @ApiPropertyOptional({
+    example: 'Materials',
+    description: 'Short free-text label describing what the payment covers',
+    nullable: true,
+  })
+  tag?: string | null;
 }
