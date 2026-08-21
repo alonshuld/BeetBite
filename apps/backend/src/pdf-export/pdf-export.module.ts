@@ -5,6 +5,7 @@ import { CompanySettingsModule } from 'src/company-settings/company-settings.mod
 import { VatRatesModule } from 'src/vat-rates/vat-rates.module';
 import { ProjectReportsModule } from 'src/project-reports/project-reports.module';
 import { SubcontractorsModule } from 'src/subcontractors/subcontractors.module';
+import { SubcontractorPaymentsModule } from 'src/subcontractor-payments/subcontractor-payments.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { SubcontractorsModule } from 'src/subcontractors/subcontractors.module';
     VatRatesModule,
     ProjectReportsModule,
     SubcontractorsModule,
+    SubcontractorPaymentsModule,
   ],
   controllers: [PdfExportController],
   providers: [PdfExportService],

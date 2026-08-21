@@ -24,4 +24,11 @@ export class NestedSubcontractorPaymentDto {
     description: 'Whether the payment has been marked as paid',
   })
   isPaid!: boolean;
+
+  @ApiProperty({
+    example: 'Materials',
+    description: 'Short free-text label describing what the payment covers',
+    nullable: true,
+  })
+  tag!: string | null;
 }

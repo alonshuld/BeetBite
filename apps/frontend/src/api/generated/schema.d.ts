@@ -230,6 +230,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/subcontractor-payments/tags": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get the tags previously used on subcontractor payments */
+    get: operations["SubcontractorPaymentsController_findTags"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/subcontractors/payments/{id}": {
     parameters: {
       query?: never;
@@ -816,6 +833,11 @@ export interface components {
        * @example 1000
        */
       amount: number;
+      /**
+       * @description Short free-text label describing what the payment covers
+       * @example Materials
+       */
+      tag?: Record<string, never> | null;
     };
     NestedSubcontractorDto: {
       /**
@@ -858,6 +880,11 @@ export interface components {
        * @example false
        */
       isPaid: boolean;
+      /**
+       * @description Short free-text label describing what the payment covers
+       * @example Materials
+       */
+      tag: Record<string, never> | null;
     };
     NestedSubcontractorPaymentDto: {
       /**
@@ -880,6 +907,11 @@ export interface components {
        * @example false
        */
       isPaid: boolean;
+      /**
+       * @description Short free-text label describing what the payment covers
+       * @example Materials
+       */
+      tag: Record<string, never> | null;
     };
     MonthlySubcontractorPaymentsDto: {
       /** @description The subcontractor associated with the payments */
@@ -945,6 +977,11 @@ export interface components {
        * @example true
        */
       isPaid?: boolean;
+      /**
+       * @description Short free-text label describing what the payment covers
+       * @example Materials
+       */
+      tag?: Record<string, never> | null;
     };
     CreateSubcontractorDto: {
       /**
@@ -2277,6 +2314,26 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  SubcontractorPaymentsController_findTags: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Distinct subcontractor payment tags. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": string[];
+        };
       };
     };
   };

@@ -24,6 +24,7 @@ vi.mock("@/api/endpoints/project-reports", () => ({
   useAddIncomeEntryMutation: vi.fn(),
   useUpdateIncomeEntryMutation: vi.fn(),
   useDeleteIncomeEntryMutation: vi.fn(),
+  useDeleteProjectReportMutation: vi.fn(),
 }));
 vi.mock("@/api/endpoints/corporation-payments", () => ({
   useCreateCorporationPaymentMutation: vi.fn(),
@@ -37,6 +38,9 @@ vi.mock("@/api/endpoints/subcontractors", () => ({
 vi.mock("@/api/endpoints/corporations", () => ({
   useGetCorporationsQuery: vi.fn(),
 }));
+vi.mock("@/api/endpoints/subcontractor-payments", () => ({
+  useGetSubcontractorPaymentsQuery: vi.fn(),
+}));
 
 import {
   useGetProjectReportsQuery,
@@ -46,6 +50,7 @@ import {
   useAddIncomeEntryMutation,
   useUpdateIncomeEntryMutation,
   useDeleteIncomeEntryMutation,
+  useDeleteProjectReportMutation,
 } from "@/api/endpoints/project-reports";
 import {
   useCreateCorporationPaymentMutation,
@@ -55,6 +60,7 @@ import {
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
+import { useGetSubcontractorPaymentsQuery } from "@/api/endpoints/subcontractor-payments";
 
 const mockProject = {
   id: "p1",
@@ -98,6 +104,12 @@ function setDetail(detail: unknown) {
   } as unknown as ReturnType<typeof useGetProjectReportQuery>);
 }
 
+function setMonthlyPayments(data: unknown) {
+  vi.mocked(useGetSubcontractorPaymentsQuery).mockReturnValue({
+    data,
+  } as unknown as ReturnType<typeof useGetSubcontractorPaymentsQuery>);
+}
+
 function setListReports(data: unknown) {
   vi.mocked(useGetProjectReportsQuery).mockReturnValue({
     data,
@@ -136,6 +148,8 @@ describe("ProjectReportsPage", () => {
     vi.mocked(useCreateCorporationPaymentMutation).mockReturnValue(mut());
     vi.mocked(useUpdateCorporationPaymentMutation).mockReturnValue(mut());
     vi.mocked(useDeleteCorporationPaymentMutation).mockReturnValue(mut());
+    vi.mocked(useDeleteProjectReportMutation).mockReturnValue(mut());
+    setMonthlyPayments([]);
   });
 
   it("renders the project name as the heading", () => {
@@ -163,6 +177,40 @@ describe("ProjectReportsPage", () => {
     expect(screen.getByText("Bob the Builder")).toBeInTheDocument();
     expect(screen.getByText("₪6,500")).toBeInTheDocument();
     expect(screen.getByText("Flooring Ltd")).toBeInTheDocument();
+  });
+
+  it("shows the subcontractor payment tag when the payment carries one", () => {
+    setMonthlyPayments([
+      {
+        subcontractor: { id: "s1", name: "Bob the Builder" },
+        amountPaid: 6500,
+        payments: [
+          {
+            id: "i1",
+            projectId: "p1",
+            amount: 6500,
+            isPaid: true,
+            tag: "Materials",
+          },
+        ],
+      },
+    ]);
+    renderPage();
+    expect(screen.getByText("Materials")).toBeInTheDocument();
+  });
+
+  it("shows no tag when the payment has none", () => {
+    setMonthlyPayments([
+      {
+        subcontractor: { id: "s1", name: "Bob the Builder" },
+        amountPaid: 6500,
+        payments: [
+          { id: "i1", projectId: "p1", amount: 6500, isPaid: true, tag: null },
+        ],
+      },
+    ]);
+    renderPage();
+    expect(screen.queryByText("Materials")).not.toBeInTheDocument();
   });
 
   it("shows the empty state when there is no report for the month", () => {

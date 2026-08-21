@@ -5,5 +5,6 @@ import { SubcontractorPaymentsController } from './subcontractor-payments.contro
 @Module({
   controllers: [SubcontractorPaymentsController],
   providers: [SubcontractorPaymentsService],
+  exports: [SubcontractorPaymentsService],
 })
 export class SubcontractorPaymentsModule {}
