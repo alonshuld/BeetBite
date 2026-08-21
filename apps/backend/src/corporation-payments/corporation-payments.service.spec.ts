@@ -10,6 +10,7 @@ import { UpdateCorporationPaymentDto } from './dto/update-corporation-payment.dt
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
 import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
+import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 
 describe('CorporationPaymentsService', () => {
   let service: CorporationPaymentsService;
@@ -28,6 +29,10 @@ describe('CorporationPaymentsService', () => {
     },
   };
 
+  const mockVatRatesService = {
+    resolveForMonth: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -35,6 +40,10 @@ describe('CorporationPaymentsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: VatRatesService,
+          useValue: mockVatRatesService,
         },
       ],
     }).compile();
@@ -44,6 +53,7 @@ describe('CorporationPaymentsService', () => {
     );
 
     jest.clearAllMocks();
+    mockVatRatesService.resolveForMonth.mockResolvedValue(18);
   });
 
   it('should be defined', () => {
@@ -145,6 +155,9 @@ describe('CorporationPaymentsService', () => {
           },
         },
       });
+      expect(mockVatRatesService.resolveForMonth).toHaveBeenCalledWith(
+        createDto.date,
+      );
     });
 
     it('should throw CorporationPaymentNotFoundError on foreign key error', async () => {
@@ -183,16 +196,35 @@ describe('CorporationPaymentsService', () => {
       );
     });
 
-    it('should default vatPercentage to 18 only when the payment is not future and no VAT is supplied', async () => {
+    it('should default vatPercentage to the resolved VAT rate when not future and no VAT is supplied', async () => {
       mockPrismaService.corporationPayment.create.mockResolvedValue(
         mockPayment,
       );
+      mockVatRatesService.resolveForMonth.mockResolvedValue(20);
 
       await service.create({ ...createDto, isFuture: false });
 
       expect(mockPrismaService.corporationPayment.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ vatPercentage: 18 }) as Record<
+          data: expect.objectContaining({ vatPercentage: 20 }) as Record<
+            string,
+            unknown
+          >,
+        }),
+      );
+    });
+
+    it('should leave vatPercentage undefined when no VAT rate has ever been configured', async () => {
+      mockPrismaService.corporationPayment.create.mockResolvedValue(
+        mockPayment,
+      );
+      mockVatRatesService.resolveForMonth.mockResolvedValue(null);
+
+      await service.create({ ...createDto, isFuture: false });
+
+      expect(mockPrismaService.corporationPayment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ vatPercentage: undefined }) as Record<
             string,
             unknown
           >,
@@ -216,6 +248,7 @@ describe('CorporationPaymentsService', () => {
           >,
         }),
       );
+      expect(mockVatRatesService.resolveForMonth).not.toHaveBeenCalled();
     });
 
     it('should preserve an explicitly supplied vatPercentage instead of overriding it with 18', async () => {
@@ -640,6 +673,9 @@ describe('CorporationPaymentsService', () => {
           },
         },
       });
+      expect(mockVatRatesService.resolveForMonth).toHaveBeenCalledWith(
+        updateDto.date,
+      );
     });
 
     it('should throw CorporationPaymentNotFoundError on not found error', async () => {

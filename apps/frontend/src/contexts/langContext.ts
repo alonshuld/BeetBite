@@ -102,6 +102,8 @@ export const translations = {
     addFirstInstalment: "Add first instalment",
     selectSubcontractor: "Select a subcontractor to view details",
     selectProjectPlaceholder: "— Select project —",
+    tag: "Tag",
+    tagPlaceholder: "e.g. Materials",
     // Profit simulator
     profitSimulatorSubtitle:
       "Preview how margin changes affect totals — nothing is saved",
@@ -214,6 +216,23 @@ export const translations = {
       "Tell us about your company — you can always fill this in later",
     skipForNow: "Skip for now",
     saveAndContinue: "Save & Continue",
+    // VAT rate
+    vatRate: "VAT Rate",
+    vatRateSubtitle:
+      "The VAT percentage applied to income, subcontractor payments, and corporation payments",
+    currentVatRate: "Current VAT Rate",
+    notConfigured: "Not configured",
+    setVatRate: "Set VAT Rate",
+    effectiveFrom: "Effective From",
+    vatPercentLabel: "VAT %",
+    vatRateHistory: "History",
+    vatRateSaved: "VAT rate saved",
+    // Export PDF
+    exportPdf: "Export PDF",
+    approvedForLabel: "Approved For",
+    approvedForPlaceholder: "What does this account approval cover?",
+    selectClientForExport: "Client",
+    selectClientPlaceholderExport: "Select a client",
   },
   he: {
     // Nav
@@ -311,6 +330,8 @@ export const translations = {
     addFirstInstalment: "הוסף תשלום ראשון",
     selectSubcontractor: "בחר קבלן משנה לצפייה בפרטים",
     selectProjectPlaceholder: "— בחר פרויקט —",
+    tag: "תיאור",
+    tagPlaceholder: "לדוגמה: חומרים",
     // Profit simulator
     profitSimulatorSubtitle: "תצוגה מקדימה: שינויי מרווח על הסכומים — לא נשמר",
     selectClientPlaceholder: "— בחר לקוח —",
@@ -420,6 +441,23 @@ export const translations = {
       "ספרו לנו על החברה שלכם — תמיד ניתן למלא זאת מאוחר יותר",
     skipForNow: "דלג לעת עתה",
     saveAndContinue: "שמור והמשך",
+    // VAT rate
+    vatRate: 'מע"מ',
+    vatRateSubtitle:
+      'אחוז המע"מ המוחל על הכנסות, תשלומי קבלני משנה ותשלומי חברות',
+    currentVatRate: 'שיעור מע"מ נוכחי',
+    notConfigured: "לא הוגדר",
+    setVatRate: 'הגדרת שיעור מע"מ',
+    effectiveFrom: "בתוקף החל מ",
+    vatPercentLabel: 'אחוז מע"מ',
+    vatRateHistory: "היסטוריה",
+    vatRateSaved: 'שיעור המע"מ נשמר',
+    // Export PDF
+    exportPdf: "ייצוא PDF",
+    approvedForLabel: "חשבון מאושר עבור",
+    approvedForPlaceholder: "מה כולל אישור חשבון זה?",
+    selectClientForExport: "לקוח",
+    selectClientPlaceholderExport: "בחר לקוח",
   },
 } as const;
 

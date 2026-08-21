@@ -3,6 +3,10 @@ import { test as dbTest, expect } from '../fixtures/db.fixture';
 const BASE = 'http://localhost:5174';
 
 dbTest.describe('Subcontractor Payments', () => {
+  // The projects table keys its inputs by project id, so each test needs the
+  // id the fixture just seeded.
+  let projectId: string;
+
   dbTest.beforeEach(async ({ db }) => {
     const client = await db.client.create({ data: { name: 'SubPay Client' } });
     const subcontractor = await db.subcontractor.create({
@@ -16,6 +20,7 @@ dbTest.describe('Subcontractor Payments', () => {
         description: 'Subcontractor payment tests',
       },
     });
+    projectId = project.id;
     // Create a project report for the current test month so the subcontractor appears
     await db.projectReport.create({
       data: {
@@ -28,33 +33,43 @@ dbTest.describe('Subcontractor Payments', () => {
     });
   });
 
+  /** Open the page and select the seeded subcontractor's card. */
+  async function openWorkerPanel(page: import('@playwright/test').Page) {
+    await page.goto(`${BASE}/subcontractor-payments`);
+    await page.waitForLoadState('networkidle');
+    await page.getByText('SubPay Worker').first().click();
+  }
+
+  /**
+   * Wait for the payment write to land. The owed amount is already on screen
+   * before any payment exists, so a text assertion would pass instantly and
+   * race the POST — read the DB instead.
+   */
+  async function waitForPaymentCount(db: { subcontractorPayment: { findMany: () => Promise<unknown[]> } }, count: number) {
+    await expect(async () => {
+      expect(await db.subcontractorPayment.findMany()).toHaveLength(count);
+    }).toPass({ timeout: 5000 });
+  }
+
+  /** Fill the inline partial row for the seeded project and save it. */
+  async function payPartial(
+    page: import('@playwright/test').Page,
+    amount: string,
+  ) {
+    await page.getByTitle('Partial', { exact: true }).first().click();
+    await page.fill(`#partial-${projectId}`, amount);
+    await page.getByTitle('Save', { exact: true }).first().click();
+  }
+
   dbTest('add partial payment → total paid updates in subcontractor card', async ({
     page,
     db,
   }) => {
     void db;
-    await page.goto(`${BASE}/subcontractor-payments`);
-    await page.waitForLoadState('networkidle');
+    await openWorkerPanel(page);
+    await payPartial(page, '10000');
 
-    // Click on the subcontractor card
-    await page.getByText('SubPay Worker').first().click();
-
-    // Open add instalment modal
-    await page
-      .getByTitle(/add instalment/i)
-      .first()
-      .click();
-
-    await page.selectOption('#inst-project', { label: 'SubPay Project' });
-    await page.fill('#inst-amount', '10000');
-    await page.getByRole('button', { name: /save/i }).click();
-
-    // After save, modal closes and total paid should update
-    await expect(page.getByRole('dialog')).not.toBeVisible({
-      timeout: 5000,
-    });
-
-    // Verify the paid amount appears in the UI
+    // The card's "Paid" line appears once a payment exists.
     await expect(page.getByText(/10,000|10000/).first()).toBeVisible({ timeout: 5000 });
   });
 
@@ -65,20 +80,8 @@ dbTest.describe('Subcontractor Payments', () => {
     void db;
     // Amount owed = income - (income × margin%) = 50000 - 5000 = 45000
     // Attempting to pay 50000 should exceed the owed amount
-
-    await page.goto(`${BASE}/subcontractor-payments`);
-    await page.waitForLoadState('networkidle');
-
-    await page.getByText('SubPay Worker').first().click();
-
-    await page
-      .getByTitle(/add instalment/i)
-      .first()
-      .click();
-
-    await page.selectOption('#inst-project', { label: 'SubPay Project' });
-    await page.fill('#inst-amount', '50000');
-    await page.getByRole('button', { name: /save/i }).click();
+    await openWorkerPanel(page);
+    await payPartial(page, '50000');
 
     // Backend rejects the overpayment (400) and the app surfaces the error in a
     // toast. Its presence is the proof of rejection (the toast auto-dismisses
@@ -91,36 +94,107 @@ dbTest.describe('Subcontractor Payments', () => {
     await expect(page.getByText(/₪45,000/).first()).toBeVisible();
   });
 
-  dbTest('multiple partial payments up to limit are accepted', async ({
+  dbTest('marking a project paid records the full amount owed', async ({
     page,
     db,
   }) => {
     void db;
-    // Owed = 45000, add two payments of 20000 each (total 40000 < 45000)
-    await page.goto(`${BASE}/subcontractor-payments`);
-    await page.waitForLoadState('networkidle');
+    await openWorkerPanel(page);
 
+    await page.getByTitle('Paid', { exact: true }).first().click();
+
+    // Owed = 45000, and the whole owed amount is recorded as one payment.
+    await expect(async () => {
+      const payments = await db.subcontractorPayment.findMany();
+      expect(payments).toHaveLength(1);
+      expect(Number(payments[0].amount)).toBe(45000);
+    }).toPass({ timeout: 5000 });
+  });
+
+  dbTest('a tag typed before saving is persisted and survives a reload', async ({
+    page,
+    db,
+  }) => {
+    void db;
+    await openWorkerPanel(page);
+
+    await page.fill(`#tag-${projectId}`, 'Materials');
+    await page.getByTitle('Paid', { exact: true }).first().click();
+    await waitForPaymentCount(db, 1);
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
     await page.getByText('SubPay Worker').first().click();
 
-    // First payment
-    await page.getByTitle(/add instalment/i).first().click();
-    await page.selectOption('#inst-project', { label: 'SubPay Project' });
-    await page.fill('#inst-amount', '20000');
-    await page.getByRole('button', { name: /save/i }).click();
-    await expect(page.getByRole('dialog')).not.toBeVisible({
+    await expect(page.locator(`#tag-${projectId}`)).toHaveValue('Materials', {
       timeout: 5000,
     });
 
-    // Second payment
-    await page.getByTitle(/add instalment/i).first().click();
-    await page.selectOption('#inst-project', { label: 'SubPay Project' });
-    await page.fill('#inst-amount', '20000');
-    await page.getByRole('button', { name: /save/i }).click();
-    await expect(page.getByRole('dialog')).not.toBeVisible({
-      timeout: 5000,
-    });
+    const payments = await db.subcontractorPayment.findMany();
+    expect(payments).toHaveLength(1);
+    expect(payments[0].tag).toBe('Materials');
+  });
 
-    // Total 40000 should be shown
-    await expect(page.getByText(/40,000|40000/).first()).toBeVisible({ timeout: 5000 });
+  dbTest('editing a tag on an existing payment saves on blur', async ({
+    page,
+    db,
+  }) => {
+    void db;
+    await openWorkerPanel(page);
+
+    await page.getByTitle('Paid', { exact: true }).first().click();
+    await waitForPaymentCount(db, 1);
+
+    await page.fill(`#tag-${projectId}`, 'Labor');
+    // Blurring commits the tag-only update; no amount is sent, so the
+    // overpayment guard is skipped.
+    await page.locator(`#tag-${projectId}`).blur();
+
+    await expect(async () => {
+      const payments = await db.subcontractorPayment.findMany();
+      expect(payments[0].tag).toBe('Labor');
+    }).toPass({ timeout: 5000 });
+  });
+
+  dbTest('a saved tag is offered as an autocomplete suggestion', async ({
+    page,
+    db,
+  }) => {
+    void db;
+    await openWorkerPanel(page);
+
+    await page.fill(`#tag-${projectId}`, 'Materials');
+    await page.getByTitle('Paid', { exact: true }).first().click();
+    await waitForPaymentCount(db, 1);
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    await expect(
+      page.locator('#payment-tags option[value="Materials"]'),
+    ).toHaveCount(1, { timeout: 5000 });
+  });
+
+  dbTest('a tag survives toggling a project unpaid and paid again', async ({
+    page,
+    db,
+  }) => {
+    void db;
+    await openWorkerPanel(page);
+
+    await page.fill(`#tag-${projectId}`, 'Materials');
+    await page.getByTitle('Paid', { exact: true }).first().click();
+    await waitForPaymentCount(db, 1);
+
+    // Unpaid deletes the payment; Paid recreates it and must carry the tag over.
+    await page.getByTitle('Unpaid', { exact: true }).first().click();
+    await waitForPaymentCount(db, 0);
+    await page.getByTitle('Paid', { exact: true }).first().click();
+
+    await expect(async () => {
+      const payments = await db.subcontractorPayment.findMany();
+      expect(payments).toHaveLength(1);
+      expect(payments[0].tag).toBe('Materials');
+    }).toPass({ timeout: 5000 });
   });
 });

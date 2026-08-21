@@ -3,13 +3,24 @@ import { useOutletContext } from "react-router-dom";
 import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
 import {
   useGetSubcontractorPaymentsQuery,
+  useGetSubcontractorPaymentTagsQuery,
   useCreateSubcontractorPaymentMutation,
+  useUpdateSubcontractorPaymentMutation,
   useDeleteSubcontractorPaymentMutation,
 } from "@/api/endpoints/subcontractor-payments";
+import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { Input } from "@/components/atoms/Input";
-import { Badge, EmptyState } from "@/components/atoms";
+import {
+  Badge,
+  ButtonPrimary,
+  EmptyState,
+  Select,
+  Textarea,
+} from "@/components/atoms";
+import { FormModal } from "@/components/organisms/Modal";
 import { useLang } from "@/contexts/useLang";
+import { useToast } from "@/contexts/useToast";
 import { formatYM } from "@/utils/formatMonth";
 
 function formatILS(n: number): string {
@@ -35,9 +46,14 @@ export default function SubcontractorPaymentsPage() {
   const { data: monthReports = [] } = useGetProjectReportsQuery(month);
   const { data: monthlyPayments = [] } =
     useGetSubcontractorPaymentsQuery(month);
+  const { data: knownTags = [] } = useGetSubcontractorPaymentTagsQuery();
   const [createPayment] = useCreateSubcontractorPaymentMutation();
+  const [updatePayment] = useUpdateSubcontractorPaymentMutation();
   const [deletePayment] = useDeleteSubcontractorPaymentMutation();
+  const [exportPdf, { isLoading: exporting }] =
+    useExportProjectReportsPdfMutation();
   const { t, lang } = useLang();
+  const { toast } = useToast();
 
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   const [partialOpen, setPartialOpen] = useState<Record<string, boolean>>({});
@@ -47,6 +63,12 @@ export default function SubcontractorPaymentsPage() {
   const [pendingProject, setPendingProject] = useState<Record<string, boolean>>(
     {},
   );
+  // Only holds tags the user has typed this session — a project the user has
+  // not touched falls back to the tag stored on its payment.
+  const [tagValues, setTagValues] = useState<Record<string, string>>({});
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportClientId, setExportClientId] = useState("");
+  const [approvedFor, setApprovedFor] = useState("");
 
   interface SubCard {
     subId: string;
@@ -54,6 +76,8 @@ export default function SubcontractorPaymentsPage() {
     projectBreakdown: {
       projectId: string;
       projectName: string;
+      clientId: string;
+      clientName: string;
       owed: number;
     }[];
     totalOwed: number;
@@ -75,6 +99,8 @@ export default function SubcontractorPaymentsPage() {
     const entry = {
       projectId: report.project.id,
       projectName: report.project.name,
+      clientId: report.project.client.id,
+      clientName: report.project.client.name,
       owed: Math.round(owed),
     };
     if (existing) {
@@ -104,18 +130,82 @@ export default function SubcontractorPaymentsPage() {
 
   const selectedCard = cards.find((c) => c.subId === selectedSubId) ?? null;
 
+  const distinctClients = selectedCard
+    ? Array.from(
+        new Map(
+          selectedCard.projectBreakdown.map((pb) => [
+            pb.clientId,
+            { id: pb.clientId, name: pb.clientName },
+          ]),
+        ).values(),
+      )
+    : [];
+
+  function openExport() {
+    setExportClientId(
+      distinctClients.length === 1 ? distinctClients[0].id : "",
+    );
+    setApprovedFor("");
+    setExportOpen(true);
+  }
+
+  async function handleExport() {
+    if (!selectedCard || !exportClientId || !approvedFor.trim()) return;
+
+    try {
+      const blob = await exportPdf({
+        subcontractorId: selectedCard.subId,
+        clientId: exportClientId,
+        month: `${month}-01`,
+        approvedFor: approvedFor.trim(),
+        lang,
+      }).unwrap();
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `account-approval-${month}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setExportOpen(false);
+      toast(t("exportPdf"), "success");
+    } catch {
+      // The global RTK Query error listener already surfaces a toast with
+      // the server's message (missing company settings, VAT, no reports).
+    }
+  }
+
   const selectedMonthlyData = monthlyPayments.find(
     (mp) => mp.subcontractor.id === selectedSubId,
   );
   const paymentsForSelected = selectedMonthlyData?.payments ?? [];
 
   const paidPerProject = new Map<string, number>();
+  const tagPerProject = new Map<string, string>();
   for (const p of paymentsForSelected) {
     paidPerProject.set(
       p.projectId,
       (paidPerProject.get(p.projectId) ?? 0) + p.amount,
     );
+    if (p.tag && !tagPerProject.has(p.projectId)) {
+      tagPerProject.set(p.projectId, p.tag);
+    }
   }
+
+  const tagFor = (projectId: string): string =>
+    tagValues[projectId] ?? tagPerProject.get(projectId) ?? "";
+
+  /**
+   * The tag to persist for a project: what the user typed if they touched the
+   * input (an empty string clears it), otherwise the tag already stored.
+   */
+  const tagToPersist = (projectId: string): string | null => {
+    const typed = tagValues[projectId];
+    if (typed !== undefined) return typed.trim() || null;
+    return tagPerProject.get(projectId) ?? null;
+  };
 
   async function handleSetUnpaid(projectId: string) {
     const toDelete = paymentsForSelected.filter(
@@ -129,6 +219,7 @@ export default function SubcontractorPaymentsPage() {
   }
 
   async function handleSetPaid(projectId: string, owed: number) {
+    const tag = tagToPersist(projectId);
     setPendingProject((prev) => ({ ...prev, [projectId]: true }));
     const toDelete = paymentsForSelected.filter(
       (p) => p.projectId === projectId,
@@ -139,6 +230,7 @@ export default function SubcontractorPaymentsPage() {
       projectId,
       serviceDate: month + "-01",
       amount: owed,
+      tag,
     });
     setPendingProject((prev) => ({ ...prev, [projectId]: false }));
     setPartialOpen((prev) => ({ ...prev, [projectId]: false }));
@@ -147,6 +239,7 @@ export default function SubcontractorPaymentsPage() {
   async function handleSetPartial(projectId: string) {
     const amount = parseFloat(partialValues[projectId] ?? "");
     if (isNaN(amount) || amount <= 0) return;
+    const tag = tagToPersist(projectId);
     setPendingProject((prev) => ({ ...prev, [projectId]: true }));
     const toDelete = paymentsForSelected.filter(
       (p) => p.projectId === projectId,
@@ -157,9 +250,29 @@ export default function SubcontractorPaymentsPage() {
       projectId,
       serviceDate: month + "-01",
       amount,
+      tag,
     });
     setPendingProject((prev) => ({ ...prev, [projectId]: false }));
     setPartialOpen((prev) => ({ ...prev, [projectId]: false }));
+  }
+
+  /**
+   * Persist a tag edit against the project's existing payments. Sending only
+   * `{ id, tag }` omits `amount`, which is what makes the backend skip its
+   * overpayment guard for this metadata-only write.
+   */
+  async function handleTagCommit(projectId: string) {
+    if (tagValues[projectId] === undefined) return;
+
+    const existing = paymentsForSelected.filter(
+      (p) => p.projectId === projectId,
+    );
+    if (existing.length === 0) return;
+
+    const tag = tagToPersist(projectId);
+    if (tag === (tagPerProject.get(projectId) ?? null)) return;
+
+    for (const p of existing) await updatePayment({ id: p.id, tag });
   }
 
   const aggregateStatus: PaymentStatus = selectedCard
@@ -221,11 +334,21 @@ export default function SubcontractorPaymentsPage() {
                 : cardStatuses.every((s) => s === "Unpaid")
                   ? "Unpaid"
                   : "Partial";
+              const cardTags = Array.from(
+                new Set(
+                  cardPayments
+                    .map((p) => p.tag?.trim())
+                    .filter((tag): tag is string => Boolean(tag)),
+                ),
+              );
               const isActive = selectedSubId === card.subId;
               return (
                 <button
                   key={card.subId}
-                  onClick={() => setSelectedSubId(card.subId)}
+                  onClick={() => {
+                    setSelectedSubId(card.subId);
+                    setTagValues({});
+                  }}
                   className={`text-left p-4 rounded border transition-colors ${
                     isActive
                       ? "bg-[var(--beet-glow)] border-beet"
@@ -259,6 +382,11 @@ export default function SubcontractorPaymentsPage() {
                       {t("paid")}: {formatILS(card.totalPaid)}
                     </p>
                   )}
+                  {cardTags.length > 0 && (
+                    <p className="text-[11px] text-text-muted mt-1">
+                      {cardTags.join(" · ")}
+                    </p>
+                  )}
                 </button>
               );
             })}
@@ -267,9 +395,17 @@ export default function SubcontractorPaymentsPage() {
           {/* Main panel */}
           {selectedCard ? (
             <div className="flex-1">
-              <h2 className="font-serif text-xl text-text mb-3">
-                {selectedCard.subName} — Projects
-              </h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-serif text-xl text-text">
+                  {selectedCard.subName} — Projects
+                </h2>
+                <ButtonPrimary
+                  onClick={openExport}
+                  className="text-xs py-1.5 px-3"
+                >
+                  {t("exportPdf")}
+                </ButtonPrimary>
+              </div>
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border">
@@ -278,6 +414,9 @@ export default function SubcontractorPaymentsPage() {
                     </th>
                     <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
                       {t("amountOwed")}
+                    </th>
+                    <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                      {t("tag")}
                     </th>
                     <th className="py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted text-center">
                       {t("paid")}?
@@ -322,6 +461,26 @@ export default function SubcontractorPaymentsPage() {
                             >
                               {formatILS(pb.owed)}
                             </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <Input
+                              id={`tag-${pb.projectId}`}
+                              aria-label={t("tag")}
+                              list="payment-tags"
+                              maxLength={100}
+                              value={tagFor(pb.projectId)}
+                              placeholder={t("tagPlaceholder")}
+                              onChange={(e) =>
+                                setTagValues((prev) => ({
+                                  ...prev,
+                                  [pb.projectId]: e.target.value,
+                                }))
+                              }
+                              onBlur={() => void handleTagCommit(pb.projectId)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") e.currentTarget.blur();
+                              }}
+                            />
                           </td>
                           <td className="py-3 px-3">
                             <div className="flex items-center justify-center gap-1.5">
@@ -412,7 +571,7 @@ export default function SubcontractorPaymentsPage() {
                             key={`${pb.projectId}-partial`}
                             className="border-b border-border bg-surface"
                           >
-                            <td colSpan={3} className="px-3 py-2">
+                            <td colSpan={4} className="px-3 py-2">
                               <div className="flex items-center gap-2">
                                 <div className="w-40">
                                   <Input
@@ -432,6 +591,22 @@ export default function SubcontractorPaymentsPage() {
                                     placeholder={`0 – ${pb.owed}`}
                                   />
                                 </div>
+                                <div className="w-32">
+                                  <Input
+                                    id={`partial-tag-${pb.projectId}`}
+                                    aria-label={t("tag")}
+                                    list="payment-tags"
+                                    maxLength={100}
+                                    value={tagFor(pb.projectId)}
+                                    placeholder={t("tagPlaceholder")}
+                                    onChange={(e) =>
+                                      setTagValues((prev) => ({
+                                        ...prev,
+                                        [pb.projectId]: e.target.value,
+                                      }))
+                                    }
+                                  />
+                                </div>
                                 <button
                                   disabled={
                                     isPending ||
@@ -444,6 +619,7 @@ export default function SubcontractorPaymentsPage() {
                                   onClick={() =>
                                     void handleSetPartial(pb.projectId)
                                   }
+                                  title={t("save")}
                                   className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-colors disabled:opacity-40"
                                   style={{ background: "var(--warning)" }}
                                 >
@@ -456,6 +632,7 @@ export default function SubcontractorPaymentsPage() {
                                       [pb.projectId]: false,
                                     }))
                                   }
+                                  title={t("cancel")}
                                   className="px-2 py-1.5 rounded text-xs text-text-muted border border-border hover:bg-surface-2 transition-colors"
                                 >
                                   ✕
@@ -479,6 +656,7 @@ export default function SubcontractorPaymentsPage() {
                       {formatILS(selectedCard.totalOwed)}
                     </td>
                     <td />
+                    <td />
                   </tr>
                 </tfoot>
               </table>
@@ -492,6 +670,46 @@ export default function SubcontractorPaymentsPage() {
           )}
         </div>
       )}
+
+      <datalist id="payment-tags">
+        {knownTags.map((tag) => (
+          <option key={tag} value={tag} />
+        ))}
+      </datalist>
+
+      <FormModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        onSubmit={() => void handleExport()}
+        title={t("exportPdf")}
+        loading={exporting}
+      >
+        <div className="flex flex-col gap-4">
+          {distinctClients.length > 1 && (
+            <Select
+              id="export-client"
+              label={t("selectClientForExport")}
+              value={exportClientId}
+              onChange={(e) => setExportClientId(e.target.value)}
+            >
+              <option value="">{t("selectClientPlaceholderExport")}</option>
+              {distinctClients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          )}
+          <Textarea
+            id="export-approved-for"
+            label={t("approvedForLabel")}
+            placeholder={t("approvedForPlaceholder")}
+            value={approvedFor}
+            onChange={(e) => setApprovedFor(e.target.value)}
+            rows={3}
+          />
+        </div>
+      </FormModal>
     </div>
   );
 }

@@ -191,6 +191,26 @@ export class ProjectReportsService {
     return toProjectReportList(projectReports);
   }
 
+  async findForSubcontractorAndClientInMonth(
+    subcontractorId: string,
+    clientId: string,
+    month: string,
+  ): Promise<ProjectReportListItemDto[]> {
+    const projectReports = await this.prismaService.projectReport.findMany({
+      where: {
+        subcontractorId,
+        date: month,
+        project: { clientId },
+      },
+      include: REPORT_INCLUDE,
+    });
+
+    this.logger.log(
+      `Retrieved ${projectReports.length} project reports for subcontractor ${subcontractorId}, client ${clientId}, month ${month}`,
+    );
+    return toProjectReportList(projectReports);
+  }
+
   async findProjectReportForPreviousMonth(
     projectId: string,
     monthQueryDto: MonthQueryDto,

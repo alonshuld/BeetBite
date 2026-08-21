@@ -124,6 +124,22 @@ export class SubcontractorPaymentsController {
   }
 
   /**
+   * List the tags previously used on subcontractor payments.
+   * @returns Distinct, non-empty tags, most recently used first
+   */
+  @Get('/subcontractor-payments/tags')
+  @ApiOperation({
+    summary: 'Get the tags previously used on subcontractor payments',
+  })
+  @ApiOkResponse({
+    description: 'Distinct subcontractor payment tags.',
+    type: [String],
+  })
+  async findTags(): Promise<string[]> {
+    return this.subcontractorPaymentsService.findDistinctTags();
+  }
+
+  /**
    * Update a subcontractor payment by ID.
    * @param id The subcontractor payment identifier
    * @param updateSubcontractorPaymentDto Payload with updated subcontractor payment properties
