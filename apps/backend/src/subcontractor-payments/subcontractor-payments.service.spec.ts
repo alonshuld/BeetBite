@@ -57,6 +57,14 @@ describe('SubcontractorPaymentsService', () => {
   });
 
   describe('create', () => {
+    /** The `data` payload handed to prisma by the single create call. */
+    const createdData = (): { tag: string | null } =>
+      (
+        mockPrismaService.subcontractorPayment.create.mock.calls[0] as [
+          { data: { tag: string | null } },
+        ]
+      )[0].data;
+
     const createDto = {
       subcontractorId: 'clh0000000000000000000001',
       projectId: 'project-1',
@@ -97,13 +105,14 @@ describe('SubcontractorPaymentsService', () => {
       expect(
         mockPrismaService.subcontractorPayment.create,
       ).toHaveBeenCalledWith({
-        data: createDto,
+        data: { ...createDto, tag: null },
         select: {
           id: true,
           projectId: true,
           serviceDate: true,
           amount: true,
           isPaid: true,
+          tag: true,
           subcontractor: {
             select: {
               id: true,
@@ -112,6 +121,38 @@ describe('SubcontractorPaymentsService', () => {
           },
         },
       });
+    });
+
+    it('should persist a trimmed tag', async () => {
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
+        profitMargin: { toNumber: () => 10 },
+        corporationPayments: [],
+      });
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+      mockPrismaService.subcontractorPayment.create.mockResolvedValue(
+        mockPayment,
+      );
+
+      await service.create({ ...createDto, tag: '  Materials  ' });
+
+      expect(createdData().tag).toBe('Materials');
+    });
+
+    it('should store an empty-string tag as null', async () => {
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
+        profitMargin: { toNumber: () => 10 },
+        corporationPayments: [],
+      });
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+      mockPrismaService.subcontractorPayment.create.mockResolvedValue(
+        mockPayment,
+      );
+
+      await service.create({ ...createDto, tag: '   ' });
+
+      expect(createdData().tag).toBeNull();
     });
 
     it('should throw SubcontractorPaymentOverpaymentError when payment exceeds amount owed', async () => {
@@ -369,6 +410,67 @@ describe('SubcontractorPaymentsService', () => {
       amount: 1500,
     };
 
+    it('should update a tag without running the overpayment guard', async () => {
+      const mockPayment = {
+        id: 'clh0000000000000000000001',
+        projectId: 'project-1',
+        serviceDate: new Date('2023-01-01'),
+        amount: { toNumber: () => 900 },
+        tag: 'Materials',
+        subcontractor: {
+          id: 'clh0000000000000000000001',
+          name: 'Test Subcontractor',
+        },
+      };
+      mockPrismaService.subcontractorPayment.update.mockResolvedValue(
+        mockPayment,
+      );
+
+      const result = await service.update('clh0000000000000000000001', {
+        tag: '  Materials  ',
+      });
+
+      expect(result.tag).toBe('Materials');
+      // No amount was sent, so the guard must not look up the owed total.
+      expect(mockPrismaService.projectReport.findFirst).not.toHaveBeenCalled();
+      expect(
+        mockPrismaService.subcontractorPayment.findMany,
+      ).not.toHaveBeenCalled();
+      expect(
+        mockPrismaService.subcontractorPayment.update,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'clh0000000000000000000001' },
+          data: { tag: 'Materials' },
+        }),
+      );
+    });
+
+    it('should leave an existing tag untouched when the update omits it', async () => {
+      const mockPayment = {
+        id: 'clh0000000000000000000001',
+        projectId: 'project-1',
+        serviceDate: new Date('2023-01-01'),
+        amount: { toNumber: () => 900 },
+        tag: 'Materials',
+        subcontractor: {
+          id: 'clh0000000000000000000001',
+          name: 'Test Subcontractor',
+        },
+      };
+      mockPrismaService.subcontractorPayment.update.mockResolvedValue(
+        mockPayment,
+      );
+
+      await service.update('clh0000000000000000000001', { isPaid: true });
+
+      expect(
+        mockPrismaService.subcontractorPayment.update,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { isPaid: true } }),
+      );
+    });
+
     it('should throw SubcontractorPaymentOverpaymentError when updated amount exceeds amount owed', async () => {
       // amountOwed = 900. Other payments = 600. New amount = 400 → total 1000 > 900
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
@@ -464,6 +566,7 @@ describe('SubcontractorPaymentsService', () => {
           serviceDate: true,
           amount: true,
           isPaid: true,
+          tag: true,
           subcontractor: {
             select: {
               id: true,
@@ -498,6 +601,81 @@ describe('SubcontractorPaymentsService', () => {
       await expect(
         service.update('clh0000000000000000000999', updateDto),
       ).rejects.toThrow(SubcontractorPaymentNotFoundError);
+    });
+  });
+
+  describe('findDistinctTags', () => {
+    it('should return a de-duplicated list of tags and exclude nulls', async () => {
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([
+        { tag: 'Materials' },
+        { tag: 'Labor' },
+        { tag: null },
+      ]);
+
+      const result = await service.findDistinctTags();
+
+      expect(result).toEqual(['Materials', 'Labor']);
+      expect(
+        mockPrismaService.subcontractorPayment.findMany,
+      ).toHaveBeenCalledWith({
+        where: { tag: { not: null } },
+        distinct: ['tag'],
+        select: { tag: true },
+        orderBy: { serviceDate: 'desc' },
+        take: 50,
+      });
+    });
+
+    it('should return an empty list when nothing is tagged', async () => {
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+
+      expect(await service.findDistinctTags()).toEqual([]);
+    });
+  });
+
+  describe('findTagsByProject', () => {
+    it('should group tags by project id', async () => {
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([
+        { projectId: 'project-1', tag: 'Materials' },
+        { projectId: 'project-1', tag: 'Labor' },
+        { projectId: 'project-2', tag: 'Plumbing' },
+      ]);
+
+      const result = await service.findTagsByProject(
+        'clh0000000000000000000001',
+        '2023-01-01T00:00:00.000Z',
+      );
+
+      expect(result).toEqual({
+        'project-1': ['Materials', 'Labor'],
+        'project-2': ['Plumbing'],
+      });
+    });
+
+    it('should drop blank tags and de-duplicate within a project', async () => {
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([
+        { projectId: 'project-1', tag: 'Materials' },
+        { projectId: 'project-1', tag: '  Materials ' },
+        { projectId: 'project-1', tag: '   ' },
+      ]);
+
+      const result = await service.findTagsByProject(
+        'clh0000000000000000000001',
+        '2023-01-01T00:00:00.000Z',
+      );
+
+      expect(result).toEqual({ 'project-1': ['Materials'] });
+    });
+
+    it('should omit projects that have no tagged payments', async () => {
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+
+      expect(
+        await service.findTagsByProject(
+          'clh0000000000000000000001',
+          '2023-01-01T00:00:00.000Z',
+        ),
+      ).toEqual({});
     });
   });
 

@@ -4,6 +4,7 @@ import { CompanySettingsService } from 'src/company-settings/company-settings.se
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 import { ProjectReportsService } from 'src/project-reports/project-reports.service';
 import { SubcontractorsService } from 'src/subcontractors/subcontractors.service';
+import { SubcontractorPaymentsService } from 'src/subcontractor-payments/subcontractor-payments.service';
 import { CompanySettingsIncompleteError } from './errors/company-settings-incomplete.error';
 import { VatRateNotConfiguredError } from './errors/vat-rate-not-configured.error';
 import { NoReportsForExportError } from './errors/no-reports-for-export.error';
@@ -28,6 +29,7 @@ describe('PdfExportService', () => {
     findForSubcontractorAndClientInMonth: jest.fn(),
   };
   const mockSubcontractorsService = { findOne: jest.fn() };
+  const mockSubcontractorPaymentsService = { findTagsByProject: jest.fn() };
 
   const completeCompanySettings = {
     id: 'company-settings',
@@ -85,6 +87,10 @@ describe('PdfExportService', () => {
         { provide: VatRatesService, useValue: mockVatRatesService },
         { provide: ProjectReportsService, useValue: mockProjectReportsService },
         { provide: SubcontractorsService, useValue: mockSubcontractorsService },
+        {
+          provide: SubcontractorPaymentsService,
+          useValue: mockSubcontractorPaymentsService,
+        },
       ],
     }).compile();
 
@@ -103,6 +109,7 @@ describe('PdfExportService', () => {
       name: 'Israelov Engineering',
       companyNumber: '516469053',
     });
+    mockSubcontractorPaymentsService.findTagsByProject.mockResolvedValue({});
   });
 
   it('should be defined', () => {
@@ -197,5 +204,58 @@ describe('PdfExportService', () => {
     expect(html).toContain('43,399.80');
     expect(html).toContain('824,596.20');
     expect(html).toContain('219,768.50');
+  });
+
+  const renderHtml = async (): Promise<string> => {
+    const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
+    const mockPage = {
+      setContent: jest.fn<void, [string, unknown]>(),
+      pdf: jest.fn().mockResolvedValue(Uint8Array.from([1])),
+    };
+    puppeteer.launch.mockResolvedValue({
+      newPage: jest.fn().mockResolvedValue(mockPage),
+      close: jest.fn(),
+    });
+
+    await service.exportProjectReportsPdf(dto);
+
+    return mockPage.setContent.mock.calls[0][0];
+  };
+
+  it("should render the project's tag in the report row", async () => {
+    mockSubcontractorPaymentsService.findTagsByProject.mockResolvedValue({
+      'project-1': ['Materials'],
+    });
+
+    expect(await renderHtml()).toContain('Materials');
+    expect(
+      mockSubcontractorPaymentsService.findTagsByProject,
+    ).toHaveBeenCalledWith('sub-1', dto.month);
+  });
+
+  it('should join several tags for the same project', async () => {
+    mockSubcontractorPaymentsService.findTagsByProject.mockResolvedValue({
+      'project-1': ['Materials', 'Labor'],
+    });
+
+    expect(await renderHtml()).toContain('Materials · Labor');
+  });
+
+  it('should escape HTML in a tag', async () => {
+    mockSubcontractorPaymentsService.findTagsByProject.mockResolvedValue({
+      'project-1': ['<script>alert(1)</script>'],
+    });
+
+    const html = await renderHtml();
+
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+  });
+
+  it('should render an empty tag cell for a project with no payment', async () => {
+    mockSubcontractorPaymentsService.findTagsByProject.mockResolvedValue({});
+
+    // The row still has its full column count, with the tag cell left blank.
+    expect(await renderHtml()).toContain('<td></td>');
   });
 });

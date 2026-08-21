@@ -1,5 +1,6 @@
 export interface ReportApprovalRow {
   projectName: string;
+  tag: string | null;
   approvedAmount: number;
   invoiceInclVat: number;
   profitMarginPercent: number;
@@ -40,6 +41,7 @@ const LABELS = {
   he: {
     subtitlePrefix: 'אישור חשבון – חודש',
     client: 'שם המזמין',
+    tag: 'תיאור',
     mainContractor: 'קבלן ראשי',
     subcontractor: 'קבלן משנה',
     approvedFor: 'חשבון מאושר עבור',
@@ -62,6 +64,7 @@ const LABELS = {
   en: {
     subtitlePrefix: 'Account Approval –',
     client: 'Client',
+    tag: 'Tag',
     mainContractor: 'Main Contractor',
     subcontractor: 'Subcontractor',
     approvedFor: 'Approved For',
@@ -114,6 +117,7 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
       (row) => `
         <tr>
           <td>${escapeHtml(row.projectName)}</td>
+          <td>${escapeHtml(row.tag ?? '')}</td>
           <td>${money(row.approvedAmount)}</td>
           <td>${money(row.invoiceInclVat)}</td>
           <td>${row.profitMarginPercent}%</td>
@@ -225,6 +229,7 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     <thead>
       <tr>
         <th></th>
+        <th>${t.tag}</th>
         <th>${t.approvedAmount}</th>
         <th>${t.invoiceInclVat}</th>
         <th>${t.profitMarginPercent}</th>
