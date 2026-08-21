@@ -6,10 +6,19 @@ import {
   useCreateSubcontractorPaymentMutation,
   useDeleteSubcontractorPaymentMutation,
 } from "@/api/endpoints/subcontractor-payments";
+import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { Input } from "@/components/atoms/Input";
-import { Badge, EmptyState } from "@/components/atoms";
+import {
+  Badge,
+  ButtonPrimary,
+  EmptyState,
+  Select,
+  Textarea,
+} from "@/components/atoms";
+import { FormModal } from "@/components/organisms/Modal";
 import { useLang } from "@/contexts/useLang";
+import { useToast } from "@/contexts/useToast";
 import { formatYM } from "@/utils/formatMonth";
 
 function formatILS(n: number): string {
@@ -37,7 +46,10 @@ export default function SubcontractorPaymentsPage() {
     useGetSubcontractorPaymentsQuery(month);
   const [createPayment] = useCreateSubcontractorPaymentMutation();
   const [deletePayment] = useDeleteSubcontractorPaymentMutation();
+  const [exportPdf, { isLoading: exporting }] =
+    useExportProjectReportsPdfMutation();
   const { t, lang } = useLang();
+  const { toast } = useToast();
 
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   const [partialOpen, setPartialOpen] = useState<Record<string, boolean>>({});
@@ -47,6 +59,9 @@ export default function SubcontractorPaymentsPage() {
   const [pendingProject, setPendingProject] = useState<Record<string, boolean>>(
     {},
   );
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportClientId, setExportClientId] = useState("");
+  const [approvedFor, setApprovedFor] = useState("");
 
   interface SubCard {
     subId: string;
@@ -54,6 +69,8 @@ export default function SubcontractorPaymentsPage() {
     projectBreakdown: {
       projectId: string;
       projectName: string;
+      clientId: string;
+      clientName: string;
       owed: number;
     }[];
     totalOwed: number;
@@ -75,6 +92,8 @@ export default function SubcontractorPaymentsPage() {
     const entry = {
       projectId: report.project.id,
       projectName: report.project.name,
+      clientId: report.project.client.id,
+      clientName: report.project.client.name,
       owed: Math.round(owed),
     };
     if (existing) {
@@ -103,6 +122,53 @@ export default function SubcontractorPaymentsPage() {
   );
 
   const selectedCard = cards.find((c) => c.subId === selectedSubId) ?? null;
+
+  const distinctClients = selectedCard
+    ? Array.from(
+        new Map(
+          selectedCard.projectBreakdown.map((pb) => [
+            pb.clientId,
+            { id: pb.clientId, name: pb.clientName },
+          ]),
+        ).values(),
+      )
+    : [];
+
+  function openExport() {
+    setExportClientId(
+      distinctClients.length === 1 ? distinctClients[0].id : "",
+    );
+    setApprovedFor("");
+    setExportOpen(true);
+  }
+
+  async function handleExport() {
+    if (!selectedCard || !exportClientId || !approvedFor.trim()) return;
+
+    try {
+      const blob = await exportPdf({
+        subcontractorId: selectedCard.subId,
+        clientId: exportClientId,
+        month: `${month}-01`,
+        approvedFor: approvedFor.trim(),
+        lang,
+      }).unwrap();
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `account-approval-${month}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setExportOpen(false);
+      toast(t("exportPdf"), "success");
+    } catch {
+      // The global RTK Query error listener already surfaces a toast with
+      // the server's message (missing company settings, VAT, no reports).
+    }
+  }
 
   const selectedMonthlyData = monthlyPayments.find(
     (mp) => mp.subcontractor.id === selectedSubId,
@@ -267,9 +333,17 @@ export default function SubcontractorPaymentsPage() {
           {/* Main panel */}
           {selectedCard ? (
             <div className="flex-1">
-              <h2 className="font-serif text-xl text-text mb-3">
-                {selectedCard.subName} — Projects
-              </h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-serif text-xl text-text">
+                  {selectedCard.subName} — Projects
+                </h2>
+                <ButtonPrimary
+                  onClick={openExport}
+                  className="text-xs py-1.5 px-3"
+                >
+                  {t("exportPdf")}
+                </ButtonPrimary>
+              </div>
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border">
@@ -492,6 +566,40 @@ export default function SubcontractorPaymentsPage() {
           )}
         </div>
       )}
+
+      <FormModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        onSubmit={() => void handleExport()}
+        title={t("exportPdf")}
+        loading={exporting}
+      >
+        <div className="flex flex-col gap-4">
+          {distinctClients.length > 1 && (
+            <Select
+              id="export-client"
+              label={t("selectClientForExport")}
+              value={exportClientId}
+              onChange={(e) => setExportClientId(e.target.value)}
+            >
+              <option value="">{t("selectClientPlaceholderExport")}</option>
+              {distinctClients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          )}
+          <Textarea
+            id="export-approved-for"
+            label={t("approvedForLabel")}
+            placeholder={t("approvedForPlaceholder")}
+            value={approvedFor}
+            onChange={(e) => setApprovedFor(e.target.value)}
+            rows={3}
+          />
+        </div>
+      </FormModal>
     </div>
   );
 }

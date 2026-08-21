@@ -16,6 +16,8 @@ import { UsersModule } from './users/users.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { IncomeModule } from './income/income.module';
 import { CompanySettingsModule } from './company-settings/company-settings.module';
+import { VatRatesModule } from './vat-rates/vat-rates.module';
+import { PdfExportModule } from './pdf-export/pdf-export.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { CompanySettingsModule } from './company-settings/company-settings.modul
     ProjectsModule,
     IncomeModule,
     CompanySettingsModule,
+    VatRatesModule,
+    PdfExportModule,
   ],
   providers: [
     {

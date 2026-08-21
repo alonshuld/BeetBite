@@ -8,7 +8,15 @@ export const store = configureStore({
     auth: authReducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(baseApi.middleware),
+    getDefaultMiddleware({
+      // The PDF-export mutation returns a Blob (see project-report-exports.ts)
+      // — an intentional, non-serializable RTK Query result. Scope the dev-only
+      // serializability check to skip just that value instead of disabling it.
+      serializableCheck: {
+        ignoredActionPaths: ["payload"],
+        ignoredPaths: [/^api\.mutations\..*\.data$/],
+      },
+    }).concat(baseApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

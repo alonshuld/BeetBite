@@ -119,6 +119,15 @@ model User {
   @@map("users")
 }
 
+model VatRate {
+  id             String   @id @default(cuid())
+  effectiveMonth DateTime @unique @db.Date
+  percentage     Decimal  @db.Decimal(5, 2)
+  createdAt      DateTime @default(now())
+
+  @@map("vat_rates")
+}
+
 model CompanySettings {
   id            String   @id @default("company-settings")
   name          String?
