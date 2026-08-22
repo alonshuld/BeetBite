@@ -32,7 +32,7 @@ pnpm test -- --testPathPattern=projects.service
 pnpx prisma migrate dev        # Apply migrations and regenerate client
 pnpx prisma migrate deploy     # Apply migrations (CI/production)
 pnpx prisma generate           # Regenerate client without migrating
-pnpx prisma db seed            # Seed admin user + optional mock data
+pnpx prisma db seed            # Seed admin user (mock data only with SEED_MOCK_DATA=true)
 ```
 
 ### Required environment variables
@@ -42,13 +42,14 @@ Set in `.env` or `.env.local` (`.env.local` takes precedence):
 | Variable | Description |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_SECRET` | Secret for signing JWT tokens — **required**, app throws on startup if missing |
+| `JWT_SECRET` | Secret for signing JWT tokens — **required**, app throws on startup if missing. In production it also throws if it is a known placeholder or under 32 chars |
 | `PORT` | HTTP port (default: 3000) |
 | `NODE_ENV` | `development` / `production` |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins (production only) |
 | `JWT_EXPIRES_IN` | Token TTL (default: `24h`) |
 | `ADMIN_USERNAME` | Seed admin username (default: `admin`) |
-| `ADMIN_PASSWORD` | Seed admin password — **required** when running `prisma db seed` |
+| `ADMIN_PASSWORD` | Seed admin password — **required** the first time the admin is created; ignored once the user exists (the seed never overwrites an existing password) |
+| `SEED_MOCK_DATA` | Set to `true` to load demo data. **Destructive** — truncates every business table first |
 
 ## Architecture
 
@@ -80,7 +81,7 @@ Flow:
 2. On success, `AuthService.login()` signs a JWT with payload `{ sub: userId, username }`
 3. Client sends `Authorization: Bearer <token>`; `JwtStrategy` validates and attaches `{ userId, username }` to `req.user`
 
-Users are stored in the `User` model with a `passwordHash` (bcrypt, 12 rounds). Create/update users via `prisma db seed` or directly via Prisma.
+Users are stored in the `User` model with a `passwordHash` (bcrypt, 12 rounds). The seed creates the admin on first run only; to rotate a password, update the hash directly via Prisma.
 
 ### Data models
 
