@@ -8,7 +8,10 @@ dbTest.describe('Clients CRUD', () => {
     await page.goto(`${BASE}/clients`);
     await page.waitForLoadState('networkidle');
 
-    await page.getByRole('button', { name: /add client/i }).first().click();
+    await page
+      .getByRole('button', { name: /add client/i })
+      .first()
+      .click();
 
     const modal = page.locator('[role="dialog"], .fixed.inset-0').last();
     await expect(modal).toBeVisible();
@@ -54,31 +57,36 @@ dbTest.describe('Clients CRUD', () => {
     await row.getByTitle(/delete/i).click();
 
     // Confirm modal
-    await page.getByRole('button', { name: /delete/i }).last().click();
+    await page
+      .getByRole('button', { name: /delete/i })
+      .last()
+      .click();
 
     await expect(
       page.getByRole('cell', { name: 'Delete Me Client' }),
     ).not.toBeVisible({ timeout: 5000 });
   });
 
-  dbTest(
-    'duplicate name shows error (409)',
-    async ({ page, db }) => {
-      await db.client.create({ data: { name: 'Unique Client Name' } });
+  dbTest('duplicate name shows error (409)', async ({ page, db }) => {
+    await db.client.create({ data: { name: 'Unique Client Name' } });
 
-      await page.goto(`${BASE}/clients`);
-      await page.waitForLoadState('networkidle');
+    await page.goto(`${BASE}/clients`);
+    await page.waitForLoadState('networkidle');
 
-      await page.getByRole('button', { name: /add client/i }).first().click();
-      await page.fill('#client-name', 'Unique Client Name');
-      await page.getByRole('button', { name: /save/i }).click();
+    await page
+      .getByRole('button', { name: /add client/i })
+      .first()
+      .click();
+    await page.fill('#client-name', 'Unique Client Name');
+    await page.getByRole('button', { name: /save/i }).click();
 
-      // Modal should stay open (or error shown) — duplicate name rejected
-      await expect(page.locator('[role="dialog"], .fixed.inset-0').last()).toBeVisible({
-        timeout: 3000,
-      });
-    },
-  );
+    // Modal should stay open (or error shown) — duplicate name rejected
+    await expect(
+      page.locator('[role="dialog"], .fixed.inset-0').last(),
+    ).toBeVisible({
+      timeout: 3000,
+    });
+  });
 
   dbTest(
     'empty name field — form validation prevents submit',
@@ -87,12 +95,17 @@ dbTest.describe('Clients CRUD', () => {
       await page.goto(`${BASE}/clients`);
       await page.waitForLoadState('networkidle');
 
-      await page.getByRole('button', { name: /add client/i }).first().click();
+      await page
+        .getByRole('button', { name: /add client/i })
+        .first()
+        .click();
       // Leave name empty
       await page.getByRole('button', { name: /save/i }).click();
 
       // Modal stays open (name is required)
-      await expect(page.locator('[role="dialog"], .fixed.inset-0').last()).toBeVisible({
+      await expect(
+        page.locator('[role="dialog"], .fixed.inset-0').last(),
+      ).toBeVisible({
         timeout: 2000,
       });
     },

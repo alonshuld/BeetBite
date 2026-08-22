@@ -1,5 +1,7 @@
 FROM node:22-alpine
-RUN corepack enable && corepack prepare pnpm@11.1.2 --activate
+# Corepack resolves pnpm from the root package.json "packageManager" field, so
+# the version stays in one place instead of drifting against a hardcoded pin.
+RUN corepack enable
 # Puppeteer (PDF export) needs a system Chromium on Alpine — its own bundled
 # Chromium is glibc-only and won't run under musl. font-noto-hebrew is required
 # for Hebrew PDFs to render actual glyphs instead of tofu boxes.

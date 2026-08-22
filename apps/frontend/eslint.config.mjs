@@ -8,7 +8,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'eslint.config.mjs', 'vite.config.js', 'vite.config.d.ts'],
+    ignores: ['dist', 'eslint.config.mjs'],
   },
   {
     files: ['scripts/**'],
@@ -22,15 +22,12 @@ export default tseslint.config(
   ...tseslint.configs.recommendedTypeChecked,
   eslintPluginPrettierRecommended,
   {
-    files: ['playwright.config.ts', 'e2e/**/*.ts'],
+    // Vite/Vitest configs run in Node, not the browser.
+    files: ['vite.config.ts', 'vite.config.e2e.ts', 'vitest.config.ts'],
     languageOptions: {
       globals: {
         ...globals.node,
       },
-    },
-    rules: {
-      // playwright.config.ts runs in Node — process.env is valid; browser tsconfig lacks @types/node
-      '@typescript-eslint/no-unsafe-member-access': 'off',
     },
   },
   {
@@ -45,7 +42,11 @@ export default tseslint.config(
       sourceType: 'module',
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['postcss.config.js', 'tailwind.config.ts', 'scripts/codegen.mjs', 'vite.config.e2e.ts', 'vitest.config.ts', 'playwright.config.ts'],
+          // Only files outside every tsconfig belong here. vite.config.ts,
+          // vite.config.e2e.ts and vitest.config.ts are covered by
+          // tsconfig.node.json, so listing them would collide with the
+          // project service.
+          allowDefaultProject: ['postcss.config.js', 'tailwind.config.ts', 'scripts/codegen.mjs'],
         },
         tsconfigRootDir: import.meta.dirname,
       },

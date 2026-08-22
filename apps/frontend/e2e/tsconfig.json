@@ -1,4 +1,0 @@
-{
-  "extends": "../tsconfig.e2e.json",
-  "include": ["./**/*.ts", "../playwright.config.ts", "../src/api/endpoints/project-reports.ts"]
-}

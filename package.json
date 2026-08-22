@@ -8,7 +8,7 @@
     "dev": "pnpm -r dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint && pnpm -r typecheck",
-    "lint:check": "pnpm -r lint:check",
+    "lint:check": "pnpm -r lint:check && pnpm -r typecheck",
     "format": "pnpm -r format",
     "format:check": "pnpm -r format:check",
     "prepare": "pnpm exec husky",
