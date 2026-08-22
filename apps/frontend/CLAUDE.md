@@ -12,9 +12,9 @@ Vite + React 18 + TypeScript (strict). State: Redux Toolkit + RTK Query. Routing
 pnpm dev          # Vite dev server on :5173 (proxies /api → :3000)
 pnpm build        # tsc -b && vite build
 pnpm preview      # Preview production build
-pnpm typecheck    # tsc --noEmit
-pnpm lint         # ESLint + tsc (auto-fix)
-pnpm lint:check   # ESLint + tsc (no fix, for CI)
+pnpm typecheck    # tsc -b — checks src (tsconfig.json) and vite.config.ts (tsconfig.node.json)
+pnpm lint         # ESLint (auto-fix)
+pnpm lint:check   # ESLint (no fix, for CI)
 pnpm format       # Prettier write
 pnpm test         # Vitest (all files)
 

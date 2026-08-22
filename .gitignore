@@ -150,3 +150,10 @@ vite.config.ts.timestamp-*
 
 .agents/
 .claude/
+# Emitted by `tsc -b` for tsconfig.node.json (see its outDir)
+apps/frontend/vite.config.js
+apps/frontend/vite.config.d.ts
+
+# Playwright run output
+test-results/
+playwright-report/

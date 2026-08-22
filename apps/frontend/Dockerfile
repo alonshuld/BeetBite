@@ -1,5 +1,7 @@
 FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@11.1.2 --activate
+# Corepack resolves pnpm from the root package.json "packageManager" field, so
+# the version stays in one place instead of drifting against a hardcoded pin.
+RUN corepack enable
 WORKDIR /app
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./

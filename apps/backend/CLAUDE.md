@@ -13,9 +13,9 @@ pnpm build              # Compile TypeScript via NestJS CLI
 pnpm start:prod         # Run compiled output
 
 # Code quality
-pnpm lint               # ESLint + tsc (auto-fix)
-pnpm lint:check         # ESLint + tsc (no fix, for CI)
-pnpm typecheck          # tsc --noEmit only
+pnpm lint               # ESLint (auto-fix)
+pnpm lint:check         # ESLint (no fix, for CI)
+pnpm typecheck          # tsc --noEmit — run separately; the root `lint`/`lint:check` chain both
 pnpm format             # Prettier write
 pnpm format:check       # Prettier check (no write)
 

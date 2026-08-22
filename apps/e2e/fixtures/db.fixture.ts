@@ -10,12 +10,19 @@ const { PrismaClient } = require(
 const { PrismaPg } = require('@prisma/adapter-pg');
 
 export type DbFixture = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: any;
 };
 
-export const test = base.extend<DbFixture>({
-  db: async ({}, use) => {
+// `db` is `any` (PrismaClient is require()'d from the backend's generated
+// output), which stops TS from contextually typing Playwright's `use`
+// callback — so annotate it rather than leave it an implicit any.
+
+type Use = (value: any) => Promise<void>;
+
+// Internal: the db fixture on its own. Not exported — the only export is the
+// auth-wrapped `test` below, so there is exactly one binding named `test`.
+const testWithDb = base.extend<DbFixture>({
+  db: async ({}, use: Use) => {
     const databaseUrl = process.env.E2E_DATABASE_URL;
     if (!databaseUrl) throw new Error('E2E_DATABASE_URL not set');
 
@@ -38,7 +45,7 @@ export const test = base.extend<DbFixture>({
 });
 
 // Extend test to apply auth state from file
-const testWithAuth = test.extend({
+const testWithAuth = testWithDb.extend({
   page: async ({ page }, use) => {
     // Load auth state from file and inject localStorage via addInitScript.
     // addInitScript runs before any page scripts on every navigation, so
@@ -48,9 +55,7 @@ const testWithAuth = test.extend({
       '../playwright/.auth/user.json',
     );
     if (fs.existsSync(authFilePath)) {
-      const authState = JSON.parse(
-        fs.readFileSync(authFilePath, 'utf-8'),
-      );
+      const authState = JSON.parse(fs.readFileSync(authFilePath, 'utf-8'));
 
       if (authState.origins && authState.origins[0]) {
         const origin = authState.origins[0];
@@ -80,5 +85,6 @@ const testWithAuth = test.extend({
 });
 
 export { expect } from '@playwright/test';
-// Export the extended test as the default export so tests can use "test as dbTest"
+// The single `test` export: db fixture + auth state + pinned month. Tests import
+// it as `test as dbTest`.
 export { testWithAuth as test };

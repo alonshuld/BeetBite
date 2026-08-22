@@ -6,17 +6,61 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: cd-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
 
 jobs:
+  # Never publish an image built from a commit that does not pass CI. Reusing
+  # ci.yml rather than re-declaring its steps keeps the two in lockstep.
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  # Phase 1: prove both images build before either is pushed. `latest` must
+  # never advance for one app while the other is broken — a deploy pulling a
+  # mismatched backend/frontend pair fails in ways nothing here would catch.
+  build:
+    name: Build ${{ matrix.app }} image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: ci
+
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [backend, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Both Dockerfiles expect the repo root as build context: they copy the
+      # workspace manifests and the lockfile before filtering to their own app.
+      # Layers land in the GHA cache, so phase 2's push is a cache replay.
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          push: false
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  # Phase 2: both builds are green, so publishing is a cache replay plus a
+  # registry push. Only this phase writes to GHCR, and it does not write back
+  # to the layer cache — phase 1 already populated it.
   publish:
     name: Publish ${{ matrix.app }} image
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: build
 
     permissions:
       contents: read
@@ -54,9 +98,7 @@ jobs:
             type=sha,format=long
             type=ref,event=branch
 
-      # Both Dockerfiles expect the repo root as build context: they copy the
-      # workspace manifests and the lockfile before filtering to their own app.
-      - name: Build and push
+      - name: Push
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -65,4 +107,3 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.app }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.app }}

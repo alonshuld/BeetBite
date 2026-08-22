@@ -5,10 +5,21 @@ on:
     branches: [main, dev]
   pull_request:
     branches: [main, dev]
+  # Callable so CD can gate publishing on a green CI instead of duplicating it.
+  workflow_call:
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Nothing in CI drives a real browser (the PDF-export specs mock puppeteer),
+  # and puppeteer's Chromium lands in ~/.cache/puppeteer, which setup-node's
+  # pnpm-store cache does not cover — so it would be re-downloaded every job.
+  PUPPETEER_SKIP_DOWNLOAD: "true"
 
 jobs:
   lint:
@@ -31,11 +42,11 @@ jobs:
       - name: Check formatting
         run: pnpm format:check
 
-      - name: Lint
+      # `lint:check` runs ESLint across all three workspaces and then
+      # `pnpm -r typecheck`. Keeping typecheck inside `lint:check` means the
+      # Husky pre-commit hook enforces exactly what CI does.
+      - name: Lint & typecheck
         run: pnpm lint:check
-
-      - name: Typecheck
-        run: pnpm -r typecheck
 
   test:
     name: Unit tests

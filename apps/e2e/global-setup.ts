@@ -1,4 +1,3 @@
-import { chromium } from '@playwright/test';
 import {
   PostgreSqlContainer,
   StartedPostgreSqlContainer,
@@ -20,11 +19,10 @@ const BACKEND_PORT = 3001;
 const FRONTEND_PORT = 5174;
 
 declare global {
-  // eslint-disable-next-line no-var
   var __E2E_CONTAINER__: StartedPostgreSqlContainer;
-  // eslint-disable-next-line no-var
+
   var __E2E_BACKEND__: ChildProcess;
-  // eslint-disable-next-line no-var
+
   var __E2E_FRONTEND__: ChildProcess;
 }
 
@@ -66,10 +64,9 @@ export default async function globalSetup(): Promise<void> {
   console.log('[e2e] Seeding admin user + company settings…');
   // Import backend's generated Prisma client
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { PrismaClient } = require(path.join(
-    BACKEND_DIR,
-    'src/generated/client',
-  ));
+  const { PrismaClient } = require(
+    path.join(BACKEND_DIR, 'src/generated/client'),
+  );
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { PrismaPg } = require('@prisma/adapter-pg');
 

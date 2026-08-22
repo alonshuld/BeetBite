@@ -8,7 +8,10 @@ dbTest.describe('Subcontractors CRUD', () => {
     await page.goto(`${BASE}/subcontractors`);
     await page.waitForLoadState('networkidle');
 
-    await page.getByRole('button', { name: /add subcontractor/i }).first().click();
+    await page
+      .getByRole('button', { name: /add subcontractor/i })
+      .first()
+      .click();
     await page.fill('#sub-name', 'Automation Sub');
     await page.fill('#sub-company-number', '515111111');
     await page.getByRole('button', { name: /save/i }).click();
@@ -35,9 +38,9 @@ dbTest.describe('Subcontractors CRUD', () => {
     await page.waitForTimeout(100);
     await page.getByRole('button', { name: /save/i }).click();
 
-    await expect(
-      page.getByRole('cell', { name: 'Sub Renamed' }),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('cell', { name: 'Sub Renamed' })).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   dbTest('delete subcontractor → removed from list', async ({ page, db }) => {
@@ -50,7 +53,10 @@ dbTest.describe('Subcontractors CRUD', () => {
 
     const row = page.getByRole('row', { name: /Sub To Delete/ });
     await row.getByTitle(/delete/i).click();
-    await page.getByRole('button', { name: /delete/i }).last().click();
+    await page
+      .getByRole('button', { name: /delete/i })
+      .last()
+      .click();
 
     await expect(
       page.getByRole('cell', { name: 'Sub To Delete' }),
@@ -65,12 +71,17 @@ dbTest.describe('Subcontractors CRUD', () => {
     await page.goto(`${BASE}/subcontractors`);
     await page.waitForLoadState('networkidle');
 
-    await page.getByRole('button', { name: /add subcontractor/i }).first().click();
+    await page
+      .getByRole('button', { name: /add subcontractor/i })
+      .first()
+      .click();
     await page.fill('#sub-name', 'Unique Sub');
     await page.fill('#sub-company-number', '515111115');
     await page.getByRole('button', { name: /save/i }).click();
 
-    await expect(page.locator('[role="dialog"], .fixed.inset-0').last()).toBeVisible({
+    await expect(
+      page.locator('[role="dialog"], .fixed.inset-0').last(),
+    ).toBeVisible({
       timeout: 3000,
     });
   });
@@ -83,12 +94,17 @@ dbTest.describe('Subcontractors CRUD', () => {
     await page.goto(`${BASE}/subcontractors`);
     await page.waitForLoadState('networkidle');
 
-    await page.getByRole('button', { name: /add subcontractor/i }).first().click();
+    await page
+      .getByRole('button', { name: /add subcontractor/i })
+      .first()
+      .click();
     await page.fill('#sub-name', 'Different Name');
     await page.fill('#sub-company-number', '515111116');
     await page.getByRole('button', { name: /save/i }).click();
 
-    await expect(page.locator('[role="dialog"], .fixed.inset-0').last()).toBeVisible({
+    await expect(
+      page.locator('[role="dialog"], .fixed.inset-0').last(),
+    ).toBeVisible({
       timeout: 3000,
     });
   });
