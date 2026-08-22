@@ -179,6 +179,11 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     font-weight: 600;
   }
   tbody tr:nth-child(even) { background: #f7f8fa; }
+  /* A <tfoot> is a table-footer-group, which print engines repeat on every
+     page a long table spans — the totals row would then appear mid-list on
+     each page as if it were the grand total. Render it as a plain row group
+     so it prints once, after the last row. */
+  tfoot { display: table-row-group; }
   tfoot td { font-weight: 700; background: #f0e6cc; }
   .section-title {
     font-size: 13px;
