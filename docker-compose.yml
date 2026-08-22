@@ -1,5 +1,9 @@
-# DB credentials — edit the defaults below (beetbite → your values)
-# or override via a .env file: DB_USER=foo DB_PASSWORD=bar DB_NAME=baz
+# Copy .env.example to .env and fill it in before bringing this stack up.
+#
+# JWT_SECRET and ADMIN_PASSWORD use the ${VAR:?err} form on purpose: compose
+# aborts when they are unset rather than falling back to a value published in
+# this repo. A shipped default would hand every reader of the repo a valid
+# signing key and a working admin login.
 
 services:
   db:
@@ -27,9 +31,9 @@ services:
       DATABASE_URL: "postgresql://${DB_USER:-pgUser}:${DB_PASSWORD:-pgPassword}@db:5432/${DB_NAME:-pgDb}"
       PORT: "3000"
       NODE_ENV: production
-      JWT_SECRET: ${JWT_SECRET:-changeme-in-production}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set (see .env.example)}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set (see .env.example)}
     ports:
       - "3000:3000"
     depends_on:

@@ -92,11 +92,17 @@ E2E_VERBOSE=1 pnpm test:e2e                    # verbose backend/frontend output
 
 ## Docker Compose
 
-`docker-compose.yml` defines three services: `db` (Postgres 17), `backend`, `frontend`. Override DB credentials and secrets via environment variables or a `.env` file:
+`docker-compose.yml` defines three services: `db` (Postgres 17), `backend`, `frontend`.
+
+Copy `.env.example` to `.env` and fill it in first — `JWT_SECRET` and `ADMIN_PASSWORD` are required and compose aborts if either is missing. They are deliberately not defaulted: a default in the repo is a signing key and an admin login that every reader of the repo already knows.
 
 ```bash
-DB_USER=foo DB_PASSWORD=bar DB_NAME=baz JWT_SECRET=secret ADMIN_PASSWORD=pass docker compose up
+cp .env.example .env
+# edit .env — JWT_SECRET (openssl rand -base64 48) and ADMIN_PASSWORD
+docker compose up
 ```
+
+`ADMIN_PASSWORD` bootstraps the admin account on first start only; the seed never overwrites an existing password, so restarts cannot reset a rotated credential. Demo data is opt-in via `SEED_MOCK_DATA=true` and is destructive — it truncates every business table before inserting fixtures.
 
 Backend and frontend each have a `Dockerfile` in their app directory.
 

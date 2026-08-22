@@ -9,23 +9,38 @@ if (!process.env.DATABASE_URL) {
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
+// This runs on every container start (see apps/backend/Dockerfile CMD), so it
+// must be idempotent and must never overwrite an existing password: a restart
+// would otherwise silently reset the operator's credential back to whatever
+// ADMIN_PASSWORD happens to hold, undoing any rotation.
 async function seedAdmin(): Promise<void> {
   const username = process.env.ADMIN_USERNAME ?? 'admin';
   const password = process.env.ADMIN_PASSWORD;
 
+  const existing = await prisma.user.findUnique({ where: { username } });
+
+  if (existing) {
+    console.log(`Admin user exists, password left untouched: ${username}`);
+    return;
+  }
+
   if (!password) {
-    throw new Error('ADMIN_PASSWORD environment variable is required');
+    throw new Error(
+      'ADMIN_PASSWORD environment variable is required to create the admin user',
+    );
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
 
+  // upsert rather than create so two containers racing on first start cannot
+  // collide on the unique username; update stays empty for the reason above.
   await prisma.user.upsert({
     where: { username },
-    update: { passwordHash },
+    update: {},
     create: { username, passwordHash },
   });
 
-  console.log(`Admin user upserted: ${username}`);
+  console.log(`Admin user created: ${username}`);
 }
 
 function d(iso: string): Date {
@@ -64,8 +79,10 @@ async function report(r: ReportInput) {
   });
 }
 
+// DESTRUCTIVE: truncates every business table before inserting demo records.
+// Only ever called behind the SEED_MOCK_DATA opt-in in main().
 async function seedMockData(): Promise<void> {
-  console.log('Seeding mock data...');
+  console.log('Seeding mock data (this wipes all existing business data)...');
 
   await prisma.subcontractorPayment.deleteMany({});
   await prisma.corporationPayment.deleteMany({});
@@ -641,7 +658,16 @@ async function seedMockData(): Promise<void> {
 async function main(): Promise<void> {
   try {
     await seedAdmin();
-    await seedMockData();
+
+    // Opt-in only. seedMockData() deletes every client, project, report and
+    // payment before inserting fixtures, and this file runs on every container
+    // start — defaulting it on would destroy real data on the first restart.
+    if (process.env.SEED_MOCK_DATA === 'true') {
+      await seedMockData();
+    } else {
+      console.log('Skipping mock data (set SEED_MOCK_DATA=true to load it)');
+    }
+
     console.log('✅ All seeds successful');
   } catch (e) {
     console.error('❌ Seed error:', e);
