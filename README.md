@@ -272,6 +272,7 @@ Per app:
 pnpm --filter backend start:dev            # Nest watch mode
 pnpm --filter backend test:cov             # Jest coverage
 pnpm --filter backend exec prisma migrate dev
+pnpm --filter backend seed:demo:he         # Hebrew demo dataset (destructive)
 pnpm --filter frontend codegen             # regenerate API types (backend must be running)
 pnpm --filter frontend vitest run src/pages/ReportsPage.test.tsx
 pnpm --filter e2e exec playwright test --ui

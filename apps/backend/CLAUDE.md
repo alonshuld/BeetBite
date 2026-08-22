@@ -33,6 +33,7 @@ pnpx prisma migrate dev        # Apply migrations and regenerate client
 pnpx prisma migrate deploy     # Apply migrations (CI/production)
 pnpx prisma generate           # Regenerate client without migrating
 pnpx prisma db seed            # Seed admin user (mock data only with SEED_MOCK_DATA=true)
+pnpm seed:demo:he              # Hebrew demo dataset — also seeds CompanySettings + VatRate (destructive)
 ```
 
 ### Required environment variables
@@ -50,6 +51,7 @@ Set in `.env` or `.env.local` (`.env.local` takes precedence):
 | `ADMIN_USERNAME` | Seed admin username (default: `admin`) |
 | `ADMIN_PASSWORD` | Seed admin password — **required** the first time the admin is created; ignored once the user exists (the seed never overwrites an existing password) |
 | `SEED_MOCK_DATA` | Set to `true` to load demo data. **Destructive** — truncates every business table first |
+| `FORCE_DEMO_SEED` | Only read by `seed:demo:he` — required to let that seed run when `NODE_ENV=production` |
 
 ## Architecture
 
