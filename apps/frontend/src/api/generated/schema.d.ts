@@ -230,23 +230,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/subcontractor-payments/tags": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get the tags previously used on subcontractor payments */
-    get: operations["SubcontractorPaymentsController_findTags"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/api/v1/subcontractors/payments/{id}": {
     parameters: {
       query?: never;
@@ -472,7 +455,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Export a monthly account-approval PDF for a subcontractor + client + month */
+    /** Export the monthly account-approval PDF for one project report */
     post: operations["PdfExportController_exportPdf"];
     delete?: never;
     options?: never;
@@ -833,11 +816,6 @@ export interface components {
        * @example 1000
        */
       amount: number;
-      /**
-       * @description Short free-text label describing what the payment covers
-       * @example Materials
-       */
-      tag?: Record<string, never> | null;
     };
     NestedSubcontractorDto: {
       /**
@@ -880,11 +858,6 @@ export interface components {
        * @example false
        */
       isPaid: boolean;
-      /**
-       * @description Short free-text label describing what the payment covers
-       * @example Materials
-       */
-      tag: Record<string, never> | null;
     };
     NestedSubcontractorPaymentDto: {
       /**
@@ -907,11 +880,6 @@ export interface components {
        * @example false
        */
       isPaid: boolean;
-      /**
-       * @description Short free-text label describing what the payment covers
-       * @example Materials
-       */
-      tag: Record<string, never> | null;
     };
     MonthlySubcontractorPaymentsDto: {
       /** @description The subcontractor associated with the payments */
@@ -977,11 +945,6 @@ export interface components {
        * @example true
        */
       isPaid?: boolean;
-      /**
-       * @description Short free-text label describing what the payment covers
-       * @example Materials
-       */
-      tag?: Record<string, never> | null;
     };
     CreateSubcontractorDto: {
       /**
@@ -1036,6 +999,11 @@ export interface components {
        * @example 2026-01-15
        */
       incomeDate?: string;
+      /**
+       * @description Short free-text label describing the work this income covers; surfaced as a badge on the account-approval PDF
+       * @example שלד
+       */
+      tag?: Record<string, never> | null;
     };
     CreateProjectReportDto: {
       /**
@@ -1106,6 +1074,11 @@ export interface components {
        * @example 2026-01-15T00:00:00.000Z
        */
       incomeDate: Record<string, never> | null;
+      /**
+       * @description Short label describing the work this income covers, or null if untagged
+       * @example שלד
+       */
+      tag: Record<string, never> | null;
     };
     NestedCorporationPaymentDto: {
       /**
@@ -1178,6 +1151,11 @@ export interface components {
        * @example 2026-01-15
        */
       incomeDate?: Record<string, never> | null;
+      /**
+       * @description Updated work label (null or blank to clear it)
+       * @example גמר
+       */
+      tag?: Record<string, never> | null;
     };
     NestedProjectDto: {
       /**
@@ -1534,24 +1512,13 @@ export interface components {
     };
     ExportProjectReportsPdfDto: {
       /**
-       * @description Subcontractor whose reports to export
+       * @description Project report to render
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
-      subcontractorId: string;
+      projectReportId: string;
       /**
-       * @description Client to scope the export to (the subcontractor's reports for the month may span multiple clients)
-       * @example 123e4567-e89b-12d3-a456-426614174000
-       */
-      clientId: string;
-      /**
-       * Format: ISO-8601
-       * @description A date within the month to export
-       * @example 2026-03-01T00:00:00.000Z
-       */
-      month: string;
-      /**
-       * @description Free text describing what the account approval covers
-       * @example עבודות שלד + גמר · פרויקט עיר היין, מגרש 309, אשקלון
+       * @description Free text describing what the account approval covers; the project name is appended to it on the document
+       * @example עבודות שלד + גמר
        */
       approvedFor: string;
       /**
@@ -2314,26 +2281,6 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
-      };
-    };
-  };
-  SubcontractorPaymentsController_findTags: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Distinct subcontractor payment tags. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": string[];
-        };
       };
     };
   };
@@ -3151,7 +3098,7 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description No project reports found for the given subcontractor, client, and month */
+      /** @description No project report found with the given id */
       404: {
         headers: {
           [name: string]: unknown;

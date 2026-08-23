@@ -22,14 +22,13 @@ export class PdfExportController {
   constructor(private readonly pdfExportService: PdfExportService) {}
 
   /**
-   * Renders a monthly account-approval PDF for one subcontractor's reports under one client.
-   * @param dto Export parameters (subcontractor, client, month, approved-for text, language)
+   * Renders the monthly account-approval PDF for one project report.
+   * @param dto Export parameters (project report, approved-for text, language)
    * @param res Raw Express response — this endpoint streams a PDF binary, not JSON
    */
   @Post('/projects/reports/export-pdf')
   @ApiOperation({
-    summary:
-      'Export a monthly account-approval PDF for a subcontractor + client + month',
+    summary: 'Export the monthly account-approval PDF for one project report',
   })
   @ApiProduces('application/pdf')
   @ApiBadRequestResponse({
@@ -37,18 +36,18 @@ export class PdfExportController {
       'Company settings incomplete, or no VAT rate configured for the month',
   })
   @ApiNotFoundResponse({
-    description:
-      'No project reports found for the given subcontractor, client, and month',
+    description: 'No project report found with the given id',
   })
   async exportPdf(
     @Body() dto: ExportProjectReportsPdfDto,
     @Res() res: Response,
   ): Promise<void> {
-    const pdf = await this.pdfExportService.exportProjectReportsPdf(dto);
+    const { pdf, month } =
+      await this.pdfExportService.exportProjectReportsPdf(dto);
 
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="account-approval-${dto.month.slice(0, 7)}.pdf"`,
+      'Content-Disposition': `attachment; filename="account-approval-${month.slice(0, 7)}.pdf"`,
       'Content-Length': pdf.length,
     });
     res.status(HttpStatus.OK).send(pdf);

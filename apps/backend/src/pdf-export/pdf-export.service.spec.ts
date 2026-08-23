@@ -4,7 +4,6 @@ import { CompanySettingsService } from 'src/company-settings/company-settings.se
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 import { ProjectReportsService } from 'src/project-reports/project-reports.service';
 import { SubcontractorsService } from 'src/subcontractors/subcontractors.service';
-import { SubcontractorPaymentsService } from 'src/subcontractor-payments/subcontractor-payments.service';
 import { CompanySettingsIncompleteError } from './errors/company-settings-incomplete.error';
 import { VatRateNotConfiguredError } from './errors/vat-rate-not-configured.error';
 import { NoReportsForExportError } from './errors/no-reports-for-export.error';
@@ -25,16 +24,13 @@ describe('PdfExportService', () => {
 
   const mockCompanySettingsService = { findOne: jest.fn() };
   const mockVatRatesService = { resolveForMonth: jest.fn() };
-  const mockProjectReportsService = {
-    findForSubcontractorAndClientInMonth: jest.fn(),
-  };
+  const mockProjectReportsService = { findOneForExport: jest.fn() };
   const mockSubcontractorsService = { findOne: jest.fn() };
-  const mockSubcontractorPaymentsService = { findTagsByProject: jest.fn() };
 
   const completeCompanySettings = {
     id: 'company-settings',
     name: 'Acme Construction Ltd.',
-    description: null,
+    description: 'Residential and urban renewal',
     companyNumber: '515123456',
     phone: '+972501234567',
     email: 'info@acme.com',
@@ -46,24 +42,39 @@ describe('PdfExportService', () => {
   };
 
   const dto: ExportProjectReportsPdfDto = {
-    subcontractorId: 'sub-1',
-    clientId: 'client-1',
-    month: '2026-03-01T00:00:00.000Z',
+    projectReportId: 'report-1',
     approvedFor: 'Shell + finishing work',
   };
 
+  /**
+   * Mirrors the customer's reference document: two tagged income entries on one
+   * report, against three supplier deductions.
+   */
   const mockReport = {
     id: 'report-1',
     project: {
       id: 'project-1',
-      name: 'Shell',
+      name: 'Wine City, plot 309 — Ashkelon',
       client: { id: 'client-1', name: 'Bar Yam Ltd.' },
     },
     subcontractor: { id: 'sub-1', name: 'Israelov Engineering' },
     date: '2026-03-01T00:00:00.000Z',
     profitMargin: 5,
-    totalIncome: 867996,
-    incomeEntries: [],
+    totalIncome: 1588835,
+    incomeEntries: [
+      {
+        id: 'entry-1',
+        amount: 867996,
+        incomeDate: '2026-03-10T00:00:00.000Z',
+        tag: 'שלד',
+      },
+      {
+        id: 'entry-2',
+        amount: 720839,
+        incomeDate: null,
+        tag: 'גמר',
+      },
+    ],
     corporationPayments: [
       {
         id: 'cp-1',
@@ -72,6 +83,22 @@ describe('PdfExportService', () => {
         vatAmount: 39558.33,
         effectiveTotal: 259326.83,
         corporation: { id: 'corp-1', name: 'Sheq Sin Corp' },
+      },
+      {
+        id: 'cp-2',
+        amount: 338012,
+        vatPercentage: 18,
+        vatAmount: 60842.16,
+        effectiveTotal: 398854.16,
+        corporation: { id: 'corp-2', name: 'Sahlav Corp' },
+      },
+      {
+        id: 'cp-3',
+        amount: 11284,
+        vatPercentage: 18,
+        vatAmount: 2031.12,
+        effectiveTotal: 13315.12,
+        corporation: { id: 'corp-3', name: 'Django Corp' },
       },
     ],
   };
@@ -87,10 +114,6 @@ describe('PdfExportService', () => {
         { provide: VatRatesService, useValue: mockVatRatesService },
         { provide: ProjectReportsService, useValue: mockProjectReportsService },
         { provide: SubcontractorsService, useValue: mockSubcontractorsService },
-        {
-          provide: SubcontractorPaymentsService,
-          useValue: mockSubcontractorPaymentsService,
-        },
       ],
     }).compile();
 
@@ -101,16 +124,29 @@ describe('PdfExportService', () => {
       completeCompanySettings,
     );
     mockVatRatesService.resolveForMonth.mockResolvedValue(18);
-    mockProjectReportsService.findForSubcontractorAndClientInMonth.mockResolvedValue(
-      [mockReport],
-    );
+    mockProjectReportsService.findOneForExport.mockResolvedValue(mockReport);
     mockSubcontractorsService.findOne.mockResolvedValue({
       id: 'sub-1',
       name: 'Israelov Engineering',
       companyNumber: '516469053',
     });
-    mockSubcontractorPaymentsService.findTagsByProject.mockResolvedValue({});
   });
+
+  const renderHtml = async (): Promise<string> => {
+    const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
+    const mockPage = {
+      setContent: jest.fn<void, [string, unknown]>(),
+      pdf: jest.fn().mockResolvedValue(Uint8Array.from([1])),
+    };
+    puppeteer.launch.mockResolvedValue({
+      newPage: jest.fn().mockResolvedValue(mockPage),
+      close: jest.fn(),
+    });
+
+    await service.exportProjectReportsPdf(dto);
+
+    return mockPage.setContent.mock.calls[0][0];
+  };
 
   it('should be defined', () => {
     expect(service).toBeDefined();
@@ -154,9 +190,9 @@ describe('PdfExportService', () => {
     );
   });
 
-  it('should throw NoReportsForExportError when no reports match', async () => {
-    mockProjectReportsService.findForSubcontractorAndClientInMonth.mockResolvedValue(
-      [],
+  it('should throw NoReportsForExportError when the report does not exist', async () => {
+    mockProjectReportsService.findOneForExport.mockRejectedValue(
+      new Error('not found'),
     );
 
     await expect(service.exportProjectReportsPdf(dto)).rejects.toThrow(
@@ -164,98 +200,105 @@ describe('PdfExportService', () => {
     );
   });
 
-  it('should query reports scoped to the given subcontractor, client, and month', async () => {
+  it('should fetch exactly the requested report', async () => {
     await service.exportProjectReportsPdf(dto);
 
-    expect(
-      mockProjectReportsService.findForSubcontractorAndClientInMonth,
-    ).toHaveBeenCalledWith('sub-1', 'client-1', dto.month);
+    expect(mockProjectReportsService.findOneForExport).toHaveBeenCalledWith(
+      'report-1',
+    );
   });
 
-  it('should render a non-empty PDF buffer when everything resolves', async () => {
+  it("should resolve VAT from the report's own month, not a caller-supplied one", async () => {
+    await service.exportProjectReportsPdf(dto);
+
+    expect(mockVatRatesService.resolveForMonth).toHaveBeenCalledWith(
+      mockReport.date,
+    );
+  });
+
+  it('should render a non-empty PDF buffer and report the month', async () => {
     const result = await service.exportProjectReportsPdf(dto);
 
-    expect(Buffer.isBuffer(result)).toBe(true);
-    expect(result.length).toBeGreaterThan(0);
+    expect(Buffer.isBuffer(result.pdf)).toBe(true);
+    expect(result.pdf.length).toBeGreaterThan(0);
+    expect(result.month).toBe(mockReport.date);
   });
 
-  it('should compute the monthly figures matching the reference document math', async () => {
-    // Reproduces the numbers verified against bill.pdf for a single report:
-    // profit = income * margin/100; afterProfit = income - profit;
-    // paymentExclVat = afterProfit - corpTotal; paymentInclVat = paymentExclVat * 1.18
-    const puppeteer = jest.requireMock<{
-      launch: jest.Mock;
-    }>('puppeteer');
-    const mockPage = {
-      setContent: jest.fn<void, [string, unknown]>(),
-      pdf: jest.fn().mockResolvedValue(Uint8Array.from([1])),
-    };
-    const mockBrowser = {
-      newPage: jest.fn().mockResolvedValue(mockPage),
-      close: jest.fn(),
-    };
-    puppeteer.launch.mockResolvedValue(mockBrowser);
+  it('should compute per-entry figures matching the reference document math', async () => {
+    // Verified against the customer's March 2026 approval:
+    //   867,996 × 1.18 = 1,024,235.28   |  5% = 43,399.80  |  → 824,596.20
+    //   720,839 × 1.18 =   850,590.02   |  5% = 36,041.95  |  → 684,797.05
+    const html = await renderHtml();
 
-    await service.exportProjectReportsPdf(dto);
-
-    const html = mockPage.setContent.mock.calls[0][0];
-    // profit = 867996 * 0.05 = 43399.8; afterProfit = 824596.2
-    // corpTotal = 219768.5; paymentExclVat = 604827.7; paymentInclVat ≈ 713696.69
+    expect(html).toContain('1,024,235.28');
     expect(html).toContain('43,399.80');
     expect(html).toContain('824,596.20');
-    expect(html).toContain('219,768.50');
+    expect(html).toContain('850,590.02');
+    expect(html).toContain('36,041.95');
+    expect(html).toContain('684,797.05');
   });
 
-  const renderHtml = async (): Promise<string> => {
-    const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
-    const mockPage = {
-      setContent: jest.fn<void, [string, unknown]>(),
-      pdf: jest.fn().mockResolvedValue(Uint8Array.from([1])),
-    };
-    puppeteer.launch.mockResolvedValue({
-      newPage: jest.fn().mockResolvedValue(mockPage),
-      close: jest.fn(),
-    });
+  it('should total income, deductions and payment across the entries', async () => {
+    // income 1,588,835 → afterProfit 1,509,393.25 − suppliers 569,064.50
+    //   = 940,328.75 → × 1.18 = 1,109,587.93
+    const html = await renderHtml();
 
-    await service.exportProjectReportsPdf(dto);
-
-    return mockPage.setContent.mock.calls[0][0];
-  };
-
-  it("should render the project's tag in the report row", async () => {
-    mockSubcontractorPaymentsService.findTagsByProject.mockResolvedValue({
-      'project-1': ['Materials'],
-    });
-
-    expect(await renderHtml()).toContain('Materials');
-    expect(
-      mockSubcontractorPaymentsService.findTagsByProject,
-    ).toHaveBeenCalledWith('sub-1', dto.month);
+    expect(html).toContain('1,588,835.00');
+    expect(html).toContain('1,509,393.25');
+    expect(html).toContain('569,064.50');
+    expect(html).toContain('940,328.75');
+    expect(html).toContain('1,109,587.93');
   });
 
-  it('should join several tags for the same project', async () => {
-    mockSubcontractorPaymentsService.findTagsByProject.mockResolvedValue({
-      'project-1': ['Materials', 'Labor'],
+  it("should render each income entry's own tag as a badge", async () => {
+    const html = await renderHtml();
+
+    expect(html).toContain('<span class="tag">שלד</span>');
+    expect(html).toContain('<span class="tag">גמר</span>');
+  });
+
+  it('should name the project once, in the info box rather than per row', async () => {
+    const html = await renderHtml();
+
+    expect(html.split('Wine City, plot 309 — Ashkelon').length - 1).toBe(1);
+  });
+
+  it('should pad the income columns when suppliers outnumber income entries', async () => {
+    // Two income entries against three suppliers: the third row keeps the
+    // supplier cells and blanks the income side rather than inventing a pair.
+    const html = await renderHtml();
+
+    expect(html).toContain('Django Corp');
+    expect(html).toContain('td class="empty"');
+  });
+
+  it('should render without a tag when an entry is untagged', async () => {
+    mockProjectReportsService.findOneForExport.mockResolvedValue({
+      ...mockReport,
+      incomeEntries: [
+        { id: 'entry-1', amount: 1000, incomeDate: null, tag: null },
+      ],
     });
 
-    expect(await renderHtml()).toContain('Materials · Labor');
+    expect(await renderHtml()).not.toContain('<span class="tag">');
   });
 
   it('should escape HTML in a tag', async () => {
-    mockSubcontractorPaymentsService.findTagsByProject.mockResolvedValue({
-      'project-1': ['<script>alert(1)</script>'],
+    mockProjectReportsService.findOneForExport.mockResolvedValue({
+      ...mockReport,
+      incomeEntries: [
+        {
+          id: 'entry-1',
+          amount: 1000,
+          incomeDate: null,
+          tag: '<script>alert(1)</script>',
+        },
+      ],
     });
 
     const html = await renderHtml();
 
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
-  });
-
-  it('should render an empty tag cell for a project with no payment', async () => {
-    mockSubcontractorPaymentsService.findTagsByProject.mockResolvedValue({});
-
-    // The row still has its full column count, with the tag cell left blank.
-    expect(await renderHtml()).toContain('<td></td>');
   });
 });

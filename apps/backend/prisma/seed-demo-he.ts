@@ -217,80 +217,94 @@ const FUTURE_PROJECTS: ProjectSeed[] = [
  */
 type ShowcaseFigures = {
   profitMargin: number;
-  /** [amount, incomeDate | null] — null means the client has not paid yet. */
-  income: [number, string | null][];
+  /**
+   * [amount, incomeDate | null, tag] — one row of the approval table. The tag
+   * is the chunk of work the amount covers and rides on the income entry
+   * itself, which is what the rendered document labels.
+   */
+  income: [number, string | null, string][];
   /** [corporationIndex, amount, description, isFuture] */
   suppliers: [number, number, string, boolean][];
-  /** Short trade labels — these fill the PDF's narrow "תיאור" column. */
-  tags: string[];
 };
 
 const SHOWCASE_FIGURES: ShowcaseFigures[] = [
   {
     profitMargin: 11,
-    income: [[520_000, '2026-07-12'], [222_000, '2026-07-28']],
+    income: [
+      [520_000, '2026-07-12', 'שלד'],
+      [222_000, '2026-07-28', 'יציקות'],
+    ],
     suppliers: [
       [8, 64_800, 'יציקת גג קומה 7 ורצפות ביניים', false],
       [0, 31_500, 'הזנות חשמל ולוחות קומתיים', false],
     ],
-    tags: ['שלד', 'יציקות'],
   },
   {
     profitMargin: 9.5,
-    income: [[318_500, '2026-07-09']],
+    income: [[318_500, '2026-07-09', 'חיזוק']],
     suppliers: [
       [2, 27_400, 'קונסטרוקציית פלדה לחיזוק', false],
       [1, 12_950, 'החלפת קווי מים ראשיים', false],
     ],
-    tags: ['חיזוק', 'תוספת'],
   },
   {
     profitMargin: 12,
-    income: [[640_000, '2026-07-06'], [505_000, null]],
+    income: [
+      [640_000, '2026-07-06', 'שלד'],
+      [505_000, null, 'מעטפת'],
+    ],
     suppliers: [
       [3, 88_600, 'מעטפת אלומיניום קומות 12–18', false],
       [5, 46_200, 'יחידות מיזוג מרכזיות – שלב א׳', false],
       [10, 18_400, 'מערכות מיגון וכיבוי אש', true],
     ],
-    tags: ['שלד'],
   },
   {
     profitMargin: 10,
-    income: [[486_000, '2026-07-15']],
+    income: [
+      [486_000, '2026-07-15', 'גמר'],
+      [164_500, null, 'תשתיות'],
+    ],
     suppliers: [
       [4, 39_750, 'ריצוף וחיפוי דירות בניין ב׳', false],
       [6, 21_300, 'צבע וגמר בחדרי מדרגות', false],
     ],
-    tags: ['גמר', 'תשתיות'],
   },
   {
     profitMargin: 9,
-    income: [[274_300, '2026-07-21']],
+    income: [[274_300, '2026-07-21', 'יסודות']],
     suppliers: [[8, 33_900, 'חיזוק יסודות וקירות מרתף', false]],
-    tags: ['יסודות'],
   },
   {
     profitMargin: 11.5,
-    income: [[400_000, '2026-07-08'], [238_750, null]],
+    income: [
+      [400_000, '2026-07-08', 'שלד'],
+      [238_750, null, 'מעטפת'],
+    ],
     suppliers: [
       [2, 57_200, 'שלד פלדה למבנה החניון', false],
       [9, 24_600, 'איטום גגות ומרפסות', false],
       [11, 9_800, 'פיתוח נופי בחזית המסחר', true],
     ],
-    tags: ['שלד', 'מעטפת'],
   },
+  // The exported showcase: two tagged income entries against three supplier
+  // deductions, so the rendered table has a ragged edge — income runs out
+  // before the supplier list does, exactly as on a real approval.
   {
-    profitMargin: 10.5,
-    income: [[395_200, '2026-07-19']],
-    suppliers: [
-      [7, 28_450, 'נגרות פנים ומטבחים – שלב א׳', false],
-      [0, 16_700, 'תשתיות חשמל ותאורת חוץ', false],
+    profitMargin: 6,
+    income: [
+      [912_400, '2026-07-14', 'שלד'],
+      [648_250, null, 'גמר'],
     ],
-    tags: ['שלד', 'גמר'],
+    suppliers: [
+      [7, 231_480, 'נגרות פנים ומטבחים – שלב א׳', false],
+      [0, 184_360, 'תשתיות חשמל ותאורת חוץ', false],
+      [11, 12_940, 'פיתוח נופי והשלמות חוץ', false],
+    ],
   },
 ];
 
-/** Short trade labels — the PDF renders them in a narrow column. */
+/** Short trade labels — each income entry carries one as a badge on the PDF. */
 const BACKGROUND_TAGS = [
   'שלד', 'גמר', 'תשתיות', 'יציקות',
   'חיפוי', 'פיתוח', 'איטום', 'מערכות',
@@ -401,9 +415,10 @@ async function main(): Promise<void> {
         date: d(SHOWCASE_MONTH),
         profitMargin: figures.profitMargin,
         incomeEntries: {
-          create: figures.income.map(([amount, incomeDate]) => ({
+          create: figures.income.map(([amount, incomeDate, tag]) => ({
             amount,
             incomeDate: incomeDate ? d(incomeDate) : null,
+            tag,
           })),
         },
       },
@@ -424,25 +439,24 @@ async function main(): Promise<void> {
       });
     }
 
-    // Partial payments to the subcontractor. Their tags are what fills the
-    // "תיאור" column of the exported PDF, so every showcase project gets some.
+    // A partial payout against what the month's work leaves the subcontractor.
+    // The approval's labels come from the income entries above, not from here.
     const totalIncome = figures.income.reduce((sum, [amount]) => sum + amount, 0);
-    const suppliersTotal = figures.suppliers.reduce((sum, [, amount]) => sum + amount, 0);
+    const suppliersTotal = figures.suppliers.reduce(
+      (sum, [, amount]) => sum + amount,
+      0,
+    );
     const owed = totalIncome * (1 - figures.profitMargin / 100) - suppliersTotal;
-    const perTag = Math.floor((owed * 0.6) / figures.tags.length / 100) * 100;
 
-    for (const tag of figures.tags) {
-      await prisma.subcontractorPayment.create({
-        data: {
-          subcontractorId: subcontractors[0].id,
-          projectId: project.id,
-          serviceDate: d(SHOWCASE_MONTH),
-          amount: perTag,
-          isPaid: true,
-          tag,
-        },
-      });
-    }
+    await prisma.subcontractorPayment.create({
+      data: {
+        subcontractorId: subcontractors[0].id,
+        projectId: project.id,
+        serviceDate: d(SHOWCASE_MONTH),
+        amount: Math.floor((owed * 0.6) / 100) * 100,
+        isPaid: true,
+      },
+    });
   }
 
   // ── History: earlier months across the whole portfolio ────────────────────
@@ -473,10 +487,24 @@ async function main(): Promise<void> {
             create:
               rand() < 0.35
                 ? [
-                    { amount: Math.round(base * 0.6), incomeDate: d(month) },
-                    { amount: Math.round(base * 0.4), incomeDate: paidLate ? null : d(month) },
+                    {
+                      amount: Math.round(base * 0.6),
+                      incomeDate: d(month),
+                      tag: oneOf(BACKGROUND_TAGS),
+                    },
+                    {
+                      amount: Math.round(base * 0.4),
+                      incomeDate: paidLate ? null : d(month),
+                      tag: oneOf(BACKGROUND_TAGS),
+                    },
                   ]
-                : [{ amount: base, incomeDate: paidLate ? null : d(month) }],
+                : [
+                    {
+                      amount: base,
+                      incomeDate: paidLate ? null : d(month),
+                      tag: oneOf(BACKGROUND_TAGS),
+                    },
+                  ],
           },
         },
       });
@@ -506,7 +534,6 @@ async function main(): Promise<void> {
             serviceDate: d(month),
             amount: Math.round(base * (0.45 + rand() * 0.25)),
             isPaid: true,
-            tag: oneOf(BACKGROUND_TAGS),
           },
         });
       }

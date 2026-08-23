@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsISO8601, IsNumber, IsOptional, Min } from 'class-validator';
+import {
+  IsISO8601,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CreateIncomeEntryDto {
   @IsNumber()
@@ -19,4 +26,15 @@ export class CreateIncomeEntryDto {
     format: 'ISO-8601',
   })
   incomeDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @ApiPropertyOptional({
+    example: 'שלד',
+    description:
+      'Short free-text label describing the work this income covers; surfaced as a badge on the account-approval PDF',
+    nullable: true,
+  })
+  tag?: string | null;
 }

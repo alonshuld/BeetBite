@@ -1,50 +1,35 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
 import {
   IsIn,
-  IsISO8601,
   IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
-import { normalizeToMonthStart } from 'src/common/utils/date.utils';
 
-// Requests a monthly account-approval PDF for one subcontractor's reports under one client.
+/**
+ * Requests the account-approval PDF for one project report.
+ *
+ * A report is already unique per project and month (`@@unique([projectId, date])`),
+ * so its id is the only scope the document needs — the rows of the rendered
+ * table are that report's own income entries.
+ */
 export class ExportProjectReportsPdfDto {
   @IsString()
   @IsNotEmpty()
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Subcontractor whose reports to export',
+    description: 'Project report to render',
   })
-  subcontractorId!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @ApiProperty({
-    example: '123e4567-e89b-12d3-a456-426614174000',
-    description:
-      "Client to scope the export to (the subcontractor's reports for the month may span multiple clients)",
-  })
-  clientId!: string;
-
-  @IsISO8601()
-  @Transform(({ value }: { value: string }) => normalizeToMonthStart(value))
-  @ApiProperty({
-    example: '2026-03-01T00:00:00.000Z',
-    description: 'A date within the month to export',
-    type: 'string',
-    format: 'ISO-8601',
-  })
-  month!: string;
+  projectReportId!: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(500)
   @ApiProperty({
-    example: 'עבודות שלד + גמר · פרויקט עיר היין, מגרש 309, אשקלון',
-    description: 'Free text describing what the account approval covers',
+    example: 'עבודות שלד + גמר',
+    description:
+      'Free text describing what the account approval covers; the project name is appended to it on the document',
   })
   approvedFor!: string;
 
