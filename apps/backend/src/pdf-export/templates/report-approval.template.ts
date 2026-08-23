@@ -42,6 +42,7 @@ const LABELS = {
   he: {
     subtitlePrefix: 'אישור חשבון – חודש',
     client: 'שם המזמין:',
+    tag: 'תיאור',
     mainContractor: 'קבלן ראשי:',
     subcontractor: 'קבלן משנה:',
     approvedFor: 'חשבון מאושר עבור:',
@@ -65,6 +66,7 @@ const LABELS = {
   en: {
     subtitlePrefix: 'Account Approval –',
     client: 'Client:',
+    tag: 'Tag',
     mainContractor: 'Main Contractor:',
     subcontractor: 'Subcontractor:',
     approvedFor: 'Approved For:',
@@ -113,36 +115,29 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
   const money = (amount: number): string => formatCurrency(amount, locale);
   const monthLabel = formatMonthLabel(data.month, data.lang);
 
-  // The income and supplier lists are independent: a report can owe four
-  // suppliers against two income entries. They share one grid, so pad the
-  // shorter side with empty cells rather than pairing rows that do not relate.
-  const bodyRowCount = Math.max(data.rows.length, data.supplierRows.length);
-  const bodyRowsHtml = Array.from({ length: bodyRowCount }, (_, index) => {
-    const row = data.rows[index];
-    const supplier = data.supplierRows[index];
-
-    const incomeCells = row
-      ? `
-          <td class="amount strong">
-            ${money(row.approvedAmount)}
-            ${row.tag ? `<span class="tag">${escapeHtml(row.tag)}</span>` : ''}
-          </td>
+  const rowsHtml = data.rows
+    .map(
+      (row) => `
+        <tr>
+          <td>${escapeHtml(row.tag ?? '')}</td>
+          <td class="amount strong">${money(row.approvedAmount)}</td>
           <td class="amount">${money(row.invoiceInclVat)}</td>
           <td class="amount muted">${row.profitMarginPercent}%</td>
           <td class="amount">${money(row.profitAmount)}</td>
-          <td class="amount">${money(row.afterProfitAmount)}</td>`
-      : `
-          <td class="empty"></td><td class="empty"></td>
-          <td class="empty"></td><td class="empty"></td><td class="empty"></td>`;
+          <td class="amount">${money(row.afterProfitAmount)}</td>
+        </tr>`,
+    )
+    .join('');
 
-    const supplierCells = supplier
-      ? `
-          <td>${escapeHtml(supplier.corporationName)}</td>
-          <td class="amount">${money(supplier.amount)}</td>`
-      : `<td class="empty"></td><td class="empty"></td>`;
-
-    return `<tr>${incomeCells}${supplierCells}</tr>`;
-  }).join('');
+  const supplierRowsHtml = data.supplierRows
+    .map(
+      (row) => `
+        <tr>
+          <td>${escapeHtml(row.corporationName)}</td>
+          <td class="amount">${money(row.amount)}</td>
+        </tr>`,
+    )
+    .join('');
 
   return `<!DOCTYPE html>
 <html dir="${dir}" lang="${data.lang}">
@@ -213,23 +208,11 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
   td.amount { white-space: nowrap; }
   td.strong { font-weight: 600; }
   td.muted { color: #667; }
-  td.empty { border-bottom: 1px solid #e8eaef; }
   tbody tr:nth-child(even) td { background: #fafbfc; }
-  .tag {
-    display: inline-block;
-    margin-inline-start: 6px;
-    background: #c9a24b;
-    color: #fff;
-    border-radius: 3px;
-    padding: 1px 7px;
-    font-size: 9px;
-    font-weight: 700;
-    vertical-align: middle;
-  }
   /* A <tfoot> is a table-footer-group, which print engines repeat on every
-     page a long table spans — the totals row would then appear mid-list on
-     each page as if it were the grand total. Render it as a plain row group
-     so it prints once, after the last row. */
+     page a long table spans — the supplier total would then appear mid-list
+     on each page as if it were the grand total. Render it as a plain row
+     group so it prints once, after the last supplier. */
   tfoot { display: table-row-group; }
   tfoot td { font-weight: 700; background: #f0e6cc; border-bottom: none; }
 
@@ -306,20 +289,27 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     <table>
       <thead>
         <tr>
+          <th>${t.tag}</th>
           <th>${t.approvedAmount}</th>
           <th>${t.invoiceInclVat}</th>
           <th>${t.profitMarginPercent}</th>
           <th>${t.profitAmount}</th>
           <th>${t.afterProfit}</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+
+    <table>
+      <thead>
+        <tr>
           <th>${t.supplierName}</th>
           <th>${t.supplierInvoice}</th>
         </tr>
       </thead>
-      <tbody>${bodyRowsHtml}</tbody>
+      <tbody>${supplierRowsHtml}</tbody>
       <tfoot>
         <tr>
-          <td class="empty"></td><td class="empty"></td><td class="empty"></td>
-          <td class="empty"></td><td class="empty"></td>
           <td>${t.supplierTotal}</td>
           <td class="amount">${money(data.supplierTotal)}</td>
         </tr>

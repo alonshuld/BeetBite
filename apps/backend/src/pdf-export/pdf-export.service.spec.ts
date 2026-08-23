@@ -250,11 +250,11 @@ describe('PdfExportService', () => {
     expect(html).toContain('1,109,587.93');
   });
 
-  it("should render each income entry's own tag as a badge", async () => {
+  it("should render each income entry's own tag in the tag column", async () => {
     const html = await renderHtml();
 
-    expect(html).toContain('<span class="tag">שלד</span>');
-    expect(html).toContain('<span class="tag">גמר</span>');
+    expect(html).toContain('<td>שלד</td>');
+    expect(html).toContain('<td>גמר</td>');
   });
 
   it('should name the project once, in the info box rather than per row', async () => {
@@ -263,13 +263,17 @@ describe('PdfExportService', () => {
     expect(html.split('Wine City, plot 309 — Ashkelon').length - 1).toBe(1);
   });
 
-  it('should pad the income columns when suppliers outnumber income entries', async () => {
-    // Two income entries against three suppliers: the third row keeps the
-    // supplier cells and blanks the income side rather than inventing a pair.
+  it('should list suppliers in their own table, independent of the income rows', async () => {
+    // Three suppliers against two income entries: the supplier table runs to
+    // its own length instead of being paired against the income rows.
     const html = await renderHtml();
 
+    expect(html).toContain('Sheq Sin Corp');
+    expect(html).toContain('Sahlav Corp');
     expect(html).toContain('Django Corp');
-    expect(html).toContain('td class="empty"');
+
+    const [, incomeTable] = html.split('<table>');
+    expect(incomeTable.split('<tr>').length - 1).toBe(3); // header + 2 entries
   });
 
   it('should render without a tag when an entry is untagged', async () => {
@@ -280,7 +284,8 @@ describe('PdfExportService', () => {
       ],
     });
 
-    expect(await renderHtml()).not.toContain('<span class="tag">');
+    // The column still renders, just empty.
+    expect(await renderHtml()).toContain('<td></td>');
   });
 
   it('should escape HTML in a tag', async () => {
