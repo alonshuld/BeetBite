@@ -8,7 +8,7 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
-import { normalizeToMonthStart } from 'src/common/utils/date.utils';
+import { normalizeToMonthStartForTransform } from 'src/common/utils/date.utils';
 
 export class CreateSubcontractorPaymentDto {
   @IsString()
@@ -32,7 +32,9 @@ export class CreateSubcontractorPaymentDto {
     example: '2026-01-01',
     description: 'The date identifying the service month',
   })
-  @Transform(({ value }: { value: string }) => normalizeToMonthStart(value))
+  @Transform(({ value }: { value: unknown }) =>
+    normalizeToMonthStartForTransform(value),
+  )
   serviceDate!: string;
 
   @IsNumber()

@@ -13,6 +13,12 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # The backend under test renders PDFs through Puppeteer, but global-setup.ts
+  # points it at the Chromium installed below by Playwright — so Puppeteer's own
+  # download (uncached, ~150MB every run) is pure waste.
+  PUPPETEER_SKIP_DOWNLOAD: "true"
+
 jobs:
   e2e:
     runs-on: ubuntu-latest

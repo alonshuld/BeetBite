@@ -17,3 +17,23 @@ export const normalizeToMonthStart = (dateStr: string): string => {
 
   return normalized.toISOString();
 };
+
+/**
+ * Month-start normalization for DTO `@Transform` callbacks.
+ *
+ * Returns the value untouched when it is not a parseable date, leaving the
+ * field's own `@IsISO8601()` validator to reject it as a 400. Calling
+ * `normalizeToMonthStart` directly from a transform would instead throw inside
+ * the ValidationPipe, escaping as an unhandled 500 on plain bad input.
+ * @param value The raw, unvalidated value from the request body or query
+ * @returns The normalized month start, or the original value if unparseable
+ */
+export const normalizeToMonthStartForTransform = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value;
+
+  try {
+    return normalizeToMonthStart(value);
+  } catch {
+    return value;
+  }
+};

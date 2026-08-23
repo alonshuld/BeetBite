@@ -8,7 +8,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { normalizeToMonthStart } from 'src/common/utils/date.utils';
+import { normalizeToMonthStartForTransform } from 'src/common/utils/date.utils';
 
 /**
  * Represents the parameters required to update a subcontractor payment.
@@ -35,7 +35,9 @@ export class UpdateSubcontractorPaymentDto {
 
   @IsOptional()
   @IsISO8601()
-  @Transform(({ value }: { value: string }) => normalizeToMonthStart(value))
+  @Transform(({ value }: { value: unknown }) =>
+    normalizeToMonthStartForTransform(value),
+  )
   @ApiPropertyOptional({
     example: '2026-01-01',
     description: 'The date identifying the service month',

@@ -1,6 +1,7 @@
 import { test as base } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
+import { BASELINE_VAT_MONTH, seedBaseline } from './seed';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { PrismaClient } = require(
@@ -39,6 +40,17 @@ const testWithDb = base.extend<DbFixture>({
     await prisma.client.deleteMany();
     await prisma.subcontractor.deleteMany();
     await prisma.corporation.deleteMany();
+
+    // VAT rates and company settings are not business rows — they are suite
+    // baseline. Drop only the rates a test added (anything after the baseline
+    // month), then restore the baseline over whatever a test wrote. Without
+    // this, a leftover VAT rate changes what later months resolve to, and a
+    // settings test that blanks `name` breaks both the PDF export and
+    // OnboardingGate for every test that follows.
+    await prisma.vatRate.deleteMany({
+      where: { effectiveMonth: { gt: BASELINE_VAT_MONTH } },
+    });
+    await seedBaseline(prisma);
 
     await prisma.$disconnect();
   },

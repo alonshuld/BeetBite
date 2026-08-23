@@ -14,7 +14,7 @@ import {
 import { CreateCorporationPaymentDto } from './create-corporation-payment.dto';
 import { CreateIncomeEntryDto } from './create-income-entry.dto';
 import { Transform, Type } from 'class-transformer';
-import { normalizeToMonthStart } from 'src/common/utils/date.utils';
+import { normalizeToMonthStartForTransform } from 'src/common/utils/date.utils';
 
 export class CreateProjectReportDto {
   @IsString()
@@ -40,7 +40,9 @@ export class CreateProjectReportDto {
     description: 'Date of the project report in ISO-8601 format',
     format: 'ISO-8601',
   })
-  @Transform(({ value }: { value: string }) => normalizeToMonthStart(value))
+  @Transform(({ value }: { value: unknown }) =>
+    normalizeToMonthStartForTransform(value),
+  )
   date!: string;
 
   @IsNumber()

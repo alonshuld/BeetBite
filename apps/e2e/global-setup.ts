@@ -6,6 +6,8 @@ import { execSync, spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as bcrypt from 'bcrypt';
+import { chromium } from '@playwright/test';
+import { seedBaseline } from './fixtures/seed';
 
 const BACKEND_DIR = path.resolve(__dirname, '../backend');
 const FRONTEND_DIR = path.resolve(__dirname, '../frontend');
@@ -38,6 +40,30 @@ async function waitForUrl(url: string, timeoutMs = 60000): Promise<void> {
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error(`Timed out waiting for ${url}`);
+}
+
+/**
+ * Resolves an executable Chromium for Puppeteer, preferring an explicit
+ * PUPPETEER_EXECUTABLE_PATH and otherwise falling back to the browser
+ * Playwright installed for this suite.
+ *
+ * Fails here rather than letting the first PDF test die on a launch timeout
+ * with nothing useful in the report.
+ */
+function resolveChromiumPath(): string {
+  const explicit = process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (explicit && fs.existsSync(explicit)) return explicit;
+
+  const playwrightChromium = chromium.executablePath();
+  if (playwrightChromium && fs.existsSync(playwrightChromium)) {
+    return playwrightChromium;
+  }
+
+  throw new Error(
+    'No Chromium executable found for Puppeteer. Run `pnpm --filter e2e exec ' +
+      'playwright install chromium --with-deps`, or set ' +
+      'PUPPETEER_EXECUTABLE_PATH to a Chromium binary.',
+  );
 }
 
 export default async function globalSetup(): Promise<void> {
@@ -81,16 +107,10 @@ export default async function globalSetup(): Promise<void> {
 
   // Company settings must exist, otherwise OnboardingGate redirects every
   // authenticated route to /onboarding and no page under test ever renders.
-  // The PDF export also requires name + companyNumber to be filled in.
-  await prisma.companySettings.upsert({
-    where: { id: 'company-settings' },
-    update: {},
-    create: {
-      id: 'company-settings',
-      name: 'E2E Contractor Ltd.',
-      companyNumber: '515000001',
-    },
-  });
+  // The PDF export also requires name + companyNumber, and a VAT rate it can
+  // resolve for the month — without one every export 400s. Both live in
+  // fixtures/seed.ts, which db.fixture.ts restores from after each test.
+  await seedBaseline(prisma);
   await prisma.$disconnect();
 
   // 4. Build backend (ensures dist/main.js exists; clears stale tsbuildinfo first)
@@ -104,12 +124,21 @@ export default async function globalSetup(): Promise<void> {
 
   // 5. Start backend (production build — stable, no file watchers)
   console.log('[e2e] Starting backend…');
+
+  // The PDF export launches headless Chromium through Puppeteer inside the
+  // backend. Rather than have Puppeteer download a second browser, point it at
+  // the one Playwright already installed for this suite — so `pnpm install` can
+  // skip Puppeteer's own download entirely (see e2e.yml).
+  const chromiumPath = resolveChromiumPath();
+  console.log(`[e2e] Puppeteer will use Chromium at ${chromiumPath}`);
+
   const backendEnv: NodeJS.ProcessEnv = {
     ...process.env,
     DATABASE_URL: databaseUrl,
     JWT_SECRET,
     PORT: String(BACKEND_PORT),
     NODE_ENV: 'development',
+    PUPPETEER_EXECUTABLE_PATH: chromiumPath,
   };
 
   const backend = spawn('node', ['dist/main'], {
