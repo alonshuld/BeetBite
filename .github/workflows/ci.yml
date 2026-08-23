@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  # Callable so CD can gate publishing on a green CI instead of duplicating it.
+  workflow_call:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # No job in this workflow drives a real browser — the unit specs mock
+  # puppeteer, and the suite that does render PDFs runs in e2e.yml against
+  # Playwright's Chromium. Puppeteer's own download lands in ~/.cache/puppeteer,
+  # which setup-node's pnpm-store cache does not cover, so it would otherwise be
+  # re-fetched every job.
+  PUPPETEER_SKIP_DOWNLOAD: "true"
+
+jobs:
+  lint:
+    name: Format, lint & typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      # `lint:check` runs ESLint across all three workspaces and then
+      # `pnpm -r typecheck`. Keeping typecheck inside `lint:check` means the
+      # Husky pre-commit hook enforces exactly what CI does.
+      - name: Lint & typecheck
+        run: pnpm lint:check
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Run the unit suites explicitly: the root `test` script fans out to every
+      # workspace, and apps/e2e's `test` is the Playwright suite (see e2e.yml).
+      - name: Backend unit tests (Jest)
+        run: pnpm --filter backend test
+
+      - name: Frontend unit tests (Vitest)
+        run: pnpm --filter frontend test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all apps
+        run: pnpm build

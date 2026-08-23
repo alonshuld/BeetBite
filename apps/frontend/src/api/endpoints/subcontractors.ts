@@ -1,0 +1,52 @@
+import { baseApi } from "@/api/baseApi";
+
+export interface Subcontractor {
+  id: string;
+  name: string;
+  companyNumber: string;
+}
+
+export interface CreateSubcontractorDto {
+  name: string;
+  companyNumber: string;
+}
+
+export interface UpdateSubcontractorDto {
+  name: string;
+  companyNumber: string;
+}
+
+export const subcontractorsApi = baseApi.injectEndpoints({
+  endpoints: (build) => ({
+    getSubcontractors: build.query<Subcontractor[], void>({
+      query: () => ({ url: "/subcontractors", params: { limit: 1000 } }),
+      providesTags: ["Subcontractors"],
+    }),
+    createSubcontractor: build.mutation<Subcontractor, CreateSubcontractorDto>({
+      query: (body) => ({ url: "/subcontractors", method: "POST", body }),
+      invalidatesTags: ["Subcontractors"],
+    }),
+    updateSubcontractor: build.mutation<
+      Subcontractor,
+      { id: string } & UpdateSubcontractorDto
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/subcontractors/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Subcontractors"],
+    }),
+    deleteSubcontractor: build.mutation<void, string>({
+      query: (id) => ({ url: `/subcontractors/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Subcontractors"],
+    }),
+  }),
+});
+
+export const {
+  useGetSubcontractorsQuery,
+  useCreateSubcontractorMutation,
+  useUpdateSubcontractorMutation,
+  useDeleteSubcontractorMutation,
+} = subcontractorsApi;
