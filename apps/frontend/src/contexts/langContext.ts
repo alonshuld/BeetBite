@@ -102,8 +102,8 @@ export const translations = {
     addFirstInstalment: "Add first instalment",
     selectSubcontractor: "Select a subcontractor to view details",
     selectProjectPlaceholder: "— Select project —",
-    tag: "Tag",
-    tagPlaceholder: "e.g. Materials",
+    tag: "Work",
+    tagPlaceholder: "e.g. Shell",
     // Profit simulator
     profitSimulatorSubtitle:
       "Preview how margin changes affect totals — nothing is saved",
@@ -231,8 +231,6 @@ export const translations = {
     exportPdf: "Export PDF",
     approvedForLabel: "Approved For",
     approvedForPlaceholder: "What does this account approval cover?",
-    selectClientForExport: "Client",
-    selectClientPlaceholderExport: "Select a client",
   },
   he: {
     // Nav
@@ -331,7 +329,7 @@ export const translations = {
     selectSubcontractor: "בחר קבלן משנה לצפייה בפרטים",
     selectProjectPlaceholder: "— בחר פרויקט —",
     tag: "תיאור",
-    tagPlaceholder: "לדוגמה: חומרים",
+    tagPlaceholder: "לדוגמה: שלד",
     // Profit simulator
     profitSimulatorSubtitle: "תצוגה מקדימה: שינויי מרווח על הסכומים — לא נשמר",
     selectClientPlaceholder: "— בחר לקוח —",
@@ -456,8 +454,6 @@ export const translations = {
     exportPdf: "ייצוא PDF",
     approvedForLabel: "חשבון מאושר עבור",
     approvedForPlaceholder: "מה כולל אישור חשבון זה?",
-    selectClientForExport: "לקוח",
-    selectClientPlaceholderExport: "בחר לקוח",
   },
 } as const;
 

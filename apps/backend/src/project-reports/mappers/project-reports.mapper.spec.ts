@@ -6,7 +6,12 @@ import {
 
 describe('project-reports mapper', () => {
   const incomeEntries = [
-    { id: 'entry-1', amount: new Prisma.Decimal('10000'), incomeDate: null },
+    {
+      id: 'entry-1',
+      amount: new Prisma.Decimal('10000'),
+      incomeDate: null,
+      tag: 'שלד',
+    },
   ];
 
   const makeListItemInput = () => ({
@@ -71,7 +76,9 @@ describe('project-reports mapper', () => {
         date: '2024-05-01T00:00:00.000Z',
         profitMargin: 10,
         totalIncome: 10000,
-        incomeEntries: [{ id: 'entry-1', amount: 10000, incomeDate: null }],
+        incomeEntries: [
+          { id: 'entry-1', amount: 10000, incomeDate: null, tag: 'שלד' },
+        ],
         corporationPayments: [],
       });
     });
@@ -97,7 +104,9 @@ describe('project-reports mapper', () => {
         profitMargin: 10,
         profit: 1000,
         totalIncome: 10000,
-        incomeEntries: [{ id: 'entry-1', amount: 10000, incomeDate: null }],
+        incomeEntries: [
+          { id: 'entry-1', amount: 10000, incomeDate: null, tag: 'שלד' },
+        ],
         subcontractor: {
           id: 'sub-1',
           name: 'Sub 1',

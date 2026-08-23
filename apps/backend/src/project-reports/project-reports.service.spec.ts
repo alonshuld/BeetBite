@@ -300,39 +300,25 @@ describe('ProjectReportsService', () => {
     });
   });
 
-  describe('findForSubcontractorAndClientInMonth', () => {
-    it('should filter by subcontractor, client, and month', async () => {
-      const mockReports = [makeProjectReport()];
-      mockPrismaService.projectReport.findMany.mockResolvedValue(mockReports);
+  describe('findOneForExport', () => {
+    it('should fetch the single report the PDF export renders', async () => {
+      const mockReport = makeProjectReport();
+      mockPrismaService.projectReport.findUnique.mockResolvedValue(mockReport);
 
-      const result = await service.findForSubcontractorAndClientInMonth(
-        'sub-1',
-        'client-1',
-        '2024-05-01T00:00:00.000Z',
-      );
+      const result = await service.findOneForExport('report-1');
 
-      expect(result).toHaveLength(1);
-      expect(mockPrismaService.projectReport.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            subcontractorId: 'sub-1',
-            date: '2024-05-01T00:00:00.000Z',
-            project: { clientId: 'client-1' },
-          },
-        }),
+      expect(result.id).toBe(mockReport.id);
+      expect(mockPrismaService.projectReport.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'report-1' } }),
       );
     });
 
-    it('should return an empty array when nothing matches', async () => {
-      mockPrismaService.projectReport.findMany.mockResolvedValue([]);
+    it('should throw ProjectReportNotFoundError when the report is missing', async () => {
+      mockPrismaService.projectReport.findUnique.mockResolvedValue(null);
 
-      const result = await service.findForSubcontractorAndClientInMonth(
-        'sub-1',
-        'client-1',
-        '2024-05-01T00:00:00.000Z',
+      await expect(service.findOneForExport('missing')).rejects.toThrow(
+        ProjectReportNotFoundError,
       );
-
-      expect(result).toEqual([]);
     });
   });
 

@@ -1,5 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsISO8601, IsNumber, IsOptional, Min } from 'class-validator';
+import {
+  IsISO8601,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class UpdateIncomeEntryDto {
   @IsOptional()
@@ -20,4 +27,14 @@ export class UpdateIncomeEntryDto {
     nullable: true,
   })
   incomeDate?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @ApiPropertyOptional({
+    example: 'גמר',
+    description: 'Updated work label (null or blank to clear it)',
+    nullable: true,
+  })
+  tag?: string | null;
 }

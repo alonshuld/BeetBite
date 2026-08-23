@@ -21,6 +21,7 @@ import { UpdateProjectReportDto } from './dto/update-project-report.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { CorporationNotFoundError } from 'src/corporations/errors/corporation-not-found.error';
 import { IncomeEntryResponseDto } from './dto/income-entry-response.dto';
+import { CreateIncomeEntryDto } from './dto/create-income-entry.dto';
 import { UpdateIncomeEntryDto } from './dto/update-income-entry.dto';
 
 const REPORT_INCLUDE = {
@@ -35,7 +36,7 @@ const REPORT_INCLUDE = {
     select: { id: true, name: true },
   },
   incomeEntries: {
-    select: { id: true, amount: true, incomeDate: true },
+    select: { id: true, amount: true, incomeDate: true, tag: true },
   },
   corporationPayments: {
     select: {
@@ -127,6 +128,7 @@ export class ProjectReportsService {
                 data: enriched.incomeEntries.map((e) => ({
                   amount: new Prisma.Decimal(e.amount),
                   incomeDate: e.incomeDate ? new Date(e.incomeDate) : null,
+                  tag: e.tag?.trim() || null,
                 })),
               },
             },
@@ -191,24 +193,22 @@ export class ProjectReportsService {
     return toProjectReportList(projectReports);
   }
 
-  async findForSubcontractorAndClientInMonth(
-    subcontractorId: string,
-    clientId: string,
-    month: string,
-  ): Promise<ProjectReportListItemDto[]> {
-    const projectReports = await this.prismaService.projectReport.findMany({
-      where: {
-        subcontractorId,
-        date: month,
-        project: { clientId },
-      },
+  /**
+   * Fetch one report with everything the account-approval PDF renders.
+   * @param id Project report to export
+   * @returns The report, its project and client, subcontractor, income entries and corporation payments
+   * @throws ProjectReportNotFoundError when no report has that id
+   */
+  async findOneForExport(id: string): Promise<ProjectReportListItemDto> {
+    const projectReport = await this.prismaService.projectReport.findUnique({
+      where: { id },
       include: REPORT_INCLUDE,
     });
 
-    this.logger.log(
-      `Retrieved ${projectReports.length} project reports for subcontractor ${subcontractorId}, client ${clientId}, month ${month}`,
-    );
-    return toProjectReportList(projectReports);
+    if (!projectReport) throw new ProjectReportNotFoundError(id);
+
+    this.logger.log(`Retrieved project report ${id} for export`);
+    return toProjectReportListItem(projectReport);
   }
 
   async findProjectReportForPreviousMonth(
@@ -244,7 +244,9 @@ export class ProjectReportsService {
       where: { id },
       include: {
         project: { select: { id: true, name: true } },
-        incomeEntries: { select: { id: true, amount: true, incomeDate: true } },
+        incomeEntries: {
+          select: { id: true, amount: true, incomeDate: true, tag: true },
+        },
         corporationPayments: {
           select: {
             id: true,
@@ -274,7 +276,7 @@ export class ProjectReportsService {
         include: {
           project: { select: { id: true, name: true } },
           incomeEntries: {
-            select: { id: true, amount: true, incomeDate: true },
+            select: { id: true, amount: true, incomeDate: true, tag: true },
           },
           corporationPayments: {
             select: {
@@ -358,6 +360,7 @@ export class ProjectReportsService {
                   data: updateProjectReportDto.incomeEntries.map((e) => ({
                     amount: new Prisma.Decimal(e.amount),
                     incomeDate: e.incomeDate ? new Date(e.incomeDate) : null,
+                    tag: e.tag?.trim() || null,
                   })),
                 },
               }
@@ -428,8 +431,7 @@ export class ProjectReportsService {
 
   async addIncomeEntry(
     reportId: string,
-    amount: number,
-    incomeDate?: string,
+    dto: CreateIncomeEntryDto,
   ): Promise<IncomeEntryResponseDto> {
     // Verify report exists
     const report = await this.prismaService.projectReport.findUnique({
@@ -441,8 +443,9 @@ export class ProjectReportsService {
     const entry = await this.prismaService.projectReportIncome.create({
       data: {
         projectReportId: reportId,
-        amount: new Prisma.Decimal(amount),
-        incomeDate: incomeDate ? new Date(incomeDate) : null,
+        amount: new Prisma.Decimal(dto.amount),
+        incomeDate: dto.incomeDate ? new Date(dto.incomeDate) : null,
+        tag: dto.tag?.trim() || null,
       },
     });
 
@@ -451,6 +454,7 @@ export class ProjectReportsService {
       id: entry.id,
       amount: entry.amount.toNumber(),
       incomeDate: entry.incomeDate?.toISOString() ?? null,
+      tag: entry.tag,
     };
   }
 
@@ -468,6 +472,9 @@ export class ProjectReportsService {
           ...(dto.incomeDate !== undefined && {
             incomeDate: dto.incomeDate ? new Date(dto.incomeDate) : null,
           }),
+          // Only touch the tag when the caller actually sent one, so an
+          // amount-only update cannot silently wipe an existing label.
+          ...(dto.tag !== undefined && { tag: dto.tag?.trim() || null }),
         },
       });
 
@@ -476,6 +483,7 @@ export class ProjectReportsService {
         id: entry.id,
         amount: entry.amount.toNumber(),
         incomeDate: entry.incomeDate?.toISOString() ?? null,
+        tag: entry.tag,
       };
     } catch (error) {
       if (

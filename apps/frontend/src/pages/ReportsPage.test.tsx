@@ -21,6 +21,9 @@ vi.mock("@/api/endpoints/subcontractors", () => ({
 vi.mock("@/api/endpoints/corporations", () => ({
   useGetCorporationsQuery: vi.fn(),
 }));
+vi.mock("@/api/endpoints/project-report-exports", () => ({
+  useExportProjectReportsPdfMutation: vi.fn(),
+}));
 
 import {
   useGetProjectReportsQuery,
@@ -30,6 +33,7 @@ import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
+import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
 
 const mockReports = [
   {
@@ -44,13 +48,20 @@ const mockReports = [
     totalIncome: 10000,
     profitMargin: 20,
     corporationPayments: [],
-    incomeEntries: [{ id: "ie1", amount: 10000, incomeDate: "2025-03-10" }],
+    incomeEntries: [
+      { id: "ie1", amount: 6000, incomeDate: "2025-03-10", tag: "Shell" },
+      { id: "ie2", amount: 4000, incomeDate: null, tag: "Finishing" },
+    ],
   },
 ];
 
 const createSpy = vi
   .fn()
   .mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
+
+const exportSpy = vi
+  .fn()
+  .mockReturnValue({ unwrap: vi.fn().mockResolvedValue(new Blob()) });
 
 function setReports(data: unknown, isLoading = false) {
   vi.mocked(useGetProjectReportsQuery).mockReturnValue({
@@ -86,6 +97,10 @@ describe("ReportsPage", () => {
       createSpy,
       { isLoading: false },
     ] as unknown as ReturnType<typeof useCreateProjectReportMutation>);
+    vi.mocked(useExportProjectReportsPdfMutation).mockReturnValue([
+      exportSpy,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useExportProjectReportsPdfMutation>);
   });
 
   it("renders the page title", () => {
@@ -142,6 +157,31 @@ describe("ReportsPage", () => {
     await userEvent.type(marginInput, "10");
     expect(screen.getByText("₪1,000")).toBeInTheDocument();
     expect(screen.getByText("₪9,000")).toBeInTheDocument();
+  });
+
+  it("labels each income entry with its own tag", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+    expect(screen.getByText("Shell")).toBeInTheDocument();
+    expect(screen.getByText("Finishing")).toBeInTheDocument();
+  });
+
+  it("exports one report at a time, identified by its own id", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    await userEvent.type(
+      screen.getByLabelText("Approved For"),
+      "Shell + finishing",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(exportSpy).toHaveBeenCalledWith({
+      projectReportId: "r1",
+      approvedFor: "Shell + finishing",
+      lang: "en",
+    });
   });
 
   it("opens the add-report modal", async () => {

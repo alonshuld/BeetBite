@@ -17,9 +17,7 @@ describe('PdfExportController', () => {
   };
 
   const dto: ExportProjectReportsPdfDto = {
-    subcontractorId: 'sub-1',
-    clientId: 'client-1',
-    month: '2026-03-01T00:00:00.000Z',
+    projectReportId: 'report-1',
     approvedFor: 'Shell + finishing work',
   };
 
@@ -56,7 +54,11 @@ describe('PdfExportController', () => {
 
   it('should stream the rendered PDF with the right headers', async () => {
     const pdf = Buffer.from([1, 2, 3]);
-    mockPdfExportService.exportProjectReportsPdf.mockResolvedValue(pdf);
+    // The month comes back from the service now — the request no longer names it.
+    mockPdfExportService.exportProjectReportsPdf.mockResolvedValue({
+      pdf,
+      month: '2026-03-01T00:00:00.000Z',
+    });
     const { res, setMock, statusMock, sendMock } = mockResponse();
 
     await controller.exportPdf(dto, res);

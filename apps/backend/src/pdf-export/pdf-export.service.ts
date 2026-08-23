@@ -4,7 +4,6 @@ import { CompanySettingsService } from 'src/company-settings/company-settings.se
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 import { ProjectReportsService } from 'src/project-reports/project-reports.service';
 import { SubcontractorsService } from 'src/subcontractors/subcontractors.service';
-import { SubcontractorPaymentsService } from 'src/subcontractor-payments/subcontractor-payments.service';
 import { ExportProjectReportsPdfDto } from './dto/export-project-reports-pdf.dto';
 import { CompanySettingsIncompleteError } from './errors/company-settings-incomplete.error';
 import { VatRateNotConfiguredError } from './errors/vat-rate-not-configured.error';
@@ -16,8 +15,8 @@ import {
 } from './templates/report-approval.template';
 
 /**
- * Service that renders a monthly account-approval PDF for one subcontractor's
- * project reports under one client, using headless Chromium via Puppeteer.
+ * Service that renders the monthly account-approval PDF for a single project
+ * report, using headless Chromium via Puppeteer.
  */
 @Injectable()
 export class PdfExportService {
@@ -28,67 +27,56 @@ export class PdfExportService {
     private readonly vatRatesService: VatRatesService,
     private readonly projectReportsService: ProjectReportsService,
     private readonly subcontractorsService: SubcontractorsService,
-    private readonly subcontractorPaymentsService: SubcontractorPaymentsService,
   ) {}
 
   async exportProjectReportsPdf(
     dto: ExportProjectReportsPdfDto,
-  ): Promise<Buffer> {
+  ): Promise<{ pdf: Buffer; month: string }> {
     const companySettings = await this.companySettingsService.findOne();
     if (!companySettings?.name || !companySettings?.companyNumber) {
       throw new CompanySettingsIncompleteError();
     }
 
-    const vatPercentage = await this.vatRatesService.resolveForMonth(dto.month);
+    let report;
+    try {
+      report = await this.projectReportsService.findOneForExport(
+        dto.projectReportId,
+      );
+    } catch {
+      throw new NoReportsForExportError(dto.projectReportId);
+    }
+
+    // A report is unique per project and month, so its own date is the month
+    // the document covers — the caller does not supply one.
+    const month = report.date;
+    const vatPercentage = await this.vatRatesService.resolveForMonth(month);
     if (vatPercentage === null) {
-      throw new VatRateNotConfiguredError(dto.month);
+      throw new VatRateNotConfiguredError(month);
     }
 
-    const reports =
-      await this.projectReportsService.findForSubcontractorAndClientInMonth(
-        dto.subcontractorId,
-        dto.clientId,
-        dto.month,
-      );
-    if (reports.length === 0) {
-      throw new NoReportsForExportError(
-        dto.subcontractorId,
-        dto.clientId,
-        dto.month,
-      );
-    }
+    const subcontractor = await this.subcontractorsService.findOne(
+      report.subcontractor.id,
+    );
 
-    const [subcontractor, tagsByProject] = await Promise.all([
-      this.subcontractorsService.findOne(dto.subcontractorId),
-      this.subcontractorPaymentsService.findTagsByProject(
-        dto.subcontractorId,
-        dto.month,
-      ),
-    ]);
-
-    const rows: ReportApprovalRow[] = reports.map((report) => {
-      const profitAmount = report.totalIncome * (report.profitMargin / 100);
-      const afterProfitAmount = report.totalIncome - profitAmount;
-      const tags = tagsByProject[report.project.id] ?? [];
+    // One row per income entry: each is a chunk of approved work carrying its
+    // own label, which is what the approval itemises.
+    const rows: ReportApprovalRow[] = report.incomeEntries.map((entry) => {
+      const profitAmount = entry.amount * (report.profitMargin / 100);
       return {
-        projectName: report.project.name,
-        // A project can carry several partial payments, each with its own tag.
-        tag: tags.length > 0 ? tags.join(' · ') : null,
-        approvedAmount: report.totalIncome,
-        invoiceInclVat: report.totalIncome * (1 + vatPercentage / 100),
+        tag: entry.tag,
+        approvedAmount: entry.amount,
+        invoiceInclVat: entry.amount * (1 + vatPercentage / 100),
         profitMarginPercent: report.profitMargin,
         profitAmount,
-        afterProfitAmount,
+        afterProfitAmount: entry.amount - profitAmount,
       };
     });
 
-    const supplierRows: ReportApprovalSupplierRow[] = reports.flatMap(
-      (report) =>
-        report.corporationPayments.map((payment) => ({
-          corporationName: payment.corporation.name,
-          amount: payment.amount,
-        })),
-    );
+    const supplierRows: ReportApprovalSupplierRow[] =
+      report.corporationPayments.map((payment) => ({
+        corporationName: payment.corporation.name,
+        amount: payment.amount,
+      }));
 
     const supplierTotal = supplierRows.reduce(
       (sum, row) => sum + row.amount,
@@ -111,11 +99,13 @@ export class PdfExportService {
       lang: dto.lang ?? 'he',
       contractorName: companySettings.name,
       contractorCompanyNumber: companySettings.companyNumber,
-      clientName: reports[0].project.client.name,
+      contractorDescription: companySettings.description,
+      clientName: report.project.client.name,
       subcontractorName: subcontractor.name,
       subcontractorCompanyNumber: subcontractor.companyNumber,
+      projectName: report.project.name,
       approvedFor: dto.approvedFor,
-      month: dto.month,
+      month,
       rows,
       supplierRows,
       supplierTotal,
@@ -132,9 +122,9 @@ export class PdfExportService {
     });
 
     this.logger.log(
-      `Rendering account-approval PDF for subcontractor ${dto.subcontractorId}, client ${dto.clientId}, month ${dto.month}`,
+      `Rendering account-approval PDF for project report ${dto.projectReportId}`,
     );
-    return this.renderPdf(html);
+    return { pdf: await this.renderPdf(html), month };
   }
 
   private async renderPdf(html: string): Promise<Buffer> {

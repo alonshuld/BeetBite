@@ -20,4 +20,12 @@ export class IncomeEntryResponseDto {
     nullable: true,
   })
   incomeDate!: string | null;
+
+  @ApiProperty({
+    example: 'שלד',
+    description:
+      'Short label describing the work this income covers, or null if untagged',
+    nullable: true,
+  })
+  tag!: string | null;
 }
