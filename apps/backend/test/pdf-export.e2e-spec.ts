@@ -46,19 +46,25 @@ import { ExportProjectReportsPdfDto } from 'src/pdf-export/dto/export-project-re
 // be named `mock*`.
 const mockPuppeteerState = { html: '' };
 
+// Plain promise-returning functions rather than `async` ones: none of them
+// await anything, and `@typescript-eslint/require-await` rejects that.
 jest.mock('puppeteer', () => ({
   __esModule: true,
   default: {
-    launch: async () => ({
-      newPage: async () => ({
-        setContent: async (html: string) => {
-          mockPuppeteerState.html = html;
-        },
-        // '%PDF' — enough for the controller's Content-Length assertion.
-        pdf: async () => Uint8Array.from([0x25, 0x50, 0x44, 0x46]),
+    launch: () =>
+      Promise.resolve({
+        newPage: () =>
+          Promise.resolve({
+            setContent: (html: string) => {
+              mockPuppeteerState.html = html;
+              return Promise.resolve();
+            },
+            // '%PDF' — enough for the controller's Content-Length assertion.
+            pdf: () =>
+              Promise.resolve(Uint8Array.from([0x25, 0x50, 0x44, 0x46])),
+          }),
+        close: () => Promise.resolve(),
       }),
-      close: async (): Promise<void> => undefined,
-    }),
   },
 }));
 
