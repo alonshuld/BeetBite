@@ -42,20 +42,6 @@ dbTest.describe('Subcontractor Payments', () => {
     await page.getByText('SubPay Worker').first().click();
   }
 
-  /**
-   * Wait for the payment write to land. The owed amount is already on screen
-   * before any payment exists, so a text assertion would pass instantly and
-   * race the POST — read the DB instead.
-   */
-  async function waitForPaymentCount(
-    db: { subcontractorPayment: { findMany: () => Promise<unknown[]> } },
-    count: number,
-  ) {
-    await expect(async () => {
-      expect(await db.subcontractorPayment.findMany()).toHaveLength(count);
-    }).toPass({ timeout: 5000 });
-  }
-
   /** Fill the inline partial row for the seeded project and save it. */
   async function payPartial(
     page: import('@playwright/test').Page,
@@ -114,93 +100,6 @@ dbTest.describe('Subcontractor Payments', () => {
         const payments = await db.subcontractorPayment.findMany();
         expect(payments).toHaveLength(1);
         expect(Number(payments[0].amount)).toBe(45000);
-      }).toPass({ timeout: 5000 });
-    },
-  );
-
-  dbTest(
-    'a tag typed before saving is persisted and survives a reload',
-    async ({ page, db }) => {
-      void db;
-      await openWorkerPanel(page);
-
-      await page.fill(`#tag-${projectId}`, 'Materials');
-      await page.getByTitle('Paid', { exact: true }).first().click();
-      await waitForPaymentCount(db, 1);
-
-      await page.reload();
-      await page.waitForLoadState('networkidle');
-      await page.getByText('SubPay Worker').first().click();
-
-      await expect(page.locator(`#tag-${projectId}`)).toHaveValue('Materials', {
-        timeout: 5000,
-      });
-
-      const payments = await db.subcontractorPayment.findMany();
-      expect(payments).toHaveLength(1);
-      expect(payments[0].tag).toBe('Materials');
-    },
-  );
-
-  dbTest(
-    'editing a tag on an existing payment saves on blur',
-    async ({ page, db }) => {
-      void db;
-      await openWorkerPanel(page);
-
-      await page.getByTitle('Paid', { exact: true }).first().click();
-      await waitForPaymentCount(db, 1);
-
-      await page.fill(`#tag-${projectId}`, 'Labor');
-      // Blurring commits the tag-only update; no amount is sent, so the
-      // overpayment guard is skipped.
-      await page.locator(`#tag-${projectId}`).blur();
-
-      await expect(async () => {
-        const payments = await db.subcontractorPayment.findMany();
-        expect(payments[0].tag).toBe('Labor');
-      }).toPass({ timeout: 5000 });
-    },
-  );
-
-  dbTest(
-    'a saved tag is offered as an autocomplete suggestion',
-    async ({ page, db }) => {
-      void db;
-      await openWorkerPanel(page);
-
-      await page.fill(`#tag-${projectId}`, 'Materials');
-      await page.getByTitle('Paid', { exact: true }).first().click();
-      await waitForPaymentCount(db, 1);
-
-      await page.reload();
-      await page.waitForLoadState('networkidle');
-
-      await expect(
-        page.locator('#payment-tags option[value="Materials"]'),
-      ).toHaveCount(1, { timeout: 5000 });
-    },
-  );
-
-  dbTest(
-    'a tag survives toggling a project unpaid and paid again',
-    async ({ page, db }) => {
-      void db;
-      await openWorkerPanel(page);
-
-      await page.fill(`#tag-${projectId}`, 'Materials');
-      await page.getByTitle('Paid', { exact: true }).first().click();
-      await waitForPaymentCount(db, 1);
-
-      // Unpaid deletes the payment; Paid recreates it and must carry the tag over.
-      await page.getByTitle('Unpaid', { exact: true }).first().click();
-      await waitForPaymentCount(db, 0);
-      await page.getByTitle('Paid', { exact: true }).first().click();
-
-      await expect(async () => {
-        const payments = await db.subcontractorPayment.findMany();
-        expect(payments).toHaveLength(1);
-        expect(payments[0].tag).toBe('Materials');
       }).toPass({ timeout: 5000 });
     },
   );

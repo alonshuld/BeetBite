@@ -12,8 +12,8 @@ const MONTH = '2026-05';
 const MONTH_DATE = new Date(`${MONTH}-01`);
 
 /**
- * End-to-end coverage for the monthly account-approval PDF export, driven from
- * the export modal on /subcontractor-payments.
+ * End-to-end coverage for the account-approval PDF, driven from the export
+ * button on each project sheet under /reports.
  *
  * This is also the only layer that renders a PDF for real: puppeteer v25 is
  * ESM-only and Jest cannot load it, so the backend integration spec stubs the
@@ -21,14 +21,11 @@ const MONTH_DATE = new Date(`${MONTH}-01`);
  * so the bytes coming back are produced by a real Chromium.
  */
 dbTest.describe('PDF export', () => {
-  let subcontractorId: string;
-  let clientId: string;
   let projectId: string;
+  let reportId: string;
 
   dbTest.beforeEach(async ({ db }) => {
     const client = await db.client.create({ data: { name: 'Export Client' } });
-    clientId = client.id;
-
     const project = await db.project.create({
       data: {
         clientId: client.id,
@@ -42,31 +39,38 @@ dbTest.describe('PDF export', () => {
     const subcontractor = await db.subcontractor.create({
       data: { name: 'Export Worker', companyNumber: '515222009' },
     });
-    subcontractorId = subcontractor.id;
 
-    await db.projectReport.create({
+    const report = await db.projectReport.create({
       data: {
         projectId: project.id,
         subcontractorId: subcontractor.id,
         date: MONTH_DATE,
         profitMargin: 10,
         incomeEntries: {
-          create: [{ amount: 50000, incomeDate: new Date(`${MONTH}-15`) }],
+          create: [
+            {
+              amount: 50000,
+              incomeDate: new Date(`${MONTH}-15`),
+              tag: 'Concrete',
+            },
+          ],
         },
       },
     });
+    reportId = report.id;
   });
 
-  /** Opens the page and selects the seeded subcontractor's card. */
-  async function openWorkerPanel(page: Page) {
-    await page.goto(`${BASE}/subcontractor-payments`);
+  /** Opens /reports and drills into the seeded client. */
+  async function openClient(page: Page) {
+    await page.goto(`${BASE}/reports`);
     await page.waitForLoadState('networkidle');
-    await page.getByText('Export Worker').first().click();
+    await page.getByRole('button', { name: /Export Client/ }).click();
   }
 
-  /** Opens the export modal from the selected subcontractor's panel. */
+  /** Opens the export modal from the seeded project's sheet. */
   async function openExportModal(page: Page) {
-    await page.getByRole('button', { name: 'Export PDF' }).click();
+    await openClient(page);
+    await page.getByRole('button', { name: 'Export PDF' }).first().click();
     await expect(
       page.getByRole('dialog', { name: 'Export PDF' }),
     ).toBeVisible();
@@ -86,92 +90,19 @@ dbTest.describe('PDF export', () => {
   // Modal mechanics
   // ==========================================================================
 
-  dbTest('export button opens the export modal', async ({ page, db }) => {
+  dbTest('each project sheet opens an export modal', async ({ page, db }) => {
     void db;
-    await openWorkerPanel(page);
     await openExportModal(page);
 
     await expect(page.getByLabel('Approved For')).toBeVisible();
+    // The modal names the project the report belongs to.
+    await expect(
+      page.getByRole('dialog', { name: 'Export PDF' }),
+    ).toContainText('Export Project');
   });
-
-  dbTest(
-    'a single client is auto-selected and its picker is hidden',
-    async ({ page, db }) => {
-      void db;
-      await openWorkerPanel(page);
-      await openExportModal(page);
-
-      // distinctClients.length === 1 → openExport() preselects it, so the
-      // Select is never rendered and the export can go straight through.
-      await expect(page.locator('#export-client')).toHaveCount(0);
-
-      const [request] = await Promise.all([
-        page.waitForRequest(EXPORT_ROUTE),
-        (async () => {
-          await page.getByLabel('Approved For').fill('Shell works');
-          await page.getByRole('button', { name: 'Save' }).click();
-        })(),
-      ]);
-
-      expect(request.postDataJSON()).toMatchObject({ clientId });
-    },
-  );
-
-  dbTest(
-    'with several clients the picker appears and blocks save until one is chosen',
-    async ({ page, db }) => {
-      const otherClient = await db.client.create({
-        data: { name: 'Second Client' },
-      });
-      const otherProject = await db.project.create({
-        data: {
-          clientId: otherClient.id,
-          name: 'Second Project',
-          estimatedAmount: 50000,
-          description: 'Second client work',
-        },
-      });
-      await db.projectReport.create({
-        data: {
-          projectId: otherProject.id,
-          subcontractorId,
-          date: MONTH_DATE,
-          profitMargin: 10,
-          incomeEntries: { create: [{ amount: 20000 }] },
-        },
-      });
-
-      await openWorkerPanel(page);
-      await openExportModal(page);
-      const exportCount = await countExportRequests(page);
-
-      const clientSelect = page.locator('#export-client');
-      await expect(clientSelect).toBeVisible();
-      await expect(clientSelect).toHaveValue('');
-
-      // No client picked → handleExport early-returns, modal stays open.
-      await page.getByLabel('Approved For').fill('Shell works');
-      await page.getByRole('button', { name: 'Save' }).click();
-      await expect(
-        page.getByRole('dialog', { name: 'Export PDF' }),
-      ).toBeVisible();
-      expect(exportCount()).toBe(0);
-
-      // Pick one and it goes through.
-      await clientSelect.selectOption(otherClient.id);
-      const [request] = await Promise.all([
-        page.waitForRequest(EXPORT_ROUTE),
-        page.getByRole('button', { name: 'Save' }).click(),
-      ]);
-      expect(request.postDataJSON()).toMatchObject({
-        clientId: otherClient.id,
-      });
-    },
-  );
 
   dbTest('a blank "Approved For" sends no request', async ({ page, db }) => {
     void db;
-    await openWorkerPanel(page);
     await openExportModal(page);
     const exportCount = await countExportRequests(page);
 
@@ -193,7 +124,6 @@ dbTest.describe('PDF export', () => {
     'exporting downloads a valid single-page PDF',
     async ({ page, db }) => {
       void db;
-      await openWorkerPanel(page);
       await openExportModal(page);
 
       await page.getByLabel('Approved For').fill('Shell works');
@@ -213,10 +143,9 @@ dbTest.describe('PDF export', () => {
   );
 
   dbTest(
-    'the request carries the trimmed form values',
+    'the request carries the report id and trimmed text',
     async ({ page, db }) => {
       void db;
-      await openWorkerPanel(page);
       await openExportModal(page);
 
       await page.getByLabel('Approved For').fill('  Shell works  ');
@@ -226,9 +155,7 @@ dbTest.describe('PDF export', () => {
       ]);
 
       expect(request.postDataJSON()).toEqual({
-        subcontractorId,
-        clientId,
-        month: `${MONTH}-01`,
+        projectReportId: reportId,
         approvedFor: 'Shell works',
         lang: 'en',
       });
@@ -237,7 +164,6 @@ dbTest.describe('PDF export', () => {
 
   dbTest('a successful export closes the modal', async ({ page, db }) => {
     void db;
-    await openWorkerPanel(page);
     await openExportModal(page);
 
     await page.getByLabel('Approved For').fill('Shell works');
@@ -251,10 +177,10 @@ dbTest.describe('PDF export', () => {
 
   dbTest('Hebrew mode requests a Hebrew document', async ({ page, db }) => {
     void db;
-    await openWorkerPanel(page);
+    await openClient(page);
     await page.getByRole('button', { name: 'עב' }).click();
 
-    await page.getByRole('button', { name: 'ייצוא PDF' }).click();
+    await page.getByRole('button', { name: 'ייצוא PDF' }).first().click();
     await page.locator('#export-approved-for').fill('עבודות שלד');
 
     const [request] = await Promise.all([
@@ -278,7 +204,6 @@ dbTest.describe('PDF export', () => {
     async ({ page, db }) => {
       await db.vatRate.deleteMany();
 
-      await openWorkerPanel(page);
       await openExportModal(page);
       await page.getByLabel('Approved For').fill('Shell works');
 
@@ -305,7 +230,6 @@ dbTest.describe('PDF export', () => {
         data: { companyNumber: null },
       });
 
-      await openWorkerPanel(page);
       await openExportModal(page);
       await page.getByLabel('Approved For').fill('Shell works');
 
@@ -321,13 +245,14 @@ dbTest.describe('PDF export', () => {
     },
   );
 
-  dbTest('no matching reports surfaces a 404', async ({ page, db }) => {
-    await openWorkerPanel(page);
+  dbTest('a deleted report surfaces a 404', async ({ page, db }) => {
     await openExportModal(page);
 
-    // Remove the report behind the card after the page has rendered, so the
-    // export asks for a month the backend no longer has anything for.
-    await db.projectReport.deleteMany({ where: { projectId } });
+    // Remove the report behind the sheet after the page has rendered.
+    await db.projectReportIncome.deleteMany({
+      where: { projectReportId: reportId },
+    });
+    await db.projectReport.delete({ where: { id: reportId } });
 
     await page.getByLabel('Approved For').fill('Shell works');
     const [response] = await Promise.all([
@@ -342,37 +267,24 @@ dbTest.describe('PDF export', () => {
   });
 
   // ==========================================================================
-  // Cross-feature
+  // Cross-feature — the tag now lives on the income entry and becomes the
+  // report row's description on the document.
   // ==========================================================================
 
-  dbTest(
-    'a tag saved in the projects table reaches the exported document',
-    async ({ page, db }) => {
-      await openWorkerPanel(page);
+  dbTest("an income entry's tag reaches the export", async ({ page, db }) => {
+    void projectId;
+    await openExportModal(page);
+    await page.getByLabel('Approved For').fill('Shell works');
 
-      // Tag the project and mark it paid, the way a user would.
-      await page.fill(`#tag-${projectId}`, 'Concrete');
-      await page.getByTitle('Paid', { exact: true }).first().click();
+    const [response] = await Promise.all([
+      page.waitForResponse(EXPORT_ROUTE),
+      page.getByRole('button', { name: 'Save' }).click(),
+    ]);
 
-      // The export reads tags back through findTagsByProject, so the write has
-      // to have landed before the request goes out.
-      await expect(async () => {
-        const payments = await db.subcontractorPayment.findMany({
-          where: { projectId },
-        });
-        expect(payments).toHaveLength(1);
-        expect(payments[0].tag).toBe('Concrete');
-      }).toPass({ timeout: 5000 });
-
-      await openExportModal(page);
-      await page.getByLabel('Approved For').fill('Shell works');
-
-      const [response] = await Promise.all([
-        page.waitForResponse(EXPORT_ROUTE),
-        page.getByRole('button', { name: 'Save' }).click(),
-      ]);
-
-      expect(response.status()).toBe(200);
-    },
-  );
+    expect(response.status()).toBe(200);
+    const entries = await db.projectReportIncome.findMany({
+      where: { projectReportId: reportId },
+    });
+    expect(entries[0].tag).toBe('Concrete');
+  });
 });

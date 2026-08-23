@@ -10,7 +10,6 @@ import {
 import { execSync } from 'child_process';
 import * as path from 'path';
 import request from 'supertest';
-import type { Server } from 'http';
 
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -25,57 +24,51 @@ import { NoReportsForExportError } from 'src/pdf-export/errors/no-reports-for-ex
 import { ExportProjectReportsPdfDto } from 'src/pdf-export/dto/export-project-reports-pdf.dto';
 
 /**
- * Integration coverage for the monthly account-approval PDF export.
+ * Integration coverage for the account-approval PDF export.
+ *
+ * The export is scoped to a single project report: its id is the entire
+ * request, the month on the document is the report's own date, and the table
+ * rows are that report's income entries, each carrying its own tag.
  *
  * `pdf-export.service.spec.ts` covers the service's branching with every
- * collaborator mocked. This suite is the complement: real Postgres, real
- * services, real template — so the report query, VAT carry-forward, tag join
- * and HTML rendering are exercised against actual rows, and the controller is
- * driven over HTTP through the same pipes and filters as production.
+ * collaborator mocked. This suite is the complement — real Postgres, real
+ * services, real template — so the lookup, VAT carry-forward and rendering are
+ * exercised against actual rows, and the controller is driven over HTTP through
+ * the same pipes and filters as production.
  *
- * Puppeteer is stubbed and the HTML handed to `setContent` is captured for
- * assertion. It cannot be un-stubbed here: puppeteer v25 ships ESM only, and
- * Jest's CommonJS loader cannot `requireActual` it. Proof that a real browser
- * renders a real PDF therefore lives one layer up, in
- * `apps/e2e/tests/pdf-export.spec.ts`, where the backend runs as an ordinary
- * Node process that can require an ES module.
+ * Puppeteer is stubbed and the HTML handed to `setContent` is captured. It
+ * cannot be un-stubbed here: puppeteer v25 is ESM-only and Jest's CommonJS
+ * loader cannot `requireActual` it, so proof that a real browser renders a real
+ * PDF lives in `apps/e2e/tests/pdf-export.spec.ts`.
  */
 
 // Jest hoists this factory above the imports, so anything it closes over must
-// be named `mock*` — hence the prefix on an otherwise plain state bag.
-const mockPuppeteerState = {
-  html: '',
-};
+// be named `mock*`.
+const mockPuppeteerState = { html: '' };
 
 jest.mock('puppeteer', () => ({
   __esModule: true,
   default: {
-    launch: () =>
-      Promise.resolve({
-        newPage: () =>
-          Promise.resolve({
-            setContent: (html: string) => {
-              mockPuppeteerState.html = html;
-              return Promise.resolve();
-            },
-            // '%PDF' — enough for the Content-Length assertion below.
-            pdf: () =>
-              Promise.resolve(Uint8Array.from([0x25, 0x50, 0x44, 0x46])),
-          }),
-        close: () => Promise.resolve(),
+    launch: async () => ({
+      newPage: async () => ({
+        setContent: async (html: string) => {
+          mockPuppeteerState.html = html;
+        },
+        // '%PDF' — enough for the controller's Content-Length assertion.
+        pdf: async () => Uint8Array.from([0x25, 0x50, 0x44, 0x46]),
       }),
+      close: async (): Promise<void> => undefined,
+    }),
   },
 }));
 
 const JWT_SECRET = 'pdf-export-e2e-secret-at-least-32-characters';
 const SETTINGS_ID = 'company-settings';
 
-/** The month under test, already normalized the way the DTO transform would. */
 const MONTH = '2026-05-01T00:00:00.000Z';
 const PREVIOUS_MONTH = '2026-04-01T00:00:00.000Z';
 const NEXT_MONTH = '2026-06-01T00:00:00.000Z';
 
-/** Baseline VAT, set far enough back that it carries forward to MONTH. */
 const BASELINE_VAT_MONTH = new Date('2020-01-01T00:00:00.000Z');
 const BASELINE_VAT = 18;
 
@@ -85,23 +78,19 @@ describe('PDF Export Integration Tests', () => {
   let service: PdfExportService;
   let prisma: PrismaService;
   let app: INestApplication;
-  let httpServer: Server;
   let token: string;
 
   let clientId: string;
-  let otherClientId: string;
   let projectId: string;
   let subcontractorId: string;
-  let otherSubcontractorId: string;
   let corporationId: string;
+  /** The report under test, set by `seedDefaultReport`. */
+  let reportId: string;
 
-  /** A well-formed export request for the seeded fixtures. */
   const exportDto = (
     overrides: Partial<ExportProjectReportsPdfDto> = {},
   ): ExportProjectReportsPdfDto => ({
-    subcontractorId,
-    clientId,
-    month: MONTH,
+    projectReportId: reportId,
     approvedFor: 'Shell works',
     lang: 'en',
     ...overrides,
@@ -126,29 +115,33 @@ describe('PDF Export Integration Tests', () => {
       },
     });
 
-  /** Creates a report with income entries and optional corporation payments. */
+  /** Creates a report with tagged income entries and optional supplier rows. */
   const seedReport = async (opts: {
-    projectId: string;
-    subcontractorId: string;
-    date: string;
-    profitMargin: number;
-    incomes: number[];
+    projectId?: string;
+    date?: string;
+    profitMargin?: number;
+    incomes: Array<{ amount: number; tag?: string | null }>;
     corporationPayments?: Array<{ corporationId: string; amount: number }>;
   }) =>
     prisma.projectReport.create({
       data: {
-        projectId: opts.projectId,
-        subcontractorId: opts.subcontractorId,
-        date: new Date(opts.date),
-        profitMargin: opts.profitMargin,
-        incomeEntries: { create: opts.incomes.map((amount) => ({ amount })) },
+        projectId: opts.projectId ?? projectId,
+        subcontractorId,
+        date: new Date(opts.date ?? MONTH),
+        profitMargin: opts.profitMargin ?? 10,
+        incomeEntries: {
+          create: opts.incomes.map((entry) => ({
+            amount: entry.amount,
+            tag: entry.tag ?? null,
+          })),
+        },
         ...(opts.corporationPayments
           ? {
               corporationPayments: {
                 create: opts.corporationPayments.map((payment) => ({
                   corporationId: payment.corporationId,
                   amount: payment.amount,
-                  date: new Date(opts.date),
+                  date: new Date(opts.date ?? MONTH),
                 })),
               },
             }
@@ -156,22 +149,19 @@ describe('PDF Export Integration Tests', () => {
       },
     });
 
-  /** The default report every "given a report exists" block starts from. */
-  const seedDefaultReport = async () =>
-    seedReport({
-      projectId,
-      subcontractorId,
-      date: MONTH,
-      profitMargin: 10,
-      incomes: [10000],
-    });
+  /** A single 10,000 income entry at a 10% margin, and the report under test. */
+  const seedDefaultReport = async () => {
+    const report = await seedReport({ incomes: [{ amount: 10000 }] });
+    reportId = report.id;
+    return report;
+  };
 
   /** Formats a number the way the template's currency helper does. */
   const money = (amount: number): string =>
-    `₪${amount.toLocaleString('en-GB', {
+    `${amount.toLocaleString('en-GB', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    })}`;
+    })} ₪`;
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:17-alpine')
@@ -225,8 +215,6 @@ describe('PDF Export Integration Tests', () => {
     app.useGlobalFilters(new EntityExceptionFilter());
     await app.init();
 
-    httpServer = app.getHttpServer() as Server;
-
     token = moduleRef
       .get(JwtService)
       .sign({ sub: 'test-user-id', username: 'tester' });
@@ -235,23 +223,12 @@ describe('PDF Export Integration Tests', () => {
   beforeEach(async () => {
     clientId = (await prisma.client.create({ data: { name: 'Acme Homes' } }))
       .id;
-    otherClientId = (
-      await prisma.client.create({ data: { name: 'Other Client' } })
-    ).id;
-
     projectId = (await createProject('Tower A')).id;
-
     subcontractorId = (
       await prisma.subcontractor.create({
         data: { name: 'Dan Builder', companyNumber: '515111222' },
       })
     ).id;
-    otherSubcontractorId = (
-      await prisma.subcontractor.create({
-        data: { name: 'Other Sub', companyNumber: '515333444' },
-      })
-    ).id;
-
     corporationId = (
       await prisma.corporation.create({ data: { name: 'Flooring Ltd' } })
     ).id;
@@ -263,7 +240,6 @@ describe('PDF Export Integration Tests', () => {
         companyNumber: '515999888',
       },
     });
-
     await prisma.vatRate.create({
       data: { effectiveMonth: BASELINE_VAT_MONTH, percentage: BASELINE_VAT },
     });
@@ -272,7 +248,6 @@ describe('PDF Export Integration Tests', () => {
   });
 
   afterEach(async () => {
-    await prisma.subcontractorPayment.deleteMany();
     await prisma.corporationPayment.deleteMany();
     await prisma.projectReportIncome.deleteMany();
     await prisma.projectReport.deleteMany();
@@ -291,95 +266,70 @@ describe('PDF Export Integration Tests', () => {
   });
 
   // ==========================================================================
-  // Scoping — the query the mocked unit spec cannot exercise
+  // Row sourcing — one row per income entry of the requested report
   // ==========================================================================
 
-  describe('Report scoping', () => {
-    it('should render one row per matching project report', async () => {
-      const second = await createProject('Tower B');
-      await seedDefaultReport();
-      await seedReport({
-        projectId: second.id,
-        subcontractorId,
-        date: MONTH,
-        profitMargin: 10,
-        incomes: [20000],
+  describe('Row sourcing', () => {
+    it('should render one row per income entry', async () => {
+      const report = await seedReport({
+        incomes: [
+          { amount: 4000, tag: 'Foundations' },
+          { amount: 6000, tag: 'Framing' },
+        ],
       });
+      reportId = report.id;
 
       const html = await renderHtml();
 
-      expect(html).toContain('Tower A');
-      expect(html).toContain('Tower B');
+      expect(html).toContain('Foundations');
+      expect(html).toContain('Framing');
+      expect(html).toContain(money(4000));
+      expect(html).toContain(money(6000));
     });
 
-    it("should exclude the subcontractor's reports under a different client", async () => {
-      const foreign = await prisma.project.create({
-        data: {
-          clientId: otherClientId,
-          name: 'Foreign Project',
-          estimatedAmount: 1000,
-          description: 'Another client',
-        },
+    it("should ignore another report's income entries", async () => {
+      const other = await createProject('Tower B');
+      await seedReport({
+        projectId: other.id,
+        incomes: [{ amount: 99999, tag: 'Not mine' }],
       });
       await seedDefaultReport();
-      await seedReport({
-        projectId: foreign.id,
-        subcontractorId,
-        date: MONTH,
-        profitMargin: 10,
-        incomes: [99999],
-      });
 
       const html = await renderHtml();
 
-      expect(html).toContain('Tower A');
-      expect(html).not.toContain('Foreign Project');
+      expect(html).not.toContain('Not mine');
+      expect(html).not.toContain(money(99999));
     });
 
-    it("should exclude another subcontractor's reports under the same client", async () => {
-      const sibling = await createProject('Sibling Project');
-      await seedDefaultReport();
-      await seedReport({
-        projectId: sibling.id,
-        subcontractorId: otherSubcontractorId,
-        date: MONTH,
-        profitMargin: 10,
-        incomes: [88888],
+    it('should render an empty tag cell for an untagged entry', async () => {
+      const report = await seedReport({
+        incomes: [{ amount: 5000, tag: null }],
       });
+      reportId = report.id;
 
       const html = await renderHtml();
 
-      expect(html).toContain('Tower A');
-      expect(html).not.toContain('Sibling Project');
+      expect(html).toContain(money(5000));
+      expect(html).toContain('<td></td>');
     });
 
-    it('should exclude reports from the adjacent months', async () => {
-      const before = await createProject('April Project');
-      const after = await createProject('June Project');
-      await seedDefaultReport();
-      await seedReport({
-        projectId: before.id,
-        subcontractorId,
-        date: PREVIOUS_MONTH,
-        profitMargin: 10,
-        incomes: [1000],
+    it('should escape HTML in a tag', async () => {
+      const report = await seedReport({
+        incomes: [{ amount: 5000, tag: '<b>bold</b> & "quoted"' }],
       });
-      await seedReport({
-        projectId: after.id,
-        subcontractorId,
-        date: NEXT_MONTH,
-        profitMargin: 10,
-        incomes: [2000],
-      });
+      reportId = report.id;
 
       const html = await renderHtml();
 
-      expect(html).toContain('Tower A');
-      expect(html).not.toContain('April Project');
-      expect(html).not.toContain('June Project');
+      expect(html).toContain(
+        '&lt;b&gt;bold&lt;/b&gt; &amp; &quot;quoted&quot;',
+      );
+      expect(html).not.toContain('<b>bold</b>');
     });
 
-    it('should throw NoReportsForExportError when nothing matches', async () => {
+    it('should throw NoReportsForExportError for an unknown report', async () => {
+      reportId = 'does-not-exist';
+
       await expect(
         service.exportProjectReportsPdf(exportDto()),
       ).rejects.toThrow(NoReportsForExportError);
@@ -387,7 +337,7 @@ describe('PDF Export Integration Tests', () => {
   });
 
   // ==========================================================================
-  // VAT resolution — carry-forward is invisible to the mocked unit spec
+  // VAT resolution — the month comes from the report, not the caller
   // ==========================================================================
 
   describe('VAT resolution', () => {
@@ -417,8 +367,30 @@ describe('PDF Export Integration Tests', () => {
 
       const html = await renderHtml();
 
-      // Still the 18% baseline, not June's 25%.
       expect(html).toContain(money(11800));
+      expect(html).not.toContain(money(12500));
+    });
+
+    it("should resolve against the report's own month", async () => {
+      // A rate effective in April must apply to an April report even though a
+      // newer one exists for May — the caller never names a month.
+      const april = await createProject('April Tower');
+      const report = await seedReport({
+        projectId: april.id,
+        date: PREVIOUS_MONTH,
+        incomes: [{ amount: 10000 }],
+      });
+      reportId = report.id;
+      await prisma.vatRate.create({
+        data: { effectiveMonth: new Date(PREVIOUS_MONTH), percentage: 20 },
+      });
+      await prisma.vatRate.create({
+        data: { effectiveMonth: new Date(MONTH), percentage: 25 },
+      });
+
+      const html = await renderHtml();
+
+      expect(html).toContain(money(12000));
       expect(html).not.toContain(money(12500));
     });
 
@@ -436,59 +408,43 @@ describe('PDF Export Integration Tests', () => {
   // ==========================================================================
 
   describe('Financial roll-up', () => {
-    it('should aggregate a multi-entry report into one approved amount', async () => {
-      await seedReport({
-        projectId,
-        subcontractorId,
-        date: MONTH,
-        profitMargin: 10,
-        incomes: [4000, 6000],
+    it('should total the income entries', async () => {
+      const report = await seedReport({
+        incomes: [{ amount: 4000 }, { amount: 6000 }],
       });
+      reportId = report.id;
 
       const html = await renderHtml();
 
       expect(html).toContain(money(10000));
     });
 
-    it('should flatten supplier rows across every report in the month', async () => {
+    it('should list supplier rows and their total', async () => {
       const plumbing = await prisma.corporation.create({
         data: { name: 'Plumbing Ltd' },
       });
-      const second = await createProject('Tower B');
-      await seedReport({
-        projectId,
-        subcontractorId,
-        date: MONTH,
-        profitMargin: 10,
-        incomes: [10000],
-        corporationPayments: [{ corporationId, amount: 1000 }],
+      const report = await seedReport({
+        incomes: [{ amount: 10000 }],
+        corporationPayments: [
+          { corporationId, amount: 1000 },
+          { corporationId: plumbing.id, amount: 2500 },
+        ],
       });
-      await seedReport({
-        projectId: second.id,
-        subcontractorId,
-        date: MONTH,
-        profitMargin: 10,
-        incomes: [20000],
-        corporationPayments: [{ corporationId: plumbing.id, amount: 2500 }],
-      });
+      reportId = report.id;
 
       const html = await renderHtml();
 
       expect(html).toContain('Flooring Ltd');
       expect(html).toContain('Plumbing Ltd');
-      // Total deductions = 1,000 + 2,500
       expect(html).toContain(money(3500));
     });
 
-    it('should compute payable excl. and incl. VAT from the month totals', async () => {
-      await seedReport({
-        projectId,
-        subcontractorId,
-        date: MONTH,
-        profitMargin: 10,
-        incomes: [10000],
+    it('should compute payable excl. and incl. VAT', async () => {
+      const report = await seedReport({
+        incomes: [{ amount: 10000 }],
         corporationPayments: [{ corporationId, amount: 1000 }],
       });
+      reportId = report.id;
 
       const html = await renderHtml();
 
@@ -497,53 +453,23 @@ describe('PDF Export Integration Tests', () => {
       // 8,000 + 18%
       expect(html).toContain(money(9440));
     });
-  });
 
-  // ==========================================================================
-  // Tags — the join the mocked unit spec can only fake
-  // ==========================================================================
-
-  describe('Subcontractor payment tags', () => {
-    const seedPayment = async (
-      tag: string | null,
-      amount = 100,
-      serviceDate = MONTH,
-    ) =>
-      prisma.subcontractorPayment.create({
-        data: {
-          subcontractorId,
-          projectId,
-          amount,
-          serviceDate: new Date(serviceDate),
-          tag,
-        },
+    it('should render both payable figures inside the highlighted block', async () => {
+      const report = await seedReport({
+        incomes: [{ amount: 10000 }],
+        corporationPayments: [{ corporationId, amount: 1000 }],
       });
-
-    beforeEach(seedDefaultReport);
-
-    it("should render the month's tag in the project row", async () => {
-      await seedPayment('Concrete');
+      reportId = report.id;
 
       const html = await renderHtml();
 
-      expect(html).toContain('Concrete');
-    });
-
-    it('should join several tags for one project', async () => {
-      await seedPayment('Concrete');
-      await seedPayment('Rebar', 200);
-
-      const html = await renderHtml();
-
-      expect(html).toContain('Concrete · Rebar');
-    });
-
-    it('should ignore a payment recorded in a different month', async () => {
-      await seedPayment('April work', 100, PREVIOUS_MONTH);
-
-      const html = await renderHtml();
-
-      expect(html).not.toContain('April work');
+      // Both payable rows share one navy block; the sub-totals above stay plain.
+      const block = html.slice(html.indexOf('summary-payable'));
+      expect(block).toContain(money(8000));
+      expect(block).toContain(money(9440));
+      expect(block.indexOf(money(8000))).toBeLessThan(
+        block.indexOf(money(9440)),
+      );
     });
   });
 
@@ -576,6 +502,25 @@ describe('PDF Export Integration Tests', () => {
       ).rejects.toThrow(CompanySettingsIncompleteError);
     });
 
+    it('should render the description in the header when set', async () => {
+      await prisma.companySettings.update({
+        where: { id: SETTINGS_ID },
+        data: { description: 'Main contractor for residential builds' },
+      });
+
+      const html = await renderHtml();
+
+      expect(html).toContain(
+        '<div class="contractor-desc">Main contractor for residential builds</div>',
+      );
+    });
+
+    it('should omit the description block when unset', async () => {
+      const html = await renderHtml();
+
+      expect(html).not.toContain('<div class="contractor-desc">');
+    });
+
     it('should join a full address as "street, city"', async () => {
       await prisma.companySettings.update({
         where: { id: SETTINGS_ID },
@@ -597,18 +542,6 @@ describe('PDF Export Integration Tests', () => {
 
       expect(html).toContain('HaHaroshet 5');
       expect(html).not.toContain('HaHaroshet 5,');
-    });
-
-    it('should render a city-only address without a leading comma', async () => {
-      await prisma.companySettings.update({
-        where: { id: SETTINGS_ID },
-        data: { addressStreet: null, addressCity: 'Ashkelon' },
-      });
-
-      const html = await renderHtml();
-
-      expect(html).toContain('Ashkelon');
-      expect(html).not.toContain(', Ashkelon');
     });
 
     it('should embed the logo and signature data URLs when present', async () => {
@@ -659,21 +592,22 @@ describe('PDF Export Integration Tests', () => {
       expect(html).toContain('dir="rtl"');
     });
 
-    it('should escape HTML in free text and entity names', async () => {
-      await prisma.client.update({
-        where: { id: clientId },
-        data: { name: '<script>alert(1)</script>' },
-      });
+    it('should append the project name to the approved-for line', async () => {
+      const html = await renderHtml({ approvedFor: 'Shell works' });
 
+      expect(html).toContain('Shell works');
+      expect(html).toContain('Tower A');
+    });
+
+    it('should escape HTML in the approved-for text', async () => {
       const html = await renderHtml({
         approvedFor: 'Works & "extras" <b>bold</b>',
       });
 
-      expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
-      expect(html).not.toContain('<script>alert(1)</script>');
       expect(html).toContain(
         'Works &amp; &quot;extras&quot; &lt;b&gt;bold&lt;/b&gt;',
       );
+      expect(html).not.toContain('<b>bold</b>');
     });
   });
 
@@ -685,9 +619,7 @@ describe('PDF Export Integration Tests', () => {
     const url = '/api/v1/projects/reports/export-pdf';
 
     const body = (overrides: Record<string, unknown> = {}) => ({
-      subcontractorId,
-      clientId,
-      month: MONTH,
+      projectReportId: reportId,
       approvedFor: 'Shell works',
       lang: 'en',
       ...overrides,
@@ -696,11 +628,11 @@ describe('PDF Export Integration Tests', () => {
     beforeEach(seedDefaultReport);
 
     it('should reject an unauthenticated request', async () => {
-      await request(httpServer).post(url).send(body()).expect(401);
+      await request(app.getHttpServer()).post(url).send(body()).expect(401);
     });
 
     it('should stream the PDF with download headers', async () => {
-      const response = await request(httpServer)
+      const response = await request(app.getHttpServer())
         .post(url)
         .set('Authorization', `Bearer ${token}`)
         .send(body())
@@ -708,6 +640,7 @@ describe('PDF Export Integration Tests', () => {
         .expect(200);
 
       expect(response.headers['content-type']).toContain('application/pdf');
+      // The filename's month comes from the report, not the request.
       expect(response.headers['content-disposition']).toBe(
         'attachment; filename="account-approval-2026-05.pdf"',
       );
@@ -717,22 +650,28 @@ describe('PDF Export Integration Tests', () => {
       expect((response.body as Buffer).toString('latin1')).toBe('%PDF');
     });
 
-    it('should normalize a mid-month date to the month start', async () => {
-      const response = await request(httpServer)
+    it("should name the file after the report's own month", async () => {
+      const april = await createProject('April Tower');
+      const report = await seedReport({
+        projectId: april.id,
+        date: PREVIOUS_MONTH,
+        incomes: [{ amount: 1000 }],
+      });
+
+      const response = await request(app.getHttpServer())
         .post(url)
         .set('Authorization', `Bearer ${token}`)
-        .send(body({ month: '2026-05-17T09:30:00.000Z' }))
+        .send(body({ projectReportId: report.id }))
         .responseType('blob')
         .expect(200);
 
-      // The report is dated the 1st — finding it at all proves the transform ran.
-      expect(response.headers['content-disposition']).toContain('2026-05');
+      expect(response.headers['content-disposition']).toContain('2026-04');
     });
 
     it('should map a missing VAT rate to 400', async () => {
       await prisma.vatRate.deleteMany();
 
-      await request(httpServer)
+      await request(app.getHttpServer())
         .post(url)
         .set('Authorization', `Bearer ${token}`)
         .send(body())
@@ -745,29 +684,29 @@ describe('PDF Export Integration Tests', () => {
         data: { companyNumber: null },
       });
 
-      await request(httpServer)
+      await request(app.getHttpServer())
         .post(url)
         .set('Authorization', `Bearer ${token}`)
         .send(body())
         .expect(400);
     });
 
-    it('should map no matching reports to 404', async () => {
-      await request(httpServer)
+    it('should map an unknown report to 404', async () => {
+      await request(app.getHttpServer())
         .post(url)
         .set('Authorization', `Bearer ${token}`)
-        .send(body({ clientId: otherClientId }))
+        .send(body({ projectReportId: 'nope' }))
         .expect(404);
     });
 
     it.each([
+      ['a missing projectReportId', { projectReportId: undefined }],
       ['a missing approvedFor', { approvedFor: undefined }],
       ['an over-long approvedFor', { approvedFor: 'x'.repeat(501) }],
       ['an unsupported language', { lang: 'fr' }],
-      ['a non-ISO month', { month: 'not-a-date' }],
       ['an unknown property', { nope: true }],
     ])('should reject %s with 400', async (_label, overrides) => {
-      await request(httpServer)
+      await request(app.getHttpServer())
         .post(url)
         .set('Authorization', `Bearer ${token}`)
         .send(body(overrides))
