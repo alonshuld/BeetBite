@@ -179,40 +179,6 @@ describe("ProjectReportsPage", () => {
     expect(screen.getByText("Flooring Ltd")).toBeInTheDocument();
   });
 
-  it("shows the subcontractor payment tag when the payment carries one", () => {
-    setMonthlyPayments([
-      {
-        subcontractor: { id: "s1", name: "Bob the Builder" },
-        amountPaid: 6500,
-        payments: [
-          {
-            id: "i1",
-            projectId: "p1",
-            amount: 6500,
-            isPaid: true,
-            tag: "Materials",
-          },
-        ],
-      },
-    ]);
-    renderPage();
-    expect(screen.getByText("Materials")).toBeInTheDocument();
-  });
-
-  it("shows no tag when the payment has none", () => {
-    setMonthlyPayments([
-      {
-        subcontractor: { id: "s1", name: "Bob the Builder" },
-        amountPaid: 6500,
-        payments: [
-          { id: "i1", projectId: "p1", amount: 6500, isPaid: true, tag: null },
-        ],
-      },
-    ]);
-    renderPage();
-    expect(screen.queryByText("Materials")).not.toBeInTheDocument();
-  });
-
   it("shows the empty state when there is no report for the month", () => {
     setListReports([]);
     setDetail(undefined);

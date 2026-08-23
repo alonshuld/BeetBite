@@ -10,7 +10,6 @@ export interface SubcontractorMonthlyData {
     projectId: string;
     amount: number;
     isPaid: boolean;
-    tag: string | null;
   }[];
 }
 
@@ -19,7 +18,6 @@ export interface CreateSubcontractorPaymentDto {
   projectId: string;
   serviceDate: string;
   amount: number;
-  tag?: string | null;
 }
 
 export interface UpdateSubcontractorPaymentDto {
@@ -28,7 +26,6 @@ export interface UpdateSubcontractorPaymentDto {
   serviceDate: string;
   amount: number;
   isPaid?: boolean;
-  tag?: string | null;
 }
 
 export interface SubcontractorPaymentResponse {
@@ -38,17 +35,12 @@ export interface SubcontractorPaymentResponse {
   serviceDate: string;
   amount: number;
   isPaid: boolean;
-  tag: string | null;
 }
 
 export const subcontractorPaymentsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getSubcontractorPayments: build.query<SubcontractorMonthlyData[], string>({
       query: (month) => `/subcontractors/payments?month=${month}-01`,
-      providesTags: ["SubcontractorPayments"],
-    }),
-    getSubcontractorPaymentTags: build.query<string[], void>({
-      query: () => "/subcontractor-payments/tags",
       providesTags: ["SubcontractorPayments"],
     }),
     createSubcontractorPayment: build.mutation<
@@ -85,7 +77,6 @@ export const subcontractorPaymentsApi = baseApi.injectEndpoints({
 
 export const {
   useGetSubcontractorPaymentsQuery,
-  useGetSubcontractorPaymentTagsQuery,
   useCreateSubcontractorPaymentMutation,
   useUpdateSubcontractorPaymentMutation,
   useDeleteSubcontractorPaymentMutation,

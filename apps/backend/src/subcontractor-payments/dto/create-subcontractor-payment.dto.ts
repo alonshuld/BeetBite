@@ -1,13 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import {
-  IsISO8601,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  MaxLength,
-} from 'class-validator';
+import { IsISO8601, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 import { normalizeToMonthStartForTransform } from 'src/common/utils/date.utils';
 
 export class CreateSubcontractorPaymentDto {
@@ -44,15 +37,4 @@ export class CreateSubcontractorPaymentDto {
     description: 'The amount of the payment',
   })
   amount!: number;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  @ApiProperty({
-    example: 'Materials',
-    description: 'Short free-text label describing what the payment covers',
-    required: false,
-    nullable: true,
-  })
-  tag?: string | null;
 }

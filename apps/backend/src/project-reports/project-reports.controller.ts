@@ -81,11 +81,7 @@ export class ProjectReportsController {
     @Param('reportId') reportId: string,
     @Body() dto: CreateIncomeEntryDto,
   ): Promise<IncomeEntryResponseDto> {
-    return await this.projectReportsService.addIncomeEntry(
-      reportId,
-      dto.amount,
-      dto.incomeDate,
-    );
+    return await this.projectReportsService.addIncomeEntry(reportId, dto);
   }
 
   @Put('/projects/reports/income-entries/:id')

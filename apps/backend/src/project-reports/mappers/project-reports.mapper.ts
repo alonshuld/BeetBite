@@ -7,6 +7,7 @@ type IncomeEntryRaw = {
   id: string;
   amount: Prisma.Decimal;
   incomeDate: Date | null;
+  tag: string | null;
 };
 
 type CorporationPaymentRaw = {
@@ -21,6 +22,7 @@ function mapIncomeEntries(entries: IncomeEntryRaw[]): IncomeEntryResponseDto[] {
     id: e.id,
     amount: e.amount.toNumber(),
     incomeDate: e.incomeDate?.toISOString() ?? null,
+    tag: e.tag,
   }));
 }
 
