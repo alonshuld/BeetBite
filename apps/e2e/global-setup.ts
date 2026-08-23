@@ -146,6 +146,8 @@ export default async function globalSetup(): Promise<void> {
     env: backendEnv,
     stdio: 'pipe',
     shell: false,
+    // Own process group, so teardown can signal the whole tree at once.
+    detached: process.platform !== 'win32',
   });
   global.__E2E_BACKEND__ = backend;
 
@@ -173,6 +175,11 @@ export default async function globalSetup(): Promise<void> {
       env: frontendEnv,
       stdio: 'pipe',
       shell: process.platform === 'win32',
+      // `pnpm dev` forks sh → vite, and signalling only the pnpm wrapper
+      // orphans vite still holding :5174 — which makes the *next* local run
+      // fail at every page.goto. Detaching puts the tree in one process group
+      // that global-teardown can signal as a unit.
+      detached: process.platform !== 'win32',
     },
   );
   global.__E2E_FRONTEND__ = frontend;

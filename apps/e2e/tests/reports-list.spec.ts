@@ -189,15 +189,18 @@ dbTest.describe('Reports list', () => {
       void db;
       await openClient(page);
 
-      // 40,000 income − 10% profit − no corporation payments.
-      await expect(page.getByText(/36,000/)).toBeVisible();
+      // 40,000 income − 10% profit − no corporation payments. The same figure
+      // also appears on the project sheet, so scope to the header total.
+      await expect(page.getByText(/Total Sub Payments:/)).toContainText(
+        '36,000',
+      );
     },
   );
 
   dbTest(
     'creating a report from this page adds it to the grid',
     async ({ page, db }) => {
-      await db.subcontractor.create({
+      const newSub = await db.subcontractor.create({
         data: { name: 'New Worker', companyNumber: '515222012' },
       });
       const newProject = await db.project.create({
@@ -214,6 +217,11 @@ dbTest.describe('Reports list', () => {
 
       await page.selectOption('#report-client', clientId);
       await page.selectOption('#report-project', newProject.id);
+      // The service only skips its previous-month lookup when BOTH the
+      // subcontractor and the profit margin are supplied. This project has no
+      // earlier report to inherit either from, so omitting one 404s.
+      await page.selectOption('#report-subcontractor', newSub.id);
+      await page.fill('#report-profit-margin', '10');
       // handleSave bails unless at least one income entry carries an amount.
       await page.getByLabel('Income (₪)').fill('12000');
       await page.getByRole('button', { name: 'Save' }).click();

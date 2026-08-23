@@ -29,7 +29,7 @@ dbTest.describe('Settings — company profile', () => {
     await page.fill('#company-name', 'Renamed Contracting');
     await page.fill('#company-description', 'Groundworks specialists');
     await page.fill('#company-number', '515777666');
-    await page.fill('#company-phone', '03-1234567');
+    await page.fill('#company-phone', '+972508887777');
     await page.fill('#company-email', 'office@example.com');
     await page.fill('#company-address-street', 'HaHaroshet 5');
     await page.fill('#company-address-city', 'Ashkelon');
@@ -44,7 +44,7 @@ dbTest.describe('Settings — company profile', () => {
         name: 'Renamed Contracting',
         description: 'Groundworks specialists',
         companyNumber: '515777666',
-        phone: '03-1234567',
+        phone: '+972508887777',
         email: 'office@example.com',
         addressStreet: 'HaHaroshet 5',
         addressCity: 'Ashkelon',
@@ -53,13 +53,13 @@ dbTest.describe('Settings — company profile', () => {
   });
 
   dbTest('stores a blanked optional field as null', async ({ page, db }) => {
-    await page.fill('#company-phone', '03-1234567');
+    await page.fill('#company-phone', '+972508887777');
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(async () => {
       const settings = await db.companySettings.findUnique({
         where: { id: COMPANY_SETTINGS_ID },
       });
-      expect(settings.phone).toBe('03-1234567');
+      expect(settings.phone).toBe('+972508887777');
     }).toPass({ timeout: 5000 });
 
     await page.fill('#company-phone', '   ');
