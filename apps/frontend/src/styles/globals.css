@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --beet: oklch(52% 0.22 5);
+  --beet-bright: oklch(62% 0.20 5);
+  --beet-dim: oklch(40% 0.18 5);
+  --beet-glow: oklch(52% 0.22 5 / 0.14);
+  --rose: oklch(60% 0.16 350);
+  --bg: oklch(96% 0.006 350);
+  --surface: oklch(100% 0 0);
+  --surface2: oklch(93% 0.008 350);
+  --surface3: oklch(88% 0.010 350);
+  --border: oklch(72% 0.015 350 / 0.55);
+  --text: oklch(15% 0.012 350);
+  --text-muted: oklch(42% 0.012 350);
+  --text-dim: oklch(60% 0.010 350);
+  --success: oklch(55% 0.18 145);
+  --warning: oklch(60% 0.18 75);
+  --danger: oklch(52% 0.22 25);
+  --badge-success-border: oklch(55% 0.18 145 / 0.30);
+  --badge-warning-border: oklch(60% 0.18 75 / 0.30);
+  --badge-danger-border: oklch(52% 0.22 25 / 0.30);
+  --badge-beet-border: oklch(52% 0.22 5 / 0.30);
+  --sidebar-w: 240px;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+[data-theme="dark"] {
+  --beet: oklch(52% 0.22 5);
+  --beet-bright: oklch(62% 0.20 5);
+  --beet-dim: oklch(40% 0.18 5);
+  --beet-glow: oklch(52% 0.22 5 / 0.18);
+  --rose: oklch(70% 0.16 350);
+  --bg: oklch(10% 0.015 350);
+  --surface: oklch(14% 0.018 350);
+  --surface2: oklch(17% 0.018 350);
+  --surface3: oklch(21% 0.018 350);
+  --border: oklch(28% 0.02 350 / 0.6);
+  --text: oklch(92% 0.008 350);
+  --text-muted: oklch(58% 0.012 350);
+  --text-dim: oklch(40% 0.01 350);
+  --success: oklch(68% 0.18 145);
+  --warning: oklch(75% 0.18 75);
+  --danger: oklch(58% 0.22 25);
+  --badge-success-border: oklch(68% 0.18 145 / 0.55);
+  --badge-warning-border: oklch(75% 0.18 75 / 0.55);
+  --badge-danger-border: oklch(58% 0.22 25 / 0.55);
+  --badge-beet-border: oklch(52% 0.22 5 / 0.55);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Heebo", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+body {
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+}
+
+/* Grain overlay */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.6;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--beet-dim);
+}
+
+/* RTL */
+[dir="rtl"] {
+  font-family: "Heebo", sans-serif;
+}
+
+[dir="rtl"] th,
+[dir="rtl"] td {
+  text-align: right;
+}
+
+[dir="rtl"] .modal-footer {
+  flex-direction: row-reverse;
+}

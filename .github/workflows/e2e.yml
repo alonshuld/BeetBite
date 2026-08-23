@@ -1,0 +1,58 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # The backend under test renders PDFs through Puppeteer, but global-setup.ts
+  # points it at the Chromium installed below by Playwright — so Puppeteer's own
+  # download (uncached, ~150MB every run) is pure waste.
+  PUPPETEER_SKIP_DOWNLOAD: "true"
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build backend
+        run: pnpm --filter backend build
+
+      - name: Install Playwright browsers
+        run: pnpm --filter e2e exec playwright install chromium --with-deps
+
+      - name: Run E2E tests
+        run: pnpm test:e2e
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: true
+          TESTCONTAINERS_CHECKS_DISABLE: true
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/e2e/playwright-report/
+          retention-days: 7

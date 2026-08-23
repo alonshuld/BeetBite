@@ -142,3 +142,18 @@ vite.config.ts.timestamp-*
 
 # pnpm files
 .pnpm-store
+# Generated files (Prisma client etc.) — keep frontend API schema
+**/generated/
+!apps/frontend/src/api/generated/
+
+.vscode/
+
+.agents/
+.claude/
+# Emitted by `tsc -b` for tsconfig.node.json (see its outDir)
+apps/frontend/vite.config.js
+apps/frontend/vite.config.d.ts
+
+# Playwright run output
+test-results/
+playwright-report/
