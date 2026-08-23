@@ -195,6 +195,8 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
   }
   .summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
   .summary-row.total { font-weight: 700; font-size: 14px; border-top: 1px solid rgba(255,255,255,0.3); margin-top: 6px; padding-top: 8px; }
+  /* The two payable rows read as one block: only the first carries the divider. */
+  .summary-row.total + .summary-row.total { border-top: none; margin-top: 0; padding-top: 4px; }
   .footer {
     margin-top: 40px;
     display: flex;
@@ -261,7 +263,7 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     <div class="summary-row"><span>${t.totalIncome}</span><span>${money(data.totalIncome)}</span></div>
     <div class="summary-row"><span>${t.totalAfterProfit}</span><span>${money(data.totalAfterProfit)}</span></div>
     <div class="summary-row"><span>${t.totalDeductions}</span><span>${money(data.supplierTotal)}</span></div>
-    <div class="summary-row"><span>${t.paymentExclVat}</span><span>${money(data.paymentExclVat)}</span></div>
+    <div class="summary-row total"><span>${t.paymentExclVat}</span><span>${money(data.paymentExclVat)}</span></div>
     <div class="summary-row total"><span>${t.paymentInclVat}</span><span>${money(data.paymentInclVat)}</span></div>
   </div>
 
