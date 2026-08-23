@@ -191,7 +191,9 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     border-radius: 6px;
     padding: 16px 20px;
     width: 320px;
-    margin-inline-start: auto;
+    /* Physical, not logical: the summary sits on the right in both
+       directions, so RTL must not mirror it to the left. */
+    margin-left: auto;
   }
   .summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
   .summary-row.total { font-weight: 700; font-size: 14px; border-top: 1px solid rgba(255,255,255,0.3); margin-top: 6px; padding-top: 8px; }
