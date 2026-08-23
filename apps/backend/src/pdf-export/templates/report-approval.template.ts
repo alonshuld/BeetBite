@@ -41,6 +41,7 @@ const LABELS = {
   he: {
     subtitlePrefix: 'אישור חשבון – חודש',
     client: 'שם המזמין',
+    project: 'פרויקט',
     tag: 'תיאור',
     mainContractor: 'קבלן ראשי',
     subcontractor: 'קבלן משנה',
@@ -64,6 +65,7 @@ const LABELS = {
   en: {
     subtitlePrefix: 'Account Approval –',
     client: 'Client',
+    project: 'Project',
     tag: 'Tag',
     mainContractor: 'Main Contractor',
     subcontractor: 'Subcontractor',
@@ -233,7 +235,7 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
   <table>
     <thead>
       <tr>
-        <th></th>
+        <th>${t.project}</th>
         <th>${t.tag}</th>
         <th>${t.approvedAmount}</th>
         <th>${t.invoiceInclVat}</th>
