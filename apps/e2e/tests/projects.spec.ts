@@ -213,7 +213,10 @@ dbTest.describe('Projects CRUD', () => {
     await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: 'Future' }).click();
 
-    await page.locator(`#done-${project.id}`).click();
+    // The Toggle atom hides the real checkbox (`sr-only`) behind the visible
+    // track, so clicking the input directly is intercepted — click its label,
+    // which is what a user actually hits.
+    await page.locator(`label[for="done-${project.id}"]`).click();
 
     await expect(async () => {
       const updated = await db.project.findUnique({
