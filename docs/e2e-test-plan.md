@@ -1,10 +1,11 @@
 # E2E test plan — next round
 
 A plan for extending BeetBite's end-to-end coverage, with the PDF project-report
-export as the headline addition. Nothing here is implemented yet; this document
-is the shopping list and the order to work through it.
+export as the headline addition.
 
-Written against `dev` (`212eb51`).
+Written against `dev` (`212eb51`). **Parts A0–A2 and B1–B4, B6 are implemented**;
+see *Implementation notes* at the end for the two places reality diverged from
+the plan. Section headings carry a status marker — ✅ done, ⬜ not started.
 
 ---
 
@@ -55,7 +56,7 @@ HTTP response headers, DTO validation, and the whole browser journey.
 
 ## 2. Part A — PDF project-report export
 
-### A0. Infrastructure that must land first
+### A0. Infrastructure that must land first ✅
 
 Four blockers. None of the PDF tests below can be written until these are done.
 
@@ -140,7 +141,7 @@ A1.
 
 ---
 
-### A1. `apps/backend/test/pdf-export.e2e-spec.ts` — new integration spec
+### A1. `apps/backend/test/pdf-export.e2e-spec.ts` — new integration spec ✅
 
 The highest-value new file in this plan. Real Postgres testcontainer, real
 services, real template; puppeteer mocked so the HTML handed to `setContent` can
@@ -214,7 +215,7 @@ be asserted. This is where the export's *correctness* gets pinned down.
 
 ---
 
-### A2. `apps/e2e/tests/pdf-export.spec.ts` — new Playwright spec
+### A2. `apps/e2e/tests/pdf-export.spec.ts` — new Playwright spec ✅
 
 The user journey from `/subcontractor-payments`. Seeds mirror the existing
 `subcontractor-payments.spec.ts` beforeEach.
@@ -263,7 +264,7 @@ relies on the A0.2 restore.
 
 ## 3. Part B — the rest of the e2e gaps
 
-### B1. `tests/reports-list.spec.ts` — `/reports`
+### B1. `tests/reports-list.spec.ts` — `/reports` ✅
 
 The largest untested page in the app.
 
@@ -278,7 +279,7 @@ The largest untested page in the app.
   profit and issues no write (PR #42's headline guarantee, currently unverified)
 - Empty state and Add button on a month with no reports
 
-### B2. `tests/settings.spec.ts`
+### B2. `tests/settings.spec.ts` ✅
 
 `/settings/company`:
 
@@ -298,7 +299,7 @@ The largest untested page in the app.
 - Carry-forward through the UI: set 17% effective 2026-01, then confirm 2026-05
   resolves to 17%
 
-### B3. `tests/onboarding.spec.ts`
+### B3. `tests/onboarding.spec.ts` ✅
 
 - With the settings row deleted, any authenticated route redirects to
   `/onboarding`
@@ -308,7 +309,7 @@ The largest untested page in the app.
 
 Needs the A0.2 restore, since it deletes the singleton every route depends on.
 
-### B4. `tests/i18n.spec.ts`
+### B4. `tests/i18n.spec.ts` ✅
 
 - Toggling to Hebrew sets `document.documentElement.dir = "rtl"` and translates
   the sidebar
@@ -316,7 +317,7 @@ Needs the A0.2 restore, since it deletes the singleton every route depends on.
 - A representative table right-aligns under RTL
 - The sidebar active indicator moves to the other edge
 
-### B5. Filling in the thin existing files
+### B5. Filling in the thin existing files ⬜ (partial)
 
 | File | Add |
 | --- | --- |
@@ -326,7 +327,7 @@ Needs the A0.2 restore, since it deletes the singleton every route depends on.
 | `clients` / `subcontractors` / `corporations` | Delete-while-referenced-by-a-report behaviour |
 | `auth.spec.ts` (7) | Garbage or expired token → redirect to `/login`; a mid-session 401 clears the token (the `baseQueryWithReauth` logout branch) |
 
-### B6. Cross-cutting
+### B6. Cross-cutting ✅ — `tests/routing.spec.ts`
 
 - An unknown route renders `NotFoundPage`, not the app shell
 - `ErrorPage` renders on a router error
@@ -375,3 +376,82 @@ assert only structural validity.
 ("nothing in CI drives a real browser") stops being true with this work. A0.3
 resolves it by sharing Playwright's binary; the comment should be updated in the
 same change so the next reader isn't misled.
+
+---
+
+## 6. Implementation notes
+
+Two things turned out differently once the plan met the code.
+
+### The real-render test cannot live in Jest
+
+A1 originally carried a test that un-mocked puppeteer and rendered a real PDF.
+That is impossible: **puppeteer v25 ships ESM only** — its `package.json`
+resolves both the `import` and the `require` condition to the same ES module —
+and Jest's CommonJS loader cannot `requireActual` it (`SyntaxError: Unexpected
+token 'export'`). The application itself is fine, because Node 22 supports
+`require(esm)`; it is specifically Jest's own module registry that cannot.
+
+So the layering shifted:
+
+- `pdf-export.e2e-spec.ts` stubs puppeteer outright and asserts the **HTML**.
+  This is where every figure, scoping rule and escaping rule is pinned down.
+- `apps/e2e/tests/pdf-export.spec.ts` is now the **only** place a real PDF is
+  produced — the Playwright suite runs the backend as an ordinary Node process,
+  where the ESM import works. `fixtures/pdf.ts` checks the downloaded bytes are
+  a structurally valid single-page PDF.
+
+This is a better split than the original anyway: the browser launch happens once
+per relevant test in the layer that already owns a browser, instead of being
+bolted onto a Jest run.
+
+### A 500 that should have been a 400
+
+A1's "reject a non-ISO month" case failed on first run — the API returned **500**,
+not 400. The cause is in the DTO, not the test:
+
+```ts
+@Transform(({ value }: { value: string }) => normalizeToMonthStart(value))
+```
+
+`normalizeToMonthStart` throws `new Error('Invalid date')` on unparseable input.
+class-transformer runs the transform *before* validation, so the throw escapes
+the `ValidationPipe` as an unhandled error — the `@IsISO8601()` sitting right
+next to it never gets a chance to report the problem. Any malformed date string
+crashed the request instead of being rejected.
+
+This was not specific to the PDF export: the same one-line pattern appears in
+**six DTOs** — `create-project-report`, `export-project-reports-pdf`,
+`create-subcontractor-payment`, `update-subcontractor-payment`,
+`upsert-vat-rate`, and the shared `month-query`. Every date-carrying endpoint
+answered malformed input with a 500.
+
+Fixed centrally with a transform-safe wrapper in `date.utils.ts`:
+
+```ts
+export const normalizeToMonthStartForTransform = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value;
+  try {
+    return normalizeToMonthStart(value);
+  } catch {
+    return value;
+  }
+};
+```
+
+Unparseable input now falls through untouched and the field's own
+`@IsISO8601()` rejects it as a 400. `normalizeToMonthStart` keeps throwing for
+its non-DTO caller (`VatRatesService.resolveForMonth`), where a bad date really
+is a programming error.
+
+### Remaining work
+
+**B5** is the only section not built. The fill-ins for `corporation-payments`,
+`income`, and the delete-while-referenced cases across the CRUD specs are still
+open; `projects.spec.ts` and `auth.spec.ts` have their additions drafted.
+
+One thing worth fixing while in here, though it is not a test gap:
+`global-teardown.ts` kills the recorded frontend PID, which is the `pnpm`
+wrapper — the `vite` grandchild survives. It does not bite CI, where every job
+is a fresh runner, but it makes two consecutive local suite runs fail in a way
+that looks like a broken test rather than a stale port.

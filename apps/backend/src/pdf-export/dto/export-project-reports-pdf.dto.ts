@@ -8,7 +8,7 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
-import { normalizeToMonthStart } from 'src/common/utils/date.utils';
+import { normalizeToMonthStartForTransform } from 'src/common/utils/date.utils';
 
 // Requests a monthly account-approval PDF for one subcontractor's reports under one client.
 export class ExportProjectReportsPdfDto {
@@ -30,7 +30,9 @@ export class ExportProjectReportsPdfDto {
   clientId!: string;
 
   @IsISO8601()
-  @Transform(({ value }: { value: string }) => normalizeToMonthStart(value))
+  @Transform(({ value }: { value: unknown }) =>
+    normalizeToMonthStartForTransform(value),
+  )
   @ApiProperty({
     example: '2026-03-01T00:00:00.000Z',
     description: 'A date within the month to export',

@@ -16,9 +16,11 @@ permissions:
   contents: read
 
 env:
-  # Nothing in CI drives a real browser (the PDF-export specs mock puppeteer),
-  # and puppeteer's Chromium lands in ~/.cache/puppeteer, which setup-node's
-  # pnpm-store cache does not cover — so it would be re-downloaded every job.
+  # No job in this workflow drives a real browser — the unit specs mock
+  # puppeteer, and the suite that does render PDFs runs in e2e.yml against
+  # Playwright's Chromium. Puppeteer's own download lands in ~/.cache/puppeteer,
+  # which setup-node's pnpm-store cache does not cover, so it would otherwise be
+  # re-fetched every job.
   PUPPETEER_SKIP_DOWNLOAD: "true"
 
 jobs:
