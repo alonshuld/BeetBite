@@ -186,19 +186,24 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     margin: 20px 0 8px;
   }
   .summary-box {
-    background: #1f2a44;
-    color: #fff;
-    border-radius: 6px;
-    padding: 16px 20px;
     width: 320px;
     /* Physical, not logical: the summary sits on the right in both
        directions, so RTL must not mirror it to the left. */
     margin-left: auto;
   }
-  .summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
-  .summary-row.total { font-weight: 700; font-size: 14px; border-top: 1px solid rgba(255,255,255,0.3); margin-top: 6px; padding-top: 8px; }
-  /* The two payable rows read as one block: only the first carries the divider. */
-  .summary-row.total + .summary-row.total { border-top: none; margin-top: 0; padding-top: 4px; }
+  /* Shared horizontal padding keeps the plain rows column-aligned with the
+     highlighted ones, even though only the latter carry a background. */
+  .summary-row { display: flex; justify-content: space-between; padding: 4px 20px; font-size: 12px; }
+  /* Only the two payable figures are called out; the sub-totals above them
+     stay plain, like the rest of the document. */
+  .summary-payable {
+    background: #1f2a44;
+    color: #fff;
+    border-radius: 6px;
+    padding: 10px 0;
+    margin-top: 8px;
+  }
+  .summary-row.total { font-weight: 700; font-size: 14px; }
   .footer {
     margin-top: 40px;
     display: flex;
@@ -265,8 +270,10 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     <div class="summary-row"><span>${t.totalIncome}</span><span>${money(data.totalIncome)}</span></div>
     <div class="summary-row"><span>${t.totalAfterProfit}</span><span>${money(data.totalAfterProfit)}</span></div>
     <div class="summary-row"><span>${t.totalDeductions}</span><span>${money(data.supplierTotal)}</span></div>
-    <div class="summary-row total"><span>${t.paymentExclVat}</span><span>${money(data.paymentExclVat)}</span></div>
-    <div class="summary-row total"><span>${t.paymentInclVat}</span><span>${money(data.paymentInclVat)}</span></div>
+    <div class="summary-payable">
+      <div class="summary-row total"><span>${t.paymentExclVat}</span><span>${money(data.paymentExclVat)}</span></div>
+      <div class="summary-row total"><span>${t.paymentInclVat}</span><span>${money(data.paymentInclVat)}</span></div>
+    </div>
   </div>
 
   <div class="footer">
