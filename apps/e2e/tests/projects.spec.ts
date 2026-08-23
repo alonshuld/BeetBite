@@ -162,4 +162,64 @@ dbTest.describe('Projects CRUD', () => {
       void closedProject;
     },
   );
+
+  dbTest('duplicate project name rejected', async ({ page, db }) => {
+    const client = await db.client.findFirst({
+      where: { name: 'E2E Test Client' },
+    });
+    await db.project.create({
+      data: {
+        clientId: client.id,
+        name: 'Taken Name',
+        estimatedAmount: 1000,
+        description: 'Already here',
+      },
+    });
+
+    await page.goto(`${BASE}/projects`);
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: 'Future' }).click();
+    await page
+      .getByRole('button', { name: /add project/i })
+      .first()
+      .click();
+
+    await page.fill('#proj-name', 'Taken Name');
+    await page.selectOption('#proj-client', { value: client.id });
+    await page.fill('#proj-desc', 'Duplicate attempt');
+    await page.fill('#proj-amount', '5000');
+    await page.getByRole('button', { name: /save/i }).click();
+
+    await expect(page.getByText(/already exists/i)).toBeVisible({
+      timeout: 5000,
+    });
+    expect(await db.project.findMany()).toHaveLength(1);
+  });
+
+  dbTest('isDone toggle persists immediately', async ({ page, db }) => {
+    const client = await db.client.findFirst({
+      where: { name: 'E2E Test Client' },
+    });
+    const project = await db.project.create({
+      data: {
+        clientId: client.id,
+        name: 'Toggle Project',
+        estimatedAmount: 1000,
+        description: 'Toggle test',
+      },
+    });
+
+    await page.goto(`${BASE}/projects`);
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: 'Future' }).click();
+
+    await page.locator(`#done-${project.id}`).click();
+
+    await expect(async () => {
+      const updated = await db.project.findUnique({
+        where: { id: project.id },
+      });
+      expect(updated.isDone).toBe(true);
+    }).toPass({ timeout: 5000 });
+  });
 });

@@ -3,8 +3,22 @@ import * as path from 'path';
 
 const STATE_FILE = path.resolve(__dirname, '.test-state.json');
 
+/**
+ * Signals a whole process group, falling back to the single process.
+ *
+ * `pnpm dev` forks sh → vite, so signalling just the recorded pid leaves vite
+ * running and holding :5174. global-setup spawns both servers detached, which
+ * makes each one a group leader whose group id equals its pid — so a negative
+ * pid reaches the children too.
+ */
 function killProcess(pid: number | undefined): void {
   if (!pid) return;
+  try {
+    process.kill(-pid, 'SIGTERM');
+    return;
+  } catch {
+    // Not a group leader (or already gone) — fall through to the plain kill.
+  }
   try {
     process.kill(pid, 'SIGTERM');
   } catch {
@@ -14,12 +28,8 @@ function killProcess(pid: number | undefined): void {
 
 export default async function globalTeardown(): Promise<void> {
   // Kill backend and frontend using global references (same process as setup)
-  if (global.__E2E_BACKEND__) {
-    global.__E2E_BACKEND__.kill('SIGTERM');
-  }
-  if (global.__E2E_FRONTEND__) {
-    global.__E2E_FRONTEND__.kill('SIGTERM');
-  }
+  killProcess(global.__E2E_BACKEND__?.pid);
+  killProcess(global.__E2E_FRONTEND__?.pid);
 
   // Fallback: read PIDs from state file
   if (fs.existsSync(STATE_FILE)) {

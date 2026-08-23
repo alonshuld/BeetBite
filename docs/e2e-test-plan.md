@@ -444,14 +444,34 @@ Unparseable input now falls through untouched and the field's own
 its non-DTO caller (`VatRatesService.resolveForMonth`), where a bad date really
 is a programming error.
 
+### Orphaned dev servers between local runs
+
+`global-teardown.ts` signalled the recorded frontend PID — the `pnpm` wrapper —
+so the `vite` grandchild survived and kept holding `:5174`. The next local run
+then failed at every `page.goto`, which reads as a suite-wide breakage rather
+than a stale port. It never bit CI, where each job gets a fresh runner, but it
+cost three confusing runs here.
+
+Fixed: `global-setup.ts` now spawns both servers `detached`, making each a
+process-group leader, and `global-teardown.ts` signals the group (`-pid`) with a
+fall-back to the bare pid.
+
+### Two things the new tests taught us about the API
+
+Both surfaced as failures in the first full run, and both are correct backend
+behaviour that the tests simply had to respect:
+
+- **Creating a report for a project with no history needs both inherited
+  fields.** `ProjectReportsService.create` only skips its previous-month lookup
+  when `profitMargin` *and* `subcontractorId` are both supplied. Supplying one
+  still sends it looking for last month's report, which a brand-new project does
+  not have — so it 404s.
+- **`@IsPhoneNumber()` really does check allocated ranges.** `+972501234567`
+  looks like a fine Israeli mobile and is rejected; `+972508887777` is accepted.
+  Test fixtures need numbers from ranges that actually exist.
+
 ### Remaining work
 
 **B5** is the only section not built. The fill-ins for `corporation-payments`,
 `income`, and the delete-while-referenced cases across the CRUD specs are still
 open; `projects.spec.ts` and `auth.spec.ts` have their additions drafted.
-
-One thing worth fixing while in here, though it is not a test gap:
-`global-teardown.ts` kills the recorded frontend PID, which is the `pnpm`
-wrapper — the `vite` grandchild survives. It does not bite CI, where every job
-is a fresh runner, but it makes two consecutive local suite runs fail in a way
-that looks like a broken test rather than a stale port.
