@@ -179,17 +179,13 @@ export class SubcontractorPaymentsService {
           }
 
           return tx.subcontractorPayment.create({
-            data: {
-              ...createSubcontractorPaymentDto,
-              tag: createSubcontractorPaymentDto.tag?.trim() || null,
-            },
+            data: createSubcontractorPaymentDto,
             select: {
               id: true,
               projectId: true,
               serviceDate: true,
               amount: true,
               isPaid: true,
-              tag: true,
               subcontractor: {
                 select: {
                   id: true,
@@ -239,7 +235,6 @@ export class SubcontractorPaymentsService {
               serviceDate: true,
               amount: true,
               isPaid: true,
-              tag: true,
             },
           },
         },
@@ -290,7 +285,6 @@ export class SubcontractorPaymentsService {
                 serviceDate: true,
                 amount: true,
                 isPaid: true,
-                tag: true,
               },
             },
           },
@@ -343,8 +337,8 @@ export class SubcontractorPaymentsService {
     id: string,
     updateSubcontractorPaymentDto: UpdateSubcontractorPaymentDto,
   ): Promise<SubcontractorPaymentResponseDto> {
-    // A tag-only or isPaid-only update omits `amount`, so there is no new
-    // total to validate and the overpayment guard is skipped.
+    // An isPaid-only update omits `amount`, so there is no new total to
+    // validate and the overpayment guard is skipped.
     const isMetadataOnlyUpdate =
       updateSubcontractorPaymentDto.amount === undefined;
 
@@ -395,21 +389,13 @@ export class SubcontractorPaymentsService {
 
           return tx.subcontractorPayment.update({
             where: { id },
-            data: {
-              ...updateSubcontractorPaymentDto,
-              // Only touch the tag when the caller actually sent one, so an
-              // isPaid-only update cannot silently wipe an existing tag.
-              ...(updateSubcontractorPaymentDto.tag !== undefined && {
-                tag: updateSubcontractorPaymentDto.tag?.trim() || null,
-              }),
-            },
+            data: updateSubcontractorPaymentDto,
             select: {
               id: true,
               projectId: true,
               serviceDate: true,
               amount: true,
               isPaid: true,
-              tag: true,
               subcontractor: {
                 select: {
                   id: true,
@@ -433,54 +419,6 @@ export class SubcontractorPaymentsService {
       }
       throw error;
     }
-  }
-
-  /**
-   * List the tags most recently used on subcontractor payments.
-   * Powers the free-text autocomplete on the subcontractor payments screen.
-   * @returns Up to 50 distinct, non-empty tags, most recently used first
-   */
-  async findDistinctTags(): Promise<string[]> {
-    const payments = await this.prismaService.subcontractorPayment.findMany({
-      where: { tag: { not: null } },
-      distinct: ['tag'],
-      select: { tag: true },
-      orderBy: { serviceDate: 'desc' },
-      take: 50,
-    });
-
-    this.logger.log(`Retrieved ${payments.length} distinct payment tags`);
-
-    return payments
-      .map((payment) => payment.tag)
-      .filter((tag): tag is string => tag !== null);
-  }
-
-  /**
-   * Group the tags of one subcontractor's payments for a month by project.
-   * @param subcontractorId Subcontractor whose payments to read
-   * @param month A date within the service month, in ISO-8601 format
-   * @returns Project ID to its non-empty tags, projects without tags omitted
-   */
-  async findTagsByProject(
-    subcontractorId: string,
-    month: string,
-  ): Promise<Record<string, string[]>> {
-    const serviceDate = new Date(month);
-
-    const payments = await this.prismaService.subcontractorPayment.findMany({
-      where: { subcontractorId, serviceDate, tag: { not: null } },
-      select: { projectId: true, tag: true },
-    });
-
-    return payments.reduce<Record<string, string[]>>((acc, payment) => {
-      const tag = payment.tag?.trim();
-      if (!tag) return acc;
-
-      const tags = (acc[payment.projectId] ??= []);
-      if (!tags.includes(tag)) tags.push(tag);
-      return acc;
-    }, {});
   }
 
   async remove(id: string): Promise<void> {

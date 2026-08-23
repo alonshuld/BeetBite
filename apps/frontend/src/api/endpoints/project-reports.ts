@@ -4,6 +4,8 @@ export interface IncomeEntry {
   id: string;
   amount: number;
   incomeDate: string | null;
+  /** Short label for the work this income covers — badged on the export PDF. */
+  tag: string | null;
 }
 
 // Matches backend ProjectReportListItemDto
@@ -44,7 +46,7 @@ export interface CreateProjectReportDto {
   projectId: string;
   subcontractorId?: string;
   date: string; // ISO date "2024-06-01"
-  incomeEntries: { amount: number; incomeDate?: string }[];
+  incomeEntries: { amount: number; incomeDate?: string; tag?: string | null }[];
   profitMargin?: number;
   corporationPayments: {
     corporationId: string;

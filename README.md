@@ -47,11 +47,11 @@ The operator enters clients, projects, corporations and subcontractors once, the
 | --- | --- |
 | 📊 **Monthly project reports** | Multiple income entries per month, pending vs. received, per-report profit margin, attached corporation payments |
 | 💰 **Monthly income** | Income and profit rolled up per client and per project, with a grand total for the month |
-| 👷 **Subcontractor payouts** | Amount owed computed from reports; partial payments with a transactional overpayment guard and free-text tags |
+| 👷 **Subcontractor payouts** | Amount owed computed from reports; partial payments with a transactional overpayment guard |
 | 🏢 **Corporation payments** | Fixed amounts per project report, optional VAT %, and a "future" flag for work not yet invoiced |
 | 🏗️ **Project portfolio** | Active / future / closed filters, payment progress against the estimated amount, remaining balance |
 | 🧾 **VAT rates** | Month-effective VAT table, resolved per payment date |
-| 📄 **PDF export** | Subcontractor account-approval document rendered server-side with Puppeteer |
+| 📄 **PDF export** | Per-report account-approval document — one project, one month — rendered server-side with Puppeteer |
 | 🌐 **English + Hebrew** | Full RTL layout switch, light and dark themes, month-scoped navigation throughout |
 
 ---
@@ -68,9 +68,9 @@ Pick a client for the month and every project card shows its income entries (pen
 
 ### Subcontractor payments
 
-Amount owed is derived from the month's reports. Partial payments are recorded against a specific project, tagged, and rejected server-side if they would exceed what is owed — the check and the write happen inside one transaction.
+Amount owed is derived from the month's reports. Partial payments are recorded against a specific project and rejected server-side if they would exceed what is owed — the check and the write happen inside one transaction.
 
-<img src="docs/media/subcontractor-payments.gif" alt="Recording a tagged partial payment and watching the owed balance update" width="880">
+<img src="docs/media/subcontractor-payments.gif" alt="Recording a partial payment and watching the owed balance update" width="880">
 
 ### Monthly income and month-scoped navigation
 
@@ -133,6 +133,7 @@ erDiagram
     ProjectReportIncome {
         decimal amount
         date incomeDate "null = not received"
+        string tag "labels the work on the approval PDF"
     }
     CorporationPayment {
         decimal amount
@@ -142,7 +143,6 @@ erDiagram
     SubcontractorPayment {
         date serviceDate
         decimal amount
-        string tag
     }
 ```
 
@@ -272,6 +272,7 @@ Per app:
 pnpm --filter backend start:dev            # Nest watch mode
 pnpm --filter backend test:cov             # Jest coverage
 pnpm --filter backend exec prisma migrate dev
+pnpm --filter backend seed:demo:he         # Hebrew demo dataset (destructive)
 pnpm --filter frontend codegen             # regenerate API types (backend must be running)
 pnpm --filter frontend vitest run src/pages/ReportsPage.test.tsx
 pnpm --filter e2e exec playwright test --ui
@@ -296,10 +297,10 @@ All routes are prefixed `/api/v1` and require `Authorization: Bearer <token>` ex
 | Corporations | `POST/GET /corporations` · `GET/PUT/DELETE /corporations/:id` |
 | Corporation payments | `POST/GET /corporations/payments` · `GET /corporations/:corporationId/payments` · `PUT/DELETE /corporations/payments/:id` |
 | Subcontractors | `POST/GET /subcontractors` · `GET/PUT/DELETE /subcontractors/:id` |
-| Subcontractor payments | `POST/GET /subcontractors/payments` · `GET /subcontractors/:subcontractorId/payments` · `GET /subcontractor-payments/by-client?month=` · `GET /subcontractor-payments/tags` · `PUT/DELETE /subcontractors/payments/:id` |
+| Subcontractor payments | `POST/GET /subcontractors/payments` · `GET /subcontractors/:subcontractorId/payments` · `GET /subcontractor-payments/by-client?month=` · `PUT/DELETE /subcontractors/payments/:id` |
 | Company settings | `GET/PUT /company-settings` (singleton) |
 | VAT rates | `GET/PUT /vat-rates` · `GET /vat-rates/resolve` |
-| PDF export | `POST /projects/reports/export-pdf` |
+| PDF export | `POST /projects/reports/export-pdf` (one project report) |
 
 Validation is global and strict: unknown properties are rejected with 400 (`whitelist` + `forbidNonWhitelisted`), and error messages are suppressed in production.
 

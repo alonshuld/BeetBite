@@ -22,7 +22,6 @@ import {
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
-import { useGetSubcontractorPaymentsQuery } from "@/api/endpoints/subcontractor-payments";
 import { StatCard } from "@/components/molecules/StatCard";
 import {
   ButtonGhost,
@@ -65,8 +64,6 @@ export default function ProjectReportsPage() {
   const { data: projects = [] } = useGetProjectsQuery();
   const { data: subcontractors = [] } = useGetSubcontractorsQuery();
   const { data: corporations = [] } = useGetCorporationsQuery();
-  const { data: monthlyPayments = [] } =
-    useGetSubcontractorPaymentsQuery(month);
   const [createReport, { isLoading: creating }] =
     useCreateProjectReportMutation();
   const [updateReport, { isLoading: updating }] =
@@ -101,13 +98,6 @@ export default function ProjectReportsPage() {
     currentListReport?.id ?? "",
     { skip: !currentListReport },
   );
-
-  // The subcontractor's tag lives on the payment, not on the report, so it is
-  // read from the payments endpoint rather than widening the report response.
-  const subcontractorPaymentTag =
-    monthlyPayments
-      .find((mp) => mp.subcontractor.id === currentReport?.subcontractor.id)
-      ?.payments.find((p) => p.projectId === projectId && p.tag)?.tag ?? null;
 
   const [deleteReportOpen, setDeleteReportOpen] = useState(false);
 
@@ -713,11 +703,6 @@ export default function ProjectReportsPage() {
                 <span className="text-sm text-text">
                   {currentReport.subcontractor.name}
                 </span>
-                {subcontractorPaymentTag && (
-                  <span className="text-xs text-text-muted">
-                    {subcontractorPaymentTag}
-                  </span>
-                )}
               </div>
               <span className="text-success font-bold text-lg">
                 ₪{currentReport.subcontractor.payment.toLocaleString("he-IL")}

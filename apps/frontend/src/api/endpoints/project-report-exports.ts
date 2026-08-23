@@ -2,9 +2,7 @@ import { baseApi } from "@/api/baseApi";
 import type { Lang } from "@/contexts/langContext";
 
 export interface ExportProjectReportsPdfDto {
-  subcontractorId: string;
-  clientId: string;
-  month: string;
+  projectReportId: string;
   approvedFor: string;
   lang?: Lang;
 }

@@ -10,6 +10,7 @@ import {
   type ProjectReport,
   type CreateProjectReportDto,
 } from "@/api/endpoints/project-reports";
+import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
@@ -23,10 +24,12 @@ import {
   EmptyState,
   Input,
   Select,
+  Textarea,
 } from "@/components/atoms";
 import { FormModal } from "@/components/organisms/Modal";
 import { FormRow } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
+import { useToast } from "@/contexts/useToast";
 import { formatISODate } from "@/utils/formatMonth";
 
 interface CorpPaymentDraft {
@@ -38,6 +41,7 @@ interface CorpPaymentDraft {
 interface IncomeEntryDraft {
   amount: string;
   incomeDate: string;
+  tag: string;
 }
 
 function todayISO(): string {
@@ -55,6 +59,7 @@ export default function ReportsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { t, lang } = useLang();
+  const { toast } = useToast();
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
@@ -68,6 +73,8 @@ export default function ReportsPage() {
   const { data: corporations = [] } = useGetCorporationsQuery();
   const [createReport, { isLoading: saving }] =
     useCreateProjectReportMutation();
+  const [exportPdf, { isLoading: exporting }] =
+    useExportProjectReportsPdfMutation();
 
   const [simMargin, setSimMargin] = useState("");
 
@@ -77,10 +84,41 @@ export default function ReportsPage() {
   const [subcontractorId, setSubcontractorId] = useState("");
   const [reportMonth, setReportMonth] = useState(month);
   const [incomeEntries, setIncomeEntries] = useState<IncomeEntryDraft[]>([
-    { amount: "", incomeDate: "" },
+    { amount: "", incomeDate: "", tag: "" },
   ]);
   const [profitMarginPercent, setProfitMarginPercent] = useState("");
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
+
+  // Export is per report: a report is already one project for one month, so
+  // the only thing the dialog still asks for is the free-text approval line.
+  const [exportReport, setExportReport] = useState<ProjectReport | null>(null);
+  const [approvedFor, setApprovedFor] = useState("");
+
+  async function handleExport() {
+    if (!exportReport || !approvedFor.trim()) return;
+
+    try {
+      const blob = await exportPdf({
+        projectReportId: exportReport.id,
+        approvedFor: approvedFor.trim(),
+        lang,
+      }).unwrap();
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `account-approval-${month}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setExportReport(null);
+      toast(t("exportPdf"), "success");
+    } catch {
+      // The global RTK Query error listener already surfaces a toast with
+      // the server's message (missing company settings, VAT, no report).
+    }
+  }
 
   const clientsInReports = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>();
@@ -153,7 +191,7 @@ export default function ReportsPage() {
     setProjectId("");
     setSubcontractorId("");
     setReportMonth(month);
-    setIncomeEntries([{ amount: "", incomeDate: "" }]);
+    setIncomeEntries([{ amount: "", incomeDate: "", tag: "" }]);
     setProfitMarginPercent("");
     setCorpPayments([]);
     setModalOpen(true);
@@ -170,6 +208,7 @@ export default function ReportsPage() {
       incomeEntries: validEntries.map((e) => ({
         amount: Number(e.amount),
         incomeDate: e.incomeDate || undefined,
+        tag: e.tag.trim() || null,
       })),
       profitMargin: Number(profitMarginPercent) || undefined,
       corporationPayments: corpPayments
@@ -185,7 +224,10 @@ export default function ReportsPage() {
   }
 
   function addIncomeEntry() {
-    setIncomeEntries((prev) => [...prev, { amount: "", incomeDate: "" }]);
+    setIncomeEntries((prev) => [
+      ...prev,
+      { amount: "", incomeDate: "", tag: "" },
+    ]);
   }
 
   function removeIncomeEntry(idx: number) {
@@ -303,6 +345,10 @@ export default function ReportsPage() {
                     report={report}
                     lang={lang}
                     month={month}
+                    onExport={() => {
+                      setApprovedFor("");
+                      setExportReport(report);
+                    }}
                     onNavigate={() =>
                       void navigate(
                         `/reports/projects/${report.project.id}?month=${month}`,
@@ -491,6 +537,16 @@ export default function ReportsPage() {
                   }
                   className="flex-1"
                 />
+                <Input
+                  label={t("tag")}
+                  maxLength={100}
+                  placeholder={t("tagPlaceholder")}
+                  value={entry.tag}
+                  onChange={(e) =>
+                    updateIncomeEntry(i, { tag: e.target.value })
+                  }
+                  className="flex-1"
+                />
                 {incomeEntries.length > 1 && (
                   <ButtonDanger
                     onClick={() => removeIncomeEntry(i)}
@@ -566,6 +622,28 @@ export default function ReportsPage() {
           </div>
         </div>
       </FormModal>
+
+      <FormModal
+        open={exportReport !== null}
+        onClose={() => setExportReport(null)}
+        onSubmit={() => void handleExport()}
+        title={t("exportPdf")}
+        loading={exporting}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-text-muted">
+            {exportReport?.project.name}
+          </p>
+          <Textarea
+            id="export-approved-for"
+            label={t("approvedForLabel")}
+            placeholder={t("approvedForPlaceholder")}
+            value={approvedFor}
+            onChange={(e) => setApprovedFor(e.target.value)}
+            rows={3}
+          />
+        </div>
+      </FormModal>
     </div>
   );
 }
@@ -596,9 +674,15 @@ interface ProjectSheetProps {
   lang: string;
   month: string;
   onNavigate: () => void;
+  onExport: () => void;
 }
 
-function ProjectSheet({ report, lang, onNavigate }: ProjectSheetProps) {
+function ProjectSheet({
+  report,
+  lang,
+  onNavigate,
+  onExport,
+}: ProjectSheetProps) {
   const { t } = useLang();
 
   const profit = report.totalIncome * (report.profitMargin / 100);
@@ -617,6 +701,9 @@ function ProjectSheet({ report, lang, onNavigate }: ProjectSheetProps) {
         >
           {report.project.name}
         </button>
+        <ButtonGhost onClick={onExport} className="text-xs py-1 px-2">
+          {t("exportPdf")}
+        </ButtonGhost>
       </div>
 
       {report.incomeEntries.map((entry) => {
@@ -627,7 +714,9 @@ function ProjectSheet({ report, lang, onNavigate }: ProjectSheetProps) {
             className="flex justify-between items-center text-sm"
           >
             <div className="flex items-center gap-2">
-              <span className="text-text-muted">{t("income")}</span>
+              <span className="text-text-muted">
+                {entry.tag ?? t("income")}
+              </span>
               <Badge variant={isReceived ? "green" : "yellow"}>
                 {isReceived
                   ? `${t("received")} ${formatISODate(entry.incomeDate!, lang as "en" | "he")}`

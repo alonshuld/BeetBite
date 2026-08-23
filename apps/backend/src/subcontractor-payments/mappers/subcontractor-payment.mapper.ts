@@ -20,5 +20,4 @@ export const toSubcontractorPaymentResponse = (
   serviceDate: subcontractorPayment.serviceDate.toISOString(),
   amount: subcontractorPayment.amount.toNumber(),
   isPaid: subcontractorPayment.isPaid,
-  tag: subcontractorPayment.tag,
 });

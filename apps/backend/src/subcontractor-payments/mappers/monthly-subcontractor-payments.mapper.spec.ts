@@ -7,13 +7,12 @@ import {
 describe('monthly-subcontractor-payments mapper', () => {
   const serviceDate = new Date('2024-05-01T00:00:00.000Z');
 
-  const makePayment = (amount: number, tag: string | null = null) => ({
+  const makePayment = (amount: number) => ({
     id: `payment-${amount}`,
     projectId: 'project-1',
     serviceDate,
     amount: new Prisma.Decimal(String(amount)),
     isPaid: false,
-    tag,
   });
 
   const makeInput = (
@@ -51,20 +50,6 @@ describe('monthly-subcontractor-payments mapper', () => {
     it('should return zero amountPaid when there are no payments', () => {
       const result = toMonthlySubcontractorPaymentsResponse(makeInput([]));
       expect(result.amountPaid).toBe(0);
-    });
-
-    it('should map the tag onto nested payments', () => {
-      const result = toMonthlySubcontractorPaymentsResponse(
-        makeInput([makePayment(500, 'Materials')]),
-      );
-      expect(result.payments[0].tag).toBe('Materials');
-    });
-
-    it('should map a missing tag as null', () => {
-      const result = toMonthlySubcontractorPaymentsResponse(
-        makeInput([makePayment(500)]),
-      );
-      expect(result.payments[0].tag).toBeNull();
     });
 
     it('should not include paymentDate on nested payments', () => {
