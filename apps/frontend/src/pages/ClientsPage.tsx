@@ -27,8 +27,10 @@ export default function ClientsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
   const [name, setName] = useState("");
 
-  const filtered = clients.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()),
+  const query = search.trim().toLowerCase();
+
+  const filtered = clients.filter(
+    (c) => !query || c.name.toLowerCase().includes(query),
   );
 
   function openAdd() {
@@ -85,10 +87,10 @@ export default function ClientsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="👤"
-          title={search ? t("noResults") : t("noClientsYet")}
-          description={search ? undefined : t("addFirstClientHint")}
+          title={query ? t("noResults") : t("noClientsYet")}
+          description={query ? undefined : t("addFirstClientHint")}
           action={
-            !search ? (
+            !query ? (
               <ButtonPrimary onClick={openAdd}>
                 + {t("addClient")}
               </ButtonPrimary>

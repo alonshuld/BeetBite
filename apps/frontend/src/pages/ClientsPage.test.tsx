@@ -79,6 +79,22 @@ describe("ClientsPage", () => {
     expect(screen.getByText("No results")).toBeInTheDocument();
   });
 
+  it("matches search case-insensitively and ignores surrounding spaces", async () => {
+    renderClientsPage();
+    await userEvent.type(screen.getByRole("searchbox"), "  aCmE  ");
+    expect(screen.getByText("Acme Corp")).toBeInTheDocument();
+    expect(screen.queryByText("Beta LLC")).not.toBeInTheDocument();
+  });
+
+  it("restores rows when the search box is cleared", async () => {
+    renderClientsPage();
+    const box = screen.getByRole("searchbox");
+    await userEvent.type(box, "zzz");
+    expect(screen.queryByText("Acme Corp")).not.toBeInTheDocument();
+    await userEvent.clear(box);
+    expect(screen.getByText("Acme Corp")).toBeInTheDocument();
+  });
+
   it("opens add modal when add button clicked", async () => {
     renderClientsPage();
     await userEvent.click(screen.getByRole("button", { name: /add client/i }));

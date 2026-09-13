@@ -9,6 +9,7 @@ import {
 } from "@/api/endpoints/projects";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { PageHeader } from "@/components/molecules/PageHeader";
+import { SearchInput } from "@/components/molecules/SearchInput";
 import { FormGroup, FormRow } from "@/components/molecules/FormGroup";
 import { Input } from "@/components/atoms/Input";
 import { Select } from "@/components/atoms/Select";
@@ -98,6 +99,7 @@ export default function ProjectsPage() {
   const [progressSort, setProgressSort] = useState<"none" | "asc" | "desc">(
     "none",
   );
+  const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
@@ -107,6 +109,8 @@ export default function ProjectsPage() {
     setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
+  const query = search.trim().toLowerCase();
+
   const filtered = projects
     .filter((p) => {
       const status = projectStatus(p);
@@ -115,6 +119,12 @@ export default function ProjectsPage() {
       if (status === "closed" && filters.closed) return true;
       return false;
     })
+    .filter(
+      (p) =>
+        !query ||
+        p.name.toLowerCase().includes(query) ||
+        (p.client?.name ?? "").toLowerCase().includes(query),
+    )
     .slice()
     .sort((a, b) => {
       if (progressSort === "none") return 0;
@@ -216,6 +226,12 @@ export default function ProjectsPage() {
 
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
+          <SearchInput
+            placeholder={t("search")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
+          />
           <FilterToggle
             label={t("active")}
             active={filters.active}
@@ -245,10 +261,12 @@ export default function ProjectsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="🏗️"
-          title={t("noProjectsMatchFilters")}
-          description={t("tryTogglingFilters")}
+          title={query ? t("noResults") : t("noProjectsMatchFilters")}
+          description={query ? undefined : t("tryTogglingFilters")}
           action={
-            <ButtonGhost onClick={openAdd}>+ {t("addProject")}</ButtonGhost>
+            query ? undefined : (
+              <ButtonGhost onClick={openAdd}>+ {t("addProject")}</ButtonGhost>
+            )
           }
         />
       ) : (

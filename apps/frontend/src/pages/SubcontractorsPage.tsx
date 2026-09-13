@@ -31,8 +31,13 @@ export default function SubcontractorsPage() {
   const [name, setName] = useState("");
   const [companyNumber, setCompanyNumber] = useState("");
 
-  const filtered = subcontractors.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()),
+  const query = search.trim().toLowerCase();
+
+  const filtered = subcontractors.filter(
+    (s) =>
+      !query ||
+      s.name.toLowerCase().includes(query) ||
+      s.companyNumber.toLowerCase().includes(query),
   );
 
   function openAdd() {
@@ -98,10 +103,10 @@ export default function SubcontractorsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="🔧"
-          title={search ? t("noResults") : t("noSubcontractorsYet")}
-          description={search ? undefined : t("addFirstSubcontractorHint")}
+          title={query ? t("noResults") : t("noSubcontractorsYet")}
+          description={query ? undefined : t("addFirstSubcontractorHint")}
           action={
-            !search ? (
+            !query ? (
               <ButtonPrimary onClick={openAdd}>
                 + {t("addSubcontractor")}
               </ButtonPrimary>

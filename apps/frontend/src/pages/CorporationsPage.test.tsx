@@ -73,6 +73,28 @@ describe("CorporationsPage", () => {
     expect(screen.queryByText("Local Ltd")).not.toBeInTheDocument();
   });
 
+  it("matches search case-insensitively and ignores surrounding spaces", async () => {
+    renderCorporationsPage();
+    await userEvent.type(screen.getByRole("searchbox"), "  gLoBaL  ");
+    expect(screen.getByText("Global Inc")).toBeInTheDocument();
+    expect(screen.queryByText("Local Ltd")).not.toBeInTheDocument();
+  });
+
+  it("shows no results empty state when search has no matches", async () => {
+    renderCorporationsPage();
+    await userEvent.type(screen.getByRole("searchbox"), "zzz");
+    expect(screen.getByText("No results")).toBeInTheDocument();
+  });
+
+  it("restores rows when the search box is cleared", async () => {
+    renderCorporationsPage();
+    const box = screen.getByRole("searchbox");
+    await userEvent.type(box, "zzz");
+    expect(screen.queryByText("Global Inc")).not.toBeInTheDocument();
+    await userEvent.clear(box);
+    expect(screen.getByText("Global Inc")).toBeInTheDocument();
+  });
+
   it("opens add modal when add button clicked", async () => {
     renderCorporationsPage();
     await userEvent.click(

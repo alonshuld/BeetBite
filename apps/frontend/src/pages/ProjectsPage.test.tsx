@@ -144,6 +144,59 @@ describe("ProjectsPage", () => {
     expect(screen.getByText(/permanently delete/i)).toBeInTheDocument();
   });
 
+  it("renders a search box", () => {
+    renderProjectsPage();
+    expect(screen.getByRole("searchbox")).toBeInTheDocument();
+  });
+
+  it("filters projects by name", async () => {
+    renderProjectsPage();
+    await userEvent.click(screen.getByRole("button", { name: "Future" }));
+    await userEvent.type(screen.getByRole("searchbox"), "Tower");
+    expect(screen.getByText("Tower Block")).toBeInTheDocument();
+    expect(screen.queryByText("Bridge Repair")).not.toBeInTheDocument();
+  });
+
+  it("filters projects by client name", async () => {
+    renderProjectsPage();
+    await userEvent.click(screen.getByRole("button", { name: "Future" }));
+    await userEvent.type(screen.getByRole("searchbox"), "Acme");
+    expect(screen.getByText("Tower Block")).toBeInTheDocument();
+    expect(screen.queryByText("Bridge Repair")).not.toBeInTheDocument();
+  });
+
+  it("matches search case-insensitively and ignores surrounding spaces", async () => {
+    renderProjectsPage();
+    await userEvent.type(screen.getByRole("searchbox"), "  tOwEr  ");
+    expect(screen.getByText("Tower Block")).toBeInTheDocument();
+  });
+
+  it("applies search on top of status filters", async () => {
+    renderProjectsPage();
+    // "Bridge Repair" is a future project, hidden by the default Active filter
+    await userEvent.type(screen.getByRole("searchbox"), "Bridge");
+    expect(screen.queryByText("Bridge Repair")).not.toBeInTheDocument();
+    expect(screen.getByText("No results")).toBeInTheDocument();
+  });
+
+  it("shows no results empty state when search has no matches", async () => {
+    renderProjectsPage();
+    await userEvent.type(screen.getByRole("searchbox"), "zzz");
+    expect(screen.getByText("No results")).toBeInTheDocument();
+    expect(
+      screen.queryByText("No projects match selected filters"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("restores rows when the search box is cleared", async () => {
+    renderProjectsPage();
+    const box = screen.getByRole("searchbox");
+    await userEvent.type(box, "zzz");
+    expect(screen.queryByText("Tower Block")).not.toBeInTheDocument();
+    await userEvent.clear(box);
+    expect(screen.getByText("Tower Block")).toBeInTheDocument();
+  });
+
   it("shows loading state", () => {
     vi.mocked(useGetProjectsQuery).mockReturnValue({
       data: [],

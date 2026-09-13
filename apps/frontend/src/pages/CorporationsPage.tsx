@@ -30,8 +30,10 @@ export default function CorporationsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Corporation | null>(null);
   const [name, setName] = useState("");
 
-  const filtered = corporations.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()),
+  const query = search.trim().toLowerCase();
+
+  const filtered = corporations.filter(
+    (c) => !query || c.name.toLowerCase().includes(query),
   );
 
   function openAdd() {
@@ -90,10 +92,10 @@ export default function CorporationsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="🏛️"
-          title={search ? t("noResults") : t("noCorporationsYet")}
-          description={search ? undefined : t("addFirstCorporationHint")}
+          title={query ? t("noResults") : t("noCorporationsYet")}
+          description={query ? undefined : t("addFirstCorporationHint")}
           action={
-            !search ? (
+            !query ? (
               <ButtonPrimary onClick={openAdd}>
                 + {t("addCorporation")}
               </ButtonPrimary>
