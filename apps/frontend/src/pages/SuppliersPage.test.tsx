@@ -56,7 +56,7 @@ describe("SuppliersPage", () => {
   it("renders page title", () => {
     renderSuppliersPage();
     expect(
-      screen.getByRole("heading", { name: "Suppliers" }),
+      screen.getByRole("heading", { name: "Manpower / Suppliers" }),
     ).toBeInTheDocument();
   });
 
@@ -98,15 +98,15 @@ describe("SuppliersPage", () => {
   it("opens add modal when add button clicked", async () => {
     renderSuppliersPage();
     await userEvent.click(
-      screen.getByRole("button", { name: /add supplier/i }),
+      screen.getByRole("button", { name: /add manpower \/ supplier/i }),
     );
-    expect(screen.getByText("Add Supplier")).toBeInTheDocument();
+    expect(screen.getByText("Add Manpower / Supplier")).toBeInTheDocument();
   });
 
   it("opens edit modal with supplier name prefilled", async () => {
     renderSuppliersPage();
     await userEvent.click(screen.getAllByTitle("Edit")[0]);
-    expect(screen.getByText("Edit Supplier")).toBeInTheDocument();
+    expect(screen.getByText("Edit Manpower / Supplier")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Global Inc")).toBeInTheDocument();
   });
 
@@ -116,7 +116,9 @@ describe("SuppliersPage", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useGetSuppliersQuery>);
     renderSuppliersPage();
-    expect(screen.getByText("No suppliers yet")).toBeInTheDocument();
+    expect(
+      screen.getByText("No manpower or suppliers yet"),
+    ).toBeInTheDocument();
   });
 
   it("shows loading state", () => {

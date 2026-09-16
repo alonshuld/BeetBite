@@ -9,7 +9,7 @@ dbTest.describe('Suppliers CRUD', () => {
     await page.waitForLoadState('networkidle');
 
     await page
-      .getByRole('button', { name: /add supplier/i })
+      .getByRole('button', { name: /add manpower \/ supplier/i })
       .first()
       .click();
     await page.fill('#corp-name', 'Automation Corp');
@@ -65,7 +65,7 @@ dbTest.describe('Suppliers CRUD', () => {
     await page.waitForLoadState('networkidle');
 
     await page
-      .getByRole('button', { name: /add supplier/i })
+      .getByRole('button', { name: /add manpower \/ supplier/i })
       .first()
       .click();
     await page.fill('#corp-name', 'Unique Corp');

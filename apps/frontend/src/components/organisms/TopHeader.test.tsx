@@ -35,7 +35,7 @@ describe("TopHeader", () => {
 
   it("renders page title for /suppliers route", () => {
     renderTopHeader("/suppliers");
-    expect(screen.getByText("Suppliers")).toBeInTheDocument();
+    expect(screen.getByText("Manpower / Suppliers")).toBeInTheDocument();
   });
 
   it("shows month picker on /income route", () => {

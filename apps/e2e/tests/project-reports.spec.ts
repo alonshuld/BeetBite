@@ -635,8 +635,10 @@ dbTest.describe('Project Reports — inline supplier payment operations', () => 
       await page.goto(`${BASE}/reports/projects/${project.id}`);
       await page.waitForLoadState('networkidle');
 
-      // Click inline "+ Supplier Payments"
-      await page.getByRole('button', { name: /\+ Supplier Payments/i }).click();
+      // Click inline "+ Manpower / Supplier Payments"
+      await page
+        .getByRole('button', { name: /\+ Manpower \/ Supplier Payments/i })
+        .click();
 
       // Fill inline form
       await page

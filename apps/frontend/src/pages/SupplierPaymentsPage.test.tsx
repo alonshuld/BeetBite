@@ -114,7 +114,7 @@ describe("SupplierPaymentsPage", () => {
   it("renders page title", () => {
     renderSupplierPaymentsPage();
     expect(
-      screen.getByRole("heading", { name: "Supplier Payments" }),
+      screen.getByRole("heading", { name: "Manpower / Supplier Payments" }),
     ).toBeInTheDocument();
   });
 
@@ -144,7 +144,9 @@ describe("SupplierPaymentsPage", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useGetSupplierPaymentsByMonthQuery>);
     renderSupplierPaymentsPage();
-    expect(screen.getByText(/No supplier payments for/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/No manpower \/ supplier payments for/i),
+    ).toBeInTheDocument();
   });
 
   // FIXED: old test looked for count "1" per corp — page now shows a flat table

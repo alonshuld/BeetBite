@@ -72,7 +72,7 @@ dbTest.describe('Supplier Payments Page', () => {
       await page.waitForLoadState('networkidle');
 
       // Should show empty state (no payments in fresh test DB for the selected month)
-      const emptyState = page.getByText(/no supplier payments/i);
+      const emptyState = page.getByText(/no manpower \/ supplier payments/i);
       const table = page.locator('table');
 
       const hasTable = await table.isVisible().catch(() => false);
