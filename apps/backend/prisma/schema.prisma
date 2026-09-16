@@ -89,6 +89,9 @@ model SupplierPayment {
   description     String?
   isFuture        Boolean   @default(false)
   vatPercentage   Decimal?  @db.Decimal(5, 2)
+  /// Whether the money has actually left. A stack of paperwork is usually
+  /// settled as one transfer, so this is also toggled per supplier per month.
+  isPaid          Boolean   @default(false)
 
   projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
   supplier      Supplier      @relation(fields: [supplierId], references: [id], onDelete: Cascade)
