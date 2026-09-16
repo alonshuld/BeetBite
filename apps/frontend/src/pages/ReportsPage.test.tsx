@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import ReportsPage from "./ReportsPage";
@@ -190,5 +190,61 @@ describe("ReportsPage", () => {
     expect(
       screen.getByRole("heading", { name: "Add Project Reports" }),
     ).toBeInTheDocument();
+  });
+
+  // T13 — total income per client, beside the existing subcontractor total.
+  describe("client income total", () => {
+    it("shows total income beside total subcontractor payments in the header", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+
+      // Scoped to the client header — "Total Income" also labels a tile row, so
+      // a page-wide query would match either and prove nothing about placement.
+      const subcontractorTotal = screen.getByText(/Total Sub Payments/);
+      const header = subcontractorTotal.closest("div")?.parentElement;
+      expect(header).not.toBeNull();
+      expect(within(header!).getByText(/Total Income/)).toBeInTheDocument();
+    });
+
+    it("totals income across the client's reports for the month", async () => {
+      setReports([
+        ...mockReports,
+        {
+          id: "r2",
+          date: "2025-03-01",
+          project: {
+            id: "p2",
+            name: "Riverside",
+            client: { id: "c1", name: "Acme Corp" },
+          },
+          subcontractor: { id: "s1", name: "Bob the Builder" },
+          totalIncome: 5000,
+          profitMargin: 20,
+          supplierPayments: [],
+          incomeEntries: [
+            { id: "ie3", amount: 5000, incomeDate: "2025-03-10", tag: null },
+          ],
+        },
+      ]);
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+
+      // 10000 + 5000, rendered with he-IL grouping.
+      expect(screen.getByText("₪15,000")).toBeInTheDocument();
+    });
+
+    it("shows zero rather than blank when the client has no income", async () => {
+      setReports([
+        {
+          ...mockReports[0],
+          totalIncome: 0,
+          incomeEntries: [],
+        },
+      ]);
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+
+      expect(screen.getAllByText("₪0").length).toBeGreaterThan(0);
+    });
   });
 });
