@@ -5,6 +5,7 @@ import { UpdateClientDto } from './dto/update-client.dto';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
 import { ClientAlreadyExistsError } from './errors/client-already-exists.exception';
+import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
 import { ClientNotFoundError } from './errors/client-not-found.exception';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -19,6 +20,9 @@ describe('ClientsService', () => {
       update: jest.fn(),
       delete: jest.fn(),
       count: jest.fn(),
+    },
+    projectClientAssignment: {
+      findMany: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -226,104 +230,62 @@ describe('ClientsService', () => {
     const CLIENT_ID = 'clh0000000000000000000001';
     const mockClient = { id: CLIENT_ID, name: 'Test Client' };
 
-    interface TxMock {
-      project: { findMany: jest.Mock; deleteMany: jest.Mock };
-      projectReport: { findMany: jest.Mock; deleteMany: jest.Mock };
-      projectReportIncome: { deleteMany: jest.Mock };
-      supplierPayment: { deleteMany: jest.Mock };
-      subcontractorPayment: { deleteMany: jest.Mock };
-      client: { delete: jest.Mock };
-    }
-
-    let txMock: TxMock;
-    let callOrder: string[];
-
-    beforeEach(() => {
-      callOrder = [];
-      txMock = {
-        project: {
-          findMany: jest.fn().mockImplementation(() => {
-            callOrder.push('project.findMany');
-            return Promise.resolve([{ id: 'project-1' }]);
-          }),
-          deleteMany: jest.fn().mockImplementation(() => {
-            callOrder.push('project.deleteMany');
-            return Promise.resolve({ count: 1 });
-          }),
-        },
-        projectReport: {
-          findMany: jest.fn().mockImplementation(() => {
-            callOrder.push('projectReport.findMany');
-            return Promise.resolve([{ id: 'report-1' }]);
-          }),
-          deleteMany: jest.fn().mockImplementation(() => {
-            callOrder.push('projectReport.deleteMany');
-            return Promise.resolve({ count: 1 });
-          }),
-        },
-        projectReportIncome: {
-          deleteMany: jest.fn().mockImplementation(() => {
-            callOrder.push('projectReportIncome.deleteMany');
-            return Promise.resolve({ count: 1 });
-          }),
-        },
-        supplierPayment: {
-          deleteMany: jest.fn().mockImplementation(() => {
-            callOrder.push('supplierPayment.deleteMany');
-            return Promise.resolve({ count: 0 });
-          }),
-        },
-        subcontractorPayment: {
-          deleteMany: jest.fn().mockImplementation(() => {
-            callOrder.push('subcontractorPayment.deleteMany');
-            return Promise.resolve({ count: 0 });
-          }),
-        },
-        client: {
-          delete: jest.fn().mockImplementation(() => {
-            callOrder.push('client.delete');
-            return Promise.resolve(mockClient);
-          }),
-        },
-      };
-    });
-
-    it('should delete a client and cascade all related records', async () => {
+    it('should delete a client that has never owned a project', async () => {
       mockPrismaService.client.findUnique.mockResolvedValue(mockClient);
-      mockPrismaService.$transaction.mockImplementation(
-        (cb: (tx: TxMock) => Promise<void>) => cb(txMock),
-      );
+      mockPrismaService.projectClientAssignment.findMany.mockResolvedValue([]);
 
       const result = await service.remove(CLIENT_ID);
 
       expect(result).toBeUndefined();
-      expect(mockPrismaService.client.findUnique).toHaveBeenCalledWith({
-        where: { id: CLIENT_ID },
-      });
-      expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(1);
-      expect(txMock.client.delete).toHaveBeenCalledWith({
+      expect(mockPrismaService.client.delete).toHaveBeenCalledWith({
         where: { id: CLIENT_ID },
       });
     });
 
-    it('should cascade deletes in the correct dependency order', async () => {
+    it('should refuse to delete a client that currently owns a project', async () => {
       mockPrismaService.client.findUnique.mockResolvedValue(mockClient);
-      mockPrismaService.$transaction.mockImplementation(
-        (cb: (tx: TxMock) => Promise<void>) => cb(txMock),
-      );
-
-      await service.remove(CLIENT_ID);
-
-      expect(callOrder).toEqual([
-        'project.findMany',
-        'projectReport.findMany',
-        'projectReportIncome.deleteMany',
-        'supplierPayment.deleteMany',
-        'projectReport.deleteMany',
-        'subcontractorPayment.deleteMany',
-        'project.deleteMany',
-        'client.delete',
+      mockPrismaService.projectClientAssignment.findMany.mockResolvedValue([
+        { project: { name: 'Jerusalem Centre' } },
       ]);
+
+      await expect(service.remove(CLIENT_ID)).rejects.toThrow(
+        EntityHasRelatedRecordsError,
+      );
+      expect(mockPrismaService.client.delete).not.toHaveBeenCalled();
+    });
+
+    // 🔴 Regression test for a real data-loss bug. remove() used to hard-cascade
+    // through every project whose cached clientId was this client, deleting
+    // their reports, income entries and payments. Once a project can be
+    // transferred (T14) that cascade destroys months belonging to a *different*
+    // client. Deleting a client that has ever held a project must refuse.
+    it('should refuse to delete a client whose project has since been transferred away', async () => {
+      mockPrismaService.client.findUnique.mockResolvedValue(mockClient);
+      // The project now belongs to someone else, but this client still holds a
+      // past assignment on it — those months are this client's history and the
+      // project is not this client's to delete.
+      mockPrismaService.projectClientAssignment.findMany.mockResolvedValue([
+        { project: { name: 'Transferred Project' } },
+      ]);
+
+      await expect(service.remove(CLIENT_ID)).rejects.toThrow(
+        EntityHasRelatedRecordsError,
+      );
+      expect(mockPrismaService.client.delete).not.toHaveBeenCalled();
+    });
+
+    it('should name the projects standing in the way', async () => {
+      mockPrismaService.client.findUnique.mockResolvedValue(mockClient);
+      mockPrismaService.projectClientAssignment.findMany.mockResolvedValue([
+        { project: { name: 'Project B' } },
+        { project: { name: 'Project A' } },
+        // The same project appears once per assignment — it must be named once.
+        { project: { name: 'Project A' } },
+      ]);
+
+      await expect(service.remove(CLIENT_ID)).rejects.toThrow(
+        /Project A, Project B/,
+      );
     });
 
     it('should throw ClientNotFoundError when client does not exist', async () => {
@@ -332,7 +294,7 @@ describe('ClientsService', () => {
       await expect(service.remove(CLIENT_ID)).rejects.toThrow(
         ClientNotFoundError,
       );
-      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+      expect(mockPrismaService.client.delete).not.toHaveBeenCalled();
     });
   });
 });

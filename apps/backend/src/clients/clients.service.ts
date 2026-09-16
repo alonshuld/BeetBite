@@ -1,3 +1,4 @@
+import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -118,9 +119,21 @@ export class ClientsService {
   }
 
   /**
-   * Removes a client by its ID, manually cascading all related records.
+   * Removes a client, refusing if it has ever owned a project.
+   *
+   * This used to hard-cascade through the client's projects, reports, income
+   * entries and payments. Once projects can be transferred between clients
+   * (T14) that cascade destroys data belonging to somebody else: a project
+   * moved from client B to client A carries B's months with it, so deleting A
+   * would take B's history too. A client that has ever held a project is
+   * therefore refused, and the message names the projects standing in the way.
+   *
+   * A client with no projects — one created by mistake, say — still deletes.
+   *
    * @param id ID of the client to remove
    * @returns void
+   * @throws ClientNotFoundError when no client has that id
+   * @throws EntityHasRelatedRecordsError when the client has ever owned a project
    */
   async remove(id: string): Promise<void> {
     const client = await this.prismaService.client.findUnique({
@@ -131,43 +144,26 @@ export class ClientsService {
       throw new ClientNotFoundError(id);
     }
 
-    await this.prismaService.$transaction(async (tx) => {
-      const projects = await tx.project.findMany({
+    // Every project has an assignment to each client that has ever owned it,
+    // so this catches both projects the client holds now and ones it has since
+    // handed over.
+    const assignments =
+      await this.prismaService.projectClientAssignment.findMany({
         where: { clientId: id },
-        select: { id: true },
-      });
-      const projectIds = projects.map((p) => p.id);
-
-      const reports = await tx.projectReport.findMany({
-        where: { projectId: { in: projectIds } },
-        select: { id: true },
-      });
-      const reportIds = reports.map((r) => r.id);
-
-      await tx.projectReportIncome.deleteMany({
-        where: { projectReportId: { in: reportIds } },
+        select: { project: { select: { name: true } } },
       });
 
-      await tx.supplierPayment.deleteMany({
-        where: { projectReportId: { in: reportIds } },
-      });
+    if (assignments.length > 0) {
+      const names = Array.from(
+        new Set(assignments.map((a) => a.project.name)),
+      ).sort();
+      throw new EntityHasRelatedRecordsError(
+        `client "${client.name}"`,
+        `projects (${names.join(', ')})`,
+      );
+    }
 
-      await tx.projectReport.deleteMany({
-        where: { projectId: { in: projectIds } },
-      });
-
-      await tx.subcontractorPayment.deleteMany({
-        where: { projectId: { in: projectIds } },
-      });
-
-      await tx.project.deleteMany({
-        where: { clientId: id },
-      });
-
-      await tx.client.delete({
-        where: { id },
-      });
-    });
+    await this.prismaService.client.delete({ where: { id } });
 
     this.logger.log(`Client deleted: ${id}`);
   }

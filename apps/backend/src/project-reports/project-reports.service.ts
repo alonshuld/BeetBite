@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
 import { CreateProjectReportDto } from './dto/create-project-report.dto';
 import { ProjectReportListItemDto } from './dto/project-report-list-item.dto';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
@@ -52,7 +53,10 @@ const REPORT_INCLUDE = {
 export class ProjectReportsService {
   private readonly logger = new Logger(ProjectReportsService.name);
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly assignmentsService: ProjectClientAssignmentsService,
+  ) {}
 
   private async enrichCreateProjectReportDto(
     createProjectReportDto: CreateProjectReportDto,
@@ -190,7 +194,51 @@ export class ProjectReportsService {
     });
 
     this.logger.log(`Retrieved ${projectReports.length} project reports`);
-    return toProjectReportList(projectReports);
+    return toProjectReportList(
+      await this.withResolvedClients(
+        projectReports,
+        paginatedMonthQueryDto.month,
+      ),
+    );
+  }
+
+  /**
+   * Replaces each report's client with whichever client owned that project in
+   * the report's own month.
+   *
+   * A project can change hands, and history is frozen — so the client shown
+   * against a past month must be the one that owned it *then*, not whoever owns
+   * the project now. Keeps the raw shape intact so the mappers are unchanged.
+   *
+   * @param reports Raw reports carrying `project.client`, all in one month.
+   * @param month The month those reports belong to.
+   * @returns The same reports with `project.client` resolved.
+   */
+  private async withResolvedClients<
+    T extends {
+      projectId: string;
+      project: { client: { id: string; name: string } };
+    },
+  >(reports: T[], month: string | Date): Promise<T[]> {
+    if (reports.length === 0) return reports;
+
+    const resolved = await this.assignmentsService.resolveClientsForMonth(
+      month,
+      reports.map((report) => report.projectId),
+    );
+
+    return reports.map((report) => {
+      const client = resolved.get(report.projectId);
+      if (!client) {
+        // Impossible after the backfill, but a missing assignment must never
+        // silently drop a report off the screen.
+        this.logger.warn(
+          `Project ${report.projectId} has no client assignment covering its report month; falling back to its current client`,
+        );
+        return report;
+      }
+      return { ...report, project: { ...report.project, client } };
+    });
   }
 
   /**
@@ -208,7 +256,13 @@ export class ProjectReportsService {
     if (!projectReport) throw new ProjectReportNotFoundError(id);
 
     this.logger.log(`Retrieved project report ${id} for export`);
-    return toProjectReportListItem(projectReport);
+    // The exported document must name the client that owned this project in
+    // the report's own month.
+    const [resolved] = await this.withResolvedClients(
+      [projectReport],
+      projectReport.date,
+    );
+    return toProjectReportListItem(resolved);
   }
 
   async findProjectReportForPreviousMonth(

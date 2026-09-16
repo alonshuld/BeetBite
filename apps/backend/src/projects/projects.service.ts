@@ -17,6 +17,7 @@ import { Prisma } from 'src/generated/client';
 import { ProjectsQueryDto } from './dto/projects-query.dto';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
 import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
+import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
 
 const PAID_REPORTS_INCLUDE = {
   reports: {
@@ -43,7 +44,10 @@ const PAID_REPORTS_INCLUDE = {
 export class ProjectsService {
   private readonly logger = new Logger(ProjectsService.name);
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly assignmentsService: ProjectClientAssignmentsService,
+  ) {}
 
   /**
    * Creates a new project.
@@ -54,12 +58,27 @@ export class ProjectsService {
     createProjectDto: CreateProjectDto,
   ): Promise<ProjectBasicResponseDto> {
     try {
-      const createdProject = await this.prismaService.project.create({
-        data: {
-          ...createProjectDto,
-          estimatedAmount: new Prisma.Decimal(createProjectDto.estimatedAmount),
+      // The project and its first client assignment are created together: a
+      // project with no assignment resolves to no client and would vanish from
+      // every month-scoped view. See T14.
+      const createdProject = await this.prismaService.$transaction(
+        async (tx) => {
+          const project = await tx.project.create({
+            data: {
+              ...createProjectDto,
+              estimatedAmount: new Prisma.Decimal(
+                createProjectDto.estimatedAmount,
+              ),
+            },
+          });
+          await this.assignmentsService.createInitialAssignment(
+            tx,
+            project.id,
+            createProjectDto.clientId,
+          );
+          return project;
         },
-      });
+      );
       this.logger.log(`Project created: ${createdProject.id}`);
 
       return toProjectBasicResponse(createdProject);

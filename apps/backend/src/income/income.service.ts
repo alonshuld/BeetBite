@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
 import {
   MonthlyIncomeItemDto,
   MonthlyIncomeProjectDto,
@@ -9,7 +10,10 @@ import {
 export class IncomeService {
   private readonly logger = new Logger(IncomeService.name);
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly assignmentsService: ProjectClientAssignmentsService,
+  ) {}
 
   async getMonthlyIncome(month: string): Promise<MonthlyIncomeItemDto[]> {
     const ref = new Date(month);
@@ -54,6 +58,14 @@ export class IncomeService {
       `Retrieved ${reports.length} project reports for month ${month}`,
     );
 
+    // Which client owned each project *that month* — not whoever owns it now.
+    // A project can change hands, and past months keep their original client.
+    const resolvedClients =
+      await this.assignmentsService.resolveClientsForMonth(
+        month,
+        reports.map((r) => r.projectId),
+      );
+
     // Group by client, then by project within client
     const clientMap = new Map<
       string,
@@ -65,15 +77,25 @@ export class IncomeService {
     >();
 
     for (const report of reports) {
-      const client = report.project.client;
-      if (!clientMap.has(client.id)) {
-        clientMap.set(client.id, {
-          clientId: client.id,
-          clientName: client.name,
+      // Fall back to the project's cached client if no assignment covers this
+      // month. That should be impossible after the backfill — but returning
+      // nothing would silently drop the report from the screen, so prefer a
+      // loud log and a sane answer over a vanishing row.
+      const client = resolvedClients.get(report.projectId);
+      if (!client) {
+        this.logger.warn(
+          `Project ${report.projectId} has no client assignment covering ${month}; falling back to its current client`,
+        );
+      }
+      const resolvedClient = client ?? report.project.client;
+      if (!clientMap.has(resolvedClient.id)) {
+        clientMap.set(resolvedClient.id, {
+          clientId: resolvedClient.id,
+          clientName: resolvedClient.name,
           projects: new Map(),
         });
       }
-      const clientEntry = clientMap.get(client.id)!;
+      const clientEntry = clientMap.get(resolvedClient.id)!;
 
       const totalIncome = report.incomeEntries.reduce(
         (sum, e) => sum + e.amount.toNumber(),

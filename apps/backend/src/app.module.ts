@@ -17,6 +17,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { IncomeModule } from './income/income.module';
 import { CompanySettingsModule } from './company-settings/company-settings.module';
 import { VatRatesModule } from './vat-rates/vat-rates.module';
+import { ProjectClientAssignmentsModule } from './project-client-assignments/project-client-assignments.module';
 import { PdfExportModule } from './pdf-export/pdf-export.module';
 
 @Module({
@@ -37,6 +38,7 @@ import { PdfExportModule } from './pdf-export/pdf-export.module';
     SubcontractorsModule,
     ProjectReportsModule,
     ProjectsModule,
+    ProjectClientAssignmentsModule,
     IncomeModule,
     CompanySettingsModule,
     VatRatesModule,

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { CreateSubcontractorPaymentDto } from './dto/create-subcontractor-payment.dto';
 import { UpdateSubcontractorPaymentDto } from './dto/update-subcontractor-payment.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
 import { SubcontractorPaymentResponseDto } from './dto/subcontractor-payments-response.dto';
 import { toSubcontractorPaymentResponse } from './mappers/subcontractor-payment.mapper';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
@@ -22,7 +23,10 @@ import { toSubcontractorPaymentsByClientResponseList } from './mappers/subcontra
 export class SubcontractorPaymentsService {
   private readonly logger = new Logger(SubcontractorPaymentsService.name);
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly assignmentsService: ProjectClientAssignmentsService,
+  ) {}
 
   private async calculateProjectExpectedTotal(
     subcontractorId: string,
@@ -318,6 +322,7 @@ export class SubcontractorPaymentsService {
       where: { serviceDate },
       select: {
         amount: true,
+        projectId: true,
         project: {
           select: {
             client: { select: { id: true, name: true } },
@@ -330,7 +335,28 @@ export class SubcontractorPaymentsService {
       `Retrieved subcontractor payments by client for ${serviceDate.toLocaleDateString()}`,
     );
 
-    return toSubcontractorPaymentsByClientResponseList(payments);
+    // Group under whichever client owned each project in this service month —
+    // a project that has since changed hands keeps its past months where they
+    // were.
+    const resolved = await this.assignmentsService.resolveClientsForMonth(
+      serviceDate,
+      payments.map((payment) => payment.projectId),
+    );
+
+    const paymentsWithResolvedClient = payments.map((payment) => {
+      const client = resolved.get(payment.projectId);
+      if (!client) {
+        this.logger.warn(
+          `Project ${payment.projectId} has no client assignment covering ${monthQuery.month}; falling back to its current client`,
+        );
+        return payment;
+      }
+      return { ...payment, project: { client } };
+    });
+
+    return toSubcontractorPaymentsByClientResponseList(
+      paymentsWithResolvedClient,
+    );
   }
 
   async update(

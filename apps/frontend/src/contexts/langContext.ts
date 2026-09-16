@@ -232,6 +232,16 @@ export const translations = {
     exportPdf: "Export PDF",
     approvedForLabel: "Approved For",
     approvedForPlaceholder: "What does this account approval cover?",
+    transferProject: "Transfer to another client",
+    transferProjectHint:
+      "Months before the chosen month keep their current client. Only that month onward moves.",
+    newClient: "New client",
+    effectiveFromMonth: "From month",
+    ownershipTimeline: "Ownership timeline",
+    untilMonth: "until",
+    toDate: "to date",
+    removeTransfer: "Remove this transfer",
+    projectTransferred: "Project transferred",
   },
   he: {
     // Nav
@@ -455,6 +465,16 @@ export const translations = {
     exportPdf: "ייצוא PDF",
     approvedForLabel: "חשבון מאושר עבור",
     approvedForPlaceholder: "מה כולל אישור חשבון זה?",
+    transferProject: "העבר ללקוח אחר",
+    transferProjectHint:
+      "חודשים לפני החודש שנבחר נשארים אצל הלקוח הנוכחי. רק מאותו חודש ואילך עובר.",
+    newClient: "לקוח חדש",
+    effectiveFromMonth: "מחודש",
+    ownershipTimeline: "היסטוריית בעלות",
+    untilMonth: "עד",
+    toDate: "עד היום",
+    removeTransfer: "הסר העברה זו",
+    projectTransferred: "הפרוייקט הועבר",
   },
 } as const;
 
