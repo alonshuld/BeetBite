@@ -186,6 +186,7 @@ export class SubcontractorPaymentsService {
               serviceDate: true,
               amount: true,
               isPaid: true,
+              paymentDate: true,
               subcontractor: {
                 select: {
                   id: true,
@@ -235,6 +236,7 @@ export class SubcontractorPaymentsService {
               serviceDate: true,
               amount: true,
               isPaid: true,
+              paymentDate: true,
             },
           },
         },
@@ -285,6 +287,7 @@ export class SubcontractorPaymentsService {
                 serviceDate: true,
                 amount: true,
                 isPaid: true,
+                paymentDate: true,
               },
             },
           },
@@ -396,6 +399,7 @@ export class SubcontractorPaymentsService {
               serviceDate: true,
               amount: true,
               isPaid: true,
+              paymentDate: true,
               subcontractor: {
                 select: {
                   id: true,

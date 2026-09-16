@@ -93,6 +93,7 @@ describe('SubcontractorPaymentsService', () => {
         subcontractor: mockPayment.subcontractor,
         serviceDate: mockPayment.serviceDate.toISOString(),
         amount: 1000,
+        paymentDate: null,
       });
       expect(
         mockPrismaService.subcontractorPayment.create,
@@ -104,6 +105,7 @@ describe('SubcontractorPaymentsService', () => {
           serviceDate: true,
           amount: true,
           isPaid: true,
+          paymentDate: true,
           subcontractor: {
             select: {
               id: true,
@@ -128,6 +130,52 @@ describe('SubcontractorPaymentsService', () => {
       await expect(
         service.create({ ...createDto, amount: 1000 }),
       ).rejects.toThrow(SubcontractorPaymentOverpaymentError);
+    });
+
+    // 🔴 serviceDate says which month is being settled; paymentDate says when
+    // the money moved. A payment made on the 17th still settles the month that
+    // starts on the 1st. Conflating the two is the failure this guards.
+    it('keeps the settled month and the payment day distinct', async () => {
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
+        profitMargin: { toNumber: () => 10 },
+        supplierPayments: [],
+      });
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+      mockPrismaService.subcontractorPayment.create.mockResolvedValue({
+        ...mockPayment,
+        paymentDate: new Date('2023-01-17'),
+      });
+
+      const result = await service.create({
+        ...createDto,
+        paymentDate: '2023-01-17',
+      });
+
+      expect(result.serviceDate).toBe('2023-01-01T00:00:00.000Z');
+      expect(result.paymentDate).toBe('2023-01-17T00:00:00.000Z');
+      // The row written carries both, unchanged.
+      const call = (
+        mockPrismaService.subcontractorPayment.create.mock.calls as unknown[][]
+      )[0][0] as { data: { serviceDate: string; paymentDate?: string } };
+      expect(call.data.serviceDate).toBe('2023-01-01');
+      expect(call.data.paymentDate).toBe('2023-01-17');
+    });
+
+    it('records a payment with no date at all', async () => {
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
+        profitMargin: { toNumber: () => 10 },
+        supplierPayments: [],
+      });
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+      mockPrismaService.subcontractorPayment.create.mockResolvedValue(
+        mockPayment,
+      );
+
+      const result = await service.create(createDto);
+
+      expect(result.paymentDate).toBeNull();
     });
 
     it('should throw SubcontractorNotFoundError when subcontractor does not exist', async () => {
@@ -484,6 +532,7 @@ describe('SubcontractorPaymentsService', () => {
         subcontractor: mockPayment.subcontractor,
         serviceDate: mockPayment.serviceDate.toISOString(),
         amount: 1500,
+        paymentDate: null,
       });
       expect(
         mockPrismaService.subcontractorPayment.update,
@@ -496,6 +545,7 @@ describe('SubcontractorPaymentsService', () => {
           serviceDate: true,
           amount: true,
           isPaid: true,
+          paymentDate: true,
           subcontractor: {
             select: {
               id: true,

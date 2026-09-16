@@ -232,6 +232,9 @@ export const translations = {
     exportPdf: "Export PDF",
     approvedForLabel: "Approved For",
     approvedForPlaceholder: "What does this account approval cover?",
+    balance: "Balance",
+    paymentDate: "Payment date",
+    noDateRecorded: "No date recorded",
   },
   he: {
     // Nav
@@ -455,6 +458,9 @@ export const translations = {
     exportPdf: "ייצוא PDF",
     approvedForLabel: "חשבון מאושר עבור",
     approvedForPlaceholder: "מה כולל אישור חשבון זה?",
+    balance: "יתרה",
+    paymentDate: "תאריך תשלום",
+    noDateRecorded: "ללא תאריך",
   },
 } as const;
 

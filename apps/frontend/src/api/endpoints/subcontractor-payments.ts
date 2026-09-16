@@ -10,14 +10,19 @@ export interface SubcontractorMonthlyData {
     projectId: string;
     amount: number;
     isPaid: boolean;
+    /** The day the money actually moved. Null for rows recorded before this existed. */
+    paymentDate: string | null;
   }[];
 }
 
 export interface CreateSubcontractorPaymentDto {
   subcontractorId: string;
   projectId: string;
+  /** Which month this settles — always the first of that month. */
   serviceDate: string;
   amount: number;
+  /** The day the money actually moved. */
+  paymentDate?: string;
 }
 
 export interface UpdateSubcontractorPaymentDto {
@@ -35,6 +40,7 @@ export interface SubcontractorPaymentResponse {
   serviceDate: string;
   amount: number;
   isPaid: boolean;
+  paymentDate: string | null;
 }
 
 export const subcontractorPaymentsApi = baseApi.injectEndpoints({

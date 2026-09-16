@@ -103,4 +103,71 @@ dbTest.describe('Subcontractor Payments', () => {
       }).toPass({ timeout: 5000 });
     },
   );
+
+  dbTest(
+    'two partial payments on different dates are each listed',
+    async ({ page, db }) => {
+      const client = await db.client.create({ data: { name: 'Dates Client' } });
+      const subcontractor = await db.subcontractor.create({
+        data: { name: 'Dates Sub', companyNumber: '515222020' },
+      });
+      const project = await db.project.create({
+        data: {
+          clientId: client.id,
+          name: 'Dates Project',
+          estimatedAmount: 100000,
+          description: 'Payment date test',
+        },
+      });
+      const report = await db.projectReport.create({
+        data: {
+          projectId: project.id,
+          subcontractorId: subcontractor.id,
+          date: new Date('2026-05-01'),
+          profitMargin: 20,
+        },
+      });
+      await db.projectReportIncome.create({
+        data: {
+          projectReportId: report.id,
+          amount: 10000,
+          incomeDate: new Date('2026-05-10'),
+        },
+      });
+
+      // Two instalments settling the same month, paid on different days.
+      for (const [amount, day] of [
+        [3000, '2026-05-05'],
+        [2000, '2026-05-19'],
+      ] as const) {
+        await db.subcontractorPayment.create({
+          data: {
+            subcontractorId: subcontractor.id,
+            projectId: project.id,
+            serviceDate: new Date('2026-05-01'),
+            amount,
+            paymentDate: new Date(day),
+          },
+        });
+      }
+
+      await page.goto(`${BASE}/subcontractor-payments`);
+      await page.waitForLoadState('networkidle');
+      await page.getByText('Dates Sub').click();
+
+      // Each instalment shows its own day and amount.
+      await expect(page.getByText(/5 May 2026/)).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(/19 May 2026/)).toBeVisible();
+      await expect(page.getByText('₪3,000')).toBeVisible();
+      await expect(page.getByText('₪2,000')).toBeVisible();
+
+      // The month being settled is untouched by either day.
+      const rows = await db.subcontractorPayment.findMany({
+        where: { projectId: project.id },
+      });
+      for (const row of rows) {
+        expect(row.serviceDate.toISOString().slice(0, 10)).toBe('2026-05-01');
+      }
+    },
+  );
 });
