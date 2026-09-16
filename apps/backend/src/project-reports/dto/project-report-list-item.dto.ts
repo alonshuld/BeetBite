@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { NestedProjectWithClientDto } from './nested-project-with-client.dto';
 import { NestedSubcontractorDto } from './nested-subcontractor.dto';
 import { IncomeEntryResponseDto } from './income-entry-response.dto';
-import { NestedCorporationPaymentDto } from './nested-corporation-payment.dto';
+import { NestedSupplierPaymentDto } from './nested-supplier-payment.dto';
 
 export class ProjectReportListItemDto {
   @ApiProperty({
@@ -49,8 +49,8 @@ export class ProjectReportListItemDto {
   incomeEntries!: IncomeEntryResponseDto[];
 
   @ApiProperty({
-    description: 'Corporation payments for this report',
-    type: [NestedCorporationPaymentDto],
+    description: 'Supplier payments for this report',
+    type: [NestedSupplierPaymentDto],
   })
-  corporationPayments!: NestedCorporationPaymentDto[];
+  supplierPayments!: NestedSupplierPaymentDto[];
 }

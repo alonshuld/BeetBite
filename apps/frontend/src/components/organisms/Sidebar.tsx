@@ -26,8 +26,8 @@ const OVERVIEW_ITEMS: NavItem[] = [
   { path: "/reports", labelKey: "projectReports", icon: "📊" },
   { path: "/income", labelKey: "monthlyIncome", icon: "💰" },
   {
-    path: "/corporation-payments",
-    labelKey: "corporationPayments",
+    path: "/supplier-payments",
+    labelKey: "supplierPayments",
     icon: "🏢",
   },
   {
@@ -41,7 +41,7 @@ const MANAGEMENT_ITEMS: NavItem[] = [
   { path: "/projects", labelKey: "projects", icon: "🏗️" },
   { path: "/clients", labelKey: "clients", icon: "👤" },
   { path: "/subcontractors", labelKey: "subcontractors", icon: "🔧" },
-  { path: "/corporations", labelKey: "corporations", icon: "🏛️" },
+  { path: "/suppliers", labelKey: "suppliers", icon: "🏛️" },
 ];
 
 const SETTINGS_ITEMS: NavItem[] = [

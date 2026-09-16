@@ -28,7 +28,7 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
   let clientId: string;
   let subcontractorId: string;
   let projectId: string;
-  let corporationId: string;
+  let supplierId: string;
 
   const jan = new Date('2026-01-15').toISOString();
   const dec2025 = new Date('2025-12-15').toISOString(); // previous month seed
@@ -96,8 +96,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
       })
     ).id;
 
-    corporationId = (
-      await prismaService.corporation.create({
+    supplierId = (
+      await prismaService.supplier.create({
         data: { name: `SubPay Test Corp ${Date.now()}` },
       })
     ).id;
@@ -116,11 +116,11 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
 
   afterEach(async () => {
     await prismaService.subcontractorPayment.deleteMany({});
-    await prismaService.corporationPayment.deleteMany({});
+    await prismaService.supplierPayment.deleteMany({});
     await prismaService.projectReportIncome.deleteMany({});
     await prismaService.projectReport.deleteMany({});
     await prismaService.project.deleteMany({});
-    await prismaService.corporation.deleteMany({});
+    await prismaService.supplier.deleteMany({});
     await prismaService.subcontractor.deleteMany({});
     await prismaService.client.deleteMany({});
   });
@@ -140,8 +140,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
     date: string;
     incomeAmount: number;
     profitMargin: number;
-    corporationPayments?: {
-      corporationId: string;
+    supplierPayments?: {
+      supplierId: string;
       amount: number;
       date?: string;
     }[];
@@ -152,7 +152,7 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
       date: opts.date,
       incomeEntries: [{ amount: opts.incomeAmount }],
       profitMargin: opts.profitMargin,
-      corporationPayments: opts.corporationPayments ?? [],
+      supplierPayments: opts.supplierPayments ?? [],
     });
   }
 
@@ -234,7 +234,7 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
       expect(Math.abs(result.amountOwed - expected)).toBeLessThan(1);
     });
 
-    it('should subtract corporation payments from amountOwed', async () => {
+    it('should subtract supplier payments from amountOwed', async () => {
       const incomeAmount = 100000;
       const profitMargin = 20;
       const corpAmount = 15000;
@@ -245,7 +245,7 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
         date: jan,
         incomeAmount,
         profitMargin,
-        corporationPayments: [{ corporationId, amount: corpAmount, date: jan }],
+        supplierPayments: [{ supplierId, amount: corpAmount, date: jan }],
       });
 
       const result = await service.findSubcontractorMonthlyPayments(

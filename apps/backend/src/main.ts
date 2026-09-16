@@ -53,7 +53,7 @@ async function bootstrap(): Promise<void> {
       .setDescription('API documentation for BeetBite backend')
       .setVersion('1.0')
       .addBearerAuth()
-      .addTag('corporations')
+      .addTag('suppliers')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);

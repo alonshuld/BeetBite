@@ -43,7 +43,7 @@ const mockReports = [
     subcontractor: { id: "s1", name: "Bob the Builder" },
     totalIncome: 10000,
     profitMargin: 20,
-    corporationPayments: [],
+    supplierPayments: [],
   },
 ];
 

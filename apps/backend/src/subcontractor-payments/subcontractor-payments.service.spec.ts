@@ -78,7 +78,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 5000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
       mockPrismaService.subcontractorPayment.create.mockResolvedValue(
@@ -118,7 +118,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 1000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       // amountOwed = 900, already paid = 500, new amount = 1000 → overpayment
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([
@@ -134,7 +134,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 5000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
@@ -406,7 +406,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 1000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([
         { amount: { toNumber: () => 600 } },
@@ -425,7 +425,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 1000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
@@ -466,7 +466,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 2000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
       mockPrismaService.subcontractorPayment.update.mockResolvedValue(
@@ -511,7 +511,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 2000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
@@ -588,7 +588,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => owed } }],
         profitMargin: { toNumber: () => 0 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
 
     it('should NOT reject a fractional payment that exactly reaches the owed amount (owed=7988.44, paid=0.44, new=7988)', async () => {
@@ -651,12 +651,12 @@ describe('SubcontractorPaymentsService', () => {
       ).rejects.toThrow(SubcontractorPaymentOverpaymentError);
     });
 
-    it('should subtract corporation payments and profit margin from income when computing the owed amount', async () => {
+    it('should subtract supplier payments and profit margin from income when computing the owed amount', async () => {
       // income=10000, margin=10% -> 9000, corp payments 2500 -> owed 6500
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 10000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [
+        supplierPayments: [
           { amount: { toNumber: () => 1500 } },
           { amount: { toNumber: () => 1000 } },
         ],
@@ -669,12 +669,12 @@ describe('SubcontractorPaymentsService', () => {
       ).rejects.toThrow(SubcontractorPaymentOverpaymentError);
     });
 
-    it('should treat the owed amount as zero (not negative) when corporation payments exceed income minus profit', async () => {
+    it('should treat the owed amount as zero (not negative) when supplier payments exceed income minus profit', async () => {
       // income=1000, margin=10% -> 900, corp payments 1500 -> raw owed = -600, floored to 0
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 1000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [{ amount: { toNumber: () => 1500 } }],
+        supplierPayments: [{ amount: { toNumber: () => 1500 } }],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
@@ -698,12 +698,12 @@ describe('SubcontractorPaymentsService', () => {
         {
           profitMargin: { toNumber: () => 0 },
           incomeEntries: [{ amount: { toNumber: () => 1000 } }],
-          corporationPayments: [{ amount: { toNumber: () => 1500 } }],
+          supplierPayments: [{ amount: { toNumber: () => 1500 } }],
         },
         {
           profitMargin: { toNumber: () => 0 },
           incomeEntries: [{ amount: { toNumber: () => 2000 } }],
-          corporationPayments: [],
+          supplierPayments: [],
         },
       ]);
 
@@ -723,13 +723,13 @@ describe('SubcontractorPaymentsService', () => {
           subcontractorId: 'sub-1',
           profitMargin: { toNumber: () => 0 },
           incomeEntries: [{ amount: { toNumber: () => 500 } }],
-          corporationPayments: [{ amount: { toNumber: () => 900 } }], // raw -400 -> 0
+          supplierPayments: [{ amount: { toNumber: () => 900 } }], // raw -400 -> 0
         },
         {
           subcontractorId: 'sub-1',
           profitMargin: { toNumber: () => 0 },
           incomeEntries: [{ amount: { toNumber: () => 3000 } }],
-          corporationPayments: [{ amount: { toNumber: () => 500 } }], // 2500
+          supplierPayments: [{ amount: { toNumber: () => 500 } }], // 2500
         },
       ]);
 

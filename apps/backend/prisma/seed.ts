@@ -85,13 +85,13 @@ async function seedMockData(): Promise<void> {
   console.log('Seeding mock data (this wipes all existing business data)...');
 
   await prisma.subcontractorPayment.deleteMany({});
-  await prisma.corporationPayment.deleteMany({});
+  await prisma.supplierPayment.deleteMany({});
   await prisma.projectReportIncome.deleteMany({});
   await prisma.projectReport.deleteMany({});
   await prisma.project.deleteMany({});
   await prisma.client.deleteMany({});
   await prisma.subcontractor.deleteMany({});
-  await prisma.corporation.deleteMany({});
+  await prisma.supplier.deleteMany({});
 
   // ── Clients (30) ──────────────────────────────────────────────────────────
   const clients = await Promise.all([
@@ -146,20 +146,20 @@ async function seedMockData(): Promise<void> {
     prisma.subcontractor.create({ data: { name: 'Tal Golan', companyNumber: '515000015' } }),         // 14
   ]);
 
-  // ── Corporations (12) ─────────────────────────────────────────────────────
-  const corporations = await Promise.all([
-    prisma.corporation.create({ data: { name: 'ElectroPro Solutions' } }),        // 0
-    prisma.corporation.create({ data: { name: 'AquaPlumbing Services' } }),       // 1
-    prisma.corporation.create({ data: { name: 'IronSteel Structures' } }),        // 2
-    prisma.corporation.create({ data: { name: 'GlassMaster Windows' } }),         // 3
-    prisma.corporation.create({ data: { name: 'TileKing Flooring' } }),           // 4
-    prisma.corporation.create({ data: { name: 'CoolAir HVAC Systems' } }),        // 5
-    prisma.corporation.create({ data: { name: 'PaintPro Finishing' } }),          // 6
-    prisma.corporation.create({ data: { name: 'WoodWorks Carpentry' } }),         // 7
-    prisma.corporation.create({ data: { name: 'ConcreteForce Foundations' } }),   // 8
-    prisma.corporation.create({ data: { name: 'RoofGuard Specialists' } }),       // 9
-    prisma.corporation.create({ data: { name: 'SecurityTech Installations' } }), // 10
-    prisma.corporation.create({ data: { name: 'LandscapeDesign Pro' } }),         // 11
+  // ── Suppliers (12) ─────────────────────────────────────────────────────
+  const suppliers = await Promise.all([
+    prisma.supplier.create({ data: { name: 'ElectroPro Solutions' } }),        // 0
+    prisma.supplier.create({ data: { name: 'AquaPlumbing Services' } }),       // 1
+    prisma.supplier.create({ data: { name: 'IronSteel Structures' } }),        // 2
+    prisma.supplier.create({ data: { name: 'GlassMaster Windows' } }),         // 3
+    prisma.supplier.create({ data: { name: 'TileKing Flooring' } }),           // 4
+    prisma.supplier.create({ data: { name: 'CoolAir HVAC Systems' } }),        // 5
+    prisma.supplier.create({ data: { name: 'PaintPro Finishing' } }),          // 6
+    prisma.supplier.create({ data: { name: 'WoodWorks Carpentry' } }),         // 7
+    prisma.supplier.create({ data: { name: 'ConcreteForce Foundations' } }),   // 8
+    prisma.supplier.create({ data: { name: 'RoofGuard Specialists' } }),       // 9
+    prisma.supplier.create({ data: { name: 'SecurityTech Installations' } }), // 10
+    prisma.supplier.create({ data: { name: 'LandscapeDesign Pro' } }),         // 11
   ]);
 
   // ── Projects ──────────────────────────────────────────────────────────────
@@ -484,7 +484,7 @@ async function seedMockData(): Promise<void> {
   );
 
   // ── SHOWCASE MONTH: May 2026 ──────────────────────────────────────────────
-  // Multiple income entries + corporation payments — best month to test new UI.
+  // Multiple income entries + supplier payments — best month to test new UI.
   //
   // Tel Aviv Properties Ltd: 3 projects
   // Jerusalem Develop Corp:  2 projects
@@ -558,55 +558,55 @@ async function seedMockData(): Promise<void> {
     ],
   });
 
-  // ── Corporation Payments ──────────────────────────────────────────────────
-  await prisma.corporationPayment.createMany({
+  // ── Supplier Payments ──────────────────────────────────────────────────
+  await prisma.supplierPayment.createMany({
     data: [
       // ── Existing months ──────────────────────────────────────────────────
       // Dizengoff Jan/Feb/Mar 2025
-      { projectReportId: reportsDizengoff[1].id, corporationId: corporations[0].id, amount: 5000, date: d('2025-01-20') },
-      { projectReportId: reportsDizengoff[1].id, corporationId: corporations[1].id, amount: 3000, date: d('2025-01-22') },
-      { projectReportId: reportsDizengoff[2].id, corporationId: corporations[0].id, amount: 5000, date: d('2025-02-18') },
-      { projectReportId: reportsDizengoff[3].id, corporationId: corporations[4].id, amount: 4000, date: d('2025-03-20') },
+      { projectReportId: reportsDizengoff[1].id, supplierId: suppliers[0].id, amount: 5000, date: d('2025-01-20') },
+      { projectReportId: reportsDizengoff[1].id, supplierId: suppliers[1].id, amount: 3000, date: d('2025-01-22') },
+      { projectReportId: reportsDizengoff[2].id, supplierId: suppliers[0].id, amount: 5000, date: d('2025-02-18') },
+      { projectReportId: reportsDizengoff[3].id, supplierId: suppliers[4].id, amount: 4000, date: d('2025-03-20') },
       // Haifa Harbor Aug/Sep 2024
-      { projectReportId: reportsHaifa[1].id, corporationId: corporations[0].id, amount: 8000, date: d('2024-07-28') },
-      { projectReportId: reportsHaifa[2].id, corporationId: corporations[0].id, amount: 8000, date: d('2024-08-25') },
-      { projectReportId: reportsHaifa[2].id, corporationId: corporations[1].id, amount: 5000, date: d('2024-08-26') },
-      { projectReportId: reportsHaifa[4].id, corporationId: corporations[2].id, amount: 10000, date: d('2024-10-28') },
+      { projectReportId: reportsHaifa[1].id, supplierId: suppliers[0].id, amount: 8000, date: d('2024-07-28') },
+      { projectReportId: reportsHaifa[2].id, supplierId: suppliers[0].id, amount: 8000, date: d('2024-08-25') },
+      { projectReportId: reportsHaifa[2].id, supplierId: suppliers[1].id, amount: 5000, date: d('2024-08-26') },
+      { projectReportId: reportsHaifa[4].id, supplierId: suppliers[2].id, amount: 10000, date: d('2024-10-28') },
       // Jerusalem Hotel Apr/May 2025
-      { projectReportId: reportsJerusalem[0].id, corporationId: corporations[0].id, amount: 10000, date: d('2025-04-30') },
-      { projectReportId: reportsJerusalem[0].id, corporationId: corporations[2].id, amount: 15000, date: d('2025-04-29') },
-      { projectReportId: reportsJerusalem[1].id, corporationId: corporations[0].id, amount: 10000, date: d('2025-05-30') },
-      { projectReportId: reportsJerusalem[1].id, corporationId: corporations[1].id, amount: 8000,  date: d('2025-05-29') },
+      { projectReportId: reportsJerusalem[0].id, supplierId: suppliers[0].id, amount: 10000, date: d('2025-04-30') },
+      { projectReportId: reportsJerusalem[0].id, supplierId: suppliers[2].id, amount: 15000, date: d('2025-04-29') },
+      { projectReportId: reportsJerusalem[1].id, supplierId: suppliers[0].id, amount: 10000, date: d('2025-05-30') },
+      { projectReportId: reportsJerusalem[1].id, supplierId: suppliers[1].id, amount: 8000,  date: d('2025-05-29') },
       // Carmel Gardens Jan/Feb 2025
-      { projectReportId: reportsCarmel[0].id, corporationId: corporations[0].id, amount: 4000, date: d('2025-01-29') },
-      { projectReportId: reportsCarmel[1].id, corporationId: corporations[0].id, amount: 4000, date: d('2025-02-26') },
-      { projectReportId: reportsCarmel[1].id, corporationId: corporations[1].id, amount: 3000, date: d('2025-02-27') },
+      { projectReportId: reportsCarmel[0].id, supplierId: suppliers[0].id, amount: 4000, date: d('2025-01-29') },
+      { projectReportId: reportsCarmel[1].id, supplierId: suppliers[0].id, amount: 4000, date: d('2025-02-26') },
+      { projectReportId: reportsCarmel[1].id, supplierId: suppliers[1].id, amount: 3000, date: d('2025-02-27') },
       // Beer Sheva May/Jun 2025
-      { projectReportId: reportsBeerSheva[0].id, corporationId: corporations[0].id, amount: 5000, date: d('2025-05-31') },
-      { projectReportId: reportsBeerSheva[1].id, corporationId: corporations[0].id, amount: 5000, date: d('2025-06-30') },
-      { projectReportId: reportsBeerSheva[1].id, corporationId: corporations[2].id, amount: 8000, date: d('2025-06-27') },
+      { projectReportId: reportsBeerSheva[0].id, supplierId: suppliers[0].id, amount: 5000, date: d('2025-05-31') },
+      { projectReportId: reportsBeerSheva[1].id, supplierId: suppliers[0].id, amount: 5000, date: d('2025-06-30') },
+      { projectReportId: reportsBeerSheva[1].id, supplierId: suppliers[2].id, amount: 8000, date: d('2025-06-27') },
       // Herzliya Mar/Apr 2025
-      { projectReportId: reportsHerzliya[0].id, corporationId: corporations[0].id, amount: 8000,  date: d('2025-03-28') },
-      { projectReportId: reportsHerzliya[0].id, corporationId: corporations[3].id, amount: 10000, date: d('2025-03-29') },
+      { projectReportId: reportsHerzliya[0].id, supplierId: suppliers[0].id, amount: 8000,  date: d('2025-03-28') },
+      { projectReportId: reportsHerzliya[0].id, supplierId: suppliers[3].id, amount: 10000, date: d('2025-03-29') },
 
       // ── Showcase: May 2026 ────────────────────────────────────────────────
       // Dizengoff — ElectroPro + AquaPlumbing
-      { projectReportId: showDizengoff.id, corporationId: corporations[0].id, amount: 5500, date: d('2026-05-18') },
-      { projectReportId: showDizengoff.id, corporationId: corporations[1].id, amount: 3200, date: d('2026-05-19') },
+      { projectReportId: showDizengoff.id, supplierId: suppliers[0].id, amount: 5500, date: d('2026-05-18') },
+      { projectReportId: showDizengoff.id, supplierId: suppliers[1].id, amount: 3200, date: d('2026-05-19') },
       // Yarkon — PaintPro
-      { projectReportId: showYarkon.id, corporationId: corporations[6].id, amount: 2000, date: d('2026-05-16') },
+      { projectReportId: showYarkon.id, supplierId: suppliers[6].id, amount: 2000, date: d('2026-05-16') },
       // Florentin — TileKing + WoodWorks
-      { projectReportId: showFlorentin.id, corporationId: corporations[4].id, amount: 2500, date: d('2026-05-20') },
-      { projectReportId: showFlorentin.id, corporationId: corporations[7].id, amount: 1800, date: d('2026-05-21') },
+      { projectReportId: showFlorentin.id, supplierId: suppliers[4].id, amount: 2500, date: d('2026-05-20') },
+      { projectReportId: showFlorentin.id, supplierId: suppliers[7].id, amount: 1800, date: d('2026-05-21') },
       // Jerusalem — IronSteel + CoolAir + SecurityTech
-      { projectReportId: showJerusalem.id, corporationId: corporations[2].id,  amount: 15000, date: d('2026-05-10') },
-      { projectReportId: showJerusalem.id, corporationId: corporations[5].id,  amount: 8000,  date: d('2026-05-11') },
-      { projectReportId: showJerusalem.id, corporationId: corporations[10].id, amount: 5000,  date: d('2026-05-12') },
+      { projectReportId: showJerusalem.id, supplierId: suppliers[2].id,  amount: 15000, date: d('2026-05-10') },
+      { projectReportId: showJerusalem.id, supplierId: suppliers[5].id,  amount: 8000,  date: d('2026-05-11') },
+      { projectReportId: showJerusalem.id, supplierId: suppliers[10].id, amount: 5000,  date: d('2026-05-12') },
       // Mamilla — WoodWorks
-      { projectReportId: showMamilla.id, corporationId: corporations[7].id, amount: 4000, date: d('2026-05-17') },
+      { projectReportId: showMamilla.id, supplierId: suppliers[7].id, amount: 4000, date: d('2026-05-17') },
       // Herzliya — GlassMaster + SecurityTech
-      { projectReportId: showHerzliya.id, corporationId: corporations[3].id,  amount: 7000, date: d('2026-05-13') },
-      { projectReportId: showHerzliya.id, corporationId: corporations[10].id, amount: 6000, date: d('2026-05-14') },
+      { projectReportId: showHerzliya.id, supplierId: suppliers[3].id,  amount: 7000, date: d('2026-05-13') },
+      { projectReportId: showHerzliya.id, supplierId: suppliers[10].id, amount: 6000, date: d('2026-05-14') },
     ],
   });
 

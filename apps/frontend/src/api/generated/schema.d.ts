@@ -53,33 +53,33 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/corporations/payments": {
+  "/api/v1/suppliers/payments": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get all corporation payments for a given month */
-    get: operations["CorporationPaymentsController_findAll"];
+    /** Get all supplier payments for a given month */
+    get: operations["SupplierPaymentsController_findAll"];
     put?: never;
-    /** Create a new corporation payment */
-    post: operations["CorporationPaymentsController_create"];
+    /** Create a new supplier payment */
+    post: operations["SupplierPaymentsController_create"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/corporations/{corporationId}/payments": {
+  "/api/v1/suppliers/{supplierId}/payments": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get a corporation's payments for a given month */
-    get: operations["CorporationPaymentsController_findOne"];
+    /** Get a supplier's payments for a given month */
+    get: operations["SupplierPaymentsController_findOne"];
     put?: never;
     post?: never;
     delete?: never;
@@ -88,7 +88,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/corporations/payments/{id}": {
+  "/api/v1/suppliers/payments/{id}": {
     parameters: {
       query?: never;
       header?: never;
@@ -96,11 +96,11 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /** Update a corporation's payment for a given month */
-    put: operations["CorporationPaymentsController_update"];
+    /** Update a supplier's payment for a given month */
+    put: operations["SupplierPaymentsController_update"];
     post?: never;
-    /** Delete a corporation payment by ID */
-    delete: operations["CorporationPaymentsController_remove"];
+    /** Delete a supplier payment by ID */
+    delete: operations["SupplierPaymentsController_remove"];
     options?: never;
     head?: never;
     patch?: never;
@@ -141,38 +141,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/corporations": {
+  "/api/v1/suppliers": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get all corporations with pagination */
-    get: operations["CorporationsController_findAll"];
+    /** Get all suppliers with pagination */
+    get: operations["SuppliersController_findAll"];
     put?: never;
-    /** Create a new corporation */
-    post: operations["CorporationsController_create"];
+    /** Create a new supplier */
+    post: operations["SuppliersController_create"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/corporations/{id}": {
+  "/api/v1/suppliers/{id}": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get a corporation by ID */
-    get: operations["CorporationsController_findOne"];
-    /** Update a corporation */
-    put: operations["CorporationsController_update"];
+    /** Get a supplier by ID */
+    get: operations["SuppliersController_findOne"];
+    /** Update a supplier */
+    put: operations["SuppliersController_update"];
     post?: never;
-    /** Delete a corporation */
-    delete: operations["CorporationsController_remove"];
+    /** Delete a supplier */
+    delete: operations["SuppliersController_remove"];
     options?: never;
     head?: never;
     patch?: never;
@@ -503,19 +503,19 @@ export interface components {
        */
       name: string;
     };
-    CreateCorporationPaymentDto: {
+    CreateSupplierPaymentDto: {
       /**
        * @description Unique identifier for the project report associated with this payment
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
       projectReportId: string;
       /**
-       * @description Unique identifier for the corporation receiving the payment
+       * @description Unique identifier for the supplier receiving the payment
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
-      corporationId: string;
+      supplierId: string;
       /**
-       * @description The amount paid to the corporation for this project
+       * @description The amount paid to the supplier for this project
        * @example 5000
        */
       amount: number;
@@ -557,30 +557,30 @@ export interface components {
        */
       projectName: string;
     };
-    NestedCorporationDto: {
+    NestedSupplierDto: {
       /**
-       * @description Unique identifier for the corporation
+       * @description Unique identifier for the supplier
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
       id: string;
       /**
-       * @description Name of the corporation
+       * @description Name of the supplier
        * @example Tech Solutions Inc.
        */
       name: string;
     };
-    CorporationPaymentResponseDto: {
+    SupplierPaymentResponseDto: {
       /**
-       * @description Unique identifier for the corporation payment
+       * @description Unique identifier for the supplier payment
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
       id: string;
       /** @description Information about the project report associated with the payment */
       projectReport: components["schemas"]["NestedProjectReportDto"];
-      /** @description Information about the corporation receiving the payment */
-      corporation: components["schemas"]["NestedCorporationDto"];
+      /** @description Information about the supplier receiving the payment */
+      supplier: components["schemas"]["NestedSupplierDto"];
       /**
-       * @description The total amount paid to the corporation for this payment
+       * @description The total amount paid to the supplier for this payment
        * @example 5000
        */
       amount: number;
@@ -624,13 +624,13 @@ export interface components {
       /** @description Information about the project report this payment is associated with */
       projectReport: components["schemas"]["NestedProjectReportDto"];
       /**
-       * @description The amount paid to the corporation for this project
+       * @description The amount paid to the supplier for this project
        * @example 5000
        */
       amount: number;
       /**
        * Format: ISO-8601
-       * @description The date the payment to the corporation was made
+       * @description The date the payment to the supplier was made
        * @example 2026-01-10T00:00:00.000Z
        */
       date: Record<string, never> | null;
@@ -660,39 +660,39 @@ export interface components {
        */
       description?: Record<string, never> | null;
     };
-    MonthlyCorporationPaymentsResponseDto: {
-      /** @description Information about the corporation receiving the payment */
-      corporation: components["schemas"]["NestedCorporationDto"];
-      /** @description The project payments associated with this corporation payment */
+    MonthlySupplierPaymentsResponseDto: {
+      /** @description Information about the supplier receiving the payment */
+      supplier: components["schemas"]["NestedSupplierDto"];
+      /** @description The project payments associated with this supplier payment */
       projectPayments: components["schemas"]["NestedProjectPaymentDto"][];
       /**
-       * @description The total amount paid to the corporation for this payment
+       * @description The total amount paid to the supplier for this payment
        * @example 5000
        */
       total: number;
     };
-    MultipleMonthlyCorporationPaymentsResponseDto: {
-      /** @description List of corporation payments for the specified month */
-      corporationsPayments: components["schemas"]["MonthlyCorporationPaymentsResponseDto"][];
+    MultipleMonthlySupplierPaymentsResponseDto: {
+      /** @description List of supplier payments for the specified month */
+      suppliersPayments: components["schemas"]["MonthlySupplierPaymentsResponseDto"][];
       /**
-       * @description The total amount paid to all corporations for the specified month
+       * @description The total amount paid to all suppliers for the specified month
        * @example 15000
        */
       total: number;
     };
-    UpdateCorporationPaymentDto: {
+    UpdateSupplierPaymentDto: {
       /**
        * @description Unique identifier for the project report associated with this payment
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
       projectReportId: string;
       /**
-       * @description Unique identifier for the corporation receiving the payment
+       * @description Unique identifier for the supplier receiving the payment
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
-      corporationId: string;
+      supplierId: string;
       /**
-       * @description The amount paid to the corporation for this project
+       * @description The amount paid to the supplier for this project
        * @example 5000
        */
       amount: number;
@@ -769,28 +769,28 @@ export interface components {
        */
       percentage: Record<string, never> | null;
     };
-    CreateCorporationDto: {
+    CreateSupplierDto: {
       /**
-       * @description Name of the corporation
+       * @description Name of the supplier
        * @example Tech Innovators Inc.
        */
       name: string;
     };
-    CorporationResponseDto: {
+    SupplierResponseDto: {
       /**
-       * @description Unique identifier for the corporation
+       * @description Unique identifier for the supplier
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
       id: string;
       /**
-       * @description Name of the corporation
+       * @description Name of the supplier
        * @example Tech Innovators Inc.
        */
       name: string;
     };
-    UpdateCorporationDto: {
+    UpdateSupplierDto: {
       /**
-       * @description Name of the corporation
+       * @description Name of the supplier
        * @example Tech Innovators Inc.
        */
       name: string;
@@ -1029,8 +1029,8 @@ export interface components {
       profitMargin?: number;
       /** @description Income entries for this report (at least one required) */
       incomeEntries: components["schemas"]["CreateIncomeEntryDto"][];
-      /** @description A list of the payments made to corporations for their work on this project this month */
-      corporationPayments: components["schemas"]["CreateCorporationPaymentDto"][];
+      /** @description A list of the payments made to suppliers for their work on this project this month */
+      supplierPayments: components["schemas"]["CreateSupplierPaymentDto"][];
     };
     NestedClientDto: {
       /**
@@ -1080,16 +1080,16 @@ export interface components {
        */
       tag: Record<string, never> | null;
     };
-    NestedCorporationPaymentDto: {
+    NestedSupplierPaymentDto: {
       /**
-       * @description Unique identifier for the corporation payment
+       * @description Unique identifier for the supplier payment
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
       id: string;
-      /** @description Information on the corporation */
-      corporation: components["schemas"]["NestedCorporationDto"];
+      /** @description Information on the supplier */
+      supplier: components["schemas"]["NestedSupplierDto"];
       /**
-       * @description The amount of money paid to the corporation
+       * @description The amount of money paid to the supplier
        * @example 20000
        */
       amount: number;
@@ -1137,8 +1137,8 @@ export interface components {
       totalIncome: number;
       /** @description Individual income entries for this report */
       incomeEntries: components["schemas"]["IncomeEntryResponseDto"][];
-      /** @description Corporation payments for this report */
-      corporationPayments: components["schemas"]["NestedCorporationPaymentDto"][];
+      /** @description Supplier payments for this report */
+      supplierPayments: components["schemas"]["NestedSupplierPaymentDto"][];
     };
     UpdateIncomeEntryDto: {
       /**
@@ -1217,8 +1217,8 @@ export interface components {
       totalIncome: number;
       /** @description Individual income entries for this report */
       incomeEntries: components["schemas"]["IncomeEntryResponseDto"][];
-      /** @description The payments made to corporations for their work on the project that month */
-      corporationPayments: components["schemas"]["NestedCorporationPaymentDto"][];
+      /** @description The payments made to suppliers for their work on the project that month */
+      supplierPayments: components["schemas"]["NestedSupplierPaymentDto"][];
       /** @description Subcontractor information for the given month's project report */
       subcontractor: components["schemas"]["NestedSubcontractorWithPaymentDto"];
     };
@@ -1246,8 +1246,8 @@ export interface components {
       profitMargin?: number;
       /** @description Income entries for this report (at least one required) */
       incomeEntries: components["schemas"]["CreateIncomeEntryDto"][];
-      /** @description A list of the payments made to corporations for their work on this project this month */
-      corporationPayments: components["schemas"]["CreateCorporationPaymentDto"][];
+      /** @description A list of the payments made to suppliers for their work on this project this month */
+      supplierPayments: components["schemas"]["CreateSupplierPaymentDto"][];
     };
     CreateProjectDto: {
       /**
@@ -1729,7 +1729,7 @@ export interface operations {
       };
     };
   };
-  CorporationPaymentsController_findAll: {
+  SupplierPaymentsController_findAll: {
     parameters: {
       query: {
         /** @description A date within the month to query, in ISO-8601 format */
@@ -1741,13 +1741,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description List of corporation payments for the specified month. */
+      /** @description List of supplier payments for the specified month. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["MultipleMonthlyCorporationPaymentsResponseDto"];
+          "application/json": components["schemas"]["MultipleMonthlySupplierPaymentsResponseDto"];
         };
       };
       /** @description Invalid input data for pagination or date filtering. */
@@ -1759,7 +1759,7 @@ export interface operations {
       };
     };
   };
-  CorporationPaymentsController_create: {
+  SupplierPaymentsController_create: {
     parameters: {
       query?: never;
       header?: never;
@@ -1768,27 +1768,27 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["CreateCorporationPaymentDto"];
+        "application/json": components["schemas"]["CreateSupplierPaymentDto"];
       };
     };
     responses: {
-      /** @description The corporation payment has been successfully created. */
+      /** @description The supplier payment has been successfully created. */
       201: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CorporationPaymentResponseDto"];
+          "application/json": components["schemas"]["SupplierPaymentResponseDto"];
         };
       };
-      /** @description Invalid input data for creating corporation payment. */
+      /** @description Invalid input data for creating supplier payment. */
       400: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Conflict occurred while creating corporation payment. */
+      /** @description Conflict occurred while creating supplier payment. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -1797,7 +1797,7 @@ export interface operations {
       };
     };
   };
-  CorporationPaymentsController_findOne: {
+  SupplierPaymentsController_findOne: {
     parameters: {
       query: {
         /** @description A date within the month to query, in ISO-8601 format */
@@ -1805,20 +1805,20 @@ export interface operations {
       };
       header?: never;
       path: {
-        /** @description Corporation ID */
-        corporationId: string;
+        /** @description Supplier ID */
+        supplierId: string;
       };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description Corporation's payments for the specified month. */
+      /** @description Supplier's payments for the specified month. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["MonthlyCorporationPaymentsResponseDto"];
+          "application/json": components["schemas"]["MonthlySupplierPaymentsResponseDto"];
         };
       };
       /** @description Invalid input data for date filtering. */
@@ -1828,7 +1828,7 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description Corporation not found or no payments for the specified month. */
+      /** @description Supplier not found or no payments for the specified month. */
       404: {
         headers: {
           [name: string]: unknown;
@@ -1837,46 +1837,46 @@ export interface operations {
       };
     };
   };
-  CorporationPaymentsController_update: {
+  SupplierPaymentsController_update: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        /** @description Corporation payment ID */
+        /** @description Supplier payment ID */
         id: string;
       };
       cookie?: never;
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["UpdateCorporationPaymentDto"];
+        "application/json": components["schemas"]["UpdateSupplierPaymentDto"];
       };
     };
     responses: {
-      /** @description The updated corporation payment for the specified month. */
+      /** @description The updated supplier payment for the specified month. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CorporationPaymentResponseDto"];
+          "application/json": components["schemas"]["SupplierPaymentResponseDto"];
         };
       };
-      /** @description Invalid input data for updating corporation payment. */
+      /** @description Invalid input data for updating supplier payment. */
       400: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Corporation payment not found for the specified month. */
+      /** @description Supplier payment not found for the specified month. */
       404: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Conflict occurred while updating corporation payment. */
+      /** @description Conflict occurred while updating supplier payment. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -1885,26 +1885,26 @@ export interface operations {
       };
     };
   };
-  CorporationPaymentsController_remove: {
+  SupplierPaymentsController_remove: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        /** @description Corporation payment ID */
+        /** @description Supplier payment ID */
         id: string;
       };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description The corporation payment has been successfully deleted. */
+      /** @description The supplier payment has been successfully deleted. */
       204: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Corporation payment not found */
+      /** @description Supplier payment not found */
       404: {
         headers: {
           [name: string]: unknown;
@@ -1991,7 +1991,7 @@ export interface operations {
       };
     };
   };
-  CorporationsController_findAll: {
+  SuppliersController_findAll: {
     parameters: {
       query?: {
         /** @description Page number (1-based) */
@@ -2005,13 +2005,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description List of corporations */
+      /** @description List of suppliers */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CorporationResponseDto"][];
+          "application/json": components["schemas"]["SupplierResponseDto"][];
         };
       };
       /** @description Invalid pagination parameters */
@@ -2023,7 +2023,7 @@ export interface operations {
       };
     };
   };
-  CorporationsController_create: {
+  SuppliersController_create: {
     parameters: {
       query?: never;
       header?: never;
@@ -2032,17 +2032,17 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["CreateCorporationDto"];
+        "application/json": components["schemas"]["CreateSupplierDto"];
       };
     };
     responses: {
-      /** @description The corporation has been successfully created. */
+      /** @description The supplier has been successfully created. */
       201: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CorporationResponseDto"];
+          "application/json": components["schemas"]["SupplierResponseDto"];
         };
       };
       /** @description Invalid input data */
@@ -2052,7 +2052,7 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description Corporation already exists */
+      /** @description Supplier already exists */
       409: {
         headers: {
           [name: string]: unknown;
@@ -2061,28 +2061,28 @@ export interface operations {
       };
     };
   };
-  CorporationsController_findOne: {
+  SuppliersController_findOne: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        /** @description Corporation ID */
+        /** @description Supplier ID */
         id: string;
       };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description The corporation has been found. */
+      /** @description The supplier has been found. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CorporationResponseDto"];
+          "application/json": components["schemas"]["SupplierResponseDto"];
         };
       };
-      /** @description Corporation not found */
+      /** @description Supplier not found */
       404: {
         headers: {
           [name: string]: unknown;
@@ -2091,39 +2091,39 @@ export interface operations {
       };
     };
   };
-  CorporationsController_update: {
+  SuppliersController_update: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        /** @description Corporation ID */
+        /** @description Supplier ID */
         id: string;
       };
       cookie?: never;
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["UpdateCorporationDto"];
+        "application/json": components["schemas"]["UpdateSupplierDto"];
       };
     };
     responses: {
-      /** @description The corporation has been successfully updated. */
+      /** @description The supplier has been successfully updated. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CorporationResponseDto"];
+          "application/json": components["schemas"]["SupplierResponseDto"];
         };
       };
-      /** @description Corporation not found */
+      /** @description Supplier not found */
       404: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Corporation name already exists */
+      /** @description Supplier name already exists */
       409: {
         headers: {
           [name: string]: unknown;
@@ -2132,26 +2132,26 @@ export interface operations {
       };
     };
   };
-  CorporationsController_remove: {
+  SuppliersController_remove: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        /** @description Corporation ID */
+        /** @description Supplier ID */
         id: string;
       };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description The corporation has been successfully deleted. */
+      /** @description The supplier has been successfully deleted. */
       204: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Corporation not found */
+      /** @description Supplier not found */
       404: {
         headers: {
           [name: string]: unknown;

@@ -8,7 +8,7 @@ import { ProjectReportNotFoundError } from './errors/project-report-not-found.ex
 import { ProjectReportAlreadyExistsError } from './errors/project-report-already-exists.exception';
 import { ProjectNotFoundError } from 'src/projects/errors/project-not-found.exception';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
-import { CorporationNotFoundError } from 'src/corporations/errors/corporation-not-found.error';
+import { SupplierNotFoundError } from 'src/suppliers/errors/supplier-not-found.error';
 
 describe('ProjectReportsService', () => {
   let service: ProjectReportsService;
@@ -77,10 +77,10 @@ describe('ProjectReportsService', () => {
     },
     subcontractor: { id: 'sub-1', name: 'Sub 1' },
     incomeEntries: defaultIncomeEntries,
-    corporationPayments: [] as {
+    supplierPayments: [] as {
       id: string;
       amount: Prisma.Decimal;
-      corporation: { id: string; name: string };
+      supplier: { id: string; name: string };
     }[],
     ...overrides,
   });
@@ -91,7 +91,7 @@ describe('ProjectReportsService', () => {
     date: '2024-05-01T00:00:00.000Z',
     profitMargin: 10,
     incomeEntries: [{ amount: 10000 }],
-    corporationPayments: [],
+    supplierPayments: [],
   };
 
   describe('create', () => {
@@ -182,7 +182,7 @@ describe('ProjectReportsService', () => {
       ).rejects.toThrow(ProjectReportNotFoundError);
     });
 
-    it('should throw CorporationNotFoundError on P2003 FK error', async () => {
+    it('should throw SupplierNotFoundError on P2003 FK error', async () => {
       const mockReport = makeProjectReport();
       mockPrismaService.projectReport.findUnique.mockResolvedValue(null);
       mockTx.projectReport.create.mockResolvedValue(mockReport);
@@ -194,7 +194,7 @@ describe('ProjectReportsService', () => {
       mockTx.projectReport.create.mockRejectedValue(error);
 
       await expect(service.create(baseCreateDto)).rejects.toThrow(
-        CorporationNotFoundError,
+        SupplierNotFoundError,
       );
     });
 
@@ -336,10 +336,10 @@ describe('ProjectReportsService', () => {
         payments: [],
       },
       incomeEntries: defaultIncomeEntries,
-      corporationPayments: [] as {
+      supplierPayments: [] as {
         id: string;
         amount: Prisma.Decimal;
-        corporation: { id: string; name: string };
+        supplier: { id: string; name: string };
       }[],
       ...overrides,
     });
@@ -354,18 +354,18 @@ describe('ProjectReportsService', () => {
       expect(result.profit).toBeCloseTo(1000); // 10000 * 10 / 100
     });
 
-    it('should return correct subcontractorPayment = totalIncome - profit - Σ(corporationPayments)', async () => {
+    it('should return correct subcontractorPayment = totalIncome - profit - Σ(supplierPayments)', async () => {
       const fullReport = makeFullReport({
-        corporationPayments: [
+        supplierPayments: [
           {
             id: 'cp-1',
             amount: new Prisma.Decimal('2000'),
-            corporation: { id: 'corp-1', name: 'Corp 1' },
+            supplier: { id: 'corp-1', name: 'Corp 1' },
           },
           {
             id: 'cp-2',
             amount: new Prisma.Decimal('500'),
-            corporation: { id: 'corp-2', name: 'Corp 2' },
+            supplier: { id: 'corp-2', name: 'Corp 2' },
           },
         ],
       });
@@ -401,11 +401,11 @@ describe('ProjectReportsService', () => {
     it('should handle profitMargin: 0 — subcontractorPayment equals totalIncome minus corp payments', async () => {
       const fullReport = makeFullReport({
         profitMargin: new Prisma.Decimal('0'),
-        corporationPayments: [
+        supplierPayments: [
           {
             id: 'cp-1',
             amount: new Prisma.Decimal('3000'),
-            corporation: { id: 'corp-1', name: 'Corp 1' },
+            supplier: { id: 'corp-1', name: 'Corp 1' },
           },
         ],
       });
@@ -472,16 +472,16 @@ describe('ProjectReportsService', () => {
       date: '2024-05-01T00:00:00.000Z',
       profitMargin: 10,
       incomeEntries: [{ amount: 10000 }],
-      corporationPayments: [
+      supplierPayments: [
         {
-          corporationId: 'corp-1',
+          supplierId: 'corp-1',
           amount: 2000,
           date: '2024-05-10T00:00:00.000Z',
         },
       ],
     };
 
-    it('should update report and use deleteMany+createMany for corporation payments', async () => {
+    it('should update report and use deleteMany+createMany for supplier payments', async () => {
       const mockReport = makeProjectReport();
       mockPrismaService.projectReport.update.mockResolvedValue(mockReport);
 
@@ -490,7 +490,7 @@ describe('ProjectReportsService', () => {
       expect(mockPrismaService.projectReport.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            corporationPayments: {
+            supplierPayments: {
               deleteMany: {},
               createMany: expect.objectContaining({
                 data: expect.any(Array) as unknown,

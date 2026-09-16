@@ -73,8 +73,8 @@ export class PdfExportService {
     });
 
     const supplierRows: ReportApprovalSupplierRow[] =
-      report.corporationPayments.map((payment) => ({
-        corporationName: payment.corporation.name,
+      report.supplierPayments.map((payment) => ({
+        supplierName: payment.supplier.name,
         amount: payment.amount,
       }));
 

@@ -19,7 +19,7 @@ import { ProjectReportResponseDto } from './dto/project-report-response.dto';
 import { ProjectReportNotFoundError } from './errors/project-report-not-found.exception';
 import { UpdateProjectReportDto } from './dto/update-project-report.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
-import { CorporationNotFoundError } from 'src/corporations/errors/corporation-not-found.error';
+import { SupplierNotFoundError } from 'src/suppliers/errors/supplier-not-found.error';
 import { IncomeEntryResponseDto } from './dto/income-entry-response.dto';
 import { CreateIncomeEntryDto } from './dto/create-income-entry.dto';
 import { UpdateIncomeEntryDto } from './dto/update-income-entry.dto';
@@ -38,12 +38,12 @@ const REPORT_INCLUDE = {
   incomeEntries: {
     select: { id: true, amount: true, incomeDate: true, tag: true },
   },
-  corporationPayments: {
+  supplierPayments: {
     select: {
       id: true,
       amount: true,
       vatPercentage: true,
-      corporation: { select: { id: true, name: true } },
+      supplier: { select: { id: true, name: true } },
     },
   },
 } as const;
@@ -132,10 +132,10 @@ export class ProjectReportsService {
                 })),
               },
             },
-            corporationPayments: {
+            supplierPayments: {
               createMany: {
-                data: enriched.corporationPayments.map((cp) => ({
-                  corporationId: cp.corporationId,
+                data: enriched.supplierPayments.map((cp) => ({
+                  supplierId: cp.supplierId,
                   amount: cp.amount,
                   date: cp.date ? new Date(cp.date) : null,
                 })),
@@ -154,7 +154,7 @@ export class ProjectReportsService {
 
       switch (error.code) {
         case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
-          throw new CorporationNotFoundError();
+          throw new SupplierNotFoundError();
         case PRISMA_ERROR_CODES.NOT_FOUND: {
           const model = (error.meta?.model as string) ?? '';
           if (model.toLowerCase().includes('project'))
@@ -196,7 +196,7 @@ export class ProjectReportsService {
   /**
    * Fetch one report with everything the account-approval PDF renders.
    * @param id Project report to export
-   * @returns The report, its project and client, subcontractor, income entries and corporation payments
+   * @returns The report, its project and client, subcontractor, income entries and supplier payments
    * @throws ProjectReportNotFoundError when no report has that id
    */
   async findOneForExport(id: string): Promise<ProjectReportListItemDto> {
@@ -247,11 +247,11 @@ export class ProjectReportsService {
         incomeEntries: {
           select: { id: true, amount: true, incomeDate: true, tag: true },
         },
-        corporationPayments: {
+        supplierPayments: {
           select: {
             id: true,
             amount: true,
-            corporation: { select: { id: true, name: true } },
+            supplier: { select: { id: true, name: true } },
           },
         },
         subcontractor: {
@@ -278,12 +278,12 @@ export class ProjectReportsService {
           incomeEntries: {
             select: { id: true, amount: true, incomeDate: true, tag: true },
           },
-          corporationPayments: {
+          supplierPayments: {
             select: {
               id: true,
               amount: true,
               vatPercentage: true,
-              corporation: { select: { id: true, name: true } },
+              supplier: { select: { id: true, name: true } },
             },
           },
           subcontractor: {
@@ -309,7 +309,7 @@ export class ProjectReportsService {
     );
     const profit =
       totalIncome * (reportWithSubPayments.profitMargin.toNumber() / 100);
-    const corpTotal = reportWithSubPayments.corporationPayments.reduce(
+    const corpTotal = reportWithSubPayments.supplierPayments.reduce(
       (sum, cp) => sum + cp.amount.toNumber(),
       0,
     );
@@ -343,7 +343,7 @@ export class ProjectReportsService {
       date:
         updateProjectReportDto.date ?? existing.date.toISOString().slice(0, 10),
       incomeEntries: updateProjectReportDto.incomeEntries ?? [],
-      corporationPayments: updateProjectReportDto.corporationPayments ?? [],
+      supplierPayments: updateProjectReportDto.supplierPayments ?? [],
     });
 
     try {
@@ -365,18 +365,16 @@ export class ProjectReportsService {
                 },
               }
             : undefined,
-          corporationPayments:
-            updateProjectReportDto.corporationPayments !== undefined
+          supplierPayments:
+            updateProjectReportDto.supplierPayments !== undefined
               ? {
                   deleteMany: {},
                   createMany: {
-                    data: updateProjectReportDto.corporationPayments.map(
-                      (cp) => ({
-                        corporationId: cp.corporationId,
-                        amount: cp.amount,
-                        date: cp.date ? new Date(cp.date) : null,
-                      }),
-                    ),
+                    data: updateProjectReportDto.supplierPayments.map((cp) => ({
+                      supplierId: cp.supplierId,
+                      amount: cp.amount,
+                      date: cp.date ? new Date(cp.date) : null,
+                    })),
                   },
                 }
               : undefined,

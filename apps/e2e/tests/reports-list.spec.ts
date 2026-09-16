@@ -189,7 +189,7 @@ dbTest.describe('Reports list', () => {
       void db;
       await openClient(page);
 
-      // 40,000 income − 10% profit − no corporation payments. The same figure
+      // 40,000 income − 10% profit − no supplier payments. The same figure
       // also appears on the project sheet, so scope to the header total.
       await expect(page.getByText(/Total Sub Payments:/)).toContainText(
         '36,000',

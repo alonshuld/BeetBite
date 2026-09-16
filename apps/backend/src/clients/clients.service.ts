@@ -148,7 +148,7 @@ export class ClientsService {
         where: { projectReportId: { in: reportIds } },
       });
 
-      await tx.corporationPayment.deleteMany({
+      await tx.supplierPayment.deleteMany({
         where: { projectReportId: { in: reportIds } },
       });
 

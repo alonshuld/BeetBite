@@ -67,8 +67,8 @@ Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` →
 | `users` | User lookup by username/id; used internally by auth strategies |
 | `clients` | Manage clients (companies that own projects) |
 | `projects` | Manage projects; expose payment progress aggregates |
-| `project-reports` | Monthly financial reports per project, including corporation payments |
-| `corporations` | Corporations that receive payments from project reports |
+| `project-reports` | Monthly financial reports per project, including supplier payments |
+| `suppliers` | Suppliers that receive payments from project reports |
 | `subcontractors` | Workers assigned to project reports |
 | `subcontractor-payments` | Track partial payments made to subcontractors per service month; enforces overpayment guard against computed amount owed per project; exposes `GET /by-client?month=` aggregation endpoint |
 | `company-settings` | Contractor's own profile (singleton) — `GET`/`PUT /company-settings`, no create/delete, no domain errors (fixed-id upsert can't conflict) |
@@ -96,7 +96,7 @@ Key entity fields (see `prisma/schema.prisma` for the full schema):
 | `Project` | `estimatedAmount` (Decimal), `description` (required String), `isDone` (Boolean, default false — marks project as closed) |
 | `ProjectReport` | unique on `(projectId, date)` — one report per project per month, which is exactly the scope of one exported account-approval PDF |
 | `ProjectReportIncome` | `amount` (Decimal); `incomeDate?` (nullable — null means income not yet received); `tag` (optional String, max 100 — short label for the chunk of work the amount covers, trimmed to `null` when blank, rendered as a badge on the account-approval PDF) |
-| `CorporationPayment` | `date?` (nullable payment date); `description?` (optional String); `isFuture` (Boolean, default false — true means not yet invoiced); `vatPercentage?` (Decimal — only applicable when `isFuture` is false, defaults to 18%) |
+| `SupplierPayment` | `date?` (nullable payment date); `description?` (optional String); `isFuture` (Boolean, default false — true means not yet invoiced); `vatPercentage?` (Decimal — only applicable when `isFuture` is false, defaults to 18%) |
 | `SubcontractorPayment` | `projectId` (String — required, payment must be assigned to a project); `serviceDate` (Date — the service month's start date, required); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, projectId, serviceDate)` allowed; no `paymentDate` — all payments are always considered paid |
 | `CompanySettings` | Singleton — `id` fixed via `@default("company-settings")`, always upserted by that literal id (no lookup needed to know if it exists). Every other field is optional (`name`, `description`, `companyNumber`, `phone`, `email`, `addressStreet`, `addressCity`, `logo`, `signature`) since onboarding is skippable. `phone` validated via `@IsPhoneNumber()` (no region arg — any region, requires `+` intl calling code prefix); `email` via `@IsEmail()`. `logo`/`signature` are base64 data-URL strings (`@Matches` regex restricts to png/jpg/webp, `@MaxLength(4_000_000)` caps size) — no multer, no disk/S3 storage. `GET` returns `null` when the row has never been created; the frontend's `OnboardingGate` treats that as "show onboarding" |
 
@@ -143,7 +143,7 @@ When creating or updating a `ProjectReport`, `subcontractorId` and `profitMargin
 **ProjectReport** (computed at read time in `project-reports.service.ts:findOne`, not stored):
 
 - `profit = income × profitMargin / 100`
-- `subcontractorPayment = income − profit − Σ(corporationPayments)`
+- `subcontractorPayment = income − profit − Σ(supplierPayments)`
 
 **SubcontractorPayment** — `amount` is stored (provided by the caller). Multiple partial payments per `(subcontractorId, projectId, serviceDate)` are allowed. On `create` and `update`, the service computes `amountOwed` for the specific project (not across all projects for the month) and rejects the payment if `Σ(existing payments for that project) + newAmount > amountOwed`. The overpayment check and the DB write are executed inside a single `$transaction` to prevent race conditions — do not split them into separate steps.
 

@@ -33,9 +33,9 @@ describe("TopHeader", () => {
     expect(screen.getByText("Clients")).toBeInTheDocument();
   });
 
-  it("renders page title for /corporations route", () => {
-    renderTopHeader("/corporations");
-    expect(screen.getByText("Corporations")).toBeInTheDocument();
+  it("renders page title for /suppliers route", () => {
+    renderTopHeader("/suppliers");
+    expect(screen.getByText("Suppliers")).toBeInTheDocument();
   });
 
   it("shows month picker on /income route", () => {
@@ -52,8 +52,8 @@ describe("TopHeader", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows month picker on /corporation-payments route", () => {
-    renderTopHeader("/corporation-payments");
+  it("shows month picker on /supplier-payments route", () => {
+    renderTopHeader("/supplier-payments");
     expect(
       screen.getByRole("button", { name: /March 2025/ }),
     ).toBeInTheDocument();
