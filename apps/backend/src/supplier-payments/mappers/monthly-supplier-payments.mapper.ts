@@ -14,6 +14,7 @@ type SupplierWithPayments = Prisma.SupplierGetPayload<{
         vatPercentage: true;
         isFuture: true;
         description: true;
+        isPaid: true;
         projectReport: {
           select: {
             id: true;
@@ -56,6 +57,7 @@ export const toMonthlySupplierPaymentsResponse = (
       effectiveTotal: amount + vatAmount,
       isFuture: payment.isFuture,
       description: payment.description,
+      isPaid: payment.isPaid,
     };
   });
 
@@ -66,6 +68,11 @@ export const toMonthlySupplierPaymentsResponse = (
     },
     projectPayments,
     total: projectPayments.reduce((sum, p) => sum + p.amount, 0),
+    // "₪12,000 of ₪18,000 paid" — what is still outstanding with this supplier
+    // is the number the contractor acts on.
+    totalPaid: projectPayments
+      .filter((p) => p.isPaid)
+      .reduce((sum, p) => sum + p.amount, 0),
   };
 };
 

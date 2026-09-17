@@ -235,6 +235,18 @@ export const translations = {
     balance: "Balance",
     paymentDate: "Payment date",
     noDateRecorded: "No date recorded",
+    documentSupplierPayments: "Document payments",
+    selectSupplierPlaceholder: "Select a supplier",
+    addRow: "Add line",
+    runningTotal: "Running total",
+    paymentsRecorded: "Payments recorded",
+    ofAmountPaid: "paid of",
+    markAllPaid: "Mark all paid",
+    markAllUnpaid: "Mark all unpaid",
+    onlyProjectsWithReportHint:
+      "Only projects with a report for this month are listed — create the report first if one is missing.",
+    noReportsThisMonthHint:
+      "No project has a report for this month yet, so there is nothing to record a payment against.",
   },
   he: {
     // Nav
@@ -461,6 +473,18 @@ export const translations = {
     balance: "יתרה",
     paymentDate: "תאריך תשלום",
     noDateRecorded: "ללא תאריך",
+    documentSupplierPayments: "תעד תשלומים",
+    selectSupplierPlaceholder: "בחר כוח אדם / ספק",
+    addRow: "הוסף שורה",
+    runningTotal: 'סה"כ מצטבר',
+    paymentsRecorded: "התשלומים תײעדו",
+    ofAmountPaid: "שולמו מתוך",
+    markAllPaid: "סמן הכל כשולם",
+    markAllUnpaid: "בטל סימון תשלום",
+    onlyProjectsWithReportHint:
+      "מוצגים רק פרוייקטים שיש להם דוח לחודש זה — צרו דוח תחילה אם חסר.",
+    noReportsThisMonthHint:
+      "לאף פרוייקט אין דוח לחודש זה, אז אין מול מה לתעד תשלום.",
   },
 } as const;
 
