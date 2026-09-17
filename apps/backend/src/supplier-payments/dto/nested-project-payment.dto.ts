@@ -63,4 +63,10 @@ export class NestedProjectPaymentDto {
     nullable: true,
   })
   description!: string | null;
+
+  @ApiProperty({
+    example: false,
+    description: 'Whether the money for this payment has actually left',
+  })
+  isPaid!: boolean;
 }

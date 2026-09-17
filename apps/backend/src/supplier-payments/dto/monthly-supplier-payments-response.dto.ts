@@ -23,4 +23,11 @@ export class MonthlySupplierPaymentsResponseDto {
     description: 'The total amount paid to the supplier for this payment',
   })
   total!: number;
+
+  @ApiProperty({
+    example: 12000,
+    description:
+      'Of that total, how much has actually been paid. The difference is what is still outstanding with this supplier.',
+  })
+  totalPaid!: number;
 }
