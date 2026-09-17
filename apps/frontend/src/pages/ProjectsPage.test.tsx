@@ -33,6 +33,8 @@ const mockProjects = [
     paymentProgress: { totalPaid: 50000 },
     client: { id: "c1", name: "Acme Corp" },
     description: null,
+    requesterName: "Jane Doe",
+    location: "123 Main St, Tel Aviv",
   },
   {
     id: "p2",
@@ -41,8 +43,10 @@ const mockProjects = [
     hasReports: false,
     estimatedAmount: 20000,
     paymentProgress: null,
-    client: null,
+    client: { id: "c2", name: "Beta Inc" },
     description: null,
+    requesterName: "John Smith",
+    location: "456 Side St, Haifa",
   },
 ];
 
@@ -214,6 +218,60 @@ describe("ProjectsPage", () => {
     renderProjectsPage();
     expect(
       screen.getByText("No projects match selected filters"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the requester in the table", () => {
+    renderProjectsPage();
+    expect(screen.getByText("Jane Doe")).toBeInTheDocument();
+  });
+
+  it("does not render a 'no client' option in the client select", async () => {
+    renderProjectsPage();
+    await userEvent.click(screen.getByRole("button", { name: /add project/i }));
+    expect(screen.queryByText("— No client —")).not.toBeInTheDocument();
+  });
+
+  it("requires a requester name before saving", async () => {
+    renderProjectsPage();
+    await userEvent.click(screen.getByRole("button", { name: /add project/i }));
+    const requesterInput = screen.getByLabelText("Requester");
+    expect(requesterInput).toBeRequired();
+  });
+
+  it("requires a location before saving", async () => {
+    renderProjectsPage();
+    await userEvent.click(screen.getByRole("button", { name: /add project/i }));
+    const locationInput = screen.getByLabelText("Location");
+    expect(locationInput).toBeRequired();
+  });
+
+  it("offers previously used requester names via datalist, while still accepting a new value", async () => {
+    renderProjectsPage();
+    await userEvent.click(screen.getByRole("button", { name: /add project/i }));
+    const requesterInput = screen.getByLabelText("Requester");
+
+    const datalist = document.getElementById(
+      requesterInput.getAttribute("list")!,
+    );
+    expect(datalist).not.toBeNull();
+    const optionValues = Array.from(datalist!.querySelectorAll("option")).map(
+      (o) => o.value,
+    );
+    expect(optionValues).toEqual(
+      expect.arrayContaining(["Jane Doe", "John Smith"]),
+    );
+
+    await userEvent.type(requesterInput, "A Brand New Requester");
+    expect(requesterInput).toHaveValue("A Brand New Requester");
+  });
+
+  it("prefills requester and location when editing an existing project", async () => {
+    renderProjectsPage();
+    await userEvent.click(screen.getAllByTitle("Edit")[0]);
+    expect(screen.getByDisplayValue("Jane Doe")).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue("123 Main St, Tel Aviv"),
     ).toBeInTheDocument();
   });
 });

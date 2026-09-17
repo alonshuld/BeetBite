@@ -163,8 +163,6 @@ export const translations = {
     corporationNamePlaceholder: "Corporation name",
     projectNamePlaceholder: "Project name",
     projectDescriptionPlaceholder: "Project description",
-    clientOptional: "Client (optional)",
-    noClientOption: "— No client —",
     estimatedAmountLabel: "Estimated Amount (₪)",
     reportMonth: "Report Month",
     incomeILS: "Income (₪)",
@@ -231,6 +229,11 @@ export const translations = {
     exportPdf: "Export PDF",
     approvedForLabel: "Approved For",
     approvedForPlaceholder: "What does this account approval cover?",
+    // Requester (T2) + Location (T8)
+    requester: "Requester",
+    requesterPlaceholder: "Who commissioned this project?",
+    location: "Location",
+    projectLocationPlaceholder: "Project location",
   },
   he: {
     // Nav
@@ -387,8 +390,6 @@ export const translations = {
     corporationNamePlaceholder: "שם החברה",
     projectNamePlaceholder: "שם הפרויקט",
     projectDescriptionPlaceholder: "תיאור הפרויקט",
-    clientOptional: "לקוח (אופציונלי)",
-    noClientOption: "— ללא לקוח —",
     estimatedAmountLabel: "סכום משוער (₪)",
     reportMonth: "חודש דוח",
     incomeILS: "הכנסה (₪)",
@@ -454,6 +455,11 @@ export const translations = {
     exportPdf: "ייצוא PDF",
     approvedForLabel: "חשבון מאושר עבור",
     approvedForPlaceholder: "מה כולל אישור חשבון זה?",
+    // Requester (T2) + Location (T8)
+    requester: "מזמין",
+    requesterPlaceholder: "מי הזמין את הפרויקט?",
+    location: "מיקום",
+    projectLocationPlaceholder: "מיקום הפרויקט",
   },
 } as const;
 

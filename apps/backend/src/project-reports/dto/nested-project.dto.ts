@@ -15,4 +15,23 @@ export class NestedProjectDto {
     description: 'Name of the project',
   })
   name!: string;
+
+  @ApiProperty({
+    example: 'Renovation of the office building located at 123 Main St.',
+    description: 'A description of the project',
+  })
+  description!: string;
+
+  @ApiProperty({
+    example: '123 Main St, Tel Aviv',
+    description: 'Location of the project',
+  })
+  location!: string;
+
+  @ApiProperty({
+    example: 'Jane Doe',
+    description:
+      'Name of the person who commissioned this specific project (may differ from the client)',
+  })
+  requesterName!: string;
 }

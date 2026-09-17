@@ -30,9 +30,18 @@ function sumIncomeEntries(entries: IncomeEntryRaw[]): number {
   return entries.reduce((sum, e) => sum + e.amount.toNumber(), 0);
 }
 
+type ProjectWithClientRaw = {
+  id: string;
+  name: string;
+  description: string;
+  location: string;
+  requesterName: string;
+  client: { id: string; name: string };
+};
+
 export const toProjectReportListItem = (
   projectReport: Omit<ProjectReport, 'income' | 'incomeDate'> & {
-    project: { id: string; name: string; client: { id: string; name: string } };
+    project: ProjectWithClientRaw;
     subcontractor: { id: string; name: string };
     incomeEntries: IncomeEntryRaw[];
     corporationPayments: CorporationPaymentRaw[];
@@ -65,7 +74,7 @@ export const toProjectReportListItem = (
 
 export const toProjectReportList = (
   projectReports: (Omit<ProjectReport, 'income' | 'incomeDate'> & {
-    project: { id: string; name: string; client: { id: string; name: string } };
+    project: ProjectWithClientRaw;
     subcontractor: { id: string; name: string };
     incomeEntries: IncomeEntryRaw[];
     corporationPayments: CorporationPaymentRaw[];
@@ -74,7 +83,13 @@ export const toProjectReportList = (
 
 export const toProjectReportResponse = (
   projectReport: Omit<ProjectReport, 'income' | 'incomeDate'> & {
-    project: { id: string; name: string };
+    project: {
+      id: string;
+      name: string;
+      description: string;
+      location: string;
+      requesterName: string;
+    };
     subcontractor: {
       id: string;
       name: string;

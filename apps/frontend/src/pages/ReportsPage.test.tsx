@@ -42,6 +42,9 @@ const mockReports = [
     project: {
       id: "p1",
       name: "Tower Block",
+      description: "A very tall residential tower",
+      location: "1 Skyline Ave",
+      requesterName: "Jane Doe",
       client: { id: "c1", name: "Acme Corp" },
     },
     subcontractor: { id: "s1", name: "Bob the Builder" },
@@ -190,5 +193,27 @@ describe("ReportsPage", () => {
     expect(
       screen.getByRole("heading", { name: "Add Project Reports" }),
     ).toBeInTheDocument();
+  });
+
+  it("renders the tile header with project name, location and description, name still clickable", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+
+    const nameButton = screen.getByRole("button", { name: "Tower Block" });
+    expect(nameButton).toBeInTheDocument();
+    expect(screen.getByText("1 Skyline Ave")).toBeInTheDocument();
+    expect(
+      screen.getByText("A very tall residential tower"),
+    ).toBeInTheDocument();
+
+    // Project name -> location -> description, in DOM order within the tile.
+    const header = nameButton.closest("div")!;
+    const text = header.textContent ?? "";
+    expect(text.indexOf("Tower Block")).toBeLessThan(
+      text.indexOf("1 Skyline Ave"),
+    );
+    expect(text.indexOf("1 Skyline Ave")).toBeLessThan(
+      text.indexOf("A very tall residential tower"),
+    );
   });
 });

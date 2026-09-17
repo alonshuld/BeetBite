@@ -16,7 +16,14 @@ export interface ProjectReport {
   totalIncome: number;
   incomeEntries: IncomeEntry[];
   corporationPayments: CorporationPaymentRow[];
-  project: { id: string; name: string; client: { id: string; name: string } };
+  project: {
+    id: string;
+    name: string;
+    description: string;
+    location: string;
+    requesterName: string;
+    client: { id: string; name: string };
+  };
   subcontractor: { id: string; name: string };
 }
 

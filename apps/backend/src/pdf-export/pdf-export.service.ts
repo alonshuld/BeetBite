@@ -100,7 +100,7 @@ export class PdfExportService {
       contractorName: companySettings.name,
       contractorCompanyNumber: companySettings.companyNumber,
       contractorDescription: companySettings.description,
-      clientName: report.project.client.name,
+      requesterName: report.project.requesterName,
       subcontractorName: subcontractor.name,
       subcontractorCompanyNumber: subcontractor.companyNumber,
       projectName: report.project.name,

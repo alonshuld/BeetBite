@@ -694,14 +694,22 @@ function ProjectSheet({
 
   return (
     <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-2 h-full">
-      <div className="flex items-center justify-between mb-1">
-        <button
-          onClick={onNavigate}
-          className="font-medium text-text hover:text-beet hover:underline transition-colors text-left"
-        >
-          {report.project.name}
-        </button>
-        <ButtonGhost onClick={onExport} className="text-xs py-1 px-2">
+      <div className="flex items-start justify-between mb-1 gap-2">
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <button
+            onClick={onNavigate}
+            className="font-medium text-text hover:text-beet hover:underline transition-colors text-left rtl:text-right truncate"
+          >
+            {report.project.name}
+          </button>
+          <span className="text-xs text-text-muted truncate">
+            {report.project.location}
+          </span>
+          <span className="text-[11px] text-text-dim line-clamp-2">
+            {report.project.description}
+          </span>
+        </div>
+        <ButtonGhost onClick={onExport} className="text-xs py-1 px-2 shrink-0">
           {t("exportPdf")}
         </ButtonGhost>
       </div>

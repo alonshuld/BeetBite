@@ -92,6 +92,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
           clientId,
           estimatedAmount: 500000,
           description: '',
+          requesterName: 'Test requester',
+          location: 'Test location',
         },
       })
     ).id;
@@ -191,6 +193,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
             clientId,
             estimatedAmount: 300000,
             description: '',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -362,6 +366,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
             clientId,
             estimatedAmount: 300000,
             description: '',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -454,6 +460,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
             clientId,
             estimatedAmount: 300000,
             description: '',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -577,6 +585,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
             clientId,
             estimatedAmount: 200000,
             description: '',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -639,6 +649,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
             clientId,
             estimatedAmount: 200000,
             description: '',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;

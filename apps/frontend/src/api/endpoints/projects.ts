@@ -8,13 +8,15 @@ export interface ProjectClient {
 export interface Project {
   id: string;
   clientId: string;
-  client: ProjectClient | null;
+  client: ProjectClient;
   name: string;
   description: string;
   estimatedAmount: number;
   isDone: boolean;
   hasReports: boolean;
   paymentProgress: { totalPaid: number };
+  requesterName: string;
+  location: string;
 }
 
 export interface CreateProjectDto {
@@ -23,6 +25,8 @@ export interface CreateProjectDto {
   description: string;
   estimatedAmount: number;
   isDone?: boolean;
+  requesterName: string;
+  location: string;
 }
 
 export type UpdateProjectDto = CreateProjectDto;

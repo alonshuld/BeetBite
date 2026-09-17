@@ -44,6 +44,8 @@ describe('ProjectsController', () => {
         name: 'Test Project',
         estimatedAmount: 100000,
         description: 'Test project description',
+        requesterName: 'Jane Doe',
+        location: '123 Main St, Tel Aviv',
       };
 
       const expectedResult: ProjectBasicResponseDto = {
@@ -53,6 +55,8 @@ describe('ProjectsController', () => {
         estimatedAmount: 100000,
         description: 'Test project description',
         isDone: false,
+        requesterName: 'Jane Doe',
+        location: '123 Main St, Tel Aviv',
       };
 
       mockProjectsService.create.mockResolvedValue(expectedResult);
@@ -74,6 +78,8 @@ describe('ProjectsController', () => {
           name: 'Duplicate Project',
           estimatedAmount: 1000,
           description: 'A description',
+          requesterName: 'Jane Doe',
+          location: '123 Main St, Tel Aviv',
         }),
       ).rejects.toThrow('Project already exists');
     });
@@ -92,6 +98,8 @@ describe('ProjectsController', () => {
           isDone: false,
           hasReports: true,
           paymentProgress: { totalPaid: 2000 },
+          requesterName: 'Jane Doe',
+          location: '123 Main St, Tel Aviv',
         },
         {
           id: 'clhp000000000000000000002',
@@ -103,6 +111,8 @@ describe('ProjectsController', () => {
           isDone: false,
           hasReports: true,
           paymentProgress: { totalPaid: 5000 },
+          requesterName: 'John Smith',
+          location: '456 Side St, Haifa',
         },
       ];
 
@@ -128,6 +138,8 @@ describe('ProjectsController', () => {
           isDone: false,
           hasReports: false,
           paymentProgress: { totalPaid: 0 },
+          requesterName: 'Jane Doe',
+          location: '789 Third St, Jerusalem',
         },
       ];
 
@@ -160,6 +172,8 @@ describe('ProjectsController', () => {
         isDone: false,
         hasReports: true,
         paymentProgress: { totalPaid: 2000 },
+        requesterName: 'Jane Doe',
+        location: '123 Main St, Tel Aviv',
       };
 
       mockProjectsService.findOne.mockResolvedValue(expectedResult);
@@ -193,6 +207,8 @@ describe('ProjectsController', () => {
         name: 'Updated Project',
         estimatedAmount: 200000,
         description: 'Updated description',
+        requesterName: 'John Smith',
+        location: '456 Side St, Haifa',
       };
 
       const expectedResult: ProjectBasicResponseDto = {
@@ -202,6 +218,8 @@ describe('ProjectsController', () => {
         estimatedAmount: 200000,
         description: 'Updated description',
         isDone: false,
+        requesterName: 'John Smith',
+        location: '456 Side St, Haifa',
       };
 
       mockProjectsService.update.mockResolvedValue(expectedResult);

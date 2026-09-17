@@ -55,6 +55,7 @@ describe('PdfExportService', () => {
     project: {
       id: 'project-1',
       name: 'Wine City, plot 309 — Ashkelon',
+      requesterName: 'Moshe Cohen',
       client: { id: 'client-1', name: 'Bar Yam Ltd.' },
     },
     subcontractor: { id: 'sub-1', name: 'Israelov Engineering' },
@@ -261,6 +262,13 @@ describe('PdfExportService', () => {
     const html = await renderHtml();
 
     expect(html.split('Wine City, plot 309 — Ashkelon').length - 1).toBe(1);
+  });
+
+  it("should print the project's requester in place of the client, and never print the client's name", async () => {
+    const html = await renderHtml();
+
+    expect(html).toContain('Moshe Cohen');
+    expect(html).not.toContain('Bar Yam Ltd.');
   });
 
   it('should list suppliers in their own table, independent of the income rows', async () => {

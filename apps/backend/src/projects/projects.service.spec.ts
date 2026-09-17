@@ -50,6 +50,8 @@ describe('ProjectsService', () => {
       name: 'Test Project',
       estimatedAmount: 100000,
       description: 'Test project description',
+      requesterName: 'Jane Doe',
+      location: '123 Main St, Tel Aviv',
     };
 
     const mockProject = {
@@ -58,6 +60,8 @@ describe('ProjectsService', () => {
       name: createDto.name,
       estimatedAmount: new Prisma.Decimal(createDto.estimatedAmount),
       description: createDto.description,
+      requesterName: createDto.requesterName,
+      location: createDto.location,
     };
 
     it('should create a project', async () => {
@@ -71,6 +75,8 @@ describe('ProjectsService', () => {
         name: mockProject.name,
         estimatedAmount: mockProject.estimatedAmount.toNumber(),
         description: mockProject.description,
+        requesterName: mockProject.requesterName,
+        location: mockProject.location,
       });
 
       expect(mockPrismaService.project.create).toHaveBeenCalledWith({
@@ -79,6 +85,8 @@ describe('ProjectsService', () => {
           name: createDto.name,
           estimatedAmount: new Prisma.Decimal(createDto.estimatedAmount),
           description: createDto.description,
+          requesterName: createDto.requesterName,
+          location: createDto.location,
         },
       });
     });
@@ -296,6 +304,8 @@ describe('ProjectsService', () => {
       name: 'Updated Project',
       estimatedAmount: 200000,
       description: 'Updated project description',
+      requesterName: 'John Smith',
+      location: '456 Side St, Haifa',
     };
 
     const mockUpdatedProject = {
@@ -304,6 +314,8 @@ describe('ProjectsService', () => {
       name: updateDto.name,
       estimatedAmount: new Prisma.Decimal(updateDto.estimatedAmount),
       description: updateDto.description,
+      requesterName: updateDto.requesterName,
+      location: updateDto.location,
     };
 
     it('should update a project', async () => {
