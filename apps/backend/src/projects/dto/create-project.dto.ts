@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsNotEmpty,
@@ -6,7 +6,10 @@ import {
   IsPositive,
   IsBoolean,
   IsOptional,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { OpeningBalanceDto } from './opening-balance.dto';
 
 /**
  * Represents the parameters required to create a new project.
@@ -58,4 +61,14 @@ export class CreateProjectDto {
     default: false,
   })
   isDone?: boolean;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => OpeningBalanceDto)
+  @ApiPropertyOptional({
+    description:
+      'Money already received for this project before it was entered. Creates one back-dated report alongside the project, in the same transaction. Omit it and only the project is created.',
+    type: OpeningBalanceDto,
+  })
+  openingBalance?: OpeningBalanceDto;
 }

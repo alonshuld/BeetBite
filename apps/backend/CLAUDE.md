@@ -147,6 +147,32 @@ When creating or updating a `ProjectReport`, `subcontractorId` and `profitMargin
 
 **SubcontractorPayment** — `amount` is stored (provided by the caller). Multiple partial payments per `(subcontractorId, projectId, serviceDate)` are allowed. On `create` and `update`, the service computes `amountOwed` for the specific project (not across all projects for the month) and rejects the payment if `Σ(existing payments for that project) + newAmount > amountOwed`. The overpayment check and the DB write are executed inside a single `$transaction` to prevent race conditions — do not split them into separate steps.
 
+### Project opening balance
+
+`POST /projects` accepts an optional nested `openingBalance` (`amount`, `month`,
+`subcontractorId`, `profitMargin`). Projects are often entered part-way through
+the work, so the contractor has already been paid for some of it; there is
+nowhere to put that amount except a real report, because every financial figure
+is derived from reports.
+
+- The project, its first client assignment and the back-dated `ProjectReport`
+  (one income entry for the amount) are written in a single `$transaction`.
+- `subcontractorId` and `profitMargin` are **required within the block** because
+  `ProjectReport` requires both. Making those columns nullable to accommodate a
+  synthetic report would push null handling through every calculation.
+- The income entry's `incomeDate` is set to the month, not left null: the
+  question asked is "how much have I *already received*", so the money is in
+  hand and must count towards payment progress.
+- The entry is tagged with `OPENING_BALANCE_TAG` (`src/common/constants.ts`) so
+  the synthetic origin stays visible. The frontend translates that exact value
+  for display — it is stored data, so the two must agree.
+- The subcontractor is looked up explicitly inside the transaction rather than
+  left to the foreign key: both it and the client can be wrong, and a raw P2003
+  does not reliably say which.
+
+The resulting report is a **real** report — it appears on the reports screen,
+in monthly income, in payment views and in totals. That is intended, not a leak.
+
 ### Project payment progress
 
 `ProjectResponseDto` includes a `paymentProgress` field with a single field: `totalPaid` = sum of `ProjectReport.income` where `incomeDate IS NOT NULL`. The frontend derives `remainingAmount` and `percentagePaid` from `totalPaid` and the project's `estimatedAmount`.

@@ -17,15 +17,30 @@ export interface Project {
   paymentProgress: { totalPaid: number };
 }
 
+/**
+ * Money the project already brought in before it was entered into the system.
+ * The backend turns this into one back-dated project report, in the same
+ * transaction as the project itself.
+ */
+export interface OpeningBalanceDto {
+  amount: number;
+  month: string;
+  subcontractorId: string;
+  profitMargin: number;
+}
+
 export interface CreateProjectDto {
   clientId: string;
   name: string;
   description: string;
   estimatedAmount: number;
   isDone?: boolean;
+  openingBalance?: OpeningBalanceDto;
 }
 
-export type UpdateProjectDto = CreateProjectDto;
+// An opening balance only exists at creation — there is nothing to back-date
+// once the project is already in the system and has its own reports.
+export type UpdateProjectDto = Omit<CreateProjectDto, "openingBalance">;
 
 export const projectsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({

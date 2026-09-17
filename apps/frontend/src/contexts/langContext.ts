@@ -242,6 +242,15 @@ export const translations = {
     toDate: "to date",
     removeTransfer: "Remove this transfer",
     projectTransferred: "Project transferred",
+    openingBalanceTitle: "Already received (optional)",
+    openingBalanceHint:
+      "If work on this project started before it was entered here, record what has already come in. It is saved as a back-dated monthly report.",
+    openingBalanceAmount: "Amount already received",
+    openingBalanceMonth: "Month it covers",
+    openingBalanceIncomplete:
+      "Fill in the month, subcontractor and profit margin too, or clear the amount.",
+    openingBalanceTag: "Opening balance",
+    chooseSubcontractor: "Choose a subcontractor",
     balance: "Balance",
     paymentDate: "Payment date",
     noDateRecorded: "No date recorded",
@@ -490,6 +499,15 @@ export const translations = {
     toDate: "עד היום",
     removeTransfer: "הסר העברה זו",
     projectTransferred: "הפרוייקט הועבר",
+    openingBalanceTitle: "כבר התקבל (רשות)",
+    openingBalanceHint:
+      "אם העבודה בפרוייקט התחילה לפני שהוזן כאן, אפשר לרשום כמה כבר התקבל. הסכום נשמר כדוח חודשי בתאריך אחורה.",
+    openingBalanceAmount: "סכום שכבר התקבל",
+    openingBalanceMonth: "החודש שאליו הסכום מתייחס",
+    openingBalanceIncomplete:
+      "יש למלא גם את החודש, קבלן המשנה ומרווח הרווח, או לרוקן את הסכום.",
+    openingBalanceTag: "יתרת פתיחה",
+    chooseSubcontractor: "בחר קבלן משנה",
     balance: "יתרה",
     paymentDate: "תאריך תשלום",
     noDateRecorded: "ללא תאריך",

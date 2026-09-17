@@ -44,6 +44,13 @@ interface IncomeEntryDraft {
   tag: string;
 }
 
+/**
+ * The tag the backend writes on an opening-balance income entry. Kept in sync
+ * with OPENING_BALANCE_TAG in the backend's common/constants.ts — it is stored
+ * data, so the two must agree.
+ */
+const OPENING_BALANCE_TAG = "Opening balance";
+
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -699,6 +706,13 @@ function ProjectSheet({
 }: ProjectSheetProps) {
   const { t } = useLang();
 
+  // Tags are free text the user typed, shown verbatim — except the one the
+  // backend writes itself on an opening-balance report (T11), which is stored
+  // in one fixed language and translated here so it reads right either way.
+  function incomeTagLabel(tag: string): string {
+    return tag === OPENING_BALANCE_TAG ? t("openingBalanceTag") : tag;
+  }
+
   const profit = report.totalIncome * (report.profitMargin / 100);
   const corpTotal = report.supplierPayments.reduce((s, cp) => s + cp.amount, 0);
   const subPayment = report.totalIncome - profit - corpTotal;
@@ -726,7 +740,7 @@ function ProjectSheet({
           >
             <div className="flex items-center gap-2">
               <span className="text-text-muted">
-                {entry.tag ?? t("income")}
+                {entry.tag ? incomeTagLabel(entry.tag) : t("income")}
               </span>
               <Badge variant={isReceived ? "green" : "yellow"}>
                 {isReceived

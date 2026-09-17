@@ -8,6 +8,7 @@ import {
   type Project,
 } from "@/api/endpoints/projects";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
+import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { SearchInput } from "@/components/molecules/SearchInput";
 import { FormGroup, FormRow } from "@/components/molecules/FormGroup";
@@ -75,6 +76,16 @@ interface FormState {
   clientId: string;
   description: string;
   estimatedAmount: string;
+  // T11 — optional opening balance. Empty strings mean "not filled in", which
+  // is the normal case; the whole section is skipped unless an amount is typed.
+  openingAmount: string;
+  openingMonth: string;
+  openingSubcontractorId: string;
+  openingProfitMargin: string;
+}
+
+function currentYearMonth(): string {
+  return new Date().toISOString().slice(0, 7);
 }
 
 const EMPTY_FORM: FormState = {
@@ -82,12 +93,17 @@ const EMPTY_FORM: FormState = {
   clientId: "",
   description: "",
   estimatedAmount: "",
+  openingAmount: "",
+  openingMonth: "",
+  openingSubcontractorId: "",
+  openingProfitMargin: "",
 };
 
 export default function ProjectsPage() {
   const { t } = useLang();
   const { data: projects = [], isLoading } = useGetProjectsQuery();
   const { data: clients = [] } = useGetClientsQuery();
+  const { data: subcontractors = [] } = useGetSubcontractorsQuery();
   const [createProject, { isLoading: creating }] = useCreateProjectMutation();
   const [updateProject, { isLoading: updating }] = useUpdateProjectMutation();
   const [deleteProject, { isLoading: deleting }] = useDeleteProjectMutation();
@@ -143,13 +159,14 @@ export default function ProjectsPage() {
 
   function openAdd() {
     setEditing(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, openingMonth: currentYearMonth() });
     setFormOpen(true);
   }
 
   function openEdit(project: Project) {
     setEditing(project);
     setForm({
+      ...EMPTY_FORM,
       name: project.name,
       clientId: project.client?.id ?? "",
       description: project.description ?? "",
@@ -168,6 +185,19 @@ export default function ProjectsPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  // The opening balance needs all four fields or none: ProjectReport requires
+  // a subcontractor and a profit margin, so a half-filled section cannot be
+  // turned into a report at all.
+  const openingAmount = parseFloat(form.openingAmount);
+  const openingBalanceStarted = form.openingAmount.trim() !== "";
+  const openingBalanceComplete =
+    openingBalanceStarted &&
+    !isNaN(openingAmount) &&
+    openingAmount > 0 &&
+    form.openingMonth !== "" &&
+    form.openingSubcontractorId !== "" &&
+    form.openingProfitMargin.trim() !== "";
+
   async function handleSave() {
     if (!form.name.trim() || !form.estimatedAmount) return;
     const amount = parseFloat(form.estimatedAmount);
@@ -178,9 +208,28 @@ export default function ProjectsPage() {
       estimatedAmount: amount,
       clientId: form.clientId,
     };
-    const result = editing
-      ? await updateProject({ id: editing.id, ...payload })
-      : await createProject(payload);
+
+    if (editing) {
+      const result = await updateProject({ id: editing.id, ...payload });
+      if (!("error" in result)) closeForm();
+      return;
+    }
+
+    if (openingBalanceStarted && !openingBalanceComplete) return;
+
+    const result = await createProject({
+      ...payload,
+      ...(openingBalanceComplete
+        ? {
+            openingBalance: {
+              amount: openingAmount,
+              month: `${form.openingMonth}-01`,
+              subcontractorId: form.openingSubcontractorId,
+              profitMargin: parseFloat(form.openingProfitMargin),
+            },
+          }
+        : {}),
+    });
     if (!("error" in result)) closeForm();
   }
 
@@ -469,6 +518,84 @@ export default function ProjectsPage() {
             />
           </FormGroup>
         </FormRow>
+
+        {/* T11 — projects are often entered part-way through the work, so ask
+            what has already come in. Creation only: there is nothing to
+            back-date once the project has reports of its own. */}
+        {!editing && (
+          <div className="flex flex-col gap-3 border-t border-border pt-4">
+            <div>
+              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                {t("openingBalanceTitle")}
+              </h3>
+              <p className="text-xs text-text-muted mt-1">
+                {t("openingBalanceHint")}
+              </p>
+            </div>
+            <FormRow>
+              <FormGroup>
+                <Input
+                  id="proj-opening-amount"
+                  label={t("openingBalanceAmount")}
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={form.openingAmount}
+                  onChange={(e) => setField("openingAmount", e.target.value)}
+                  placeholder="0"
+                />
+              </FormGroup>
+              <FormGroup>
+                <Input
+                  id="proj-opening-month"
+                  label={t("openingBalanceMonth")}
+                  type="month"
+                  value={form.openingMonth}
+                  onChange={(e) => setField("openingMonth", e.target.value)}
+                />
+              </FormGroup>
+            </FormRow>
+            <FormRow>
+              <FormGroup>
+                <Select
+                  id="proj-opening-subcontractor"
+                  label={t("subcontractor")}
+                  value={form.openingSubcontractorId}
+                  onChange={(e) =>
+                    setField("openingSubcontractorId", e.target.value)
+                  }
+                >
+                  <option value="">{t("chooseSubcontractor")}</option>
+                  {subcontractors.map((sc) => (
+                    <option key={sc.id} value={sc.id}>
+                      {sc.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormGroup>
+              <FormGroup>
+                <Input
+                  id="proj-opening-margin"
+                  label={t("profitMargin")}
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={form.openingProfitMargin}
+                  onChange={(e) =>
+                    setField("openingProfitMargin", e.target.value)
+                  }
+                  placeholder="0"
+                />
+              </FormGroup>
+            </FormRow>
+            {openingBalanceStarted && !openingBalanceComplete && (
+              <p className="text-xs text-warning" role="alert">
+                {t("openingBalanceIncomplete")}
+              </p>
+            )}
+          </div>
+        )}
       </FormModal>
 
       <ProjectTransferModal

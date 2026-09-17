@@ -15,6 +15,10 @@ vi.mock("@/api/endpoints/clients", () => ({
   useGetClientsQuery: vi.fn(),
 }));
 
+vi.mock("@/api/endpoints/subcontractors", () => ({
+  useGetSubcontractorsQuery: vi.fn(),
+}));
+
 import {
   useGetProjectsQuery,
   useCreateProjectMutation,
@@ -22,6 +26,7 @@ import {
   useDeleteProjectMutation,
 } from "@/api/endpoints/projects";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
+import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 
 const mockProjects = [
   {
@@ -66,6 +71,10 @@ describe("ProjectsPage", () => {
       data: [{ id: "c1", name: "Acme Corp" }],
       isLoading: false,
     } as unknown as ReturnType<typeof useGetClientsQuery>);
+    vi.mocked(useGetSubcontractorsQuery).mockReturnValue({
+      data: [{ id: "s1", name: "Dan Levi", companyNumber: "515222020" }],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useGetSubcontractorsQuery>);
     vi.mocked(useCreateProjectMutation).mockReturnValue([
       noopMutation,
       { isLoading: false },
@@ -215,5 +224,113 @@ describe("ProjectsPage", () => {
     expect(
       screen.getByText("No projects match selected filters"),
     ).toBeInTheDocument();
+  });
+
+  describe("opening balance (T11)", () => {
+    const createSpy = vi.fn().mockResolvedValue({ data: { id: "new" } });
+
+    beforeEach(() => {
+      createSpy.mockClear();
+      vi.mocked(useCreateProjectMutation).mockReturnValue([
+        createSpy,
+        { isLoading: false },
+      ] as unknown as ReturnType<typeof useCreateProjectMutation>);
+    });
+
+    async function openAddForm() {
+      await userEvent.click(
+        screen.getByRole("button", { name: /add project/i }),
+      );
+    }
+
+    async function fillRequiredFields() {
+      await userEvent.type(screen.getByLabelText("Name"), "New Project");
+      await userEvent.type(screen.getByLabelText(/Estimated Amount/i), "80000");
+    }
+
+    it("offers the section when adding a project", async () => {
+      renderProjectsPage();
+      await openAddForm();
+      expect(
+        screen.getByLabelText("Amount already received"),
+      ).toBeInTheDocument();
+    });
+
+    // There is nothing to back-date once the project is already in the system
+    // and has reports of its own.
+    it("does not offer the section when editing", async () => {
+      renderProjectsPage();
+      await userEvent.click(screen.getAllByTitle("Edit")[0]);
+      expect(
+        screen.queryByLabelText("Amount already received"),
+      ).not.toBeInTheDocument();
+    });
+
+    // 🔴 The section is optional. Leaving it alone must send no openingBalance
+    // at all — sending an empty one would create a bogus report.
+    it("sends no opening balance when the section is left empty", async () => {
+      renderProjectsPage();
+      await openAddForm();
+      await fillRequiredFields();
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      const payload = createSpy.mock.calls[0][0] as Record<string, unknown>;
+      expect(payload).not.toHaveProperty("openingBalance");
+    });
+
+    it("sends the opening balance when every field is filled", async () => {
+      renderProjectsPage();
+      await openAddForm();
+      await fillRequiredFields();
+
+      await userEvent.type(
+        screen.getByLabelText("Amount already received"),
+        "45000",
+      );
+      await userEvent.clear(screen.getByLabelText("Month it covers"));
+      await userEvent.type(screen.getByLabelText("Month it covers"), "2026-03");
+      await userEvent.selectOptions(
+        screen.getByLabelText("Subcontractor"),
+        "s1",
+      );
+      await userEvent.type(screen.getByLabelText("Profit Margin"), "12.5");
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      const payload = createSpy.mock.calls[0][0] as {
+        openingBalance: {
+          amount: number;
+          month: string;
+          subcontractorId: string;
+          profitMargin: number;
+        };
+      };
+      expect(payload.openingBalance).toEqual({
+        amount: 45000,
+        month: "2026-03-01",
+        subcontractorId: "s1",
+        profitMargin: 12.5,
+      });
+    });
+
+    // 🔴 ProjectReport requires a subcontractor and a profit margin, so a
+    // half-filled section cannot become a report. Submitting it anyway would
+    // fail at the API with nothing on screen explaining why.
+    it("blocks submit and explains when the section is half-filled", async () => {
+      renderProjectsPage();
+      await openAddForm();
+      await fillRequiredFields();
+      await userEvent.type(
+        screen.getByLabelText("Amount already received"),
+        "45000",
+      );
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(createSpy).not.toHaveBeenCalled();
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /month, subcontractor and profit margin/i,
+      );
+    });
   });
 });
