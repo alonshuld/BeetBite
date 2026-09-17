@@ -234,6 +234,8 @@ export const translations = {
     requesterPlaceholder: "Who commissioned this project?",
     location: "Location",
     projectLocationPlaceholder: "Project location",
+    exportDescriptionHint:
+      "Editing this updates the project's description everywhere, not just this document.",
   },
   he: {
     // Nav
@@ -460,6 +462,8 @@ export const translations = {
     requesterPlaceholder: "מי הזמין את הפרויקט?",
     location: "מיקום",
     projectLocationPlaceholder: "מיקום הפרויקט",
+    exportDescriptionHint:
+      "עריכת שדה זה מעדכנת את תיאור הפרויקט בכל מקום, לא רק במסמך זה.",
   },
 } as const;
 

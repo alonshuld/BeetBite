@@ -407,4 +407,33 @@ describe('ProjectsService', () => {
       );
     });
   });
+
+  describe('updateLastApprovedFor', () => {
+    it('should update only the lastApprovedFor field', async () => {
+      mockPrismaService.project.update.mockResolvedValue({});
+
+      await service.updateLastApprovedFor(
+        'clhp000000000000000000001',
+        'עבודות שלד + גמר',
+      );
+
+      expect(mockPrismaService.project.update).toHaveBeenCalledWith({
+        where: { id: 'clhp000000000000000000001' },
+        data: { lastApprovedFor: 'עבודות שלד + גמר' },
+      });
+    });
+
+    it('should throw ProjectNotFoundError when project not found', async () => {
+      const error = new PrismaClientKnownRequestError('', {
+        code: PRISMA_ERROR_CODES.NOT_FOUND,
+        clientVersion: '1.0.0',
+      });
+
+      mockPrismaService.project.update.mockRejectedValue(error);
+
+      await expect(
+        service.updateLastApprovedFor('clhp000000000000000000001', 'text'),
+      ).rejects.toThrow(ProjectNotFoundError);
+    });
+  });
 });

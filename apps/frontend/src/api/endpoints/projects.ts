@@ -17,6 +17,8 @@ export interface Project {
   paymentProgress: { totalPaid: number };
   requesterName: string;
   location: string;
+  /** The "approved for" text from this project's most recent PDF export, if any. */
+  lastApprovedFor: string | null;
 }
 
 export interface CreateProjectDto {

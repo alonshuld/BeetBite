@@ -4,6 +4,7 @@ import { CompanySettingsService } from 'src/company-settings/company-settings.se
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 import { ProjectReportsService } from 'src/project-reports/project-reports.service';
 import { SubcontractorsService } from 'src/subcontractors/subcontractors.service';
+import { ProjectsService } from 'src/projects/projects.service';
 import { ExportProjectReportsPdfDto } from './dto/export-project-reports-pdf.dto';
 import { CompanySettingsIncompleteError } from './errors/company-settings-incomplete.error';
 import { VatRateNotConfiguredError } from './errors/vat-rate-not-configured.error';
@@ -27,6 +28,7 @@ export class PdfExportService {
     private readonly vatRatesService: VatRatesService,
     private readonly projectReportsService: ProjectReportsService,
     private readonly subcontractorsService: SubcontractorsService,
+    private readonly projectsService: ProjectsService,
   ) {}
 
   async exportProjectReportsPdf(
@@ -124,7 +126,17 @@ export class PdfExportService {
     this.logger.log(
       `Rendering account-approval PDF for project report ${dto.projectReportId}`,
     );
-    return { pdf: await this.renderPdf(html), month };
+    const pdf = await this.renderPdf(html);
+
+    // Only a *successful* render counts as an export — persisting before this
+    // point would remember text from a request that never actually produced
+    // a document.
+    await this.projectsService.updateLastApprovedFor(
+      report.project.id,
+      dto.approvedFor,
+    );
+
+    return { pdf, month };
   }
 
   private async renderPdf(html: string): Promise<Buffer> {

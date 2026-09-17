@@ -14,7 +14,10 @@ vi.mock("@/api/endpoints/project-reports", () => ({
   useCreateProjectReportMutation: vi.fn(),
 }));
 vi.mock("@/api/endpoints/clients", () => ({ useGetClientsQuery: vi.fn() }));
-vi.mock("@/api/endpoints/projects", () => ({ useGetProjectsQuery: vi.fn() }));
+vi.mock("@/api/endpoints/projects", () => ({
+  useGetProjectsQuery: vi.fn(),
+  useUpdateProjectMutation: vi.fn(),
+}));
 vi.mock("@/api/endpoints/subcontractors", () => ({
   useGetSubcontractorsQuery: vi.fn(),
 }));
@@ -30,7 +33,10 @@ import {
   useCreateProjectReportMutation,
 } from "@/api/endpoints/project-reports";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
-import { useGetProjectsQuery } from "@/api/endpoints/projects";
+import {
+  useGetProjectsQuery,
+  useUpdateProjectMutation,
+} from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
 import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
@@ -66,6 +72,10 @@ const exportSpy = vi
   .fn()
   .mockReturnValue({ unwrap: vi.fn().mockResolvedValue(new Blob()) });
 
+const updateProjectSpy = vi
+  .fn()
+  .mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
+
 function setReports(data: unknown, isLoading = false) {
   vi.mocked(useGetProjectReportsQuery).mockReturnValue({
     data,
@@ -88,8 +98,22 @@ describe("ReportsPage", () => {
       data: [{ id: "c1", name: "Acme Corp" }],
     } as unknown as ReturnType<typeof useGetClientsQuery>);
     vi.mocked(useGetProjectsQuery).mockReturnValue({
-      data: [{ id: "p1", name: "Tower Block", clientId: "c1" }],
+      data: [
+        {
+          id: "p1",
+          name: "Tower Block",
+          clientId: "c1",
+          description: "Shell + finishing work",
+          estimatedAmount: 100000,
+          isDone: false,
+          lastApprovedFor: null,
+        },
+      ],
     } as unknown as ReturnType<typeof useGetProjectsQuery>);
+    vi.mocked(useUpdateProjectMutation).mockReturnValue([
+      updateProjectSpy,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useUpdateProjectMutation>);
     vi.mocked(useGetSubcontractorsQuery).mockReturnValue({
       data: [{ id: "s1", name: "Bob the Builder" }],
     } as unknown as ReturnType<typeof useGetSubcontractorsQuery>);
@@ -185,6 +209,65 @@ describe("ReportsPage", () => {
       approvedFor: "Shell + finishing",
       lang: "en",
     });
+  });
+
+  it("prefills the export dialog's description from the project and persists edits to it on submit", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    const descriptionField = screen.getByLabelText("Description");
+    expect(descriptionField).toHaveValue("Shell + finishing work");
+
+    await userEvent.clear(descriptionField);
+    await userEvent.type(descriptionField, "Updated scope of work");
+    await userEvent.type(screen.getByLabelText("Approved For"), "Approved");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(updateProjectSpy).toHaveBeenCalledWith({
+      id: "p1",
+      clientId: "c1",
+      name: "Tower Block",
+      estimatedAmount: 100000,
+      description: "Updated scope of work",
+      isDone: false,
+    });
+  });
+
+  it("does not persist an edited description when the dialog is cancelled", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    await userEvent.clear(screen.getByLabelText("Description"));
+    await userEvent.type(screen.getByLabelText("Description"), "Never saved");
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(updateProjectSpy).not.toHaveBeenCalled();
+  });
+
+  it("prefills approvedFor from the project's lastApprovedFor on the second export", async () => {
+    vi.mocked(useGetProjectsQuery).mockReturnValue({
+      data: [
+        {
+          id: "p1",
+          name: "Tower Block",
+          clientId: "c1",
+          description: "Shell + finishing work",
+          estimatedAmount: 100000,
+          isDone: false,
+          lastApprovedFor: "Shell + finishing (previous export)",
+        },
+      ],
+    } as unknown as ReturnType<typeof useGetProjectsQuery>);
+
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    expect(screen.getByLabelText("Approved For")).toHaveValue(
+      "Shell + finishing (previous export)",
+    );
   });
 
   it("opens the add-report modal", async () => {

@@ -85,4 +85,13 @@ export class ProjectResponseDto {
     type: 'string',
   })
   location!: string;
+
+  @ApiProperty({
+    example: 'עבודות שלד + גמר',
+    description:
+      "The 'approved for' text used on this project's most recent PDF export, prefilled on the next export",
+    type: 'string',
+    nullable: true,
+  })
+  lastApprovedFor!: string | null;
 }

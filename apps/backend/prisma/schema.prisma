@@ -26,6 +26,7 @@ model Project {
   isDone          Boolean  @default(false)
   requesterName   String
   location        String
+  lastApprovedFor String?
 
   client               Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
   reports              ProjectReport[]

@@ -4,6 +4,7 @@ import { CompanySettingsService } from 'src/company-settings/company-settings.se
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 import { ProjectReportsService } from 'src/project-reports/project-reports.service';
 import { SubcontractorsService } from 'src/subcontractors/subcontractors.service';
+import { ProjectsService } from 'src/projects/projects.service';
 import { CompanySettingsIncompleteError } from './errors/company-settings-incomplete.error';
 import { VatRateNotConfiguredError } from './errors/vat-rate-not-configured.error';
 import { NoReportsForExportError } from './errors/no-reports-for-export.error';
@@ -26,6 +27,7 @@ describe('PdfExportService', () => {
   const mockVatRatesService = { resolveForMonth: jest.fn() };
   const mockProjectReportsService = { findOneForExport: jest.fn() };
   const mockSubcontractorsService = { findOne: jest.fn() };
+  const mockProjectsService = { updateLastApprovedFor: jest.fn() };
 
   const completeCompanySettings = {
     id: 'company-settings',
@@ -115,6 +117,7 @@ describe('PdfExportService', () => {
         { provide: VatRatesService, useValue: mockVatRatesService },
         { provide: ProjectReportsService, useValue: mockProjectReportsService },
         { provide: SubcontractorsService, useValue: mockSubcontractorsService },
+        { provide: ProjectsService, useValue: mockProjectsService },
       ],
     }).compile();
 
@@ -131,6 +134,7 @@ describe('PdfExportService', () => {
       name: 'Israelov Engineering',
       companyNumber: '516469053',
     });
+    mockProjectsService.updateLastApprovedFor.mockResolvedValue(undefined);
   });
 
   const renderHtml = async (): Promise<string> => {
@@ -294,6 +298,60 @@ describe('PdfExportService', () => {
 
     // The column still renders, just empty.
     expect(await renderHtml()).toContain('<td></td>');
+  });
+
+  it("should persist approvedFor onto the report's project after a successful export", async () => {
+    await service.exportProjectReportsPdf(dto);
+
+    expect(mockProjectsService.updateLastApprovedFor).toHaveBeenCalledWith(
+      'project-1',
+      dto.approvedFor,
+    );
+  });
+
+  it('should not persist approvedFor when company settings are incomplete', async () => {
+    mockCompanySettingsService.findOne.mockResolvedValue(null);
+
+    await expect(service.exportProjectReportsPdf(dto)).rejects.toThrow(
+      CompanySettingsIncompleteError,
+    );
+    expect(mockProjectsService.updateLastApprovedFor).not.toHaveBeenCalled();
+  });
+
+  it('should not persist approvedFor when no VAT rate resolves for the month', async () => {
+    mockVatRatesService.resolveForMonth.mockResolvedValue(null);
+
+    await expect(service.exportProjectReportsPdf(dto)).rejects.toThrow(
+      VatRateNotConfiguredError,
+    );
+    expect(mockProjectsService.updateLastApprovedFor).not.toHaveBeenCalled();
+  });
+
+  it('should not persist approvedFor when the report does not exist', async () => {
+    mockProjectReportsService.findOneForExport.mockRejectedValue(
+      new Error('not found'),
+    );
+
+    await expect(service.exportProjectReportsPdf(dto)).rejects.toThrow(
+      NoReportsForExportError,
+    );
+    expect(mockProjectsService.updateLastApprovedFor).not.toHaveBeenCalled();
+  });
+
+  it('should not persist approvedFor when PDF rendering itself fails', async () => {
+    const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
+    puppeteer.launch.mockResolvedValue({
+      newPage: jest.fn().mockResolvedValue({
+        setContent: jest.fn().mockResolvedValue(undefined),
+        pdf: jest.fn().mockRejectedValue(new Error('render failed')),
+      }),
+      close: jest.fn().mockResolvedValue(undefined),
+    });
+
+    await expect(service.exportProjectReportsPdf(dto)).rejects.toThrow(
+      'render failed',
+    );
+    expect(mockProjectsService.updateLastApprovedFor).not.toHaveBeenCalled();
   });
 
   it('should escape HTML in a tag', async () => {
