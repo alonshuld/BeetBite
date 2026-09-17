@@ -122,9 +122,11 @@ export default function ProjectReportsPage() {
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editEntryAmount, setEditEntryAmount] = useState("");
   const [editEntryDate, setEditEntryDate] = useState("");
+  const [editEntryTag, setEditEntryTag] = useState("");
   const [addingNewEntry, setAddingNewEntry] = useState(false);
   const [newEntryAmount, setNewEntryAmount] = useState("");
   const [newEntryDate, setNewEntryDate] = useState("");
+  const [newEntryTag, setNewEntryTag] = useState("");
 
   // Inline corp payment editing state
   const [editingCorpId, setEditingCorpId] = useState<string | null>(null);
@@ -239,6 +241,7 @@ export default function ProjectReportsPage() {
     setEditingEntryId(entry.id);
     setEditEntryAmount(String(entry.amount));
     setEditEntryDate(entry.incomeDate ? entry.incomeDate.slice(0, 10) : "");
+    setEditEntryTag(entry.tag ?? "");
   }
 
   async function saveEntryEdit(entryId: string) {
@@ -246,6 +249,7 @@ export default function ProjectReportsPage() {
       id: entryId,
       amount: Number(editEntryAmount) || undefined,
       incomeDate: editEntryDate || null,
+      tag: editEntryTag.trim() || null,
     });
     setEditingEntryId(null);
   }
@@ -256,10 +260,12 @@ export default function ProjectReportsPage() {
       reportId: currentReport.id,
       amount: Number(newEntryAmount),
       incomeDate: newEntryDate || undefined,
+      tag: newEntryTag.trim() || undefined,
     });
     setAddingNewEntry(false);
     setNewEntryAmount("");
     setNewEntryDate("");
+    setNewEntryTag("");
   }
 
   function startEditCorp(cp: {
@@ -418,6 +424,14 @@ export default function ProjectReportsPage() {
                       onChange={(e) => setEditEntryDate(e.target.value)}
                       className="flex-1"
                     />
+                    <Input
+                      label={t("tag")}
+                      maxLength={100}
+                      placeholder={t("tagPlaceholder")}
+                      value={editEntryTag}
+                      onChange={(e) => setEditEntryTag(e.target.value)}
+                      className="flex-1"
+                    />
                     <div className="flex gap-1 mb-[1px]">
                       <ButtonPrimary
                         onClick={() => void saveEntryEdit(entry.id)}
@@ -444,7 +458,7 @@ export default function ProjectReportsPage() {
                 >
                   <div className="flex flex-col">
                     <span className="text-xs text-text-muted">
-                      {t("clientIncome")}
+                      {entry.tag || t("clientIncome")}
                     </span>
                     {isReceived ? (
                       <span className="text-[11px] text-success">
@@ -495,6 +509,14 @@ export default function ProjectReportsPage() {
                   onChange={(e) => setNewEntryDate(e.target.value)}
                   className="flex-1"
                 />
+                <Input
+                  label={t("tag")}
+                  maxLength={100}
+                  placeholder={t("tagPlaceholder")}
+                  value={newEntryTag}
+                  onChange={(e) => setNewEntryTag(e.target.value)}
+                  className="flex-1"
+                />
                 <div className="flex gap-1 mb-[1px]">
                   <ButtonPrimary
                     onClick={() => void saveNewEntry()}
@@ -508,6 +530,7 @@ export default function ProjectReportsPage() {
                       setAddingNewEntry(false);
                       setNewEntryAmount("");
                       setNewEntryDate("");
+                      setNewEntryTag("");
                     }}
                     className="text-xs py-1 px-3"
                   >

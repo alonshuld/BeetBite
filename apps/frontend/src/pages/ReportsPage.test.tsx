@@ -12,6 +12,7 @@ vi.mock("react-router-dom", async (importOriginal) => {
 vi.mock("@/api/endpoints/project-reports", () => ({
   useGetProjectReportsQuery: vi.fn(),
   useCreateProjectReportMutation: vi.fn(),
+  useUpdateIncomeEntryMutation: vi.fn(),
 }));
 vi.mock("@/api/endpoints/clients", () => ({ useGetClientsQuery: vi.fn() }));
 vi.mock("@/api/endpoints/projects", () => ({
@@ -31,6 +32,7 @@ vi.mock("@/api/endpoints/project-report-exports", () => ({
 import {
   useGetProjectReportsQuery,
   useCreateProjectReportMutation,
+  useUpdateIncomeEntryMutation,
 } from "@/api/endpoints/project-reports";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
 import {
@@ -73,6 +75,10 @@ const exportSpy = vi
   .mockReturnValue({ unwrap: vi.fn().mockResolvedValue(new Blob()) });
 
 const updateProjectSpy = vi
+  .fn()
+  .mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
+
+const updateIncomeEntrySpy = vi
   .fn()
   .mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
 
@@ -128,6 +134,10 @@ describe("ReportsPage", () => {
       exportSpy,
       { isLoading: false },
     ] as unknown as ReturnType<typeof useExportProjectReportsPdfMutation>);
+    vi.mocked(useUpdateIncomeEntryMutation).mockReturnValue([
+      updateIncomeEntrySpy,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useUpdateIncomeEntryMutation>);
   });
 
   it("renders the page title", () => {
@@ -297,6 +307,48 @@ describe("ReportsPage", () => {
     );
     expect(text.indexOf("1 Skyline Ave")).toBeLessThan(
       text.indexOf("A very tall residential tower"),
+    );
+  });
+
+  it("edits an income entry's tag inline on the tile without opening a modal", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+
+    await userEvent.click(screen.getByText("Shell"));
+    const tagInput = screen.getByPlaceholderText("e.g. Shell");
+    await userEvent.clear(tagInput);
+    await userEvent.type(tagInput, "Foundation");
+    await userEvent.click(screen.getByRole("button", { name: "Save tag" }));
+
+    expect(updateIncomeEntrySpy).toHaveBeenCalledWith({
+      id: "ie1",
+      tag: "Foundation",
+    });
+    // No modal was opened for this edit.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("edits every income entry's tag from the edit-tags modal", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit Tags" }));
+    expect(
+      screen.getByRole("heading", { name: /Edit Income Tags/ }),
+    ).toBeInTheDocument();
+
+    const tagInputs = screen.getAllByPlaceholderText("e.g. Shell");
+    await userEvent.clear(tagInputs[1]);
+    await userEvent.type(tagInputs[1], "Roofing");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(updateIncomeEntrySpy).toHaveBeenCalledWith({
+      id: "ie2",
+      tag: "Roofing",
+    });
+    // Only the changed row was written.
+    expect(updateIncomeEntrySpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: "ie1" }),
     );
   });
 });

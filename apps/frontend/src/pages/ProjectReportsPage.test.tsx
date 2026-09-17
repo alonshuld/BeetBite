@@ -79,7 +79,9 @@ const mockDetail = {
   totalIncome: 10000,
   profitMargin: 20,
   profit: 2000,
-  incomeEntries: [{ id: "ie1", amount: 10000, incomeDate: "2025-03-10" }],
+  incomeEntries: [
+    { id: "ie1", amount: 10000, incomeDate: "2025-03-10", tag: "Shell" },
+  ],
   corporationPayments: [
     {
       id: "cp1",
@@ -93,6 +95,7 @@ const mockDetail = {
 };
 
 const deleteEntrySpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
+const updateEntrySpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
 
 function mut(spy = vi.fn().mockReturnValue({ unwrap: vi.fn() })) {
   return [spy, { isLoading: false }] as unknown as never;
@@ -141,7 +144,9 @@ describe("ProjectReportsPage", () => {
     vi.mocked(useUpdateProjectReportMutation).mockReturnValue(mut());
     vi.mocked(useCreateProjectReportMutation).mockReturnValue(mut());
     vi.mocked(useAddIncomeEntryMutation).mockReturnValue(mut());
-    vi.mocked(useUpdateIncomeEntryMutation).mockReturnValue(mut());
+    vi.mocked(useUpdateIncomeEntryMutation).mockReturnValue(
+      mut(updateEntrySpy),
+    );
     vi.mocked(useDeleteIncomeEntryMutation).mockReturnValue(
       mut(deleteEntrySpy),
     );
@@ -207,5 +212,28 @@ describe("ProjectReportsPage", () => {
     renderPage();
     await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]);
     expect(deleteEntrySpy).toHaveBeenCalledWith("ie1");
+  });
+
+  it("shows the entry's tag in place of the generic income label", () => {
+    renderPage();
+    expect(screen.getByText("Shell")).toBeInTheDocument();
+  });
+
+  it("edits an income entry's tag inline without recreating the entry", async () => {
+    renderPage();
+    // Entry-level Edit is the second Edit button (index 0 is the report-level one).
+    await userEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
+
+    const tagInput = screen.getByLabelText("Work");
+    await userEvent.clear(tagInput);
+    await userEvent.type(tagInput, "Foundation");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    // The dedicated single-entry endpoint is used — same entry id, tag only
+    // changes alongside whatever else was in the edit row, never a full
+    // report rewrite.
+    expect(updateEntrySpy).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "ie1", tag: "Foundation" }),
+    );
   });
 });

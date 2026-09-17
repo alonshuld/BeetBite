@@ -7,8 +7,10 @@ import {
 import {
   useGetProjectReportsQuery,
   useCreateProjectReportMutation,
+  useUpdateIncomeEntryMutation,
   type ProjectReport,
   type CreateProjectReportDto,
+  type IncomeEntry,
 } from "@/api/endpoints/project-reports";
 import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
@@ -736,6 +738,8 @@ function ProjectSheet({
   );
   const subPayment = report.totalIncome - profit - corpTotal;
 
+  const [tagsModalOpen, setTagsModalOpen] = useState(false);
+
   return (
     <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-2 h-full">
       <div className="flex items-start justify-between mb-1 gap-2">
@@ -753,9 +757,17 @@ function ProjectSheet({
             {report.project.description}
           </span>
         </div>
-        <ButtonGhost onClick={onExport} className="text-xs py-1 px-2 shrink-0">
-          {t("exportPdf")}
-        </ButtonGhost>
+        <div className="flex items-center gap-1 shrink-0">
+          <ButtonGhost
+            onClick={() => setTagsModalOpen(true)}
+            className="text-xs py-1 px-2"
+          >
+            {t("editTags")}
+          </ButtonGhost>
+          <ButtonGhost onClick={onExport} className="text-xs py-1 px-2">
+            {t("exportPdf")}
+          </ButtonGhost>
+        </div>
       </div>
 
       {report.incomeEntries.map((entry) => {
@@ -766,9 +778,7 @@ function ProjectSheet({
             className="flex justify-between items-center text-sm"
           >
             <div className="flex items-center gap-2">
-              <span className="text-text-muted">
-                {entry.tag ?? t("income")}
-              </span>
+              <TileTagEditor entry={entry} />
               <Badge variant={isReceived ? "green" : "yellow"}>
                 {isReceived
                   ? `${t("received")} ${formatISODate(entry.incomeDate!, lang as "en" | "he")}`
@@ -781,6 +791,12 @@ function ProjectSheet({
           </div>
         );
       })}
+
+      <EditTagsModal
+        report={report}
+        open={tagsModalOpen}
+        onClose={() => setTagsModalOpen(false)}
+      />
 
       {report.incomeEntries.length > 1 && (
         <div className="flex justify-between items-center text-sm border-t border-border pt-1">
@@ -822,5 +838,127 @@ function ProjectSheet({
         </span>
       </div>
     </div>
+  );
+}
+
+/** Light-touch inline tag edit directly on a tile row — no modal. */
+function TileTagEditor({ entry }: { entry: IncomeEntry }) {
+  const { t } = useLang();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(entry.tag ?? "");
+  const [updateIncomeEntry, { isLoading }] = useUpdateIncomeEntryMutation();
+
+  async function handleSave() {
+    await updateIncomeEntry({ id: entry.id, tag: value.trim() || null });
+    setEditing(false);
+  }
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => {
+          setValue(entry.tag ?? "");
+          setEditing(true);
+        }}
+        className="text-text-muted hover:text-text hover:underline transition-colors text-left"
+      >
+        {entry.tag || t("income")}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        autoFocus
+        type="text"
+        maxLength={100}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={t("tagPlaceholder")}
+        className="w-24 rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-text focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+      <button
+        onClick={() => void handleSave()}
+        disabled={isLoading}
+        className="flex h-5 w-5 items-center justify-center rounded bg-beet text-white text-[10px] font-bold disabled:opacity-50"
+        aria-label="Save tag"
+      >
+        ✓
+      </button>
+      <button
+        onClick={() => setEditing(false)}
+        className="flex h-5 w-5 items-center justify-center rounded text-text-muted text-[10px]"
+        aria-label="Cancel"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Edit-report modal reachable from the tile, scoped to tags only. Every
+ * change is written via the single-entry income endpoint, never through the
+ * report update endpoint, so no income row is destroyed and recreated.
+ */
+function EditTagsModal({
+  report,
+  open,
+  onClose,
+}: {
+  report: ProjectReport;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { t } = useLang();
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [updateIncomeEntry, { isLoading }] = useUpdateIncomeEntryMutation();
+
+  useEffect(() => {
+    if (!open) return;
+    setDrafts(
+      Object.fromEntries(report.incomeEntries.map((e) => [e.id, e.tag ?? ""])),
+    );
+  }, [open, report.incomeEntries]);
+
+  async function handleSaveAll() {
+    const changed = report.incomeEntries.filter(
+      (e) => (drafts[e.id] ?? "") !== (e.tag ?? ""),
+    );
+    await Promise.all(
+      changed.map((e) =>
+        updateIncomeEntry({
+          id: e.id,
+          tag: (drafts[e.id] ?? "").trim() || null,
+        }),
+      ),
+    );
+    onClose();
+  }
+
+  return (
+    <FormModal
+      open={open}
+      onClose={onClose}
+      onSubmit={() => void handleSaveAll()}
+      title={`${t("editIncomeTags")} — ${report.project.name}`}
+      loading={isLoading}
+    >
+      <div className="flex flex-col gap-3">
+        {report.incomeEntries.map((entry) => (
+          <Input
+            key={entry.id}
+            label={`₪${entry.amount.toLocaleString("he-IL")}`}
+            maxLength={100}
+            placeholder={t("tagPlaceholder")}
+            value={drafts[entry.id] ?? ""}
+            onChange={(e) =>
+              setDrafts((prev) => ({ ...prev, [entry.id]: e.target.value }))
+            }
+          />
+        ))}
+      </div>
+    </FormModal>
   );
 }

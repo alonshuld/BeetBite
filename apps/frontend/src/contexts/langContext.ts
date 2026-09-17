@@ -236,6 +236,9 @@ export const translations = {
     projectLocationPlaceholder: "Project location",
     exportDescriptionHint:
       "Editing this updates the project's description everywhere, not just this document.",
+    // Income tag editing
+    editTags: "Edit Tags",
+    editIncomeTags: "Edit Income Tags",
   },
   he: {
     // Nav
@@ -464,6 +467,9 @@ export const translations = {
     projectLocationPlaceholder: "מיקום הפרויקט",
     exportDescriptionHint:
       "עריכת שדה זה מעדכנת את תיאור הפרויקט בכל מקום, לא רק במסמך זה.",
+    // Income tag editing
+    editTags: "עריכת תיאורים",
+    editIncomeTags: "עריכת תיאורי הכנסה",
   },
 } as const;
 
