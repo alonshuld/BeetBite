@@ -17,7 +17,7 @@ export interface ReportApprovalData {
   contractorName: string;
   contractorCompanyNumber: string;
   contractorDescription: string | null;
-  clientName: string;
+  requesterName: string;
   subcontractorName: string;
   subcontractorCompanyNumber: string;
   projectName: string;
@@ -286,7 +286,7 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     <div class="title"><span>${t.subtitlePrefix} ${monthLabel}</span></div>
 
     <div class="info-box">
-      <div class="info-row"><span class="label">${t.client}</span><span>${escapeHtml(data.clientName)}</span></div>
+      <div class="info-row"><span class="label">${t.client}</span><span>${escapeHtml(data.requesterName)}</span></div>
       <div class="info-row"><span class="label">${t.mainContractor}</span><span>${escapeHtml(data.contractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.contractorCompanyNumber)}</span></div>
       <div class="info-row"><span class="label">${t.subcontractor}</span><span>${escapeHtml(data.subcontractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.subcontractorCompanyNumber)}</span></div>
       <div class="info-row"><span class="label">${t.approvedFor}</span><span>${escapeHtml(data.approvedFor)} • ${escapeHtml(data.projectName)}</span></div>

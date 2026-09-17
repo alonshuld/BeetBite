@@ -30,6 +30,9 @@ const REPORT_INCLUDE = {
     select: {
       id: true,
       name: true,
+      description: true,
+      location: true,
+      requesterName: true,
       client: { select: { id: true, name: true } },
     },
   },
@@ -297,7 +300,15 @@ export class ProjectReportsService {
     const projectReport = await this.prismaService.projectReport.findUnique({
       where: { id },
       include: {
-        project: { select: { id: true, name: true } },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            location: true,
+            requesterName: true,
+          },
+        },
         incomeEntries: {
           select: { id: true, amount: true, incomeDate: true, tag: true },
         },
@@ -328,7 +339,15 @@ export class ProjectReportsService {
       await this.prismaService.projectReport.findUnique({
         where: { id },
         include: {
-          project: { select: { id: true, name: true } },
+          project: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              location: true,
+              requesterName: true,
+            },
+          },
           incomeEntries: {
             select: { id: true, amount: true, incomeDate: true, tag: true },
           },

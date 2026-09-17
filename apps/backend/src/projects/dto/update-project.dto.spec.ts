@@ -8,6 +8,8 @@ const validProject = {
   name: 'Test Project',
   description: 'Test description',
   estimatedAmount: 100000,
+  requesterName: 'Jane Doe',
+  location: '123 Main St, Tel Aviv',
 };
 
 const openingBalance = {

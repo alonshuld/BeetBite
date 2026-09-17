@@ -7,6 +7,7 @@ import {
   IsBoolean,
   IsOptional,
   ValidateNested,
+  MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { OpeningBalanceDto } from './opening-balance.dto';
@@ -61,6 +62,27 @@ export class CreateProjectDto {
     default: false,
   })
   isDone?: boolean;
+
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(255)
+  @ApiProperty({
+    example: 'Jane Doe',
+    description:
+      'Name of the person who commissioned this specific project (may differ from the client); printed on the account-approval PDF in place of the client name',
+    type: 'string',
+  })
+  requesterName!: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(255)
+  @ApiProperty({
+    example: '123 Main St, Tel Aviv',
+    description: 'Location of the project',
+    type: 'string',
+  })
+  location!: string;
 
   @IsOptional()
   @ValidateNested()

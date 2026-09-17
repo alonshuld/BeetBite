@@ -133,6 +133,18 @@ type ProjectSeed = {
   isDone?: boolean;
 };
 
+/** Cycled by client index to give demo projects a plausible requester name. */
+const DEMO_REQUESTER_NAMES = [
+  'משה כהן',
+  'דנה לוי',
+  'אבי מזרחי',
+  'רונית פרץ',
+  'יוסי בן־דוד',
+  'מיכל שוורץ',
+  'גיל גולדמן',
+  'שרית דהן',
+];
+
 /** The seven projects that make up the exported account approval. */
 const SHOWCASE_PROJECTS: ProjectSeed[] = [
   {
@@ -384,6 +396,11 @@ async function main(): Promise<void> {
     suppliers.push(await prisma.supplier.create({ data: { name } }));
   }
 
+  // Project names already end in "– <city>"; reuse that as the demo location
+  // rather than hand-writing a location for every seed entry.
+  const locationFromName = (name: string): string =>
+    name.includes('–') ? name.split('–').pop()!.trim() : name;
+
   const createProject = async (seed: ProjectSeed) =>
     prisma.project.create({
       data: {
@@ -392,6 +409,8 @@ async function main(): Promise<void> {
         estimatedAmount: seed.estimatedAmount,
         description: seed.description,
         isDone: seed.isDone ?? false,
+        requesterName: DEMO_REQUESTER_NAMES[seed.clientIndex % DEMO_REQUESTER_NAMES.length],
+        location: locationFromName(seed.name),
       },
     });
 

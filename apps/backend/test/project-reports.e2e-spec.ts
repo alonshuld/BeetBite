@@ -79,6 +79,8 @@ describe('ProjectReportsService Integration Tests', () => {
           clientId,
           estimatedAmount: 100000,
           description: 'Test project',
+          requesterName: 'Test requester',
+          location: 'Test location',
         },
       })
     ).id;
@@ -248,6 +250,8 @@ describe('ProjectReportsService Integration Tests', () => {
             clientId,
             estimatedAmount: 100000,
             description: 'Test project',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -284,6 +288,8 @@ describe('ProjectReportsService Integration Tests', () => {
             clientId,
             estimatedAmount: 100000,
             description: 'Test project',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -876,6 +882,8 @@ describe('ProjectReportsService Integration Tests', () => {
               clientId,
               estimatedAmount: 100000,
               description: 'Test project',
+              requesterName: 'Test requester',
+              location: 'Test location',
             },
           })
         ).id;
@@ -993,6 +1001,8 @@ describe('ProjectReportsService Integration Tests', () => {
             clientId,
             estimatedAmount: 100000,
             description: 'Test project',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -1012,6 +1022,8 @@ describe('ProjectReportsService Integration Tests', () => {
             clientId,
             estimatedAmount: 100000,
             description: 'Test project',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -1252,6 +1264,8 @@ describe('ProjectReportsService Integration Tests', () => {
             clientId,
             estimatedAmount: 100000,
             description: '',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -1505,6 +1519,8 @@ describe('ProjectReportsService Integration Tests', () => {
               clientId,
               estimatedAmount: 100000,
               description: '',
+              requesterName: 'Test requester',
+              location: 'Test location',
             },
           })
         ).id;

@@ -99,6 +99,8 @@ describe('ProjectsService', () => {
       name: 'Test Project',
       estimatedAmount: 100000,
       description: 'Test project description',
+      requesterName: 'Jane Doe',
+      location: '123 Main St, Tel Aviv',
     };
 
     const mockProject = {
@@ -107,6 +109,8 @@ describe('ProjectsService', () => {
       name: createDto.name,
       estimatedAmount: new Prisma.Decimal(createDto.estimatedAmount),
       description: createDto.description,
+      requesterName: createDto.requesterName,
+      location: createDto.location,
     };
 
     it('should create a project', async () => {
@@ -120,6 +124,8 @@ describe('ProjectsService', () => {
         name: mockProject.name,
         estimatedAmount: mockProject.estimatedAmount.toNumber(),
         description: mockProject.description,
+        requesterName: mockProject.requesterName,
+        location: mockProject.location,
       });
 
       expect(mockPrismaService.project.create).toHaveBeenCalledWith({
@@ -128,6 +134,8 @@ describe('ProjectsService', () => {
           name: createDto.name,
           estimatedAmount: new Prisma.Decimal(createDto.estimatedAmount),
           description: createDto.description,
+          requesterName: createDto.requesterName,
+          location: createDto.location,
         },
       });
     });
@@ -502,6 +510,8 @@ describe('ProjectsService', () => {
       name: 'Updated Project',
       estimatedAmount: 200000,
       description: 'Updated project description',
+      requesterName: 'John Smith',
+      location: '456 Side St, Haifa',
     };
 
     const mockUpdatedProject = {
@@ -510,6 +520,8 @@ describe('ProjectsService', () => {
       name: updateDto.name,
       estimatedAmount: new Prisma.Decimal(updateDto.estimatedAmount),
       description: updateDto.description,
+      requesterName: updateDto.requesterName,
+      location: updateDto.location,
     };
 
     it('should update a project', async () => {
@@ -599,6 +611,35 @@ describe('ProjectsService', () => {
       await expect(service.remove('clhp000000000000000000001')).rejects.toThrow(
         EntityHasRelatedRecordsError,
       );
+    });
+  });
+
+  describe('updateLastApprovedFor', () => {
+    it('should update only the lastApprovedFor field', async () => {
+      mockPrismaService.project.update.mockResolvedValue({});
+
+      await service.updateLastApprovedFor(
+        'clhp000000000000000000001',
+        'עבודות שלד + גמר',
+      );
+
+      expect(mockPrismaService.project.update).toHaveBeenCalledWith({
+        where: { id: 'clhp000000000000000000001' },
+        data: { lastApprovedFor: 'עבודות שלד + גמר' },
+      });
+    });
+
+    it('should throw ProjectNotFoundError when project not found', async () => {
+      const error = new PrismaClientKnownRequestError('', {
+        code: PRISMA_ERROR_CODES.NOT_FOUND,
+        clientVersion: '1.0.0',
+      });
+
+      mockPrismaService.project.update.mockRejectedValue(error);
+
+      await expect(
+        service.updateLastApprovedFor('clhp000000000000000000001', 'text'),
+      ).rejects.toThrow(ProjectNotFoundError);
     });
   });
 });

@@ -12,9 +12,13 @@ vi.mock("react-router-dom", async (importOriginal) => {
 vi.mock("@/api/endpoints/project-reports", () => ({
   useGetProjectReportsQuery: vi.fn(),
   useCreateProjectReportMutation: vi.fn(),
+  useUpdateIncomeEntryMutation: vi.fn(),
 }));
 vi.mock("@/api/endpoints/clients", () => ({ useGetClientsQuery: vi.fn() }));
-vi.mock("@/api/endpoints/projects", () => ({ useGetProjectsQuery: vi.fn() }));
+vi.mock("@/api/endpoints/projects", () => ({
+  useGetProjectsQuery: vi.fn(),
+  useUpdateProjectMutation: vi.fn(),
+}));
 vi.mock("@/api/endpoints/subcontractors", () => ({
   useGetSubcontractorsQuery: vi.fn(),
 }));
@@ -28,9 +32,13 @@ vi.mock("@/api/endpoints/project-report-exports", () => ({
 import {
   useGetProjectReportsQuery,
   useCreateProjectReportMutation,
+  useUpdateIncomeEntryMutation,
 } from "@/api/endpoints/project-reports";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
-import { useGetProjectsQuery } from "@/api/endpoints/projects";
+import {
+  useGetProjectsQuery,
+  useUpdateProjectMutation,
+} from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
@@ -42,6 +50,9 @@ const mockReports = [
     project: {
       id: "p1",
       name: "Tower Block",
+      description: "A very tall residential tower",
+      location: "1 Skyline Ave",
+      requesterName: "Jane Doe",
       client: { id: "c1", name: "Acme Corp" },
     },
     subcontractor: { id: "s1", name: "Bob the Builder" },
@@ -62,6 +73,14 @@ const createSpy = vi
 const exportSpy = vi
   .fn()
   .mockReturnValue({ unwrap: vi.fn().mockResolvedValue(new Blob()) });
+
+const updateProjectSpy = vi
+  .fn()
+  .mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
+
+const updateIncomeEntrySpy = vi
+  .fn()
+  .mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
 
 function setReports(data: unknown, isLoading = false) {
   vi.mocked(useGetProjectReportsQuery).mockReturnValue({
@@ -85,8 +104,22 @@ describe("ReportsPage", () => {
       data: [{ id: "c1", name: "Acme Corp" }],
     } as unknown as ReturnType<typeof useGetClientsQuery>);
     vi.mocked(useGetProjectsQuery).mockReturnValue({
-      data: [{ id: "p1", name: "Tower Block", clientId: "c1" }],
+      data: [
+        {
+          id: "p1",
+          name: "Tower Block",
+          clientId: "c1",
+          description: "Shell + finishing work",
+          estimatedAmount: 100000,
+          isDone: false,
+          lastApprovedFor: null,
+        },
+      ],
     } as unknown as ReturnType<typeof useGetProjectsQuery>);
+    vi.mocked(useUpdateProjectMutation).mockReturnValue([
+      updateProjectSpy,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useUpdateProjectMutation>);
     vi.mocked(useGetSubcontractorsQuery).mockReturnValue({
       data: [{ id: "s1", name: "Bob the Builder" }],
     } as unknown as ReturnType<typeof useGetSubcontractorsQuery>);
@@ -101,6 +134,10 @@ describe("ReportsPage", () => {
       exportSpy,
       { isLoading: false },
     ] as unknown as ReturnType<typeof useExportProjectReportsPdfMutation>);
+    vi.mocked(useUpdateIncomeEntryMutation).mockReturnValue([
+      updateIncomeEntrySpy,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useUpdateIncomeEntryMutation>);
   });
 
   it("renders the page title", () => {
@@ -184,6 +221,65 @@ describe("ReportsPage", () => {
     });
   });
 
+  it("prefills the export dialog's description from the project and persists edits to it on submit", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    const descriptionField = screen.getByLabelText("Description");
+    expect(descriptionField).toHaveValue("Shell + finishing work");
+
+    await userEvent.clear(descriptionField);
+    await userEvent.type(descriptionField, "Updated scope of work");
+    await userEvent.type(screen.getByLabelText("Approved For"), "Approved");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(updateProjectSpy).toHaveBeenCalledWith({
+      id: "p1",
+      clientId: "c1",
+      name: "Tower Block",
+      estimatedAmount: 100000,
+      description: "Updated scope of work",
+      isDone: false,
+    });
+  });
+
+  it("does not persist an edited description when the dialog is cancelled", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    await userEvent.clear(screen.getByLabelText("Description"));
+    await userEvent.type(screen.getByLabelText("Description"), "Never saved");
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(updateProjectSpy).not.toHaveBeenCalled();
+  });
+
+  it("prefills approvedFor from the project's lastApprovedFor on the second export", async () => {
+    vi.mocked(useGetProjectsQuery).mockReturnValue({
+      data: [
+        {
+          id: "p1",
+          name: "Tower Block",
+          clientId: "c1",
+          description: "Shell + finishing work",
+          estimatedAmount: 100000,
+          isDone: false,
+          lastApprovedFor: "Shell + finishing (previous export)",
+        },
+      ],
+    } as unknown as ReturnType<typeof useGetProjectsQuery>);
+
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+    await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    expect(screen.getByLabelText("Approved For")).toHaveValue(
+      "Shell + finishing (previous export)",
+    );
+  });
+
   it("opens the add-report modal", async () => {
     renderPage();
     await userEvent.click(screen.getAllByRole("button", { name: "+ Add" })[0]);
@@ -246,5 +342,69 @@ describe("ReportsPage", () => {
 
       expect(screen.getAllByText("₪0").length).toBeGreaterThan(0);
     });
+  });
+
+  it("renders the tile header with project name, location and description, name still clickable", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+
+    const nameButton = screen.getByRole("button", { name: "Tower Block" });
+    expect(nameButton).toBeInTheDocument();
+    expect(screen.getByText("1 Skyline Ave")).toBeInTheDocument();
+    expect(
+      screen.getByText("A very tall residential tower"),
+    ).toBeInTheDocument();
+
+    // Project name -> location -> description, in DOM order within the tile.
+    const header = nameButton.closest("div")!;
+    const text = header.textContent ?? "";
+    expect(text.indexOf("Tower Block")).toBeLessThan(
+      text.indexOf("1 Skyline Ave"),
+    );
+    expect(text.indexOf("1 Skyline Ave")).toBeLessThan(
+      text.indexOf("A very tall residential tower"),
+    );
+  });
+
+  it("edits an income entry's tag inline on the tile without opening a modal", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+
+    await userEvent.click(screen.getByText("Shell"));
+    const tagInput = screen.getByPlaceholderText("e.g. Shell");
+    await userEvent.clear(tagInput);
+    await userEvent.type(tagInput, "Foundation");
+    await userEvent.click(screen.getByRole("button", { name: "Save tag" }));
+
+    expect(updateIncomeEntrySpy).toHaveBeenCalledWith({
+      id: "ie1",
+      tag: "Foundation",
+    });
+    // No modal was opened for this edit.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("edits every income entry's tag from the edit-tags modal", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit Tags" }));
+    expect(
+      screen.getByRole("heading", { name: /Edit Income Tags/ }),
+    ).toBeInTheDocument();
+
+    const tagInputs = screen.getAllByPlaceholderText("e.g. Shell");
+    await userEvent.clear(tagInputs[1]);
+    await userEvent.type(tagInputs[1], "Roofing");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(updateIncomeEntrySpy).toHaveBeenCalledWith({
+      id: "ie2",
+      tag: "Roofing",
+    });
+    // Only the changed row was written.
+    expect(updateIncomeEntrySpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: "ie1" }),
+    );
   });
 });

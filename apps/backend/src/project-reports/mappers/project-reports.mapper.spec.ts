@@ -23,6 +23,9 @@ describe('project-reports mapper', () => {
     project: {
       id: 'project-1',
       name: 'Project 1',
+      description: 'A project',
+      location: '123 Main St, Tel Aviv',
+      requesterName: 'Jane Doe',
       client: { id: 'client-1', name: 'Client 1' },
     },
     subcontractor: { id: 'sub-1', name: 'Sub 1' },
@@ -37,7 +40,13 @@ describe('project-reports mapper', () => {
 
   const makeResponseInput = () => ({
     ...makeListItemInput(),
-    project: { id: 'project-1', name: 'Project 1' },
+    project: {
+      id: 'project-1',
+      name: 'Project 1',
+      description: 'A project',
+      location: '123 Main St, Tel Aviv',
+      requesterName: 'Jane Doe',
+    },
     subcontractor: {
       id: 'sub-1',
       name: 'Sub 1',
@@ -70,6 +79,9 @@ describe('project-reports mapper', () => {
         project: {
           id: 'project-1',
           name: 'Project 1',
+          description: 'A project',
+          location: '123 Main St, Tel Aviv',
+          requesterName: 'Jane Doe',
           client: { id: 'client-1', name: 'Client 1' },
         },
         subcontractor: { id: 'sub-1', name: 'Sub 1' },
@@ -99,7 +111,13 @@ describe('project-reports mapper', () => {
       const result = toProjectReportResponse(makeResponseInput(), 1000, 8000);
       expect(result).toEqual({
         id: 'report-1',
-        project: { id: 'project-1', name: 'Project 1' },
+        project: {
+          id: 'project-1',
+          name: 'Project 1',
+          description: 'A project',
+          location: '123 Main St, Tel Aviv',
+          requesterName: 'Jane Doe',
+        },
         date: '2024-05-01T00:00:00.000Z',
         profitMargin: 10,
         profit: 1000,

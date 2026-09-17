@@ -10,6 +10,7 @@ import { ProjectReportAlreadyExistsError } from './errors/project-report-already
 import { ProjectNotFoundError } from 'src/projects/errors/project-not-found.exception';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
 import { SupplierNotFoundError } from 'src/suppliers/errors/supplier-not-found.error';
+import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
 
 describe('ProjectReportsService', () => {
   let service: ProjectReportsService;
@@ -585,6 +586,183 @@ describe('ProjectReportsService', () => {
 
       await expect(service.remove('report-999')).rejects.toThrow(
         ProjectReportNotFoundError,
+      );
+    });
+  });
+
+  describe('addIncomeEntry', () => {
+    it('should add a new income entry to an existing report', async () => {
+      mockPrismaService.projectReport.findUnique.mockResolvedValue({
+        id: 'report-1',
+      });
+      mockPrismaService.projectReportIncome.create.mockResolvedValue({
+        id: 'entry-new',
+        amount: new Prisma.Decimal('5000'),
+        incomeDate: null,
+        tag: 'שלד',
+      });
+
+      const result = await service.addIncomeEntry('report-1', {
+        amount: 5000,
+        tag: 'שלד',
+      });
+
+      expect(result).toEqual({
+        id: 'entry-new',
+        amount: 5000,
+        incomeDate: null,
+        tag: 'שלד',
+      });
+      expect(mockPrismaService.projectReportIncome.create).toHaveBeenCalledWith(
+        {
+          data: {
+            projectReportId: 'report-1',
+            amount: new Prisma.Decimal(5000),
+            incomeDate: null,
+            tag: 'שלד',
+          },
+        },
+      );
+    });
+
+    it('should throw ProjectReportNotFoundError when the report does not exist', async () => {
+      mockPrismaService.projectReport.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.addIncomeEntry('missing-report', { amount: 1000 }),
+      ).rejects.toThrow(ProjectReportNotFoundError);
+      expect(
+        mockPrismaService.projectReportIncome.create,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('trims a blank tag down to null', async () => {
+      mockPrismaService.projectReport.findUnique.mockResolvedValue({
+        id: 'report-1',
+      });
+      mockPrismaService.projectReportIncome.create.mockResolvedValue({
+        id: 'entry-new',
+        amount: new Prisma.Decimal('5000'),
+        incomeDate: null,
+        tag: null,
+      });
+
+      await service.addIncomeEntry('report-1', { amount: 5000, tag: '   ' });
+
+      expect(mockPrismaService.projectReportIncome.create).toHaveBeenCalledWith(
+        {
+          data: {
+            projectReportId: 'report-1',
+            amount: new Prisma.Decimal(5000),
+            incomeDate: null,
+            tag: null,
+          },
+        },
+      );
+    });
+  });
+
+  describe('updateIncomeEntry', () => {
+    it('updates only the single income row in place, preserving its id', async () => {
+      mockPrismaService.projectReportIncome.update.mockResolvedValue({
+        id: 'entry-1',
+        amount: new Prisma.Decimal('12000'),
+        incomeDate: null,
+        tag: 'גמר',
+      });
+
+      const result = await service.updateIncomeEntry('entry-1', {
+        tag: 'גמר',
+      });
+
+      // 🔴 The trap this task exists to avoid: a tag patch must go through
+      // projectReportIncome.update targeted at this one row, never through
+      // deleteMany+createMany on the parent report. The id returned is the
+      // same id that was passed in — nothing was destroyed and recreated.
+      expect(result.id).toBe('entry-1');
+      expect(mockPrismaService.projectReportIncome.update).toHaveBeenCalledWith(
+        {
+          where: { id: 'entry-1' },
+          data: { tag: 'גמר' },
+        },
+      );
+      // The report-level delete-and-recreate path is never touched by a
+      // single-entry patch.
+      expect(mockPrismaService.projectReport.update).not.toHaveBeenCalled();
+    });
+
+    it('clears the tag when given null', async () => {
+      mockPrismaService.projectReportIncome.update.mockResolvedValue({
+        id: 'entry-1',
+        amount: new Prisma.Decimal('12000'),
+        incomeDate: null,
+        tag: null,
+      });
+
+      await service.updateIncomeEntry('entry-1', { tag: null });
+
+      expect(mockPrismaService.projectReportIncome.update).toHaveBeenCalledWith(
+        {
+          where: { id: 'entry-1' },
+          data: { tag: null },
+        },
+      );
+    });
+
+    it('does not touch the tag when the caller only sends an amount', async () => {
+      mockPrismaService.projectReportIncome.update.mockResolvedValue({
+        id: 'entry-1',
+        amount: new Prisma.Decimal('9000'),
+        incomeDate: null,
+        tag: 'existing-tag',
+      });
+
+      await service.updateIncomeEntry('entry-1', { amount: 9000 });
+
+      // Exact match (not objectContaining): proves `tag` is absent from the
+      // write, so an amount-only update cannot silently clear it.
+      expect(mockPrismaService.projectReportIncome.update).toHaveBeenCalledWith(
+        {
+          where: { id: 'entry-1' },
+          data: { amount: new Prisma.Decimal(9000) },
+        },
+      );
+    });
+
+    it('throws EntityNotFoundError when the entry does not exist', async () => {
+      const error = new PrismaClientKnownRequestError('Not found', {
+        code: PRISMA_ERROR_CODES.NOT_FOUND,
+        clientVersion: '4.0.0',
+      });
+      mockPrismaService.projectReportIncome.update.mockRejectedValue(error);
+
+      await expect(
+        service.updateIncomeEntry('missing-entry', { tag: 'x' }),
+      ).rejects.toThrow(EntityNotFoundError);
+    });
+  });
+
+  describe('removeIncomeEntry', () => {
+    it('removes a single income entry', async () => {
+      mockPrismaService.projectReportIncome.delete.mockResolvedValue({});
+
+      await expect(
+        service.removeIncomeEntry('entry-1'),
+      ).resolves.toBeUndefined();
+      expect(mockPrismaService.projectReportIncome.delete).toHaveBeenCalledWith(
+        { where: { id: 'entry-1' } },
+      );
+    });
+
+    it('throws EntityNotFoundError when the entry does not exist', async () => {
+      const error = new PrismaClientKnownRequestError('Not found', {
+        code: PRISMA_ERROR_CODES.NOT_FOUND,
+        clientVersion: '4.0.0',
+      });
+      mockPrismaService.projectReportIncome.delete.mockRejectedValue(error);
+
+      await expect(service.removeIncomeEntry('missing-entry')).rejects.toThrow(
+        EntityNotFoundError,
       );
     });
   });

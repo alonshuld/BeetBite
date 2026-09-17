@@ -76,6 +76,8 @@ interface FormState {
   clientId: string;
   description: string;
   estimatedAmount: string;
+  requesterName: string;
+  location: string;
   // T11 — optional opening balance. Empty strings mean "not filled in", which
   // is the normal case; the whole section is skipped unless an amount is typed.
   openingAmount: string;
@@ -93,6 +95,8 @@ const EMPTY_FORM: FormState = {
   clientId: "",
   description: "",
   estimatedAmount: "",
+  requesterName: "",
+  location: "",
   openingAmount: "",
   openingMonth: "",
   openingSubcontractorId: "",
@@ -141,7 +145,7 @@ export default function ProjectsPage() {
       (p) =>
         !query ||
         p.name.toLowerCase().includes(query) ||
-        (p.client?.name ?? "").toLowerCase().includes(query),
+        p.client.name.toLowerCase().includes(query),
     )
     .slice()
     .sort((a, b) => {
@@ -168,9 +172,11 @@ export default function ProjectsPage() {
     setForm({
       ...EMPTY_FORM,
       name: project.name,
-      clientId: project.client?.id ?? "",
+      clientId: project.client.id,
       description: project.description ?? "",
       estimatedAmount: String(project.estimatedAmount),
+      requesterName: project.requesterName,
+      location: project.location,
     });
     setFormOpen(true);
   }
@@ -200,6 +206,8 @@ export default function ProjectsPage() {
 
   async function handleSave() {
     if (!form.name.trim() || !form.estimatedAmount) return;
+    if (!form.clientId) return;
+    if (!form.requesterName.trim() || !form.location.trim()) return;
     const amount = parseFloat(form.estimatedAmount);
     if (isNaN(amount) || amount < 0) return;
     const payload = {
@@ -207,6 +215,8 @@ export default function ProjectsPage() {
       description: form.description.trim(),
       estimatedAmount: amount,
       clientId: form.clientId,
+      requesterName: form.requesterName.trim(),
+      location: form.location.trim(),
     };
 
     if (editing) {
@@ -246,6 +256,8 @@ export default function ProjectsPage() {
       description: project.description,
       estimatedAmount: project.estimatedAmount,
       clientId: project.clientId,
+      requesterName: project.requesterName,
+      location: project.location,
       isDone: !project.isDone,
     });
   }
@@ -332,6 +344,9 @@ export default function ProjectsPage() {
                   {t("client")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                  {t("requester")}
+                </th>
+                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
                   {t("estimated")}
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
@@ -387,7 +402,10 @@ export default function ProjectsPage() {
                       {project.name}
                     </td>
                     <td className="py-3 px-4 text-text-muted">
-                      {project.client?.name ?? "—"}
+                      {project.client.name}
+                    </td>
+                    <td className="py-3 px-4 text-text-muted">
+                      {project.requesterName}
                     </td>
                     <td className="py-3 px-4 text-text">
                       {formatILS(project.estimatedAmount)}
@@ -480,17 +498,50 @@ export default function ProjectsPage() {
           <FormGroup>
             <Select
               id="proj-client"
-              label={t("clientOptional")}
+              label={t("client")}
               value={form.clientId}
               onChange={(e) => setField("clientId", e.target.value)}
+              required
             >
-              <option value="">{t("noClientOption")}</option>
+              <option value="" disabled>
+                {t("selectClientPlaceholder")}
+              </option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
             </Select>
+          </FormGroup>
+        </FormRow>
+        <FormRow>
+          <FormGroup>
+            <Input
+              id="proj-requester"
+              label={t("requester")}
+              value={form.requesterName}
+              onChange={(e) => setField("requesterName", e.target.value)}
+              placeholder={t("requesterPlaceholder")}
+              required
+              list="requester-name-options"
+            />
+            <datalist id="requester-name-options">
+              {Array.from(new Set(projects.map((p) => p.requesterName)))
+                .filter(Boolean)
+                .map((name) => (
+                  <option key={name} value={name} />
+                ))}
+            </datalist>
+          </FormGroup>
+          <FormGroup>
+            <Input
+              id="proj-location"
+              label={t("location")}
+              value={form.location}
+              onChange={(e) => setField("location", e.target.value)}
+              placeholder={t("projectLocationPlaceholder")}
+              required
+            />
           </FormGroup>
         </FormRow>
         <FormGroup>

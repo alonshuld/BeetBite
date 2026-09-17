@@ -8,13 +8,17 @@ export interface ProjectClient {
 export interface Project {
   id: string;
   clientId: string;
-  client: ProjectClient | null;
+  client: ProjectClient;
   name: string;
   description: string;
   estimatedAmount: number;
   isDone: boolean;
   hasReports: boolean;
   paymentProgress: { totalPaid: number };
+  requesterName: string;
+  location: string;
+  /** The "approved for" text from this project's most recent PDF export, if any. */
+  lastApprovedFor: string | null;
 }
 
 /**
@@ -35,6 +39,8 @@ export interface CreateProjectDto {
   description: string;
   estimatedAmount: number;
   isDone?: boolean;
+  requesterName: string;
+  location: string;
   openingBalance?: OpeningBalanceDto;
 }
 

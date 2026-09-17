@@ -7,12 +7,17 @@ import {
 import {
   useGetProjectReportsQuery,
   useCreateProjectReportMutation,
+  useUpdateIncomeEntryMutation,
   type ProjectReport,
   type CreateProjectReportDto,
+  type IncomeEntry,
 } from "@/api/endpoints/project-reports";
 import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
-import { useGetProjectsQuery } from "@/api/endpoints/projects";
+import {
+  useGetProjectsQuery,
+  useUpdateProjectMutation,
+} from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { PageHeader } from "@/components/molecules/PageHeader";
@@ -25,6 +30,7 @@ import {
   Input,
   Select,
   Textarea,
+  Divider,
 } from "@/components/atoms";
 import { FormModal } from "@/components/organisms/Modal";
 import { FormRow } from "@/components/molecules/FormGroup";
@@ -82,6 +88,7 @@ export default function ReportsPage() {
     useCreateProjectReportMutation();
   const [exportPdf, { isLoading: exporting }] =
     useExportProjectReportsPdfMutation();
+  const [updateProject] = useUpdateProjectMutation();
 
   const [simMargin, setSimMargin] = useState("");
 
@@ -97,12 +104,34 @@ export default function ReportsPage() {
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
 
   // Export is per report: a report is already one project for one month, so
-  // the only thing the dialog still asks for is the free-text approval line.
+  // the dialog asks for the free-text approval line, plus — as a convenience
+  // reached from the same place the document is produced — the project's
+  // description.
   const [exportReport, setExportReport] = useState<ProjectReport | null>(null);
   const [approvedFor, setApprovedFor] = useState("");
+  const [exportDescription, setExportDescription] = useState("");
 
   async function handleExport() {
     if (!exportReport || !approvedFor.trim()) return;
+
+    const project = projects.find((p) => p.id === exportReport.project.id);
+    if (project) {
+      try {
+        await updateProject({
+          id: project.id,
+          clientId: project.clientId,
+          name: project.name,
+          estimatedAmount: project.estimatedAmount,
+          description: exportDescription,
+          isDone: project.isDone,
+          requesterName: project.requesterName,
+          location: project.location,
+        }).unwrap();
+      } catch {
+        // Surfaced by the global RTK Query error listener; the PDF export
+        // below is independent and should still be attempted.
+      }
+    }
 
     try {
       const blob = await exportPdf({
@@ -367,7 +396,11 @@ export default function ReportsPage() {
                     lang={lang}
                     month={month}
                     onExport={() => {
-                      setApprovedFor("");
+                      const exportProject = projects.find(
+                        (p) => p.id === report.project.id,
+                      );
+                      setApprovedFor(exportProject?.lastApprovedFor ?? "");
+                      setExportDescription(exportProject?.description ?? "");
                       setExportReport(report);
                     }}
                     onNavigate={() =>
@@ -663,6 +696,19 @@ export default function ReportsPage() {
             onChange={(e) => setApprovedFor(e.target.value)}
             rows={3}
           />
+          <Divider />
+          <div className="flex flex-col gap-1">
+            <p className="text-xs text-text-dim">
+              {t("exportDescriptionHint")}
+            </p>
+            <Textarea
+              id="export-project-description"
+              label={t("description")}
+              value={exportDescription}
+              onChange={(e) => setExportDescription(e.target.value)}
+              rows={2}
+            />
+          </div>
         </div>
       </FormModal>
     </div>
@@ -717,18 +763,36 @@ function ProjectSheet({
   const corpTotal = report.supplierPayments.reduce((s, cp) => s + cp.amount, 0);
   const subPayment = report.totalIncome - profit - corpTotal;
 
+  const [tagsModalOpen, setTagsModalOpen] = useState(false);
+
   return (
     <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-2 h-full">
-      <div className="flex items-center justify-between mb-1">
-        <button
-          onClick={onNavigate}
-          className="font-medium text-text hover:text-beet hover:underline transition-colors text-left"
-        >
-          {report.project.name}
-        </button>
-        <ButtonGhost onClick={onExport} className="text-xs py-1 px-2">
-          {t("exportPdf")}
-        </ButtonGhost>
+      <div className="flex items-start justify-between mb-1 gap-2">
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <button
+            onClick={onNavigate}
+            className="font-medium text-text hover:text-beet hover:underline transition-colors text-left rtl:text-right truncate"
+          >
+            {report.project.name}
+          </button>
+          <span className="text-xs text-text-muted truncate">
+            {report.project.location}
+          </span>
+          <span className="text-[11px] text-text-dim line-clamp-2">
+            {report.project.description}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <ButtonGhost
+            onClick={() => setTagsModalOpen(true)}
+            className="text-xs py-1 px-2"
+          >
+            {t("editTags")}
+          </ButtonGhost>
+          <ButtonGhost onClick={onExport} className="text-xs py-1 px-2">
+            {t("exportPdf")}
+          </ButtonGhost>
+        </div>
       </div>
 
       {report.incomeEntries.map((entry) => {
@@ -739,9 +803,7 @@ function ProjectSheet({
             className="flex justify-between items-center text-sm"
           >
             <div className="flex items-center gap-2">
-              <span className="text-text-muted">
-                {entry.tag ? incomeTagLabel(entry.tag) : t("income")}
-              </span>
+              <TileTagEditor entry={entry} incomeTagLabel={incomeTagLabel} />
               <Badge variant={isReceived ? "green" : "yellow"}>
                 {isReceived
                   ? `${t("received")} ${formatISODate(entry.incomeDate!, lang as "en" | "he")}`
@@ -754,6 +816,12 @@ function ProjectSheet({
           </div>
         );
       })}
+
+      <EditTagsModal
+        report={report}
+        open={tagsModalOpen}
+        onClose={() => setTagsModalOpen(false)}
+      />
 
       {report.incomeEntries.length > 1 && (
         <div className="flex justify-between items-center text-sm border-t border-border pt-1">
@@ -795,5 +863,133 @@ function ProjectSheet({
         </span>
       </div>
     </div>
+  );
+}
+
+/** Light-touch inline tag edit directly on a tile row — no modal. */
+function TileTagEditor({
+  entry,
+  incomeTagLabel,
+}: {
+  entry: IncomeEntry;
+  incomeTagLabel: (tag: string) => string;
+}) {
+  const { t } = useLang();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(entry.tag ?? "");
+  const [updateIncomeEntry, { isLoading }] = useUpdateIncomeEntryMutation();
+
+  async function handleSave() {
+    await updateIncomeEntry({ id: entry.id, tag: value.trim() || null });
+    setEditing(false);
+  }
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => {
+          setValue(entry.tag ?? "");
+          setEditing(true);
+        }}
+        className="text-text-muted hover:text-text hover:underline transition-colors text-left"
+      >
+        {entry.tag ? incomeTagLabel(entry.tag) : t("income")}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        autoFocus
+        type="text"
+        maxLength={100}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={t("tagPlaceholder")}
+        className="w-24 rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-text focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+      <button
+        onClick={() => void handleSave()}
+        disabled={isLoading}
+        className="flex h-5 w-5 items-center justify-center rounded bg-beet text-white text-[10px] font-bold disabled:opacity-50"
+        aria-label="Save tag"
+      >
+        ✓
+      </button>
+      <button
+        onClick={() => setEditing(false)}
+        className="flex h-5 w-5 items-center justify-center rounded text-text-muted text-[10px]"
+        aria-label="Cancel"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Edit-report modal reachable from the tile, scoped to tags only. Every
+ * change is written via the single-entry income endpoint, never through the
+ * report update endpoint, so no income row is destroyed and recreated.
+ */
+function EditTagsModal({
+  report,
+  open,
+  onClose,
+}: {
+  report: ProjectReport;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { t } = useLang();
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [updateIncomeEntry, { isLoading }] = useUpdateIncomeEntryMutation();
+
+  useEffect(() => {
+    if (!open) return;
+    setDrafts(
+      Object.fromEntries(report.incomeEntries.map((e) => [e.id, e.tag ?? ""])),
+    );
+  }, [open, report.incomeEntries]);
+
+  async function handleSaveAll() {
+    const changed = report.incomeEntries.filter(
+      (e) => (drafts[e.id] ?? "") !== (e.tag ?? ""),
+    );
+    await Promise.all(
+      changed.map((e) =>
+        updateIncomeEntry({
+          id: e.id,
+          tag: (drafts[e.id] ?? "").trim() || null,
+        }),
+      ),
+    );
+    onClose();
+  }
+
+  return (
+    <FormModal
+      open={open}
+      onClose={onClose}
+      onSubmit={() => void handleSaveAll()}
+      title={`${t("editIncomeTags")} — ${report.project.name}`}
+      loading={isLoading}
+    >
+      <div className="flex flex-col gap-3">
+        {report.incomeEntries.map((entry) => (
+          <Input
+            key={entry.id}
+            label={`₪${entry.amount.toLocaleString("he-IL")}`}
+            maxLength={100}
+            placeholder={t("tagPlaceholder")}
+            value={drafts[entry.id] ?? ""}
+            onChange={(e) =>
+              setDrafts((prev) => ({ ...prev, [entry.id]: e.target.value }))
+            }
+          />
+        ))}
+      </div>
+    </FormModal>
   );
 }

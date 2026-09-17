@@ -7,5 +7,6 @@ import { ProjectClientAssignmentsModule } from '../project-client-assignments/pr
   imports: [ProjectClientAssignmentsModule],
   providers: [ProjectsService],
   controllers: [ProjectsController],
+  exports: [ProjectsService],
 })
 export class ProjectsModule {}

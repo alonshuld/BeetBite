@@ -165,52 +165,52 @@ async function seedMockData(): Promise<void> {
   // ── Projects ──────────────────────────────────────────────────────────────
   const closedProjects = await Promise.all([
     prisma.project.create({
-      data: { clientId: clients[0].id, name: 'Tel Aviv Central Renewal', estimatedAmount: 300000, description: 'Central bus station area renovation', isDone: true },
+      data: { clientId: clients[0].id, name: 'Tel Aviv Central Renewal', requesterName: 'Moshe Cohen', location: 'Tel Aviv', estimatedAmount: 300000, description: 'Central bus station area renovation', isDone: true },
     }),
     prisma.project.create({
-      data: { clientId: clients[1].id, name: 'Haifa University Annex', estimatedAmount: 250000, description: 'New administrative annex for the university', isDone: true },
+      data: { clientId: clients[1].id, name: 'Haifa University Annex', requesterName: 'Avi Levi', location: 'Haifa University', estimatedAmount: 250000, description: 'New administrative annex for the university', isDone: true },
     }),
     prisma.project.create({
-      data: { clientId: clients[3].id, name: 'Raanana Shopping Complex Phase 1', estimatedAmount: 450000, description: 'First phase of mall expansion project', isDone: true },
+      data: { clientId: clients[3].id, name: 'Raanana Shopping Complex Phase 1', requesterName: 'Dana Mizrahi', location: 'Raanana Shopping', estimatedAmount: 450000, description: 'First phase of mall expansion project', isDone: true },
     }),
     prisma.project.create({
-      data: { clientId: clients[7].id, name: 'Rehovot Medical Center Wing', estimatedAmount: 520000, description: 'New pediatric ward construction', isDone: true },
+      data: { clientId: clients[7].id, name: 'Rehovot Medical Center Wing', requesterName: 'Yossi Peretz', location: 'Rehovot Medical', estimatedAmount: 520000, description: 'New pediatric ward construction', isDone: true },
     }),
     prisma.project.create({
-      data: { clientId: clients[8].id, name: 'Petah Tikva School Complex', estimatedAmount: 380000, description: 'Primary school with sports facilities', isDone: true },
+      data: { clientId: clients[8].id, name: 'Petah Tikva School Complex', requesterName: 'Ronit Ben-David', location: 'Petah Tikva', estimatedAmount: 380000, description: 'Primary school with sports facilities', isDone: true },
     }),
   ]);
 
   const activeProjects = await Promise.all([
-    prisma.project.create({ data: { clientId: clients[0].id, name: 'Dizengoff Tower Renovation', estimatedAmount: 500000, description: 'Full renovation of a 12-story tower on Dizengoff St' } }),        // 0
-    prisma.project.create({ data: { clientId: clients[0].id, name: 'Yarkon Park Residence', estimatedAmount: 200000, description: 'Residential complex near Yarkon Park' } }),                           // 1
-    prisma.project.create({ data: { clientId: clients[0].id, name: 'Florentin Lofts Conversion', estimatedAmount: 180000, description: 'Industrial loft conversion in Florentin neighborhood' } }),      // 2
-    prisma.project.create({ data: { clientId: clients[1].id, name: 'Haifa Harbor Complex', estimatedAmount: 800000, description: 'Commercial complex at the Haifa harbor area' } }),                      // 3
-    prisma.project.create({ data: { clientId: clients[1].id, name: 'Carmel Gardens Residences', estimatedAmount: 450000, description: 'Luxury residential complex on Mount Carmel' } }),                 // 4
-    prisma.project.create({ data: { clientId: clients[2].id, name: 'Jerusalem Old City Hotel', estimatedAmount: 1200000, description: 'Boutique hotel construction near the Old City walls' } }),        // 5
-    prisma.project.create({ data: { clientId: clients[2].id, name: 'Mamilla Mall Extension', estimatedAmount: 400000, description: 'Extension of the Mamilla open-air mall' } }),                        // 6
-    prisma.project.create({ data: { clientId: clients[3].id, name: 'Raanana Villa Complex', estimatedAmount: 350000, description: 'Upscale villa development in northern Raanana' } }),                  // 7
-    prisma.project.create({ data: { clientId: clients[4].id, name: 'Beer Sheva Tech Campus', estimatedAmount: 600000, description: 'Technology campus for the cyber district' } }),                      // 8
-    prisma.project.create({ data: { clientId: clients[5].id, name: 'Herzliya Marina Towers', estimatedAmount: 900000, description: 'Twin residential towers overlooking the marina' } }),                // 9
-    prisma.project.create({ data: { clientId: clients[6].id, name: 'Netanya Beach Resort', estimatedAmount: 750000, description: 'Luxury beach resort on the northern coast' } }),                       // 10
-    prisma.project.create({ data: { clientId: clients[6].id, name: 'Netanya Shopping Center', estimatedAmount: 300000, description: 'Modern shopping center in the city center' } }),                    // 11
-    prisma.project.create({ data: { clientId: clients[7].id, name: 'Rehovot Research Park', estimatedAmount: 650000, description: 'Science and technology park development' } }),                        // 12
-    prisma.project.create({ data: { clientId: clients[8].id, name: 'Petah Tikva Commercial District', estimatedAmount: 480000, description: 'Mixed-use commercial and residential complex' } }),         // 13
-    prisma.project.create({ data: { clientId: clients[9].id, name: 'Holon Industrial Park', estimatedAmount: 720000, description: 'Modern logistics and manufacturing facilities' } }),                   // 14
-    prisma.project.create({ data: { clientId: clients[10].id, name: 'Rishon LeZion Office Tower', estimatedAmount: 550000, description: 'Class A office building with parking complex' } }),             // 15
+    prisma.project.create({ data: { clientId: clients[0].id, name: 'Dizengoff Tower Renovation', requesterName: 'Ilan Dahan', location: 'Dizengoff Tower', estimatedAmount: 500000, description: 'Full renovation of a 12-story tower on Dizengoff St' } }),        // 0
+    prisma.project.create({ data: { clientId: clients[0].id, name: 'Yarkon Park Residence', requesterName: 'Michal Rosenblum', location: 'Yarkon Park', estimatedAmount: 200000, description: 'Residential complex near Yarkon Park' } }),                           // 1
+    prisma.project.create({ data: { clientId: clients[0].id, name: 'Florentin Lofts Conversion', requesterName: 'Gil Schwartz', location: 'Florentin Lofts', estimatedAmount: 180000, description: 'Industrial loft conversion in Florentin neighborhood' } }),      // 2
+    prisma.project.create({ data: { clientId: clients[1].id, name: 'Haifa Harbor Complex', requesterName: 'Sarit Goldman', location: 'Haifa Harbor', estimatedAmount: 800000, description: 'Commercial complex at the Haifa harbor area' } }),                      // 3
+    prisma.project.create({ data: { clientId: clients[1].id, name: 'Carmel Gardens Residences', requesterName: 'Nir Shalit', location: 'Carmel Gardens', estimatedAmount: 450000, description: 'Luxury residential complex on Mount Carmel' } }),                 // 4
+    prisma.project.create({ data: { clientId: clients[2].id, name: 'Jerusalem Old City Hotel', requesterName: 'Moshe Cohen', location: 'Jerusalem Old', estimatedAmount: 1200000, description: 'Boutique hotel construction near the Old City walls' } }),        // 5
+    prisma.project.create({ data: { clientId: clients[2].id, name: 'Mamilla Mall Extension', requesterName: 'Avi Levi', location: 'Mamilla Mall', estimatedAmount: 400000, description: 'Extension of the Mamilla open-air mall' } }),                        // 6
+    prisma.project.create({ data: { clientId: clients[3].id, name: 'Raanana Villa Complex', requesterName: 'Dana Mizrahi', location: 'Raanana Villa', estimatedAmount: 350000, description: 'Upscale villa development in northern Raanana' } }),                  // 7
+    prisma.project.create({ data: { clientId: clients[4].id, name: 'Beer Sheva Tech Campus', requesterName: 'Yossi Peretz', location: 'Beer Sheva', estimatedAmount: 600000, description: 'Technology campus for the cyber district' } }),                      // 8
+    prisma.project.create({ data: { clientId: clients[5].id, name: 'Herzliya Marina Towers', requesterName: 'Ronit Ben-David', location: 'Herzliya Marina', estimatedAmount: 900000, description: 'Twin residential towers overlooking the marina' } }),                // 9
+    prisma.project.create({ data: { clientId: clients[6].id, name: 'Netanya Beach Resort', requesterName: 'Ilan Dahan', location: 'Netanya Beach', estimatedAmount: 750000, description: 'Luxury beach resort on the northern coast' } }),                       // 10
+    prisma.project.create({ data: { clientId: clients[6].id, name: 'Netanya Shopping Center', requesterName: 'Michal Rosenblum', location: 'Netanya Shopping', estimatedAmount: 300000, description: 'Modern shopping center in the city center' } }),                    // 11
+    prisma.project.create({ data: { clientId: clients[7].id, name: 'Rehovot Research Park', requesterName: 'Gil Schwartz', location: 'Rehovot Research', estimatedAmount: 650000, description: 'Science and technology park development' } }),                        // 12
+    prisma.project.create({ data: { clientId: clients[8].id, name: 'Petah Tikva Commercial District', requesterName: 'Sarit Goldman', location: 'Petah Tikva', estimatedAmount: 480000, description: 'Mixed-use commercial and residential complex' } }),         // 13
+    prisma.project.create({ data: { clientId: clients[9].id, name: 'Holon Industrial Park', requesterName: 'Nir Shalit', location: 'Holon Industrial', estimatedAmount: 720000, description: 'Modern logistics and manufacturing facilities' } }),                   // 14
+    prisma.project.create({ data: { clientId: clients[10].id, name: 'Rishon LeZion Office Tower', requesterName: 'Moshe Cohen', location: 'Rishon LeZion', estimatedAmount: 550000, description: 'Class A office building with parking complex' } }),             // 15
   ]);
 
   await Promise.all([
-    prisma.project.create({ data: { clientId: clients[2].id, name: 'Jerusalem Tech Hub', estimatedAmount: 550000, description: 'Modern tech campus in Malha area' } }),
-    prisma.project.create({ data: { clientId: clients[11].id, name: 'Modiin Cultural Center', estimatedAmount: 420000, description: 'Concert hall and arts facility' } }),
-    prisma.project.create({ data: { clientId: clients[12].id, name: 'Ashdod Port Terminal', estimatedAmount: 900000, description: 'Container terminal expansion' } }),
-    prisma.project.create({ data: { clientId: clients[13].id, name: 'Ashkelon Water Treatment Facility', estimatedAmount: 1100000, description: 'Advanced desalination plant' } }),
-    prisma.project.create({ data: { clientId: clients[14].id, name: 'Cyber Security HQ Expansion', estimatedAmount: 850000, description: 'Government cybersecurity operations center' } }),
-    prisma.project.create({ data: { clientId: clients[15].id, name: 'Afula Agricultural Hub', estimatedAmount: 380000, description: 'Regional agricultural processing center' } }),
-    prisma.project.create({ data: { clientId: clients[16].id, name: 'Safed Tourist Complex', estimatedAmount: 620000, description: 'Hotel and entertainment complex in Safed' } }),
-    prisma.project.create({ data: { clientId: clients[17].id, name: 'Tiberias Marina Development', estimatedAmount: 780000, description: 'Waterfront resort and marina project' } }),
-    prisma.project.create({ data: { clientId: clients[18].id, name: 'Eilat International Airport Terminal', estimatedAmount: 950000, description: 'New passenger terminal and facilities' } }),
-    prisma.project.create({ data: { clientId: clients[19].id, name: 'Upper Galilee Forest Lodge', estimatedAmount: 380000, description: 'Eco-tourism resort with sustainable design' } }),
+    prisma.project.create({ data: { clientId: clients[2].id, name: 'Jerusalem Tech Hub', requesterName: 'Avi Levi', location: 'Jerusalem Tech', estimatedAmount: 550000, description: 'Modern tech campus in Malha area' } }),
+    prisma.project.create({ data: { clientId: clients[11].id, name: 'Modiin Cultural Center', requesterName: 'Dana Mizrahi', location: 'Modiin Cultural', estimatedAmount: 420000, description: 'Concert hall and arts facility' } }),
+    prisma.project.create({ data: { clientId: clients[12].id, name: 'Ashdod Port Terminal', requesterName: 'Yossi Peretz', location: 'Ashdod Port', estimatedAmount: 900000, description: 'Container terminal expansion' } }),
+    prisma.project.create({ data: { clientId: clients[13].id, name: 'Ashkelon Water Treatment Facility', requesterName: 'Ronit Ben-David', location: 'Ashkelon Water', estimatedAmount: 1100000, description: 'Advanced desalination plant' } }),
+    prisma.project.create({ data: { clientId: clients[14].id, name: 'Cyber Security HQ Expansion', requesterName: 'Ilan Dahan', location: 'Cyber Security', estimatedAmount: 850000, description: 'Government cybersecurity operations center' } }),
+    prisma.project.create({ data: { clientId: clients[15].id, name: 'Afula Agricultural Hub', requesterName: 'Michal Rosenblum', location: 'Afula Agricultural', estimatedAmount: 380000, description: 'Regional agricultural processing center' } }),
+    prisma.project.create({ data: { clientId: clients[16].id, name: 'Safed Tourist Complex', requesterName: 'Gil Schwartz', location: 'Safed Tourist', estimatedAmount: 620000, description: 'Hotel and entertainment complex in Safed' } }),
+    prisma.project.create({ data: { clientId: clients[17].id, name: 'Tiberias Marina Development', requesterName: 'Sarit Goldman', location: 'Tiberias Marina', estimatedAmount: 780000, description: 'Waterfront resort and marina project' } }),
+    prisma.project.create({ data: { clientId: clients[18].id, name: 'Eilat International Airport Terminal', requesterName: 'Nir Shalit', location: 'Eilat International', estimatedAmount: 950000, description: 'New passenger terminal and facilities' } }),
+    prisma.project.create({ data: { clientId: clients[19].id, name: 'Upper Galilee Forest Lodge', requesterName: 'Moshe Cohen', location: 'Upper Galilee', estimatedAmount: 380000, description: 'Eco-tourism resort with sustainable design' } }),
   ]);
 
   // ── Reports ───────────────────────────────────────────────────────────────

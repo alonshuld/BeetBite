@@ -260,6 +260,29 @@ export class ProjectsService {
   }
 
   /**
+   * Persists the free-text "approved for" line from a successful PDF export
+   * onto the project, so the next export's dialog can prefill it.
+   * @param id ID of the project the export was for.
+   * @param approvedFor The text submitted with that export.
+   */
+  async updateLastApprovedFor(id: string, approvedFor: string): Promise<void> {
+    try {
+      await this.prismaService.project.update({
+        where: { id },
+        data: { lastApprovedFor: approvedFor },
+      });
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_ERROR_CODES.NOT_FOUND
+      ) {
+        throw new ProjectNotFoundError(id);
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Removes a project by its ID.
    * @param id ID of the project to remove
    * @returns void

@@ -118,6 +118,8 @@ describe('PDF Export Integration Tests', () => {
         name,
         estimatedAmount: 100000,
         description: `${name} description`,
+        requesterName: `${name} requester`,
+        location: `${name} location`,
       },
     });
 

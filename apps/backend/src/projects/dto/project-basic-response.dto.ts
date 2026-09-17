@@ -42,4 +42,28 @@ export class ProjectBasicResponseDto {
     type: 'boolean',
   })
   isDone!: boolean;
+
+  @ApiProperty({
+    example: 'Jane Doe',
+    description:
+      'Name of the person who commissioned this specific project (may differ from the client); printed on the account-approval PDF in place of the client name',
+    type: 'string',
+  })
+  requesterName!: string;
+
+  @ApiProperty({
+    example: '123 Main St, Tel Aviv',
+    description: 'Location of the project',
+    type: 'string',
+  })
+  location!: string;
+
+  @ApiProperty({
+    example: 'עבודות שלד + גמר',
+    description:
+      "The 'approved for' text used on this project's most recent PDF export, prefilled on the next export",
+    type: 'string',
+    nullable: true,
+  })
+  lastApprovedFor!: string | null;
 }

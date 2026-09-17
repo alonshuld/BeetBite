@@ -16,7 +16,14 @@ export interface ProjectReport {
   totalIncome: number;
   incomeEntries: IncomeEntry[];
   supplierPayments: SupplierPaymentRow[];
-  project: { id: string; name: string; client: { id: string; name: string } };
+  project: {
+    id: string;
+    name: string;
+    description: string;
+    location: string;
+    requesterName: string;
+    client: { id: string; name: string };
+  };
   subcontractor: { id: string; name: string };
 }
 
@@ -61,11 +68,13 @@ export type UpdateProjectReportDto = Partial<CreateProjectReportDto>;
 export interface AddIncomeEntryDto {
   amount: number;
   incomeDate?: string;
+  tag?: string | null;
 }
 
 export interface UpdateIncomeEntryDto {
   amount?: number;
   incomeDate?: string | null;
+  tag?: string | null;
 }
 
 export const projectReportsApi = baseApi.injectEndpoints({

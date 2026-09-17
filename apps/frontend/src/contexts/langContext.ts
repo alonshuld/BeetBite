@@ -164,8 +164,6 @@ export const translations = {
     supplierNamePlaceholder: "Manpower agency / supplier name",
     projectNamePlaceholder: "Project name",
     projectDescriptionPlaceholder: "Project description",
-    clientOptional: "Client (optional)",
-    noClientOption: "— No client —",
     estimatedAmountLabel: "Estimated Amount (₪)",
     reportMonth: "Report Month",
     incomeILS: "Income (₪)",
@@ -266,6 +264,16 @@ export const translations = {
       "Only projects with a report for this month are listed — create the report first if one is missing.",
     noReportsThisMonthHint:
       "No project has a report for this month yet, so there is nothing to record a payment against.",
+    // Requester (T2) + Location (T8)
+    requester: "Requester",
+    requesterPlaceholder: "Who commissioned this project?",
+    location: "Location",
+    projectLocationPlaceholder: "Project location",
+    exportDescriptionHint:
+      "Editing this updates the project's description everywhere, not just this document.",
+    // Income tag editing
+    editTags: "Edit Tags",
+    editIncomeTags: "Edit Income Tags",
   },
   he: {
     // Nav
@@ -422,8 +430,6 @@ export const translations = {
     supplierNamePlaceholder: "שם כוח האדם / הספק",
     projectNamePlaceholder: "שם הפרויקט",
     projectDescriptionPlaceholder: "תיאור הפרויקט",
-    clientOptional: "לקוח (אופציונלי)",
-    noClientOption: "— ללא לקוח —",
     estimatedAmountLabel: "סכום משוער (₪)",
     reportMonth: "חודש דוח",
     incomeILS: "הכנסה (₪)",
@@ -523,6 +529,16 @@ export const translations = {
       "מוצגים רק פרוייקטים שיש להם דוח לחודש זה — צרו דוח תחילה אם חסר.",
     noReportsThisMonthHint:
       "לאף פרוייקט אין דוח לחודש זה, אז אין מול מה לתעד תשלום.",
+    // Requester (T2) + Location (T8)
+    requester: "מזמין",
+    requesterPlaceholder: "מי הזמין את הפרויקט?",
+    location: "מיקום",
+    projectLocationPlaceholder: "מיקום הפרויקט",
+    exportDescriptionHint:
+      "עריכת שדה זה מעדכנת את תיאור הפרויקט בכל מקום, לא רק במסמך זה.",
+    // Income tag editing
+    editTags: "עריכת תיאורים",
+    editIncomeTags: "עריכת תיאורי הכנסה",
   },
 } as const;
 
