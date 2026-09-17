@@ -98,7 +98,13 @@ describe('SubcontractorPaymentsService', () => {
       expect(
         mockPrismaService.subcontractorPayment.create,
       ).toHaveBeenCalledWith({
-        data: createDto,
+        data: {
+          subcontractorId: createDto.subcontractorId,
+          projectId: createDto.projectId,
+          serviceDate: new Date(createDto.serviceDate),
+          amount: createDto.amount,
+          paymentDate: null,
+        },
         select: {
           id: true,
           projectId: true,
@@ -154,12 +160,20 @@ describe('SubcontractorPaymentsService', () => {
 
       expect(result.serviceDate).toBe('2023-01-01T00:00:00.000Z');
       expect(result.paymentDate).toBe('2023-01-17T00:00:00.000Z');
-      // The row written carries both, unchanged.
+      // Both reach Prisma as Date objects, each keeping its own meaning. A
+      // date-only string here would be accepted by @IsISO8601() and then
+      // rejected by Prisma at runtime, which is exactly how this broke before.
       const call = (
         mockPrismaService.subcontractorPayment.create.mock.calls as unknown[][]
-      )[0][0] as { data: { serviceDate: string; paymentDate?: string } };
-      expect(call.data.serviceDate).toBe('2023-01-01');
-      expect(call.data.paymentDate).toBe('2023-01-17');
+      )[0][0] as { data: { serviceDate: Date; paymentDate: Date | null } };
+      expect(call.data.serviceDate).toBeInstanceOf(Date);
+      expect(call.data.serviceDate.toISOString()).toBe(
+        '2023-01-01T00:00:00.000Z',
+      );
+      expect(call.data.paymentDate).toBeInstanceOf(Date);
+      expect(call.data.paymentDate!.toISOString()).toBe(
+        '2023-01-17T00:00:00.000Z',
+      );
     });
 
     it('records a payment with no date at all', async () => {
@@ -176,6 +190,10 @@ describe('SubcontractorPaymentsService', () => {
       const result = await service.create(createDto);
 
       expect(result.paymentDate).toBeNull();
+      const call = (
+        mockPrismaService.subcontractorPayment.create.mock.calls as unknown[][]
+      )[0][0] as { data: { paymentDate: Date | null } };
+      expect(call.data.paymentDate).toBeNull();
     });
 
     it('should throw SubcontractorNotFoundError when subcontractor does not exist', async () => {

@@ -179,7 +179,18 @@ export class SubcontractorPaymentsService {
           }
 
           return tx.subcontractorPayment.create({
-            data: createSubcontractorPaymentDto,
+            // Build the row explicitly rather than spreading the DTO: the date
+            // fields arrive as strings and Prisma rejects a date-only string
+            // ("2026-09-17") for a DateTime column.
+            data: {
+              subcontractorId: createSubcontractorPaymentDto.subcontractorId,
+              projectId: createSubcontractorPaymentDto.projectId,
+              serviceDate,
+              amount: createSubcontractorPaymentDto.amount,
+              paymentDate: createSubcontractorPaymentDto.paymentDate
+                ? new Date(createSubcontractorPaymentDto.paymentDate)
+                : null,
+            },
             select: {
               id: true,
               projectId: true,

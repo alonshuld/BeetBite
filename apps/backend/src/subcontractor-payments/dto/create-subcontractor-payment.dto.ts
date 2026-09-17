@@ -7,7 +7,10 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { normalizeToMonthStartForTransform } from 'src/common/utils/date.utils';
+import {
+  normalizeToDayStartForTransform,
+  normalizeToMonthStartForTransform,
+} from 'src/common/utils/date.utils';
 
 export class CreateSubcontractorPaymentDto {
   @IsString()
@@ -51,5 +54,8 @@ export class CreateSubcontractorPaymentDto {
     description:
       'The day the money actually moved. Distinct from serviceDate, which is the month being settled.',
   })
+  @Transform(({ value }: { value: unknown }) =>
+    normalizeToDayStartForTransform(value),
+  )
   paymentDate?: string;
 }

@@ -155,11 +155,17 @@ dbTest.describe('Subcontractor Payments', () => {
       await page.waitForLoadState('networkidle');
       await page.getByText('Dates Sub').click();
 
-      // Each instalment shows its own day and amount.
-      await expect(page.getByText(/5 May 2026/)).toBeVisible({ timeout: 5000 });
-      await expect(page.getByText(/19 May 2026/)).toBeVisible();
-      await expect(page.getByText('₪3,000')).toBeVisible();
-      await expect(page.getByText('₪2,000')).toBeVisible();
+      // Each instalment shows its own day next to its own amount. Assert on
+      // the pair within one list row: a bare amount lookup also matches the
+      // balance and remaining lines, which can carry the same figure.
+      for (const [day, amount] of [
+        ['5 May 2026', '₪3,000'],
+        ['19 May 2026', '₪2,000'],
+      ] as const) {
+        await expect(
+          page.getByRole('listitem').filter({ hasText: day }),
+        ).toContainText(amount, { timeout: 5000 });
+      }
 
       // The month being settled is untouched by either day.
       const rows = await db.subcontractorPayment.findMany({
