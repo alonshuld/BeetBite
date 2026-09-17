@@ -53,6 +53,7 @@ describe('ProjectsController', () => {
         estimatedAmount: 100000,
         description: 'Test project description',
         isDone: false,
+        lastApprovedFor: null,
       };
 
       mockProjectsService.create.mockResolvedValue(expectedResult);
@@ -90,6 +91,7 @@ describe('ProjectsController', () => {
           estimatedAmount: 5000,
           description: 'Description 1',
           isDone: false,
+          lastApprovedFor: null,
           hasReports: true,
           paymentProgress: { totalPaid: 2000 },
         },
@@ -101,6 +103,7 @@ describe('ProjectsController', () => {
           estimatedAmount: 10000,
           description: 'Description 2',
           isDone: false,
+          lastApprovedFor: null,
           hasReports: true,
           paymentProgress: { totalPaid: 5000 },
         },
@@ -126,6 +129,7 @@ describe('ProjectsController', () => {
           estimatedAmount: 7500,
           description: 'Description 3',
           isDone: false,
+          lastApprovedFor: null,
           hasReports: false,
           paymentProgress: { totalPaid: 0 },
         },
@@ -158,6 +162,7 @@ describe('ProjectsController', () => {
         estimatedAmount: 5000,
         description: 'Description 1',
         isDone: false,
+        lastApprovedFor: null,
         hasReports: true,
         paymentProgress: { totalPaid: 2000 },
       };
@@ -202,6 +207,7 @@ describe('ProjectsController', () => {
         estimatedAmount: 200000,
         description: 'Updated description',
         isDone: false,
+        lastApprovedFor: null,
       };
 
       mockProjectsService.update.mockResolvedValue(expectedResult);

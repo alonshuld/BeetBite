@@ -12,7 +12,10 @@ import {
 } from "@/api/endpoints/project-reports";
 import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
-import { useGetProjectsQuery } from "@/api/endpoints/projects";
+import {
+  useGetProjectsQuery,
+  useUpdateProjectMutation,
+} from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
 import { PageHeader } from "@/components/molecules/PageHeader";
@@ -25,6 +28,7 @@ import {
   Input,
   Select,
   Textarea,
+  Divider,
 } from "@/components/atoms";
 import { FormModal } from "@/components/organisms/Modal";
 import { FormRow } from "@/components/molecules/FormGroup";
@@ -75,6 +79,7 @@ export default function ReportsPage() {
     useCreateProjectReportMutation();
   const [exportPdf, { isLoading: exporting }] =
     useExportProjectReportsPdfMutation();
+  const [updateProject] = useUpdateProjectMutation();
 
   const [simMargin, setSimMargin] = useState("");
 
@@ -90,12 +95,32 @@ export default function ReportsPage() {
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
 
   // Export is per report: a report is already one project for one month, so
-  // the only thing the dialog still asks for is the free-text approval line.
+  // the dialog asks for the free-text approval line, plus — as a convenience
+  // reached from the same place the document is produced — the project's
+  // description.
   const [exportReport, setExportReport] = useState<ProjectReport | null>(null);
   const [approvedFor, setApprovedFor] = useState("");
+  const [exportDescription, setExportDescription] = useState("");
 
   async function handleExport() {
     if (!exportReport || !approvedFor.trim()) return;
+
+    const project = projects.find((p) => p.id === exportReport.project.id);
+    if (project) {
+      try {
+        await updateProject({
+          id: project.id,
+          clientId: project.clientId,
+          name: project.name,
+          estimatedAmount: project.estimatedAmount,
+          description: exportDescription,
+          isDone: project.isDone,
+        }).unwrap();
+      } catch {
+        // Surfaced by the global RTK Query error listener; the PDF export
+        // below is independent and should still be attempted.
+      }
+    }
 
     try {
       const blob = await exportPdf({
@@ -346,7 +371,11 @@ export default function ReportsPage() {
                     lang={lang}
                     month={month}
                     onExport={() => {
-                      setApprovedFor("");
+                      const exportProject = projects.find(
+                        (p) => p.id === report.project.id,
+                      );
+                      setApprovedFor(exportProject?.lastApprovedFor ?? "");
+                      setExportDescription(exportProject?.description ?? "");
                       setExportReport(report);
                     }}
                     onNavigate={() =>
@@ -642,6 +671,19 @@ export default function ReportsPage() {
             onChange={(e) => setApprovedFor(e.target.value)}
             rows={3}
           />
+          <Divider />
+          <div className="flex flex-col gap-1">
+            <p className="text-xs text-text-dim">
+              {t("exportDescriptionHint")}
+            </p>
+            <Textarea
+              id="export-project-description"
+              label={t("description")}
+              value={exportDescription}
+              onChange={(e) => setExportDescription(e.target.value)}
+              rows={2}
+            />
+          </div>
         </div>
       </FormModal>
     </div>

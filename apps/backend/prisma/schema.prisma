@@ -24,6 +24,7 @@ model Project {
   estimatedAmount Decimal  @db.Decimal(12, 2)
   description     String
   isDone          Boolean  @default(false)
+  lastApprovedFor String?
 
   client               Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
   reports              ProjectReport[]

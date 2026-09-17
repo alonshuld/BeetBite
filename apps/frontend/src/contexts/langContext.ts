@@ -231,6 +231,8 @@ export const translations = {
     exportPdf: "Export PDF",
     approvedForLabel: "Approved For",
     approvedForPlaceholder: "What does this account approval cover?",
+    exportDescriptionHint:
+      "Editing this updates the project's description everywhere, not just this document.",
   },
   he: {
     // Nav
@@ -454,6 +456,8 @@ export const translations = {
     exportPdf: "ייצוא PDF",
     approvedForLabel: "חשבון מאושר עבור",
     approvedForPlaceholder: "מה כולל אישור חשבון זה?",
+    exportDescriptionHint:
+      "עריכת שדה זה מעדכנת את תיאור הפרויקט בכל מקום, לא רק במסמך זה.",
   },
 } as const;
 

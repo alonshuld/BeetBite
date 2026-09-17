@@ -15,6 +15,8 @@ export interface Project {
   isDone: boolean;
   hasReports: boolean;
   paymentProgress: { totalPaid: number };
+  /** The "approved for" text from this project's most recent PDF export, if any. */
+  lastApprovedFor: string | null;
 }
 
 export interface CreateProjectDto {
