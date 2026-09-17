@@ -61,11 +61,13 @@ export type UpdateProjectReportDto = Partial<CreateProjectReportDto>;
 export interface AddIncomeEntryDto {
   amount: number;
   incomeDate?: string;
+  tag?: string | null;
 }
 
 export interface UpdateIncomeEntryDto {
   amount?: number;
   incomeDate?: string | null;
+  tag?: string | null;
 }
 
 export const projectReportsApi = baseApi.injectEndpoints({

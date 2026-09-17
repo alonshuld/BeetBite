@@ -231,6 +231,9 @@ export const translations = {
     exportPdf: "Export PDF",
     approvedForLabel: "Approved For",
     approvedForPlaceholder: "What does this account approval cover?",
+    // Income tag editing
+    editTags: "Edit Tags",
+    editIncomeTags: "Edit Income Tags",
   },
   he: {
     // Nav
@@ -454,6 +457,9 @@ export const translations = {
     exportPdf: "ייצוא PDF",
     approvedForLabel: "חשבון מאושר עבור",
     approvedForPlaceholder: "מה כולל אישור חשבון זה?",
+    // Income tag editing
+    editTags: "עריכת תיאורים",
+    editIncomeTags: "עריכת תיאורי הכנסה",
   },
 } as const;
 
