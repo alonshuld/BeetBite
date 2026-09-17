@@ -18,6 +18,8 @@ import { ProjectsQueryDto } from './dto/projects-query.dto';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
 import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
 import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
+import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
+import { OPENING_BALANCE_TAG } from 'src/common/constants';
 
 const PAID_REPORTS_INCLUDE = {
   reports: {
@@ -58,14 +60,17 @@ export class ProjectsService {
     createProjectDto: CreateProjectDto,
   ): Promise<ProjectBasicResponseDto> {
     try {
-      // The project and its first client assignment are created together: a
-      // project with no assignment resolves to no client and would vanish from
-      // every month-scoped view. See T14.
+      // The project, its first client assignment and any opening-balance report
+      // are created together: a project with no assignment resolves to no
+      // client and would vanish from every month-scoped view (T14), and a
+      // project left holding a half-made opening balance misstates its income.
+      const { openingBalance, ...projectFields } = createProjectDto;
+
       const createdProject = await this.prismaService.$transaction(
         async (tx) => {
           const project = await tx.project.create({
             data: {
-              ...createProjectDto,
+              ...projectFields,
               estimatedAmount: new Prisma.Decimal(
                 createProjectDto.estimatedAmount,
               ),
@@ -76,16 +81,62 @@ export class ProjectsService {
             project.id,
             createProjectDto.clientId,
           );
+
+          if (openingBalance) {
+            // Checked explicitly rather than left to the foreign key: both the
+            // client and the subcontractor can be wrong here, and a raw P2003
+            // does not reliably say which. Guessing would send the user hunting
+            // in the wrong place.
+            const subcontractor = await tx.subcontractor.findUnique({
+              where: { id: openingBalance.subcontractorId },
+              select: { id: true },
+            });
+            if (!subcontractor) {
+              throw new SubcontractorNotFoundError(
+                openingBalance.subcontractorId,
+              );
+            }
+
+            const month = new Date(openingBalance.month);
+            await tx.projectReport.create({
+              data: {
+                projectId: project.id,
+                subcontractorId: openingBalance.subcontractorId,
+                date: month,
+                profitMargin: new Prisma.Decimal(openingBalance.profitMargin),
+                incomeEntries: {
+                  create: {
+                    amount: new Prisma.Decimal(openingBalance.amount),
+                    // The question asked is "how much have I already
+                    // received?", so this money is in hand. Leaving incomeDate
+                    // null would file it as still owed and keep it out of the
+                    // project's payment progress, which is the one figure the
+                    // opening balance exists to correct.
+                    incomeDate: month,
+                    tag: OPENING_BALANCE_TAG,
+                  },
+                },
+              },
+            });
+          }
+
           return project;
         },
       );
-      this.logger.log(`Project created: ${createdProject.id}`);
+      this.logger.log(
+        openingBalance
+          ? `Project created with opening balance: ${createdProject.id}`
+          : `Project created: ${createdProject.id}`,
+      );
 
       return toProjectBasicResponse(createdProject);
     } catch (error) {
+      if (error instanceof SubcontractorNotFoundError) throw error;
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
           case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
+            // The subcontractor is checked above, so the only foreign key left
+            // to fail here is the client's.
             throw new ClientNotFoundError(createProjectDto.clientId);
           case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
             throw new ProjectAlreadyExistsError(createProjectDto.name);
