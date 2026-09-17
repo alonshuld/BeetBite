@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectsService } from './projects.service';
+import { ProjectClientAssignmentsService } from '../project-client-assignments/project-client-assignments.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -15,7 +16,16 @@ import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-relat
 describe('ProjectsService', () => {
   let service: ProjectsService;
 
-  const mockPrismaService = {
+  const mockPrismaService: {
+    project: {
+      create: jest.Mock;
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
+    };
+    $transaction: jest.Mock;
+  } = {
     project: {
       create: jest.fn(),
       findMany: jest.fn(),
@@ -23,6 +33,24 @@ describe('ProjectsService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    $transaction: jest.fn(),
+  };
+
+  // create() now writes the project and its first client assignment in one
+  // transaction (T14). Running the callback against the same mock keeps every
+  // existing project.create expectation below working unchanged. Assigned after
+  // the literal so the type is not self-referential.
+  mockPrismaService.$transaction.mockImplementation(
+    (callback: (tx: typeof mockPrismaService) => unknown) =>
+      callback(mockPrismaService),
+  );
+
+  // Resolution is exercised by project-client-assignments.service.spec.ts.
+  // An empty map here makes the read paths fall back to the project's cached
+  // client, which is the behaviour every assertion below was written against.
+  const mockAssignmentsService = {
+    resolveClientsForMonth: jest.fn().mockResolvedValue(new Map()),
+    createInitialAssignment: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -32,6 +60,10 @@ describe('ProjectsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: ProjectClientAssignmentsService,
+          useValue: mockAssignmentsService,
         },
       ],
     }).compile();

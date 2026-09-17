@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectReportsService } from './project-reports.service';
+import { ProjectClientAssignmentsService } from '../project-client-assignments/project-client-assignments.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
@@ -38,6 +39,14 @@ describe('ProjectReportsService', () => {
     },
   };
 
+  // Resolution is exercised by project-client-assignments.service.spec.ts.
+  // An empty map here makes the read paths fall back to the project's cached
+  // client, which is the behaviour every assertion below was written against.
+  const mockAssignmentsService = {
+    resolveClientsForMonth: jest.fn().mockResolvedValue(new Map()),
+    createInitialAssignment: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -45,6 +54,10 @@ describe('ProjectReportsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: ProjectClientAssignmentsService,
+          useValue: mockAssignmentsService,
         },
       ],
     }).compile();

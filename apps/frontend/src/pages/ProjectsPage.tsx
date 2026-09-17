@@ -23,6 +23,7 @@ import {
   EmptyState,
 } from "@/components/atoms";
 import { FormModal, ConfirmModal } from "@/components/organisms/Modal";
+import { ProjectTransferModal } from "@/components/organisms/ProjectTransferModal";
 
 function formatILS(amount: number): string {
   return `₪${amount.toLocaleString("he-IL")}`;
@@ -103,6 +104,7 @@ export default function ProjectsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [transferTarget, setTransferTarget] = useState<Project | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
   function toggleFilter(key: keyof FilterState) {
@@ -384,6 +386,12 @@ export default function ProjectsPage() {
                           ✏️
                         </ButtonIcon>
                         <ButtonIcon
+                          onClick={() => setTransferTarget(project)}
+                          title={t("transferProject")}
+                        >
+                          🔄
+                        </ButtonIcon>
+                        <ButtonIcon
                           onClick={() => setDeleteTarget(project)}
                           title={t("delete")}
                           className="hover:text-danger hover:border-danger"
@@ -462,6 +470,11 @@ export default function ProjectsPage() {
           </FormGroup>
         </FormRow>
       </FormModal>
+
+      <ProjectTransferModal
+        project={transferTarget}
+        onClose={() => setTransferTarget(null)}
+      />
 
       <ConfirmModal
         open={!!deleteTarget}

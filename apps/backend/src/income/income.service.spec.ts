@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { IncomeService } from './income.service';
+import { ProjectClientAssignmentsService } from '../project-client-assignments/project-client-assignments.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 describe('IncomeService', () => {
@@ -14,6 +15,14 @@ describe('IncomeService', () => {
   /** Builds a Decimal-like stub mirroring Prisma.Decimal's toNumber(). */
   const decimal = (value: number) => ({ toNumber: () => value });
 
+  // Resolution is exercised by project-client-assignments.service.spec.ts.
+  // An empty map here makes the read paths fall back to the project's cached
+  // client, which is the behaviour every assertion below was written against.
+  const mockAssignmentsService = {
+    resolveClientsForMonth: jest.fn().mockResolvedValue(new Map()),
+    createInitialAssignment: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -21,6 +30,10 @@ describe('IncomeService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: ProjectClientAssignmentsService,
+          useValue: mockAssignmentsService,
         },
       ],
     }).compile();

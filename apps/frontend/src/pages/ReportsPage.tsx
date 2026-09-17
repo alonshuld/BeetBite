@@ -145,6 +145,14 @@ export default function ReportsPage() {
     [reports, selectedClientId],
   );
 
+  // T13 — the income side of the same figure, for the selected month only.
+  // Reports are already filtered to the selected client and month, and the
+  // backend groups them by whichever client owned each project that month.
+  const totalClientIncome = useMemo(
+    () => selectedClientReports.reduce((sum, r) => sum + r.totalIncome, 0),
+    [selectedClientReports],
+  );
+
   const totalSubcontractorPayments = useMemo(
     () =>
       selectedClientReports.reduce((sum, r) => {
@@ -318,7 +326,13 @@ export default function ReportsPage() {
                 {selectedClientName}
               </h1>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="text-sm text-text-muted">
+                {t("totalIncome")}:{" "}
+                <span className="text-text font-semibold">
+                  ₪{Math.round(totalClientIncome).toLocaleString("he-IL")}
+                </span>
+              </div>
               <div className="text-sm text-text-muted">
                 {t("totalSubcontractorPayments")}:{" "}
                 <span className="text-text font-semibold">
