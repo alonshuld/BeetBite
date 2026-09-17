@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/molecules/PageHeader";
 import { Input } from "@/components/atoms/Input";
 import { Badge, EmptyState } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
-import { formatYM } from "@/utils/formatMonth";
+import { formatYM, formatISODate } from "@/utils/formatMonth";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
@@ -23,6 +23,10 @@ const STATUS_VARIANT: Record<PaymentStatus, "green" | "yellow" | "red"> = {
   Partial: "yellow",
   Unpaid: "red",
 };
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 function projectStatus(paid: number, owed: number): PaymentStatus {
   if (paid <= 0) return "Unpaid";
@@ -47,6 +51,13 @@ export default function SubcontractorPaymentsPage() {
   const [pendingProject, setPendingProject] = useState<Record<string, boolean>>(
     {},
   );
+  // The day the money moved, per project row. Defaults to today; the user can
+  // change it, because paperwork is often entered days after the transfer.
+  const [paymentDates, setPaymentDates] = useState<Record<string, string>>({});
+
+  function paymentDateFor(projectId: string): string {
+    return paymentDates[projectId] ?? todayISO();
+  }
 
   interface SubCard {
     subId: string;
@@ -141,8 +152,11 @@ export default function SubcontractorPaymentsPage() {
     await createPayment({
       subcontractorId: selectedSubId!,
       projectId,
+      // serviceDate is the month being settled; paymentDate is the day the
+      // money moved. They are deliberately different things.
       serviceDate: month + "-01",
       amount: owed,
+      paymentDate: paymentDateFor(projectId),
     });
     setPendingProject((prev) => ({ ...prev, [projectId]: false }));
     setPartialOpen((prev) => ({ ...prev, [projectId]: false }));
@@ -161,6 +175,7 @@ export default function SubcontractorPaymentsPage() {
       projectId,
       serviceDate: month + "-01",
       amount,
+      paymentDate: paymentDateFor(projectId),
     });
     setPendingProject((prev) => ({ ...prev, [projectId]: false }));
     setPartialOpen((prev) => ({ ...prev, [projectId]: false }));
@@ -265,6 +280,18 @@ export default function SubcontractorPaymentsPage() {
                       {t("paid")}: {formatILS(card.totalPaid)}
                     </p>
                   )}
+                  {/* T10 — the balance is the number actually acted on, so it
+                      is styled to stand out and coloured like the statuses:
+                      settled at zero, outstanding above it. */}
+                  <p
+                    className={`text-sm font-semibold ${
+                      card.totalOwed - card.totalPaid <= 0
+                        ? "text-success"
+                        : "text-warning"
+                    }`}
+                  >
+                    {t("balance")}: {formatILS(card.totalOwed - card.totalPaid)}
+                  </p>
                 </button>
               );
             })}
@@ -297,6 +324,9 @@ export default function SubcontractorPaymentsPage() {
                     const paid = paidPerProject.get(pb.projectId) ?? 0;
                     const status = projectStatus(paid, pb.owed);
                     const remaining = pb.owed - paid;
+                    const projectPayments = paymentsForSelected.filter(
+                      (payment) => payment.projectId === pb.projectId,
+                    );
                     const isPending = pendingProject[pb.projectId] ?? false;
                     const isPartialOpen = partialOpen[pb.projectId] ?? false;
 
@@ -414,6 +444,45 @@ export default function SubcontractorPaymentsPage() {
                           </td>
                         </tr>
 
+                        {/* T9 — each recorded payment as its own line: the
+                            day the money moved on one side, the amount on the
+                            other. A month settled in three instalments shows
+                            three dated lines. */}
+                        {projectPayments.length > 0 && (
+                          <tr
+                            key={`${pb.projectId}-payments`}
+                            className="border-b border-border"
+                          >
+                            <td colSpan={4} className="px-3 py-1">
+                              <ul className="flex flex-col gap-0.5">
+                                {projectPayments.map((payment) => (
+                                  <li
+                                    key={payment.id}
+                                    className="flex justify-between text-xs text-text-muted"
+                                  >
+                                    <span>
+                                      {payment.paymentDate
+                                        ? formatISODate(
+                                            payment.paymentDate,
+                                            lang,
+                                            {
+                                              day: "numeric",
+                                              month: "short",
+                                              year: "numeric",
+                                            },
+                                          )
+                                        : t("noDateRecorded")}
+                                    </span>
+                                    <span className="text-text font-medium">
+                                      {formatILS(payment.amount)}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </td>
+                          </tr>
+                        )}
+
                         {/* Partial amount input row */}
                         {isPartialOpen && (
                           <tr
@@ -438,6 +507,21 @@ export default function SubcontractorPaymentsPage() {
                                       }))
                                     }
                                     placeholder={`0 – ${pb.owed}`}
+                                  />
+                                </div>
+                                <div className="w-44">
+                                  <Input
+                                    id={`payment-date-${pb.projectId}`}
+                                    label=""
+                                    type="date"
+                                    aria-label={t("paymentDate")}
+                                    value={paymentDateFor(pb.projectId)}
+                                    onChange={(e) =>
+                                      setPaymentDates((prev) => ({
+                                        ...prev,
+                                        [pb.projectId]: e.target.value,
+                                      }))
+                                    }
                                   />
                                 </div>
                                 <button

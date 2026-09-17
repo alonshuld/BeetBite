@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -28,6 +29,9 @@ import { MonthlySupplierPaymentsResponseDto } from './dto/monthly-supplier-payme
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { MultipleMonthlySupplierPaymentsResponseDto } from './dto/multiple-monthly-supplier-payments-response.dto';
 import { UpdateSupplierPaymentDto } from './dto/update-supplier-payment.dto';
+import { BatchCreateSupplierPaymentsDto } from './dto/batch-create-supplier-payments.dto';
+import { SetSupplierPaymentPaidDto } from './dto/set-supplier-payment-paid.dto';
+import { SetSupplierPaymentsPaidDto } from './dto/set-supplier-payments-paid.dto';
 
 @ApiTags('suppliers/payments')
 @Controller()
@@ -158,5 +162,73 @@ export class SupplierPaymentsController {
   })
   async remove(@Param('id') id: string) {
     return await this.supplierPaymentsService.remove(id);
+  }
+
+  /**
+   * Record a whole stack of one supplier's paperwork in a single submission.
+   * All rows are written, or none are.
+   * @param supplierId Supplier the paperwork came from
+   * @param dto The payment lines
+   * @returns The created payments
+   */
+  @Post('/suppliers/:supplierId/payments/batch')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: "Record a batch of one supplier's payments in a single submission",
+  })
+  @ApiParam({ name: 'supplierId', description: 'Supplier receiving payment' })
+  @ApiCreatedResponse({ type: [SupplierPaymentResponseDto] })
+  @ApiNotFoundResponse({ description: 'Supplier or project report not found' })
+  @ApiBadRequestResponse({
+    description:
+      'Invalid rows, or no VAT rate configured for a row\u2019s month',
+  })
+  async createBatch(
+    @Param('supplierId') supplierId: string,
+    @Body() dto: BatchCreateSupplierPaymentsDto,
+  ): Promise<SupplierPaymentResponseDto[]> {
+    return await this.supplierPaymentsService.createBatch(supplierId, dto);
+  }
+
+  /**
+   * Mark a single supplier payment paid or unpaid.
+   * @param id Payment to flag
+   * @param dto Whether it is paid
+   * @returns The updated payment
+   */
+  @Patch('/suppliers/payments/:id/paid')
+  @ApiOperation({ summary: 'Mark a supplier payment paid or unpaid' })
+  @ApiParam({ name: 'id', description: 'Supplier payment to flag' })
+  @ApiOkResponse({ type: SupplierPaymentResponseDto })
+  @ApiNotFoundResponse({ description: 'Supplier payment not found' })
+  async setPaid(
+    @Param('id') id: string,
+    @Body() dto: SetSupplierPaymentPaidDto,
+  ): Promise<SupplierPaymentResponseDto> {
+    return await this.supplierPaymentsService.setPaid(id, dto);
+  }
+
+  /**
+   * Mark every one of a supplier's payments in a month paid or unpaid — a
+   * stack of paperwork usually settles as one transfer.
+   * @param supplierId Supplier whose payments to settle
+   * @param dto Whether they are paid, and which month
+   * @returns How many payments were changed
+   */
+  @Patch('/suppliers/:supplierId/payments/paid')
+  @ApiOperation({
+    summary: "Mark all of a supplier's payments in a month paid or unpaid",
+  })
+  @ApiParam({ name: 'supplierId', description: 'Supplier to settle' })
+  @ApiOkResponse({ description: 'Number of payments changed' })
+  @ApiNotFoundResponse({ description: 'Supplier not found' })
+  async setPaidForSupplier(
+    @Param('supplierId') supplierId: string,
+    @Body() dto: SetSupplierPaymentsPaidDto,
+  ): Promise<{ updated: number }> {
+    return await this.supplierPaymentsService.setPaidForSupplier(
+      supplierId,
+      dto,
+    );
   }
 }

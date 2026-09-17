@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateSupplierPaymentDto } from './dto/create-supplier-payment.dto';
+import { BatchCreateSupplierPaymentsDto } from './dto/batch-create-supplier-payments.dto';
+import { SetSupplierPaymentPaidDto } from './dto/set-supplier-payment-paid.dto';
+import { SetSupplierPaymentsPaidDto } from './dto/set-supplier-payments-paid.dto';
 import { MonthlySupplierPaymentsResponseDto } from './dto/monthly-supplier-payments-response.dto';
 import { SupplierPaymentNotFoundError } from './errors/supplier-payment-not-found.error';
 import { MonthQueryDto } from 'src/common/month-query.dto';
@@ -23,6 +26,30 @@ import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 /**
  * Service responsible for managing supplier payments, including creating, fetching, updating, and deleting payments. It interacts with the database through PrismaService and handles various error scenarios related to supplier payments.
  */
+/**
+ * Everything `toSupplierPaymentResponseDto` needs. Shared by the single-create,
+ * batch-create and paid-toggle paths so they cannot drift apart.
+ */
+const SUPPLIER_PAYMENT_SELECT = {
+  id: true,
+  amount: true,
+  date: true,
+  description: true,
+  isFuture: true,
+  vatPercentage: true,
+  isPaid: true,
+  projectReportId: true,
+  supplierId: true,
+  projectReport: {
+    select: {
+      id: true,
+      projectId: true,
+      project: { select: { id: true, name: true } },
+    },
+  },
+  supplier: { select: { id: true, name: true } },
+} as const;
+
 @Injectable()
 export class SupplierPaymentsService {
   private readonly logger = new Logger(SupplierPaymentsService.name);
@@ -81,34 +108,7 @@ export class SupplierPaymentsService {
 
       const supplierPayment = await this.prismaService.supplierPayment.create({
         data,
-        select: {
-          id: true,
-          amount: true,
-          date: true,
-          description: true,
-          isFuture: true,
-          vatPercentage: true,
-          projectReportId: true,
-          supplierId: true,
-          projectReport: {
-            select: {
-              id: true,
-              projectId: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
-          supplier: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
+        select: SUPPLIER_PAYMENT_SELECT,
       });
 
       this.logger.log(
@@ -176,6 +176,7 @@ export class SupplierPaymentsService {
             vatPercentage: true,
             isFuture: true,
             description: true,
+            isPaid: true,
             projectReport: {
               select: {
                 id: true,
@@ -237,6 +238,7 @@ export class SupplierPaymentsService {
             vatPercentage: true,
             isFuture: true,
             description: true,
+            isPaid: true,
             projectReport: {
               select: {
                 id: true,
@@ -294,34 +296,7 @@ export class SupplierPaymentsService {
         await this.prismaService.supplierPayment.update({
           where: { id: supplierPaymentId },
           data,
-          select: {
-            id: true,
-            amount: true,
-            date: true,
-            description: true,
-            isFuture: true,
-            vatPercentage: true,
-            projectReportId: true,
-            supplierId: true,
-            projectReport: {
-              select: {
-                id: true,
-                projectId: true,
-                project: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-            supplier: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
+          select: SUPPLIER_PAYMENT_SELECT,
         });
 
       this.logger.log(`Updated supplier payment with ID: ${supplierPaymentId}`);
@@ -379,5 +354,153 @@ export class SupplierPaymentsService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Records a whole stack of one supplier's paperwork in a single submission.
+   *
+   * The contractor gets everything supplier X is owed for the month across
+   * several projects at once. Rows are written **all-or-nothing**: a stack
+   * half-recorded, with nothing to say which half, is worse than a clean
+   * failure.
+   *
+   * VAT is resolved per row exactly as the single-create path does — resolved
+   * up front so that a month with no configured rate fails before anything is
+   * written.
+   *
+   * @param supplierId Supplier the paperwork came from
+   * @param dto The payment lines
+   * @returns The created payments
+   * @throws SupplierNotFoundError, ProjectReportNotFoundError on a bad reference
+   */
+  async createBatch(
+    supplierId: string,
+    dto: BatchCreateSupplierPaymentsDto,
+  ): Promise<SupplierPaymentResponseDto[]> {
+    const supplier = await this.prismaService.supplier.findUnique({
+      where: { id: supplierId },
+      select: { id: true },
+    });
+    if (!supplier) throw new SupplierNotFoundError(supplierId);
+
+    // Resolve every row's VAT before opening the transaction: a missing rate
+    // should fail the whole stack, not leave part of it written.
+    const rows = await Promise.all(
+      dto.payments.map(async (payment) => ({
+        ...payment,
+        vatPercentage: await this.vatRatesService.resolveForMonth(payment.date),
+      })),
+    );
+
+    try {
+      const created = await this.prismaService.$transaction(async (tx) =>
+        Promise.all(
+          rows.map((row) =>
+            tx.supplierPayment.create({
+              data: {
+                supplierId,
+                projectReportId: row.projectReportId,
+                amount: row.amount,
+                date: new Date(row.date),
+                description: row.description ?? null,
+                vatPercentage: row.vatPercentage,
+              },
+              select: SUPPLIER_PAYMENT_SELECT,
+            }),
+          ),
+        ),
+      );
+
+      this.logger.log(
+        `Recorded ${created.length} payments for supplier ${supplierId} in one batch`,
+      );
+      return created.map(toSupplierPaymentResponseDto);
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED
+      ) {
+        // Prisma names the offending column but not the row, and the whole
+        // batch has rolled back either way — so report which *kind* of
+        // reference was bad rather than inventing a row number.
+        const fieldName = (error.meta?.field_name as string) ?? '';
+        if (fieldName.toLowerCase().includes('supplierid')) {
+          throw new SupplierNotFoundError(supplierId);
+        }
+        throw new ProjectReportNotFoundError(
+          dto.payments.map((payment) => payment.projectReportId).join(', '),
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Marks one payment paid or unpaid.
+   * @param paymentId Payment to flag
+   * @param dto Whether it is paid
+   * @returns The updated payment
+   * @throws SupplierPaymentNotFoundError when no payment has that id
+   */
+  async setPaid(
+    paymentId: string,
+    dto: SetSupplierPaymentPaidDto,
+  ): Promise<SupplierPaymentResponseDto> {
+    try {
+      const updated = await this.prismaService.supplierPayment.update({
+        where: { id: paymentId },
+        data: { isPaid: dto.isPaid },
+        select: SUPPLIER_PAYMENT_SELECT,
+      });
+      return toSupplierPaymentResponseDto(updated);
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_ERROR_CODES.NOT_FOUND
+      ) {
+        throw new SupplierPaymentNotFoundError(paymentId);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Marks every one of a supplier's payments in a month paid or unpaid.
+   *
+   * A stack of paperwork usually settles as one transfer, so ticking twelve
+   * rows individually is the wrong shape for the common case.
+   *
+   * @param supplierId Supplier whose payments to settle
+   * @param dto Whether they are paid, and which month
+   * @returns How many payments were changed
+   */
+  async setPaidForSupplier(
+    supplierId: string,
+    dto: SetSupplierPaymentsPaidDto,
+  ): Promise<{ updated: number }> {
+    const supplier = await this.prismaService.supplier.findUnique({
+      where: { id: supplierId },
+      select: { id: true },
+    });
+    if (!supplier) throw new SupplierNotFoundError(supplierId);
+
+    const monthFilter = dto.month
+      ? (() => {
+          const { startDate, endDate } = this.calculateStartAndEndDates(
+            dto.month,
+          );
+          return { projectReport: { date: { gte: startDate, lte: endDate } } };
+        })()
+      : {};
+
+    const result = await this.prismaService.supplierPayment.updateMany({
+      where: { supplierId, ...monthFilter },
+      data: { isPaid: dto.isPaid },
+    });
+
+    this.logger.log(
+      `Marked ${result.count} payments of supplier ${supplierId} as ${dto.isPaid ? 'paid' : 'unpaid'}`,
+    );
+    return { updated: result.count };
   }
 }

@@ -113,6 +113,9 @@ model SupplierPayment {
   description     String?
   isFuture        Boolean   @default(false)
   vatPercentage   Decimal?  @db.Decimal(5, 2)
+  /// Whether the money has actually left. A stack of paperwork is usually
+  /// settled as one transfer, so this is also toggled per supplier per month.
+  isPaid          Boolean   @default(false)
 
   projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
   supplier      Supplier      @relation(fields: [supplierId], references: [id], onDelete: Cascade)
@@ -121,12 +124,17 @@ model SupplierPayment {
 }
 
 model SubcontractorPayment {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   subcontractorId String
   projectId       String
-  serviceDate     DateTime @db.Date
-  amount          Decimal  @db.Decimal(12, 2)
-  isPaid          Boolean  @default(false)
+  /// Which month this settles — always the first of that month. NOT the day the
+  /// money moved; that is paymentDate.
+  serviceDate     DateTime  @db.Date
+  amount          Decimal   @db.Decimal(12, 2)
+  isPaid          Boolean   @default(false)
+  /// The day the money actually moved, chosen by the user. Nullable because
+  /// rows recorded before this column existed have no honest answer.
+  paymentDate     DateTime? @db.Date
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
   project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
