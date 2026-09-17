@@ -52,6 +52,8 @@ interface MockPayment {
   projectId: string;
   amount: number;
   isPaid: boolean;
+  /** Null for rows recorded before the column existed. */
+  paymentDate: string | null;
 }
 
 function makePayments(payments: MockPayment[], amountPaid: number) {
@@ -70,6 +72,7 @@ function makePayment(overrides: Partial<MockPayment> = {}): MockPayment {
     projectId: "p1",
     amount: 8000,
     isPaid: true,
+    paymentDate: null,
     ...overrides,
   };
 }
@@ -146,7 +149,7 @@ describe("SubcontractorPaymentsPage", () => {
   it("renders a card with the subcontractor name and amount owed", () => {
     renderPage();
     expect(screen.getByText("Bob the Builder")).toBeInTheDocument();
-    expect(screen.getByText(/₪8,000/)).toBeInTheDocument();
+    expect(screen.getByText(/Owed: ₪8,000/)).toBeInTheDocument();
   });
 
   it("shows Unpaid when there are no payments", () => {
@@ -186,12 +189,18 @@ describe("SubcontractorPaymentsPage", () => {
     renderPage();
     await openPanel();
     await userEvent.click(screen.getByTitle("Paid"));
-    expect(createSpy).toHaveBeenCalledWith({
-      subcontractorId: "s1",
-      projectId: "p1",
-      serviceDate: "2025-03-01",
-      amount: 8000,
-    });
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subcontractorId: "s1",
+        projectId: "p1",
+        // The month being settled — unchanged by the new payment date.
+        serviceDate: "2025-03-01",
+        amount: 8000,
+      }),
+    );
+    // The day the money moved defaults to today when left alone.
+    const call = createSpy.mock.calls[0][0] as { paymentDate: string };
+    expect(call.paymentDate).toBe(new Date().toISOString().slice(0, 10));
   });
 
   it("opens the inline partial-amount row", async () => {
@@ -199,5 +208,91 @@ describe("SubcontractorPaymentsPage", () => {
     await openPanel();
     await userEvent.click(screen.getByTitle("Partial"));
     expect(screen.getByPlaceholderText("0 – 8000")).toBeInTheDocument();
+  });
+
+  // T9 + T10 — the day the money moved, and what is still outstanding.
+  describe("payment dates and balance", () => {
+    it("shows the balance beside owed and paid", () => {
+      setPayments(makePayments([makePayment({ amount: 3000 })], 3000));
+      renderPage();
+
+      expect(screen.getByText(/Owed: ₪8,000/)).toBeInTheDocument();
+      expect(screen.getByText(/Paid: ₪3,000/)).toBeInTheDocument();
+      expect(screen.getByText(/Balance: ₪5,000/)).toBeInTheDocument();
+    });
+
+    it("shows a zero balance once the card is fully paid", () => {
+      setPayments(makePayments([makePayment({ amount: 8000 })], 8000));
+      renderPage();
+
+      expect(screen.getByText(/Balance: ₪0/)).toBeInTheDocument();
+    });
+
+    it("offers an editable payment date defaulting to today", async () => {
+      renderPage();
+      await openPanel();
+      await userEvent.click(screen.getByTitle("Partial"));
+
+      const dateInput = screen.getByLabelText("Payment date");
+      expect(dateInput).toHaveValue(new Date().toISOString().slice(0, 10));
+    });
+
+    it("sends the date the user picked, not today", async () => {
+      renderPage();
+      await openPanel();
+      await userEvent.click(screen.getByTitle("Partial"));
+
+      const dateInput = screen.getByLabelText("Payment date");
+      await userEvent.clear(dateInput);
+      await userEvent.type(dateInput, "2025-03-19");
+      await userEvent.type(screen.getByPlaceholderText("0 – 8000"), "2000");
+      await userEvent.click(screen.getByTitle("Save"));
+
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: 2000,
+          paymentDate: "2025-03-19",
+          // Still the month being settled, whatever day was picked.
+          serviceDate: "2025-03-01",
+        }),
+      );
+    });
+
+    it("lists each recorded payment with its own date and amount", async () => {
+      setPayments(
+        makePayments(
+          [
+            makePayment({
+              id: "pay-1",
+              amount: 2000,
+              paymentDate: "2025-03-05T00:00:00.000Z",
+            }),
+            makePayment({
+              id: "pay-2",
+              amount: 3000,
+              paymentDate: "2025-03-19T00:00:00.000Z",
+            }),
+          ],
+          5000,
+        ),
+      );
+      renderPage();
+      await openPanel();
+
+      expect(screen.getByText("₪2,000")).toBeInTheDocument();
+      expect(screen.getByText("₪3,000")).toBeInTheDocument();
+      expect(screen.getByText(/5 Mar 2025/)).toBeInTheDocument();
+      expect(screen.getByText(/19 Mar 2025/)).toBeInTheDocument();
+    });
+
+    it("says so for a payment recorded before dates existed", async () => {
+      setPayments(
+        makePayments([makePayment({ amount: 2000, paymentDate: null })], 2000),
+      );
+      renderPage();
+      await openPanel();
+
+      expect(screen.getByText("No date recorded")).toBeInTheDocument();
+    });
   });
 });

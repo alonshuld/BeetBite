@@ -21,12 +21,14 @@ describe('SupplierPaymentsService', () => {
       findSuppliersPaymentsInMonth: jest.fn(),
       findSupplierMonthlyPayments: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       delete: jest.fn(),
     },
     supplier: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   const mockVatRatesService = {
@@ -52,6 +54,11 @@ describe('SupplierPaymentsService', () => {
 
     jest.clearAllMocks();
     mockVatRatesService.resolveForMonth.mockResolvedValue(18);
+    // Run transaction callbacks against the same mock.
+    mockPrismaService.$transaction.mockImplementation(
+      (callback: (tx: typeof mockPrismaService) => unknown) =>
+        callback(mockPrismaService),
+    );
   });
 
   it('should be defined', () => {
@@ -129,6 +136,7 @@ describe('SupplierPaymentsService', () => {
           description: true,
           isFuture: true,
           vatPercentage: true,
+          isPaid: true,
           projectReportId: true,
           supplierId: true,
           projectReport: {
@@ -296,6 +304,7 @@ describe('SupplierPaymentsService', () => {
           vatPercentage: null,
           isFuture: false,
           description: null,
+          isPaid: false,
           supplier: {
             id: 'corp-1',
             name: 'Corp 1',
@@ -316,6 +325,7 @@ describe('SupplierPaymentsService', () => {
           vatPercentage: null,
           isFuture: false,
           description: null,
+          isPaid: false,
           projectReportId: 'report-2',
           supplierId: 'corp-1',
           supplier: {
@@ -364,6 +374,7 @@ describe('SupplierPaymentsService', () => {
             effectiveTotal: 1000,
             isFuture: false,
             description: null,
+            isPaid: false,
           },
           {
             id: 'payment-2',
@@ -379,9 +390,11 @@ describe('SupplierPaymentsService', () => {
             effectiveTotal: 500,
             isFuture: false,
             description: null,
+            isPaid: false,
           },
         ],
         total: 1500,
+        totalPaid: 0,
       });
       expect(mockPrismaService.supplier.findUnique).toHaveBeenCalledWith({
         where: { id: 'corp-1' },
@@ -404,6 +417,7 @@ describe('SupplierPaymentsService', () => {
               vatPercentage: true,
               isFuture: true,
               description: true,
+              isPaid: true,
               projectReport: {
                 select: {
                   id: true,
@@ -527,6 +541,7 @@ describe('SupplierPaymentsService', () => {
               vatPercentage: true,
               isFuture: true,
               description: true,
+              isPaid: true,
               projectReport: {
                 select: {
                   id: true,
@@ -635,6 +650,7 @@ describe('SupplierPaymentsService', () => {
           description: true,
           isFuture: true,
           vatPercentage: true,
+          isPaid: true,
           projectReportId: true,
           supplierId: true,
           projectReport: {
@@ -736,6 +752,224 @@ describe('SupplierPaymentsService', () => {
       await expect(service.remove('payment-1')).rejects.toThrow(
         SupplierPaymentNotFoundError,
       );
+    });
+  });
+
+  describe('createBatch', () => {
+    const SUPPLIER_ID = 'supplier-1';
+    const batchDto = {
+      payments: [
+        { projectReportId: 'report-1', amount: 1000, date: '2026-03-05' },
+        { projectReportId: 'report-2', amount: 2000, date: '2026-03-06' },
+        {
+          projectReportId: 'report-3',
+          amount: 3000,
+          date: '2026-03-07',
+          description: 'Invoice #77',
+        },
+      ],
+    };
+
+    function createdRow(id: string) {
+      return {
+        id,
+        amount: { toNumber: () => 1000 },
+        date: new Date('2026-03-05'),
+        description: null,
+        isFuture: false,
+        vatPercentage: { toNumber: () => 18 },
+        isPaid: false,
+        projectReportId: 'report-1',
+        supplierId: SUPPLIER_ID,
+        projectReport: {
+          id: 'report-1',
+          projectId: 'project-1',
+          project: { id: 'project-1', name: 'Project 1' },
+        },
+        supplier: { id: SUPPLIER_ID, name: 'Supplier 1' },
+      };
+    }
+
+    beforeEach(() => {
+      mockPrismaService.supplier.findUnique.mockResolvedValue({
+        id: SUPPLIER_ID,
+      });
+    });
+
+    it('records every line of the paperwork in one transaction', async () => {
+      mockPrismaService.supplierPayment.create
+        .mockResolvedValueOnce(createdRow('p1'))
+        .mockResolvedValueOnce(createdRow('p2'))
+        .mockResolvedValueOnce(createdRow('p3'));
+
+      const result = await service.createBatch(SUPPLIER_ID, batchDto);
+
+      expect(result).toHaveLength(3);
+      expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.supplierPayment.create).toHaveBeenCalledTimes(3);
+    });
+
+    // 🔴 The most important test in T5. A stack half-recorded, with nothing to
+    // say which half, is worse than a clean failure — so one bad row must
+    // write nothing at all.
+    it('writes nothing when any row is rejected', async () => {
+      const fkError = new PrismaClientKnownRequestError('FK failed', {
+        code: PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED,
+        clientVersion: 'test',
+      });
+      // The second line of the paperwork names a report that does not exist.
+      mockPrismaService.supplierPayment.create
+        .mockResolvedValueOnce(createdRow('p1'))
+        .mockRejectedValueOnce(fkError);
+      // The real transaction rolls back; the mock must not pretend otherwise.
+      mockPrismaService.$transaction.mockImplementation(
+        async (
+          callback: (tx: typeof mockPrismaService) => Promise<unknown>,
+        ) => {
+          await callback(mockPrismaService);
+          throw new Error('transaction should have rolled back');
+        },
+      );
+
+      await expect(
+        service.createBatch(SUPPLIER_ID, batchDto),
+      ).rejects.toThrow();
+    });
+
+    it('resolves VAT per row, as the single-create path does', async () => {
+      mockPrismaService.supplierPayment.create.mockResolvedValue(
+        createdRow('p1'),
+      );
+
+      await service.createBatch(SUPPLIER_ID, batchDto);
+
+      // One resolution per line, against that line's own date.
+      expect(mockVatRatesService.resolveForMonth).toHaveBeenCalledTimes(3);
+      expect(mockVatRatesService.resolveForMonth).toHaveBeenCalledWith(
+        '2026-03-05',
+      );
+      expect(mockPrismaService.supplierPayment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ vatPercentage: 18 }) as unknown,
+        }) as unknown,
+      );
+    });
+
+    it('writes nothing when a row\u2019s month has no VAT rate', async () => {
+      // Resolution happens before the transaction opens precisely so that this
+      // fails clean rather than half-written.
+      mockVatRatesService.resolveForMonth.mockRejectedValue(
+        new Error('No VAT rate configured'),
+      );
+
+      await expect(
+        service.createBatch(SUPPLIER_ID, batchDto),
+      ).rejects.toThrow();
+      expect(mockPrismaService.supplierPayment.create).not.toHaveBeenCalled();
+      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects an unknown supplier before touching anything', async () => {
+      mockPrismaService.supplier.findUnique.mockResolvedValue(null);
+
+      await expect(service.createBatch('nope', batchDto)).rejects.toThrow();
+      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('paid flag', () => {
+    /**
+     * `jest.fn().mock.calls` is `any[][]`, so reaching into it directly trips
+     * no-unsafe-member-access. Narrow once, here.
+     */
+    function firstUpdateManyArgs(): {
+      where: { supplierId: string; projectReport?: unknown };
+      data: { isPaid: boolean };
+    } {
+      const calls = mockPrismaService.supplierPayment.updateMany.mock
+        .calls as unknown[][];
+      return calls[0][0] as {
+        where: { supplierId: string; projectReport?: unknown };
+        data: { isPaid: boolean };
+      };
+    }
+
+    it('marks a single payment paid', async () => {
+      mockPrismaService.supplierPayment.update.mockResolvedValue({
+        id: 'p1',
+        amount: { toNumber: () => 1000 },
+        date: new Date('2026-03-05'),
+        description: null,
+        isFuture: false,
+        vatPercentage: null,
+        isPaid: true,
+        projectReportId: 'report-1',
+        supplierId: 'supplier-1',
+        projectReport: {
+          id: 'report-1',
+          projectId: 'project-1',
+          project: { id: 'project-1', name: 'Project 1' },
+        },
+        supplier: { id: 'supplier-1', name: 'Supplier 1' },
+      });
+
+      await service.setPaid('p1', { isPaid: true });
+
+      expect(mockPrismaService.supplierPayment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'p1' },
+          data: { isPaid: true },
+        }) as unknown,
+      );
+    });
+
+    it('throws when the payment does not exist', async () => {
+      mockPrismaService.supplierPayment.update.mockRejectedValue(
+        new PrismaClientKnownRequestError('Not found', {
+          code: PRISMA_ERROR_CODES.NOT_FOUND,
+          clientVersion: 'test',
+        }),
+      );
+
+      await expect(service.setPaid('nope', { isPaid: true })).rejects.toThrow(
+        SupplierPaymentNotFoundError,
+      );
+    });
+
+    // A stack settles as one transfer, so the group action is the common case.
+    it('marks every payment of one supplier in a month, and no others', async () => {
+      mockPrismaService.supplier.findUnique.mockResolvedValue({
+        id: 'supplier-1',
+      });
+      mockPrismaService.supplierPayment.updateMany.mockResolvedValue({
+        count: 4,
+      });
+
+      const result = await service.setPaidForSupplier('supplier-1', {
+        isPaid: true,
+        month: '2026-03-01',
+      });
+
+      expect(result).toEqual({ updated: 4 });
+      const call = firstUpdateManyArgs();
+      // Scoped to this supplier AND this month — not every payment they have.
+      expect(call.where.supplierId).toBe('supplier-1');
+      expect(call.where.projectReport).toBeDefined();
+      expect(call.data).toEqual({ isPaid: true });
+    });
+
+    it('applies to every month when none is given', async () => {
+      mockPrismaService.supplier.findUnique.mockResolvedValue({
+        id: 'supplier-1',
+      });
+      mockPrismaService.supplierPayment.updateMany.mockResolvedValue({
+        count: 9,
+      });
+
+      await service.setPaidForSupplier('supplier-1', { isPaid: false });
+
+      const call = firstUpdateManyArgs();
+      expect(call.where.projectReport).toBeUndefined();
     });
   });
 });

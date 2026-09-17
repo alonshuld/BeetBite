@@ -1,7 +1,16 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsISO8601, IsNotEmpty, IsNumber, IsString } from 'class-validator';
-import { normalizeToMonthStartForTransform } from 'src/common/utils/date.utils';
+import {
+  IsISO8601,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import {
+  normalizeToDayStartForTransform,
+  normalizeToMonthStartForTransform,
+} from 'src/common/utils/date.utils';
 
 export class CreateSubcontractorPaymentDto {
   @IsString()
@@ -37,4 +46,16 @@ export class CreateSubcontractorPaymentDto {
     description: 'The amount of the payment',
   })
   amount!: number;
+
+  @IsOptional()
+  @IsISO8601()
+  @ApiPropertyOptional({
+    example: '2026-01-17',
+    description:
+      'The day the money actually moved. Distinct from serviceDate, which is the month being settled.',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    normalizeToDayStartForTransform(value),
+  )
+  paymentDate?: string;
 }
