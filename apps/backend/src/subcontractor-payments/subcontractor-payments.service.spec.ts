@@ -93,17 +93,25 @@ describe('SubcontractorPaymentsService', () => {
         subcontractor: mockPayment.subcontractor,
         serviceDate: mockPayment.serviceDate.toISOString(),
         amount: 1000,
+        paymentDate: null,
       });
       expect(
         mockPrismaService.subcontractorPayment.create,
       ).toHaveBeenCalledWith({
-        data: createDto,
+        data: {
+          subcontractorId: createDto.subcontractorId,
+          projectId: createDto.projectId,
+          serviceDate: new Date(createDto.serviceDate),
+          amount: createDto.amount,
+          paymentDate: null,
+        },
         select: {
           id: true,
           projectId: true,
           serviceDate: true,
           amount: true,
           isPaid: true,
+          paymentDate: true,
           subcontractor: {
             select: {
               id: true,
@@ -128,6 +136,64 @@ describe('SubcontractorPaymentsService', () => {
       await expect(
         service.create({ ...createDto, amount: 1000 }),
       ).rejects.toThrow(SubcontractorPaymentOverpaymentError);
+    });
+
+    // 🔴 serviceDate says which month is being settled; paymentDate says when
+    // the money moved. A payment made on the 17th still settles the month that
+    // starts on the 1st. Conflating the two is the failure this guards.
+    it('keeps the settled month and the payment day distinct', async () => {
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
+        profitMargin: { toNumber: () => 10 },
+        supplierPayments: [],
+      });
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+      mockPrismaService.subcontractorPayment.create.mockResolvedValue({
+        ...mockPayment,
+        paymentDate: new Date('2023-01-17'),
+      });
+
+      const result = await service.create({
+        ...createDto,
+        paymentDate: '2023-01-17',
+      });
+
+      expect(result.serviceDate).toBe('2023-01-01T00:00:00.000Z');
+      expect(result.paymentDate).toBe('2023-01-17T00:00:00.000Z');
+      // Both reach Prisma as Date objects, each keeping its own meaning. A
+      // date-only string here would be accepted by @IsISO8601() and then
+      // rejected by Prisma at runtime, which is exactly how this broke before.
+      const call = (
+        mockPrismaService.subcontractorPayment.create.mock.calls as unknown[][]
+      )[0][0] as { data: { serviceDate: Date; paymentDate: Date | null } };
+      expect(call.data.serviceDate).toBeInstanceOf(Date);
+      expect(call.data.serviceDate.toISOString()).toBe(
+        '2023-01-01T00:00:00.000Z',
+      );
+      expect(call.data.paymentDate).toBeInstanceOf(Date);
+      expect(call.data.paymentDate!.toISOString()).toBe(
+        '2023-01-17T00:00:00.000Z',
+      );
+    });
+
+    it('records a payment with no date at all', async () => {
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
+        profitMargin: { toNumber: () => 10 },
+        supplierPayments: [],
+      });
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+      mockPrismaService.subcontractorPayment.create.mockResolvedValue(
+        mockPayment,
+      );
+
+      const result = await service.create(createDto);
+
+      expect(result.paymentDate).toBeNull();
+      const call = (
+        mockPrismaService.subcontractorPayment.create.mock.calls as unknown[][]
+      )[0][0] as { data: { paymentDate: Date | null } };
+      expect(call.data.paymentDate).toBeNull();
     });
 
     it('should throw SubcontractorNotFoundError when subcontractor does not exist', async () => {
@@ -484,6 +550,7 @@ describe('SubcontractorPaymentsService', () => {
         subcontractor: mockPayment.subcontractor,
         serviceDate: mockPayment.serviceDate.toISOString(),
         amount: 1500,
+        paymentDate: null,
       });
       expect(
         mockPrismaService.subcontractorPayment.update,
@@ -496,6 +563,7 @@ describe('SubcontractorPaymentsService', () => {
           serviceDate: true,
           amount: true,
           isPaid: true,
+          paymentDate: true,
           subcontractor: {
             select: {
               id: true,

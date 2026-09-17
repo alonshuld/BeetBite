@@ -100,12 +100,17 @@ model SupplierPayment {
 }
 
 model SubcontractorPayment {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   subcontractorId String
   projectId       String
-  serviceDate     DateTime @db.Date
-  amount          Decimal  @db.Decimal(12, 2)
-  isPaid          Boolean  @default(false)
+  /// Which month this settles — always the first of that month. NOT the day the
+  /// money moved; that is paymentDate.
+  serviceDate     DateTime  @db.Date
+  amount          Decimal   @db.Decimal(12, 2)
+  isPaid          Boolean   @default(false)
+  /// The day the money actually moved, chosen by the user. Nullable because
+  /// rows recorded before this column existed have no honest answer.
+  paymentDate     DateTime? @db.Date
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
   project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)

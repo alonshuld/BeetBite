@@ -7,12 +7,13 @@ import {
 describe('monthly-subcontractor-payments mapper', () => {
   const serviceDate = new Date('2024-05-01T00:00:00.000Z');
 
-  const makePayment = (amount: number) => ({
+  const makePayment = (amount: number, paymentDate: Date | null = null) => ({
     id: `payment-${amount}`,
     projectId: 'project-1',
     serviceDate,
     amount: new Prisma.Decimal(String(amount)),
     isPaid: false,
+    paymentDate,
   });
 
   const makeInput = (
@@ -52,11 +53,15 @@ describe('monthly-subcontractor-payments mapper', () => {
       expect(result.amountPaid).toBe(0);
     });
 
-    it('should not include paymentDate on nested payments', () => {
+    // This test used to assert the opposite — that paymentDate was absent —
+    // guarding the old "a row means it was paid, so a date is redundant"
+    // design. The contractor needs the day the money actually moved, so the
+    // field is back and the assertion is inverted deliberately, not weakened.
+    it('should include paymentDate on nested payments', () => {
       const result = toMonthlySubcontractorPaymentsResponse(
-        makeInput([makePayment(500)]),
+        makeInput([makePayment(500, new Date('2024-05-17T00:00:00.000Z'))]),
       );
-      expect(result.payments[0]).not.toHaveProperty('paymentDate');
+      expect(result.payments[0].paymentDate).toBe('2024-05-17T00:00:00.000Z');
     });
   });
 
@@ -75,5 +80,30 @@ describe('monthly-subcontractor-payments mapper', () => {
       expect(results[0].amountPaid).toBe(500);
       expect(results[1].amountPaid).toBe(1000);
     });
+  });
+
+  // Several partial payments in one month each carry their own date — that is
+  // the whole point of the field, and what the card lists line by line.
+  it('carries each payment\u2019s own date through', () => {
+    const result = toMonthlySubcontractorPaymentsResponse(
+      makeInput([
+        makePayment(500, new Date('2024-05-03T00:00:00.000Z')),
+        makePayment(700, new Date('2024-05-19T00:00:00.000Z')),
+      ]),
+    );
+
+    expect(result.payments.map((payment) => payment.paymentDate)).toEqual([
+      '2024-05-03T00:00:00.000Z',
+      '2024-05-19T00:00:00.000Z',
+    ]);
+    // The month being settled is unchanged by any of it.
+    expect(result.serviceDate).toBe('2024-05-01T00:00:00.000Z');
+  });
+
+  it('maps a payment with no date to null', () => {
+    const result = toMonthlySubcontractorPaymentsResponse(
+      makeInput([makePayment(500)]),
+    );
+    expect(result.payments[0].paymentDate).toBeNull();
   });
 });
