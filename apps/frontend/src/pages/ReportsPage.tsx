@@ -14,7 +14,7 @@ import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-repo
 import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
-import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
+import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import {
   ButtonPrimary,
@@ -33,7 +33,7 @@ import { useToast } from "@/contexts/useToast";
 import { formatISODate } from "@/utils/formatMonth";
 
 interface CorpPaymentDraft {
-  corporationId: string;
+  supplierId: string;
   amount: string;
   date: string;
 }
@@ -70,7 +70,7 @@ export default function ReportsPage() {
   const { data: clients = [] } = useGetClientsQuery();
   const { data: projects = [] } = useGetProjectsQuery();
   const { data: subcontractors = [] } = useGetSubcontractorsQuery();
-  const { data: corporations = [] } = useGetCorporationsQuery();
+  const { data: suppliers = [] } = useGetSuppliersQuery();
   const [createReport, { isLoading: saving }] =
     useCreateProjectReportMutation();
   const [exportPdf, { isLoading: exporting }] =
@@ -149,7 +149,7 @@ export default function ReportsPage() {
     () =>
       selectedClientReports.reduce((sum, r) => {
         const profit = r.totalIncome * (r.profitMargin / 100);
-        const corpTotal = r.corporationPayments.reduce(
+        const corpTotal = r.supplierPayments.reduce(
           (s, cp) => s + cp.amount,
           0,
         );
@@ -211,10 +211,10 @@ export default function ReportsPage() {
         tag: e.tag.trim() || null,
       })),
       profitMargin: Number(profitMarginPercent) || undefined,
-      corporationPayments: corpPayments
-        .filter((cp) => cp.corporationId !== "")
+      supplierPayments: corpPayments
+        .filter((cp) => cp.supplierId !== "")
         .map((cp) => ({
-          corporationId: cp.corporationId,
+          supplierId: cp.supplierId,
           amount: Number(cp.amount),
           date: cp.date,
         })),
@@ -243,7 +243,7 @@ export default function ReportsPage() {
   function addCorpPayment() {
     setCorpPayments((prev) => [
       ...prev,
-      { corporationId: "", amount: "", date: todayISO() },
+      { supplierId: "", amount: "", date: todayISO() },
     ]);
   }
 
@@ -383,7 +383,7 @@ export default function ReportsPage() {
                     const corpTotal = selectedClientReports.reduce(
                       (s, r) =>
                         s +
-                        r.corporationPayments.reduce(
+                        r.supplierPayments.reduce(
                           (cs, cp) => cs + cp.amount,
                           0,
                         ),
@@ -562,7 +562,7 @@ export default function ReportsPage() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
-                {t("corporationPayments")}
+                {t("supplierPayments")}
               </span>
               <ButtonGhost
                 onClick={addCorpPayment}
@@ -579,13 +579,13 @@ export default function ReportsPage() {
               >
                 <div className="grid grid-cols-3 gap-2 items-end">
                   <Select
-                    value={cp.corporationId}
+                    value={cp.supplierId}
                     onChange={(e) =>
-                      updateCorpPayment(i, { corporationId: e.target.value })
+                      updateCorpPayment(i, { supplierId: e.target.value })
                     }
                   >
-                    <option value="">— {t("corporation")} —</option>
-                    {corporations.map((c) => (
+                    <option value="">— {t("supplier")} —</option>
+                    {suppliers.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
@@ -686,10 +686,7 @@ function ProjectSheet({
   const { t } = useLang();
 
   const profit = report.totalIncome * (report.profitMargin / 100);
-  const corpTotal = report.corporationPayments.reduce(
-    (s, cp) => s + cp.amount,
-    0,
-  );
+  const corpTotal = report.supplierPayments.reduce((s, cp) => s + cp.amount, 0);
   const subPayment = report.totalIncome - profit - corpTotal;
 
   return (
@@ -750,9 +747,9 @@ function ProjectSheet({
         </span>
       </div>
 
-      {report.corporationPayments.map((cp) => (
+      {report.supplierPayments.map((cp) => (
         <div key={cp.id} className="flex justify-between items-center text-sm">
-          <span className="text-text-muted">{cp.corporation.name}</span>
+          <span className="text-text-muted">{cp.supplier.name}</span>
           <span className="text-warning font-medium">
             − ₪{cp.amount.toLocaleString("he-IL")}
           </span>

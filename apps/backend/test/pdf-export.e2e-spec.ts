@@ -89,7 +89,7 @@ describe('PDF Export Integration Tests', () => {
   let clientId: string;
   let projectId: string;
   let subcontractorId: string;
-  let corporationId: string;
+  let supplierId: string;
   /** The report under test, set by `seedDefaultReport`. */
   let reportId: string;
 
@@ -127,7 +127,7 @@ describe('PDF Export Integration Tests', () => {
     date?: string;
     profitMargin?: number;
     incomes: Array<{ amount: number; tag?: string | null }>;
-    corporationPayments?: Array<{ corporationId: string; amount: number }>;
+    supplierPayments?: Array<{ supplierId: string; amount: number }>;
   }) =>
     prisma.projectReport.create({
       data: {
@@ -141,11 +141,11 @@ describe('PDF Export Integration Tests', () => {
             tag: entry.tag ?? null,
           })),
         },
-        ...(opts.corporationPayments
+        ...(opts.supplierPayments
           ? {
-              corporationPayments: {
-                create: opts.corporationPayments.map((payment) => ({
-                  corporationId: payment.corporationId,
+              supplierPayments: {
+                create: opts.supplierPayments.map((payment) => ({
+                  supplierId: payment.supplierId,
                   amount: payment.amount,
                   date: new Date(opts.date ?? MONTH),
                 })),
@@ -235,8 +235,8 @@ describe('PDF Export Integration Tests', () => {
         data: { name: 'Dan Builder', companyNumber: '515111222' },
       })
     ).id;
-    corporationId = (
-      await prisma.corporation.create({ data: { name: 'Flooring Ltd' } })
+    supplierId = (
+      await prisma.supplier.create({ data: { name: 'Flooring Ltd' } })
     ).id;
 
     await prisma.companySettings.create({
@@ -254,13 +254,13 @@ describe('PDF Export Integration Tests', () => {
   });
 
   afterEach(async () => {
-    await prisma.corporationPayment.deleteMany();
+    await prisma.supplierPayment.deleteMany();
     await prisma.projectReportIncome.deleteMany();
     await prisma.projectReport.deleteMany();
     await prisma.project.deleteMany();
     await prisma.client.deleteMany();
     await prisma.subcontractor.deleteMany();
-    await prisma.corporation.deleteMany();
+    await prisma.supplier.deleteMany();
     await prisma.vatRate.deleteMany();
     await prisma.companySettings.deleteMany();
   });
@@ -426,14 +426,14 @@ describe('PDF Export Integration Tests', () => {
     });
 
     it('should list supplier rows and their total', async () => {
-      const plumbing = await prisma.corporation.create({
+      const plumbing = await prisma.supplier.create({
         data: { name: 'Plumbing Ltd' },
       });
       const report = await seedReport({
         incomes: [{ amount: 10000 }],
-        corporationPayments: [
-          { corporationId, amount: 1000 },
-          { corporationId: plumbing.id, amount: 2500 },
+        supplierPayments: [
+          { supplierId, amount: 1000 },
+          { supplierId: plumbing.id, amount: 2500 },
         ],
       });
       reportId = report.id;
@@ -448,7 +448,7 @@ describe('PDF Export Integration Tests', () => {
     it('should compute payable excl. and incl. VAT', async () => {
       const report = await seedReport({
         incomes: [{ amount: 10000 }],
-        corporationPayments: [{ corporationId, amount: 1000 }],
+        supplierPayments: [{ supplierId, amount: 1000 }],
       });
       reportId = report.id;
 
@@ -463,7 +463,7 @@ describe('PDF Export Integration Tests', () => {
     it('should render both payable figures inside the highlighted block', async () => {
       const report = await seedReport({
         incomes: [{ amount: 10000 }],
-        corporationPayments: [{ corporationId, amount: 1000 }],
+        supplierPayments: [{ supplierId, amount: 1000 }],
       });
       reportId = report.id;
 

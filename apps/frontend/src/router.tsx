@@ -10,16 +10,14 @@ const SettingsCompanyPage = lazy(() => import("@/pages/SettingsCompanyPage"));
 const SettingsVatPage = lazy(() => import("@/pages/SettingsVatPage"));
 const ReportsPage = lazy(() => import("@/pages/ReportsPage"));
 const ProjectReportsPage = lazy(() => import("@/pages/ProjectReportsPage"));
-const CorporationPaymentsPage = lazy(
-  () => import("@/pages/CorporationPaymentsPage"),
-);
+const SupplierPaymentsPage = lazy(() => import("@/pages/SupplierPaymentsPage"));
 const SubcontractorPaymentsPage = lazy(
   () => import("@/pages/SubcontractorPaymentsPage"),
 );
 const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
 const ClientsPage = lazy(() => import("@/pages/ClientsPage"));
 const SubcontractorsPage = lazy(() => import("@/pages/SubcontractorsPage"));
-const CorporationsPage = lazy(() => import("@/pages/CorporationsPage"));
+const SuppliersPage = lazy(() => import("@/pages/SuppliersPage"));
 const MonthlyIncomePage = lazy(() => import("@/pages/MonthlyIncomePage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 const ErrorPage = lazy(() => import("@/pages/ErrorPage"));
@@ -54,8 +52,8 @@ export const router = createBrowserRouter([
                 element: wrap(ProjectReportsPage),
               },
               {
-                path: "corporation-payments",
-                element: wrap(CorporationPaymentsPage),
+                path: "supplier-payments",
+                element: wrap(SupplierPaymentsPage),
               },
               {
                 path: "subcontractor-payments",
@@ -64,7 +62,7 @@ export const router = createBrowserRouter([
               { path: "projects", element: wrap(ProjectsPage) },
               { path: "clients", element: wrap(ClientsPage) },
               { path: "subcontractors", element: wrap(SubcontractorsPage) },
-              { path: "corporations", element: wrap(CorporationsPage) },
+              { path: "suppliers", element: wrap(SuppliersPage) },
               { path: "income", element: wrap(MonthlyIncomePage) },
               {
                 path: "settings/company",

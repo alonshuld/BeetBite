@@ -8,7 +8,7 @@ export interface ReportApprovalRow {
 }
 
 export interface ReportApprovalSupplierRow {
-  corporationName: string;
+  supplierName: string;
   amount: number;
 }
 
@@ -133,7 +133,7 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     .map(
       (row) => `
         <tr>
-          <td>${escapeHtml(row.corporationName)}</td>
+          <td>${escapeHtml(row.supplierName)}</td>
           <td class="amount">${money(row.amount)}</td>
         </tr>`,
     )

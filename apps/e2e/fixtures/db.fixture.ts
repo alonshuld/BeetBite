@@ -34,12 +34,12 @@ const testWithDb = base.extend<DbFixture>({
 
     // Truncate in FK-safe order after each test
     await prisma.subcontractorPayment.deleteMany();
-    await prisma.corporationPayment.deleteMany();
+    await prisma.supplierPayment.deleteMany();
     await prisma.projectReport.deleteMany();
     await prisma.project.deleteMany();
     await prisma.client.deleteMany();
     await prisma.subcontractor.deleteMany();
-    await prisma.corporation.deleteMany();
+    await prisma.supplier.deleteMany();
 
     // VAT rates and company settings are not business rows — they are suite
     // baseline. Drop only the rates a test added (anything after the baseline

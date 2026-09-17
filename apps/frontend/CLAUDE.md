@@ -91,12 +91,12 @@ Data router via `createBrowserRouter`. All authenticated routes are wrapped in `
 | `/` | redirect → `/reports` |
 | `/reports` | ReportsPage |
 | `/reports/projects/:id` | ProjectReportsPage |
-| `/corporation-payments` | CorporationPaymentsPage |
+| `/supplier-payments` | SupplierPaymentsPage |
 | `/subcontractor-payments` | SubcontractorPaymentsPage |
 | `/projects` | ProjectsPage |
 | `/clients` | ClientsPage |
 | `/subcontractors` | SubcontractorsPage |
-| `/corporations` | CorporationsPage |
+| `/suppliers` | SuppliersPage |
 | `/settings/company` | SettingsCompanyPage |
 | `/simulator` | ProfitSimulatorPage |
 | `*` | NotFoundPage |
@@ -140,9 +140,9 @@ Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`, `setLang`) is provided at 
 
 ## Sidebar nav sections
 
-**Overview** (use global month picker in TopHeader): Project Reports, Monthly Income, Corporation Payments, Subcontractors, Income Per Month\*
+**Overview** (use global month picker in TopHeader): Project Reports, Monthly Income, Supplier Payments, Subcontractors, Income Per Month\*
 
-**Management**: Projects, Clients, Subcontractors, Corporations
+**Management**: Projects, Clients, Subcontractors, Suppliers
 
 **Tools**: Profit Margin Simulator
 
@@ -155,9 +155,9 @@ Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`, `setLang`) is provided at 
 - **Project completion %**: `sum of reports with incomeDate ÷ project.estimatedAmount`. Shown as 6px progress bar across Projects page, Project Detail, and Income Per Month.
 - **Subcontractor overpay guard**: block save in AddInstalmentModal if `totalPaid + newAmount > subcontractor.agreedAmount`.
 - **Subcontractor company number**: required, unique, exactly 9 digits (Israeli company registration number). `SubcontractorsPage` strips non-digits and caps input length at 9 on change (`value.replace(/\D/g, "").slice(0, 9)`) rather than only relying on `pattern`/`maxLength`.
-- **Corporation payment fields**: `amount`, `description`, `date`, `isFuture` (bool), `vatPercentage` (number, default 18, shown only when `isFuture = false`).
+- **Supplier payment fields**: `amount`, `description`, `date`, `isFuture` (bool), `vatPercentage` (number, default 18, shown only when `isFuture = false`).
 - **Project filters** (three independent toggles, Active on by default): Active (`isDone=false` + has reports), Future (no reports yet), Closed (`isDone=true`).
-- **ProjectReportFormModal flow**: client picker → filtered project list → subcontractor prefills from last month → completion % prefills from last month → report month → income + date → profit margin % → corporation payments (multi-row).
+- **ProjectReportFormModal flow**: client picker → filtered project list → subcontractor prefills from last month → completion % prefills from last month → report month → income + date → profit margin % → supplier payments (multi-row).
 - **Date display in reports**: month + year only (`MMM YYYY`), no day. Use `formatISODate(iso, lang)` — locale-aware.
 - **MonthPicker**: click the label to open a popover with a year `<select>` (±10 years) and a 3×4 month button grid. No prev/next arrows. Month names in the picker also respect `lang` via `MONTH_NAMES[lang]` arrays defined in the component.
 - **Profit Simulator**: read-only, no API writes. Uses already-loaded RTK Query data.

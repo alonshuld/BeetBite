@@ -50,10 +50,10 @@ export const baseApi = createApi({
   tagTypes: [
     "Clients",
     "Subcontractors",
-    "Corporations",
+    "Suppliers",
     "Projects",
     "ProjectReports",
-    "CorporationPayments",
+    "SupplierPayments",
     "SubcontractorPayments",
     "Incomes",
     "CompanySettings",

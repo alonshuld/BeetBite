@@ -10,11 +10,11 @@ type IncomeEntryRaw = {
   tag: string | null;
 };
 
-type CorporationPaymentRaw = {
+type SupplierPaymentRaw = {
   id: string;
   amount: Prisma.Decimal;
   vatPercentage: Prisma.Decimal | null;
-  corporation: { id: string; name: string };
+  supplier: { id: string; name: string };
 };
 
 function mapIncomeEntries(entries: IncomeEntryRaw[]): IncomeEntryResponseDto[] {
@@ -35,7 +35,7 @@ export const toProjectReportListItem = (
     project: { id: string; name: string; client: { id: string; name: string } };
     subcontractor: { id: string; name: string };
     incomeEntries: IncomeEntryRaw[];
-    corporationPayments: CorporationPaymentRaw[];
+    supplierPayments: SupplierPaymentRaw[];
   },
 ): ProjectReportListItemDto => {
   const entries = mapIncomeEntries(projectReport.incomeEntries);
@@ -47,7 +47,7 @@ export const toProjectReportListItem = (
     profitMargin: projectReport.profitMargin.toNumber(),
     totalIncome: sumIncomeEntries(projectReport.incomeEntries),
     incomeEntries: entries,
-    corporationPayments: projectReport.corporationPayments.map((cp) => {
+    supplierPayments: projectReport.supplierPayments.map((cp) => {
       const amount = cp.amount.toNumber();
       const vatPercentage = cp.vatPercentage?.toNumber() ?? null;
       const vatAmount = vatPercentage ? amount * (vatPercentage / 100) : 0;
@@ -57,7 +57,7 @@ export const toProjectReportListItem = (
         vatPercentage,
         vatAmount,
         effectiveTotal: amount + vatAmount,
-        corporation: cp.corporation,
+        supplier: cp.supplier,
       };
     }),
   };
@@ -68,7 +68,7 @@ export const toProjectReportList = (
     project: { id: string; name: string; client: { id: string; name: string } };
     subcontractor: { id: string; name: string };
     incomeEntries: IncomeEntryRaw[];
-    corporationPayments: CorporationPaymentRaw[];
+    supplierPayments: SupplierPaymentRaw[];
   })[],
 ): ProjectReportListItemDto[] => projectReports.map(toProjectReportListItem);
 
@@ -80,7 +80,7 @@ export const toProjectReportResponse = (
       name: string;
       payments: { id: string }[];
     };
-    corporationPayments: CorporationPaymentRaw[];
+    supplierPayments: SupplierPaymentRaw[];
     incomeEntries: IncomeEntryRaw[];
   },
   profit: number,
@@ -98,9 +98,9 @@ export const toProjectReportResponse = (
     name: projectReport.subcontractor.name,
     payment: subcontractorPayment,
   },
-  corporationPayments: projectReport.corporationPayments.map((cp) => ({
+  supplierPayments: projectReport.supplierPayments.map((cp) => ({
     id: cp.id,
     amount: cp.amount.toNumber(),
-    corporation: cp.corporation,
+    supplier: cp.supplier,
   })),
 });

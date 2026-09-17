@@ -11,15 +11,15 @@ BeetBite is a back-office tool for a single contractor company that manages cons
 The contractor does not do the physical work itself. Instead it hires:
 
 - **Subcontractors** — individual workers assigned to a project for a given month. Each project report has exactly one subcontractor.
-- **Corporations** — specialist firms (flooring, plumbing, etc.) paid fixed amounts per month per project, stored as **CorporationPayments** attached to the report.
+- **Suppliers** — specialist firms (flooring, plumbing, etc.) paid fixed amounts per month per project, stored as **SupplierPayments** attached to the report.
 
-Each month, the contractor keeps a **profit margin** percentage of the income, then pays the corporations their agreed amounts, and the subcontractor receives whatever is left. These values are derived at read time, not stored (see backend CLAUDE.md → *Financial calculations*).
+Each month, the contractor keeps a **profit margin** percentage of the income, then pays the suppliers their agreed amounts, and the subcontractor receives whatever is left. These values are derived at read time, not stored (see backend CLAUDE.md → *Financial calculations*).
 
 **SubcontractorPayments** track partial payments made to a subcontractor for a given service month. Multiple partial payments per month are allowed. The amount owed is computed from project reports at read time; the service rejects any payment that would cause the total paid to exceed that amount.
 
 **Company Settings** is a singleton record holding the contractor's own profile — name, description, company registration number, phone, email, address (street + city), logo, and signature (images stored as base64 data URLs, no file upload infra). On first login, if it doesn't exist yet, the user is nudged to an onboarding screen to fill it in; this is a soft, skippable nudge (not a blocking gate) and the data is editable anytime after from a Settings page. None of these fields are required to use the app — a future PDF-export feature will require name + company number before exporting, but that's enforced by export, not here.
 
-Users manually enter clients, projects, corporations, and subcontractors once, then create a project report each month per project. The system derives all financial insights (profits, payments, income totals, project payment progress) from these reports.
+Users manually enter clients, projects, suppliers, and subcontractors once, then create a project report each month per project. The system derives all financial insights (profits, payments, income totals, project payment progress) from these reports.
 
 ## Monorepo structure
 
@@ -71,7 +71,7 @@ Browser → frontend (Vite :5173)
 
 ## E2E tests
 
-Playwright suite in `apps/e2e/tests/`. Covers all nine domain areas (auth, clients, projects, project reports, corporations, corporation payments, subcontractors, subcontractor payments, income).
+Playwright suite in `apps/e2e/tests/`. Covers all nine domain areas (auth, clients, projects, project reports, suppliers, supplier payments, subcontractors, subcontractor payments, income).
 
 `global-setup.ts` bootstraps the full stack automatically:
 1. Starts a PostgreSQL testcontainer

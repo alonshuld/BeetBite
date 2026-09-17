@@ -27,11 +27,11 @@ describe('project-reports mapper', () => {
     },
     subcontractor: { id: 'sub-1', name: 'Sub 1' },
     incomeEntries,
-    corporationPayments: [] as {
+    supplierPayments: [] as {
       id: string;
       amount: Prisma.Decimal;
       vatPercentage: Prisma.Decimal | null;
-      corporation: { id: string; name: string };
+      supplier: { id: string; name: string };
     }[],
   });
 
@@ -43,11 +43,11 @@ describe('project-reports mapper', () => {
       name: 'Sub 1',
       payments: [] as { id: string }[],
     },
-    corporationPayments: [] as {
+    supplierPayments: [] as {
       id: string;
       amount: Prisma.Decimal;
       vatPercentage: Prisma.Decimal | null;
-      corporation: { id: string; name: string };
+      supplier: { id: string; name: string };
     }[],
     incomeEntries,
   });
@@ -79,7 +79,7 @@ describe('project-reports mapper', () => {
         incomeEntries: [
           { id: 'entry-1', amount: 10000, incomeDate: null, tag: 'שלד' },
         ],
-        corporationPayments: [],
+        supplierPayments: [],
       });
     });
   });
@@ -112,7 +112,7 @@ describe('project-reports mapper', () => {
           name: 'Sub 1',
           payment: 8000,
         },
-        corporationPayments: [],
+        supplierPayments: [],
       });
     });
   });

@@ -18,8 +18,8 @@ vi.mock("@/api/endpoints/projects", () => ({ useGetProjectsQuery: vi.fn() }));
 vi.mock("@/api/endpoints/subcontractors", () => ({
   useGetSubcontractorsQuery: vi.fn(),
 }));
-vi.mock("@/api/endpoints/corporations", () => ({
-  useGetCorporationsQuery: vi.fn(),
+vi.mock("@/api/endpoints/suppliers", () => ({
+  useGetSuppliersQuery: vi.fn(),
 }));
 vi.mock("@/api/endpoints/project-report-exports", () => ({
   useExportProjectReportsPdfMutation: vi.fn(),
@@ -32,7 +32,7 @@ import {
 import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
-import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
+import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
 
 const mockReports = [
@@ -47,7 +47,7 @@ const mockReports = [
     subcontractor: { id: "s1", name: "Bob the Builder" },
     totalIncome: 10000,
     profitMargin: 20,
-    corporationPayments: [],
+    supplierPayments: [],
     incomeEntries: [
       { id: "ie1", amount: 6000, incomeDate: "2025-03-10", tag: "Shell" },
       { id: "ie2", amount: 4000, incomeDate: null, tag: "Finishing" },
@@ -90,9 +90,9 @@ describe("ReportsPage", () => {
     vi.mocked(useGetSubcontractorsQuery).mockReturnValue({
       data: [{ id: "s1", name: "Bob the Builder" }],
     } as unknown as ReturnType<typeof useGetSubcontractorsQuery>);
-    vi.mocked(useGetCorporationsQuery).mockReturnValue({
+    vi.mocked(useGetSuppliersQuery).mockReturnValue({
       data: [{ id: "co1", name: "Flooring Ltd" }],
-    } as unknown as ReturnType<typeof useGetCorporationsQuery>);
+    } as unknown as ReturnType<typeof useGetSuppliersQuery>);
     vi.mocked(useCreateProjectReportMutation).mockReturnValue([
       createSpy,
       { isLoading: false },

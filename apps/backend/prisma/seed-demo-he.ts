@@ -20,7 +20,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import {
   PrismaClient,
   type Client,
-  type Corporation,
+  type Supplier,
   type Project,
   type Subcontractor,
 } from '../src/generated/client';
@@ -108,7 +108,7 @@ const SUBCONTRACTORS = [
   { name: 'ארז מלכה עבודות גמר בע״מ', companyNumber: '515246108' },
 ] as const;
 
-const CORPORATION_NAMES = [
+const SUPPLIER_NAMES = [
   'אור־רם מערכות חשמל בע״מ',
   'מי־טל אינסטלציה וביוב בע״מ',
   'פלדות הצפון קונסטרוקציה בע״מ',
@@ -223,7 +223,7 @@ type ShowcaseFigures = {
    * itself, which is what the rendered document labels.
    */
   income: [number, string | null, string][];
-  /** [corporationIndex, amount, description, isFuture] */
+  /** [supplierIndex, amount, description, isFuture] */
   suppliers: [number, number, string, boolean][];
 };
 
@@ -319,13 +319,13 @@ const SUPPLIER_DESCRIPTIONS = [
 
 async function wipe(): Promise<void> {
   await prisma.subcontractorPayment.deleteMany({});
-  await prisma.corporationPayment.deleteMany({});
+  await prisma.supplierPayment.deleteMany({});
   await prisma.projectReportIncome.deleteMany({});
   await prisma.projectReport.deleteMany({});
   await prisma.project.deleteMany({});
   await prisma.client.deleteMany({});
   await prisma.subcontractor.deleteMany({});
-  await prisma.corporation.deleteMany({});
+  await prisma.supplier.deleteMany({});
   await prisma.vatRate.deleteMany({});
 }
 
@@ -379,9 +379,9 @@ async function main(): Promise<void> {
     subcontractors.push(await prisma.subcontractor.create({ data }));
   }
 
-  const corporations: Corporation[] = [];
-  for (const name of CORPORATION_NAMES) {
-    corporations.push(await prisma.corporation.create({ data: { name } }));
+  const suppliers: Supplier[] = [];
+  for (const name of SUPPLIER_NAMES) {
+    suppliers.push(await prisma.supplier.create({ data: { name } }));
   }
 
   const createProject = async (seed: ProjectSeed) =>
@@ -425,11 +425,11 @@ async function main(): Promise<void> {
     });
     showcaseReportCount += 1;
 
-    for (const [corporationIndex, amount, description, isFuture] of figures.suppliers) {
-      await prisma.corporationPayment.create({
+    for (const [supplierIndex, amount, description, isFuture] of figures.suppliers) {
+      await prisma.supplierPayment.create({
         data: {
           projectReportId: report.id,
-          corporationId: corporations[corporationIndex].id,
+          supplierId: suppliers[supplierIndex].id,
           amount,
           date: isFuture ? null : d('2026-07-31'),
           description,
@@ -513,10 +513,10 @@ async function main(): Promise<void> {
       const supplierCount = 1 + Math.floor(rand() * 3);
       for (let i = 0; i < supplierCount; i += 1) {
         const isFuture = rand() < 0.12;
-        await prisma.corporationPayment.create({
+        await prisma.supplierPayment.create({
           data: {
             projectReportId: report.id,
-            corporationId: oneOf(corporations).id,
+            supplierId: oneOf(suppliers).id,
             amount: money(base * 0.03, base * 0.11, 50),
             date: isFuture ? null : d(month),
             description: oneOf(SUPPLIER_DESCRIPTIONS),
@@ -543,7 +543,7 @@ async function main(): Promise<void> {
   console.log(
     [
       '✅ Hebrew demo seed complete:',
-      `   ${clients.length} clients · ${SUBCONTRACTORS.length} subcontractors · ${CORPORATION_NAMES.length} corporations`,
+      `   ${clients.length} clients · ${SUBCONTRACTORS.length} subcontractors · ${SUPPLIER_NAMES.length} suppliers`,
       `   ${showcaseProjects.length + backgroundProjects.length + FUTURE_PROJECTS.length} projects`,
       `   ${showcaseReportCount + historyReportCount} project reports across ${MONTHS.length} months`,
       `   showcase month ${SHOWCASE_MONTH}: "${CLIENT_NAMES[0]}" × "${SUBCONTRACTORS[0].name}"`,

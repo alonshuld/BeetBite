@@ -65,7 +65,7 @@ export default function SubcontractorPaymentsPage() {
   const subMap = new Map<string, SubCard>();
   for (const report of monthReports) {
     const sub = report.subcontractor;
-    const corpTotal = report.corporationPayments.reduce(
+    const corpTotal = report.supplierPayments.reduce(
       (s, cp) => s + cp.amount,
       0,
     );

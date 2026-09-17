@@ -6,7 +6,7 @@ import { useLang } from "@/contexts/useLang";
 const OVERVIEW_PATHS = [
   "/reports",
   "/income",
-  "/corporation-payments",
+  "/supplier-payments",
   "/subcontractor-payments",
 ];
 
@@ -22,13 +22,13 @@ const SCREEN_LABELS: Record<
 > = {
   "/reports": "projectReports",
   "/income": "monthlyIncome",
-  "/corporation-payments": "corporationPayments",
+  "/supplier-payments": "supplierPayments",
   "/subcontractor-payments": "subcontractorPayments",
   "/income-per-month": "incomePerMonth",
   "/projects": "projects",
   "/clients": "clients",
   "/subcontractors": "subcontractors",
-  "/corporations": "corporations",
+  "/suppliers": "suppliers",
 };
 
 export function TopHeader({

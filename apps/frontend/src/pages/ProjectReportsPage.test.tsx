@@ -26,17 +26,17 @@ vi.mock("@/api/endpoints/project-reports", () => ({
   useDeleteIncomeEntryMutation: vi.fn(),
   useDeleteProjectReportMutation: vi.fn(),
 }));
-vi.mock("@/api/endpoints/corporation-payments", () => ({
-  useCreateCorporationPaymentMutation: vi.fn(),
-  useUpdateCorporationPaymentMutation: vi.fn(),
-  useDeleteCorporationPaymentMutation: vi.fn(),
+vi.mock("@/api/endpoints/supplier-payments", () => ({
+  useCreateSupplierPaymentMutation: vi.fn(),
+  useUpdateSupplierPaymentMutation: vi.fn(),
+  useDeleteSupplierPaymentMutation: vi.fn(),
 }));
 vi.mock("@/api/endpoints/projects", () => ({ useGetProjectsQuery: vi.fn() }));
 vi.mock("@/api/endpoints/subcontractors", () => ({
   useGetSubcontractorsQuery: vi.fn(),
 }));
-vi.mock("@/api/endpoints/corporations", () => ({
-  useGetCorporationsQuery: vi.fn(),
+vi.mock("@/api/endpoints/suppliers", () => ({
+  useGetSuppliersQuery: vi.fn(),
 }));
 vi.mock("@/api/endpoints/subcontractor-payments", () => ({
   useGetSubcontractorPaymentsQuery: vi.fn(),
@@ -53,13 +53,13 @@ import {
   useDeleteProjectReportMutation,
 } from "@/api/endpoints/project-reports";
 import {
-  useCreateCorporationPaymentMutation,
-  useUpdateCorporationPaymentMutation,
-  useDeleteCorporationPaymentMutation,
-} from "@/api/endpoints/corporation-payments";
+  useCreateSupplierPaymentMutation,
+  useUpdateSupplierPaymentMutation,
+  useDeleteSupplierPaymentMutation,
+} from "@/api/endpoints/supplier-payments";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
-import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
+import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { useGetSubcontractorPaymentsQuery } from "@/api/endpoints/subcontractor-payments";
 
 const mockProject = {
@@ -80,10 +80,10 @@ const mockDetail = {
   profitMargin: 20,
   profit: 2000,
   incomeEntries: [{ id: "ie1", amount: 10000, incomeDate: "2025-03-10" }],
-  corporationPayments: [
+  supplierPayments: [
     {
       id: "cp1",
-      corporation: { id: "co1", name: "Flooring Ltd" },
+      supplier: { id: "co1", name: "Flooring Ltd" },
       amount: 1500,
       vatPercentage: null,
       effectiveTotal: 1500,
@@ -135,9 +135,9 @@ describe("ProjectReportsPage", () => {
     vi.mocked(useGetSubcontractorsQuery).mockReturnValue({
       data: [{ id: "s1", name: "Bob the Builder" }],
     } as unknown as ReturnType<typeof useGetSubcontractorsQuery>);
-    vi.mocked(useGetCorporationsQuery).mockReturnValue({
+    vi.mocked(useGetSuppliersQuery).mockReturnValue({
       data: [{ id: "co1", name: "Flooring Ltd" }],
-    } as unknown as ReturnType<typeof useGetCorporationsQuery>);
+    } as unknown as ReturnType<typeof useGetSuppliersQuery>);
     vi.mocked(useUpdateProjectReportMutation).mockReturnValue(mut());
     vi.mocked(useCreateProjectReportMutation).mockReturnValue(mut());
     vi.mocked(useAddIncomeEntryMutation).mockReturnValue(mut());
@@ -145,9 +145,9 @@ describe("ProjectReportsPage", () => {
     vi.mocked(useDeleteIncomeEntryMutation).mockReturnValue(
       mut(deleteEntrySpy),
     );
-    vi.mocked(useCreateCorporationPaymentMutation).mockReturnValue(mut());
-    vi.mocked(useUpdateCorporationPaymentMutation).mockReturnValue(mut());
-    vi.mocked(useDeleteCorporationPaymentMutation).mockReturnValue(mut());
+    vi.mocked(useCreateSupplierPaymentMutation).mockReturnValue(mut());
+    vi.mocked(useUpdateSupplierPaymentMutation).mockReturnValue(mut());
+    vi.mocked(useDeleteSupplierPaymentMutation).mockReturnValue(mut());
     vi.mocked(useDeleteProjectReportMutation).mockReturnValue(mut());
     setMonthlyPayments([]);
   });

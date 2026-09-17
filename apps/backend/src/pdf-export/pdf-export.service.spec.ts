@@ -75,14 +75,14 @@ describe('PdfExportService', () => {
         tag: 'גמר',
       },
     ],
-    corporationPayments: [
+    supplierPayments: [
       {
         id: 'cp-1',
         amount: 219768.5,
         vatPercentage: 18,
         vatAmount: 39558.33,
         effectiveTotal: 259326.83,
-        corporation: { id: 'corp-1', name: 'Sheq Sin Corp' },
+        supplier: { id: 'corp-1', name: 'Sheq Sin Corp' },
       },
       {
         id: 'cp-2',
@@ -90,7 +90,7 @@ describe('PdfExportService', () => {
         vatPercentage: 18,
         vatAmount: 60842.16,
         effectiveTotal: 398854.16,
-        corporation: { id: 'corp-2', name: 'Sahlav Corp' },
+        supplier: { id: 'corp-2', name: 'Sahlav Corp' },
       },
       {
         id: 'cp-3',
@@ -98,7 +98,7 @@ describe('PdfExportService', () => {
         vatPercentage: 18,
         vatAmount: 2031.12,
         effectiveTotal: 13315.12,
-        corporation: { id: 'corp-3', name: 'Django Corp' },
+        supplier: { id: 'corp-3', name: 'Django Corp' },
       },
     ],
   };

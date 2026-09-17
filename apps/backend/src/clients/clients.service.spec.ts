@@ -230,7 +230,7 @@ describe('ClientsService', () => {
       project: { findMany: jest.Mock; deleteMany: jest.Mock };
       projectReport: { findMany: jest.Mock; deleteMany: jest.Mock };
       projectReportIncome: { deleteMany: jest.Mock };
-      corporationPayment: { deleteMany: jest.Mock };
+      supplierPayment: { deleteMany: jest.Mock };
       subcontractorPayment: { deleteMany: jest.Mock };
       client: { delete: jest.Mock };
     }
@@ -267,9 +267,9 @@ describe('ClientsService', () => {
             return Promise.resolve({ count: 1 });
           }),
         },
-        corporationPayment: {
+        supplierPayment: {
           deleteMany: jest.fn().mockImplementation(() => {
-            callOrder.push('corporationPayment.deleteMany');
+            callOrder.push('supplierPayment.deleteMany');
             return Promise.resolve({ count: 0 });
           }),
         },
@@ -318,7 +318,7 @@ describe('ClientsService', () => {
         'project.findMany',
         'projectReport.findMany',
         'projectReportIncome.deleteMany',
-        'corporationPayment.deleteMany',
+        'supplierPayment.deleteMany',
         'projectReport.deleteMany',
         'subcontractorPayment.deleteMany',
         'project.deleteMany',

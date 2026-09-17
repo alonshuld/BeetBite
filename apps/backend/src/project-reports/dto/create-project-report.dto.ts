@@ -11,7 +11,7 @@ import {
   IsArray,
   ArrayMinSize,
 } from 'class-validator';
-import { CreateCorporationPaymentDto } from './create-corporation-payment.dto';
+import { CreateSupplierPaymentDto } from './create-supplier-payment.dto';
 import { CreateIncomeEntryDto } from './create-income-entry.dto';
 import { Transform, Type } from 'class-transformer';
 import { normalizeToMonthStartForTransform } from 'src/common/utils/date.utils';
@@ -68,12 +68,12 @@ export class CreateProjectReportDto {
   incomeEntries!: CreateIncomeEntryDto[];
 
   @IsArray()
-  @Type(() => CreateCorporationPaymentDto)
+  @Type(() => CreateSupplierPaymentDto)
   @ValidateNested({ each: true })
   @ApiProperty({
     description:
-      'A list of the payments made to corporations for their work on this project this month',
-    type: [CreateCorporationPaymentDto],
+      'A list of the payments made to suppliers for their work on this project this month',
+    type: [CreateSupplierPaymentDto],
   })
-  corporationPayments!: CreateCorporationPaymentDto[];
+  supplierPayments!: CreateSupplierPaymentDto[];
 }

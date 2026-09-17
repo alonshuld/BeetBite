@@ -15,15 +15,15 @@ export interface ProjectReport {
   profitMargin: number;
   totalIncome: number;
   incomeEntries: IncomeEntry[];
-  corporationPayments: CorporationPaymentRow[];
+  supplierPayments: SupplierPaymentRow[];
   project: { id: string; name: string; client: { id: string; name: string } };
   subcontractor: { id: string; name: string };
 }
 
 // Matches backend ProjectReportResponseDto
-export interface CorporationPaymentRow {
+export interface SupplierPaymentRow {
   id: string;
-  corporation: { id: string; name: string };
+  supplier: { id: string; name: string };
   amount: number;
   vatPercentage?: number | null;
   effectiveTotal?: number;
@@ -38,7 +38,7 @@ export interface ProjectReportDetail {
   incomeEntries: IncomeEntry[];
   project: { id: string; name: string };
   subcontractor: { id: string; name: string; payment: number };
-  corporationPayments: CorporationPaymentRow[];
+  supplierPayments: SupplierPaymentRow[];
 }
 
 // Matches backend CreateProjectReportDto
@@ -48,8 +48,8 @@ export interface CreateProjectReportDto {
   date: string; // ISO date "2024-06-01"
   incomeEntries: { amount: number; incomeDate?: string; tag?: string | null }[];
   profitMargin?: number;
-  corporationPayments: {
-    corporationId: string;
+  supplierPayments: {
+    supplierId: string;
     amount: number;
     date: string;
     vatPercentage?: number;

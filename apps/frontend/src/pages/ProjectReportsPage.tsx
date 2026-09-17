@@ -15,13 +15,13 @@ import {
   type UpdateProjectReportDto,
 } from "@/api/endpoints/project-reports";
 import {
-  useCreateCorporationPaymentMutation,
-  useUpdateCorporationPaymentMutation,
-  useDeleteCorporationPaymentMutation,
-} from "@/api/endpoints/corporation-payments";
+  useCreateSupplierPaymentMutation,
+  useUpdateSupplierPaymentMutation,
+  useDeleteSupplierPaymentMutation,
+} from "@/api/endpoints/supplier-payments";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
-import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
+import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { StatCard } from "@/components/molecules/StatCard";
 import {
   ButtonGhost,
@@ -37,7 +37,7 @@ import { useLang } from "@/contexts/useLang";
 import { formatYM, formatISODate } from "@/utils/formatMonth";
 
 interface CorpPaymentDraft {
-  corporationId: string;
+  supplierId: string;
   amount: string;
   date: string;
 }
@@ -63,7 +63,7 @@ export default function ProjectReportsPage() {
     useGetProjectReportsQuery(month);
   const { data: projects = [] } = useGetProjectsQuery();
   const { data: subcontractors = [] } = useGetSubcontractorsQuery();
-  const { data: corporations = [] } = useGetCorporationsQuery();
+  const { data: suppliers = [] } = useGetSuppliersQuery();
   const [createReport, { isLoading: creating }] =
     useCreateProjectReportMutation();
   const [updateReport, { isLoading: updating }] =
@@ -74,10 +74,10 @@ export default function ProjectReportsPage() {
     useUpdateIncomeEntryMutation();
   const [deleteIncomeEntry] = useDeleteIncomeEntryMutation();
   const [createCorp, { isLoading: addingCorp }] =
-    useCreateCorporationPaymentMutation();
+    useCreateSupplierPaymentMutation();
   const [updateCorp, { isLoading: updatingCorp }] =
-    useUpdateCorporationPaymentMutation();
-  const [deleteCorp] = useDeleteCorporationPaymentMutation();
+    useUpdateSupplierPaymentMutation();
+  const [deleteCorp] = useDeleteSupplierPaymentMutation();
   const [deleteReport, { isLoading: deletingReport }] =
     useDeleteProjectReportMutation();
 
@@ -164,9 +164,9 @@ export default function ProjectReportsPage() {
   async function handleSave() {
     const validEntries = incomeEntries.filter((e) => e.amount !== "");
     const corpPaymentsDto = corpPayments
-      .filter((cp) => cp.corporationId !== "")
+      .filter((cp) => cp.supplierId !== "")
       .map((cp) => ({
-        corporationId: cp.corporationId,
+        supplierId: cp.supplierId,
         amount: Number(cp.amount),
         date: cp.date,
       }));
@@ -181,7 +181,7 @@ export default function ProjectReportsPage() {
           incomeDate: e.incomeDate || undefined,
         })),
         profitMargin: Number(profitMarginPercent) || undefined,
-        corporationPayments: corpPaymentsDto,
+        supplierPayments: corpPaymentsDto,
       };
       await updateReport({ id: editingId, ...dto });
     } else {
@@ -194,7 +194,7 @@ export default function ProjectReportsPage() {
           incomeDate: e.incomeDate || undefined,
         })),
         profitMargin: Number(profitMarginPercent) || undefined,
-        corporationPayments: corpPaymentsDto,
+        supplierPayments: corpPaymentsDto,
       };
       await createReport(dto);
     }
@@ -221,7 +221,7 @@ export default function ProjectReportsPage() {
   function addCorpPayment() {
     setCorpPayments((prev) => [
       ...prev,
-      { corporationId: "", amount: "", date: todayISO() },
+      { supplierId: "", amount: "", date: todayISO() },
     ]);
   }
 
@@ -264,11 +264,11 @@ export default function ProjectReportsPage() {
 
   function startEditCorp(cp: {
     id: string;
-    corporation: { id: string };
+    supplier: { id: string };
     amount: number;
   }) {
     setEditingCorpId(cp.id);
-    setEditCorpCorpId(cp.corporation.id);
+    setEditCorpCorpId(cp.supplier.id);
     setEditCorpAmount(String(cp.amount));
     setEditCorpDate(todayISO());
   }
@@ -278,7 +278,7 @@ export default function ProjectReportsPage() {
     await updateCorp({
       id: cpId,
       projectReportId: currentReport.id,
-      corporationId: editCorpCorpId,
+      supplierId: editCorpCorpId,
       amount: Number(editCorpAmount),
       date: editCorpDate,
       isFuture: false,
@@ -290,7 +290,7 @@ export default function ProjectReportsPage() {
     if (!currentReport || !newCorpCorpId || !newCorpAmount) return;
     await createCorp({
       projectReportId: currentReport.id,
-      corporationId: newCorpCorpId,
+      supplierId: newCorpCorpId,
       amount: Number(newCorpAmount),
       date: newCorpDate,
       isFuture: false,
@@ -546,7 +546,7 @@ export default function ProjectReportsPage() {
             </div>
 
             {/* Corp payments with inline edit/delete */}
-            {currentReport.corporationPayments.map((cp) => {
+            {currentReport.supplierPayments.map((cp) => {
               if (editingCorpId === cp.id) {
                 return (
                   <div key={cp.id} className="flex gap-2 items-end">
@@ -555,8 +555,8 @@ export default function ProjectReportsPage() {
                       onChange={(e) => setEditCorpCorpId(e.target.value)}
                       className="flex-1"
                     >
-                      <option value="">— {t("corporation")} —</option>
-                      {corporations.map((c) => (
+                      <option value="">— {t("supplier")} —</option>
+                      {suppliers.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
                         </option>
@@ -600,7 +600,7 @@ export default function ProjectReportsPage() {
                 <div key={cp.id} className="flex justify-between items-center">
                   <div className="flex flex-col">
                     <span className="text-xs text-text-muted">
-                      {cp.corporation.name}
+                      {cp.supplier.name}
                     </span>
                     {cp.vatPercentage != null && cp.vatPercentage > 0 && (
                       <span className="text-[11px] text-text-muted">
@@ -641,8 +641,8 @@ export default function ProjectReportsPage() {
                   onChange={(e) => setNewCorpCorpId(e.target.value)}
                   className="flex-1"
                 >
-                  <option value="">— {t("corporation")} —</option>
-                  {corporations.map((c) => (
+                  <option value="">— {t("supplier")} —</option>
+                  {suppliers.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                     </option>
@@ -689,7 +689,7 @@ export default function ProjectReportsPage() {
                 onClick={() => setAddingNewCorp(true)}
                 className="text-xs py-1 px-3 self-start"
               >
-                + {t("corporationPayments")}
+                + {t("supplierPayments")}
               </ButtonGhost>
             )}
 
@@ -809,7 +809,7 @@ export default function ProjectReportsPage() {
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
-                  {t("corporationPayments")}
+                  {t("supplierPayments")}
                 </span>
                 <ButtonGhost
                   onClick={addCorpPayment}
@@ -826,15 +826,15 @@ export default function ProjectReportsPage() {
                 >
                   <div className="grid grid-cols-3 gap-2">
                     <Select
-                      value={cp.corporationId}
+                      value={cp.supplierId}
                       onChange={(e) =>
                         updateCorpPayment(i, {
-                          corporationId: e.target.value,
+                          supplierId: e.target.value,
                         })
                       }
                     >
-                      <option value="">— {t("corporation")} —</option>
-                      {corporations.map((c) => (
+                      <option value="">— {t("supplier")} —</option>
+                      {suppliers.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
                         </option>

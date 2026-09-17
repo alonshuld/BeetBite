@@ -34,7 +34,7 @@ export class SubcontractorPaymentsService {
       select: {
         profitMargin: true,
         incomeEntries: { select: { amount: true } },
-        corporationPayments: { select: { amount: true } },
+        supplierPayments: { select: { amount: true } },
       },
     });
 
@@ -46,12 +46,12 @@ export class SubcontractorPaymentsService {
     );
     const afterProfit =
       income - (report.profitMargin.toNumber() * income) / 100;
-    const corpTotal = report.corporationPayments.reduce(
+    const corpTotal = report.supplierPayments.reduce(
       (s, p) => s + p.amount.toNumber(),
       0,
     );
-    // The subcontractor receives whatever is left after profit and corporation
-    // payments. When corporation payments exceed that remainder the subcontractor
+    // The subcontractor receives whatever is left after profit and supplier
+    // payments. When supplier payments exceed that remainder the subcontractor
     // is owed nothing, never a negative amount, so floor the result at zero.
     return Math.max(0, afterProfit - corpTotal);
   }
@@ -66,7 +66,7 @@ export class SubcontractorPaymentsService {
         select: {
           profitMargin: true,
           incomeEntries: { select: { amount: true } },
-          corporationPayments: { select: { amount: true } },
+          supplierPayments: { select: { amount: true } },
         },
       });
 
@@ -77,13 +77,13 @@ export class SubcontractorPaymentsService {
       );
       const profitMargin = project.profitMargin.toNumber();
       const afterProfit = income - (profitMargin * income) / 100;
-      const corporationPaymentsTotal = project.corporationPayments.reduce(
+      const supplierPaymentsTotal = project.supplierPayments.reduce(
         (sum, payment) => sum + payment.amount.toNumber(),
         0,
       );
       // Floor each project at zero so one project's overage cannot cancel out
       // amounts legitimately owed on the subcontractor's other projects.
-      return total + Math.max(0, afterProfit - corporationPaymentsTotal);
+      return total + Math.max(0, afterProfit - supplierPaymentsTotal);
     }, 0);
   }
 
@@ -97,7 +97,7 @@ export class SubcontractorPaymentsService {
           subcontractorId: true,
           profitMargin: true,
           incomeEntries: { select: { amount: true } },
-          corporationPayments: { select: { amount: true } },
+          supplierPayments: { select: { amount: true } },
         },
       });
 
@@ -109,7 +109,7 @@ export class SubcontractorPaymentsService {
         );
         const profitMargin = project.profitMargin.toNumber();
         const afterProfit = income - (profitMargin * income) / 100;
-        const corporationPaymentsTotal = project.corporationPayments.reduce(
+        const supplierPaymentsTotal = project.supplierPayments.reduce(
           (sum, payment) => sum + payment.amount.toNumber(),
           0,
         );
@@ -117,7 +117,7 @@ export class SubcontractorPaymentsService {
         // amounts legitimately owed on the subcontractor's other projects.
         const subcontractorPayment = Math.max(
           0,
-          afterProfit - corporationPaymentsTotal,
+          afterProfit - supplierPaymentsTotal,
         );
 
         acc[project.subcontractorId] =
