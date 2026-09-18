@@ -286,6 +286,8 @@ export const translations = {
     noInitiatorOption: "— No initiator —",
     initiatorPayments: "Initiator Payments",
     initiatorPaymentDescriptionPlaceholder: "e.g. Consulting fee",
+    // T6 — client-wide simulated export
+    exportWithSimulator: "Export with Simulator",
   },
   he: {
     // Nav
@@ -563,6 +565,8 @@ export const translations = {
     noInitiatorOption: "— ללא יזם —",
     initiatorPayments: "תשלומי יזם",
     initiatorPaymentDescriptionPlaceholder: "לדוגמה: שכר ייעוץ",
+    // T6 — client-wide simulated export
+    exportWithSimulator: "ייצוא עם סימולטור",
   },
 } as const;
 

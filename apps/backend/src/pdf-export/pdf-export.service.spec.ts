@@ -9,6 +9,8 @@ import { CompanySettingsIncompleteError } from './errors/company-settings-incomp
 import { VatRateNotConfiguredError } from './errors/vat-rate-not-configured.error';
 import { NoReportsForExportError } from './errors/no-reports-for-export.error';
 import { ExportProjectReportsPdfDto } from './dto/export-project-reports-pdf.dto';
+import { ExportClientSimulatedPdfDto } from './dto/export-client-simulated-pdf.dto';
+import { BadRequestException } from '@nestjs/common';
 
 jest.mock('puppeteer', () => ({
   launch: jest.fn().mockResolvedValue({
@@ -25,7 +27,10 @@ describe('PdfExportService', () => {
 
   const mockCompanySettingsService = { findOne: jest.fn() };
   const mockVatRatesService = { resolveForMonth: jest.fn() };
-  const mockProjectReportsService = { findOneForExport: jest.fn() };
+  const mockProjectReportsService = {
+    findOneForExport: jest.fn(),
+    findProjectReportsInMonth: jest.fn(),
+  };
   const mockSubcontractorsService = { findOne: jest.fn() };
   const mockProjectsService = { updateLastApprovedFor: jest.fn() };
 
@@ -452,6 +457,231 @@ describe('PdfExportService', () => {
 
       expect(html).toContain('Initiator:');
       expect(html).toContain('Yaniv Goldman');
+    });
+  });
+
+  // T6 — client-wide simulated export: summary page + one detail page per
+  // project, all of a client's reports for the month, at simulated margins.
+  describe('exportClientSimulatedPdf', () => {
+    const simDto: ExportClientSimulatedPdfDto = {
+      clientId: 'client-1',
+      month: '2026-03-01',
+      overrides: [{ projectId: 'project-1', margin: 15 }],
+    };
+
+    const baseProjectFields = {
+      description: 'A project',
+      location: 'Somewhere',
+      requesterName: 'Moshe Cohen',
+      initiatorName: null,
+    };
+
+    const reportsForClient1 = [
+      {
+        id: 'report-1',
+        date: '2026-03-01T00:00:00.000Z',
+        profitMargin: 10, // saved — overridden to 15 by simDto
+        totalIncome: 10000,
+        project: {
+          id: 'project-1',
+          name: 'Tower Block',
+          client: { id: 'client-1', name: 'Acme Corp' },
+          ...baseProjectFields,
+        },
+        subcontractor: { id: 'sub-1', name: 'Israelov Engineering' },
+        incomeEntries: [
+          { id: 'e1', amount: 10000, incomeDate: null, tag: null },
+        ],
+        supplierPayments: [
+          {
+            id: 'sp1',
+            amount: 1000,
+            vatPercentage: 18,
+            vatAmount: 180,
+            effectiveTotal: 1180,
+            supplier: { id: 's1', name: 'Flooring Ltd' },
+          },
+        ],
+        initiatorPayments: [],
+      },
+      {
+        id: 'report-2',
+        date: '2026-03-01T00:00:00.000Z',
+        profitMargin: 20, // saved — no override, stays 20
+        totalIncome: 5000,
+        project: {
+          id: 'project-2',
+          name: 'Riverside',
+          client: { id: 'client-1', name: 'Acme Corp' },
+          ...baseProjectFields,
+        },
+        subcontractor: { id: 'sub-2', name: 'Bar Yam Builders' },
+        incomeEntries: [
+          { id: 'e2', amount: 5000, incomeDate: null, tag: null },
+        ],
+        supplierPayments: [],
+        initiatorPayments: [],
+      },
+      {
+        id: 'report-3',
+        date: '2026-03-01T00:00:00.000Z',
+        profitMargin: 10,
+        totalIncome: 2000,
+        project: {
+          id: 'project-3',
+          name: 'Other Client Project',
+          client: { id: 'client-2', name: 'Other Client' },
+          ...baseProjectFields,
+        },
+        subcontractor: { id: 'sub-3', name: 'Someone Else' },
+        incomeEntries: [
+          { id: 'e3', amount: 2000, incomeDate: null, tag: null },
+        ],
+        supplierPayments: [],
+        initiatorPayments: [],
+      },
+    ];
+
+    beforeEach(() => {
+      mockProjectReportsService.findProjectReportsInMonth.mockResolvedValue(
+        reportsForClient1,
+      );
+      mockSubcontractorsService.findOne.mockImplementation(
+        (id: string) =>
+          Promise.resolve({
+            id,
+            name:
+              reportsForClient1.find((r) => r.subcontractor.id === id)
+                ?.subcontractor.name ?? 'Unknown',
+            companyNumber: '000000000',
+          }) as unknown,
+      );
+    });
+
+    const renderSimHtml = async (
+      dto: ExportClientSimulatedPdfDto = simDto,
+    ): Promise<string> => {
+      const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
+      const mockPage = {
+        setContent: jest.fn<void, [string, unknown]>(),
+        pdf: jest.fn().mockResolvedValue(Uint8Array.from([1])),
+      };
+      puppeteer.launch.mockResolvedValue({
+        newPage: jest.fn().mockResolvedValue(mockPage),
+        close: jest.fn(),
+      });
+
+      await service.exportClientSimulatedPdf(dto);
+
+      return mockPage.setContent.mock.calls[0][0];
+    };
+
+    it('should throw CompanySettingsIncompleteError when settings are incomplete', async () => {
+      mockCompanySettingsService.findOne.mockResolvedValue(null);
+
+      await expect(service.exportClientSimulatedPdf(simDto)).rejects.toThrow(
+        CompanySettingsIncompleteError,
+      );
+    });
+
+    it('should throw NoReportsForExportError when the client has no reports this month', async () => {
+      mockProjectReportsService.findProjectReportsInMonth.mockResolvedValue([]);
+
+      await expect(service.exportClientSimulatedPdf(simDto)).rejects.toThrow(
+        NoReportsForExportError,
+      );
+    });
+
+    it('should throw NoReportsForExportError when only other clients have reports this month', async () => {
+      mockProjectReportsService.findProjectReportsInMonth.mockResolvedValue([
+        reportsForClient1[2], // client-2 only
+      ]);
+
+      await expect(service.exportClientSimulatedPdf(simDto)).rejects.toThrow(
+        NoReportsForExportError,
+      );
+    });
+
+    it("should reject an override for a project that is not this client's", async () => {
+      await expect(
+        service.exportClientSimulatedPdf({
+          ...simDto,
+          overrides: [{ projectId: 'project-3', margin: 15 }],
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw VatRateNotConfiguredError when no VAT rate resolves for the month', async () => {
+      mockVatRatesService.resolveForMonth.mockResolvedValue(null);
+
+      await expect(service.exportClientSimulatedPdf(simDto)).rejects.toThrow(
+        VatRateNotConfiguredError,
+      );
+    });
+
+    it('should cover every report of the client for the month, and none of another client', async () => {
+      const html = await renderSimHtml();
+
+      expect(html).toContain('Tower Block');
+      expect(html).toContain('Riverside');
+      expect(html).not.toContain('Other Client Project');
+    });
+
+    it('normalizes a date-only month before querying reports, since findProjectReportsInMonth is normally reached through a DTO whose @Transform does that widening', async () => {
+      await renderSimHtml();
+
+      expect(
+        mockProjectReportsService.findProjectReportsInMonth,
+      ).toHaveBeenCalledWith({
+        month: expect.stringMatching(/^2026-03-01T00:00:00/) as unknown,
+      });
+    });
+
+    it('computes figures at the simulated margin where overridden, and the stored margin otherwise', async () => {
+      const html = await renderSimHtml();
+
+      // project-1: overridden to 15% -> profit 1,500, supplier 1,000,
+      // subcontractor remainder 10,000 - 1,500 - 1,000 = 7,500.
+      expect(html).toContain('7,500.00');
+      // project-2: no override, stays at its saved 20% -> profit 1,000,
+      // no supplier deductions, subcontractor remainder 5,000 - 1,000 = 4,000.
+      expect(html).toContain('4,000.00');
+    });
+
+    it('renders a detail page per project after the summary page', async () => {
+      const html = await renderSimHtml();
+
+      // Both project names appear once in the summary table, and again on
+      // their own detail page's info box / title area — at least twice each.
+      expect(html.split('Tower Block').length - 1).toBeGreaterThanOrEqual(2);
+      expect(html.split('Riverside').length - 1).toBeGreaterThanOrEqual(2);
+    });
+
+    // 🔴 The test that defines this task: exporting with overrides must never
+    // touch stored data. This service method has no write path at all — the
+    // only persistence call anywhere in this service is updateLastApprovedFor,
+    // used exclusively by the single-report export.
+    it('does not persist anything — no stored profitMargin or approvedFor is touched', async () => {
+      await renderSimHtml();
+
+      expect(mockProjectsService.updateLastApprovedFor).not.toHaveBeenCalled();
+    });
+
+    it('renders in the requested language', async () => {
+      const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
+      const mockPage = {
+        setContent: jest.fn<void, [string, unknown]>(),
+        pdf: jest.fn().mockResolvedValue(Uint8Array.from([1])),
+      };
+      puppeteer.launch.mockResolvedValue({
+        newPage: jest.fn().mockResolvedValue(mockPage),
+        close: jest.fn(),
+      });
+
+      await service.exportClientSimulatedPdf({ ...simDto, lang: 'en' });
+      const html = mockPage.setContent.mock.calls[0][0];
+
+      expect(html).toContain('Simulated Profit Report');
     });
   });
 });

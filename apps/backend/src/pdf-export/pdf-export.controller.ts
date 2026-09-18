@@ -10,6 +10,7 @@ import {
 import { Response } from 'express';
 import { PdfExportService } from './pdf-export.service';
 import { ExportProjectReportsPdfDto } from './dto/export-project-reports-pdf.dto';
+import { ExportClientSimulatedPdfDto } from './dto/export-client-simulated-pdf.dto';
 
 /**
  * Controller for exporting monthly account-approval PDFs from project reports.
@@ -48,6 +49,41 @@ export class PdfExportController {
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="account-approval-${month.slice(0, 7)}.pdf"`,
+      'Content-Length': pdf.length,
+    });
+    res.status(HttpStatus.OK).send(pdf);
+  }
+
+  /**
+   * Renders the client-wide simulated PDF (T6) — a summary page followed by
+   * one account-approval-style page per project, all of a client's reports
+   * for one month, at simulated (never persisted) profit margins.
+   * @param dto Export parameters (client, month, per-project margin overrides, language)
+   * @param res Raw Express response — this endpoint streams a PDF binary, not JSON
+   */
+  @Post('/projects/reports/export-client-simulated-pdf')
+  @ApiOperation({
+    summary:
+      'Export the client-wide simulated PDF — every report of a client for a month, at simulated margins',
+  })
+  @ApiProduces('application/pdf')
+  @ApiBadRequestResponse({
+    description:
+      'Company settings incomplete, no VAT rate configured for the month, or an override references a project outside this client',
+  })
+  @ApiNotFoundResponse({
+    description: 'No reports found for this client in the given month',
+  })
+  async exportClientSimulatedPdf(
+    @Body() dto: ExportClientSimulatedPdfDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { pdf, month } =
+      await this.pdfExportService.exportClientSimulatedPdf(dto);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="simulated-report-${month.slice(0, 7)}.pdf"`,
       'Content-Length': pdf.length,
     });
     res.status(HttpStatus.OK).send(pdf);

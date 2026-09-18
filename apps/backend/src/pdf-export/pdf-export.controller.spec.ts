@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PdfExportController } from './pdf-export.controller';
 import { PdfExportService } from './pdf-export.service';
 import { ExportProjectReportsPdfDto } from './dto/export-project-reports-pdf.dto';
+import { ExportClientSimulatedPdfDto } from './dto/export-client-simulated-pdf.dto';
 import { Response } from 'express';
 
 // pdf-export.service.ts imports the real (ESM-only) puppeteer package at
@@ -14,6 +15,7 @@ describe('PdfExportController', () => {
 
   const mockPdfExportService = {
     exportProjectReportsPdf: jest.fn(),
+    exportClientSimulatedPdf: jest.fn(),
   };
 
   const dto: ExportProjectReportsPdfDto = {
@@ -88,5 +90,50 @@ describe('PdfExportController', () => {
       'Company settings incomplete',
     );
     expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  describe('exportClientSimulatedPdf', () => {
+    const simDto: ExportClientSimulatedPdfDto = {
+      clientId: 'client-1',
+      month: '2026-03-01',
+      overrides: [{ projectId: 'project-1', margin: 15 }],
+    };
+
+    it('should stream the rendered PDF with the right headers', async () => {
+      const pdf = Buffer.from([1, 2, 3]);
+      mockPdfExportService.exportClientSimulatedPdf.mockResolvedValue({
+        pdf,
+        month: '2026-03-01T00:00:00.000Z',
+      });
+      const { res, setMock, statusMock, sendMock } = mockResponse();
+
+      await controller.exportClientSimulatedPdf(simDto, res);
+
+      expect(
+        mockPdfExportService.exportClientSimulatedPdf,
+      ).toHaveBeenCalledWith(simDto);
+      expect(setMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': expect.stringContaining(
+            'simulated-report-2026-03',
+          ) as string,
+        }),
+      );
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(sendMock).toHaveBeenCalledWith(pdf);
+    });
+
+    it('should propagate errors from the service without writing a response', async () => {
+      mockPdfExportService.exportClientSimulatedPdf.mockRejectedValue(
+        new Error('No reports for this client'),
+      );
+      const { res, sendMock } = mockResponse();
+
+      await expect(
+        controller.exportClientSimulatedPdf(simDto, res),
+      ).rejects.toThrow('No reports for this client');
+      expect(sendMock).not.toHaveBeenCalled();
+    });
   });
 });

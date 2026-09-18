@@ -107,89 +107,20 @@ const LABELS = {
   },
 } as const;
 
-const escapeHtml = (value: string): string =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+import {
+  escapeHtml,
+  formatCurrency,
+  formatMonthLabel,
+  localeFor,
+  dirFor,
+} from './shared';
 
-const formatCurrency = (amount: number, locale: string): string =>
-  `${amount.toLocaleString(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ₪`;
-
-const formatMonthLabel = (monthIso: string, lang: 'en' | 'he'): string =>
-  new Intl.DateTimeFormat(lang === 'he' ? 'he-IL' : 'en-GB', {
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(monthIso));
-
-export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
-  const t = LABELS[data.lang];
-  const dir = data.lang === 'he' ? 'rtl' : 'ltr';
-  const locale = data.lang === 'he' ? 'he-IL' : 'en-GB';
-  const money = (amount: number): string => formatCurrency(amount, locale);
-  const monthLabel = formatMonthLabel(data.month, data.lang);
-
-  const rowsHtml = data.rows
-    .map(
-      (row) => `
-        <tr>
-          <td>${escapeHtml(row.tag ?? '')}</td>
-          <td class="amount strong">${money(row.approvedAmount)}</td>
-          <td class="amount">${money(row.invoiceInclVat)}</td>
-          <td class="amount muted">${row.profitMarginPercent}%</td>
-          <td class="amount">${money(row.profitAmount)}</td>
-          <td class="amount">${money(row.afterProfitAmount)}</td>
-        </tr>`,
-    )
-    .join('');
-
-  const supplierRowsHtml = data.supplierRows
-    .map(
-      (row) => `
-        <tr>
-          <td>${escapeHtml(row.supplierName)}</td>
-          <td class="amount">${money(row.amount)}</td>
-        </tr>`,
-    )
-    .join('');
-
-  // No initiator on the project → the whole block is absent, not an empty
-  // heading or a zero row. Initiator with no payments this month → the name
-  // still prints, only the payment rows are conditional. See T7.
-  const initiatorInfoRowHtml = data.initiator
-    ? `<div class="info-row"><span class="label">${t.initiator}</span><span>${escapeHtml(data.initiator.name)}</span></div>`
-    : '';
-
-  const initiatorTableHtml =
-    data.initiator && data.initiator.rows.length > 0
-      ? `<table>
-      <thead>
-        <tr>
-          <th>${t.initiatorPaymentDescription}</th>
-          <th>${t.initiatorPaymentAmount}</th>
-        </tr>
-      </thead>
-      <tbody>${data.initiator.rows
-        .map(
-          (row) => `
-        <tr>
-          <td>${escapeHtml(row.description)}</td>
-          <td class="amount">${money(row.amount)}</td>
-        </tr>`,
-        )
-        .join('')}</tbody>
-    </table>`
-      : '';
-
-  return `<!DOCTYPE html>
-<html dir="${dir}" lang="${data.lang}">
-<head>
-<meta charset="UTF-8" />
-<style>
+/**
+ * The CSS shared by every account-approval-style page. Exported so the
+ * client-wide simulated export (T6) can wrap several of these pages plus its
+ * own summary page in one document without duplicating the stylesheet.
+ */
+export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   body {
@@ -315,10 +246,73 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     font-size: 10px;
     color: #667;
   }
-</style>
-</head>
-<body>
-<div class="page">
+`;
+
+/**
+ * Renders one account-approval report as a single `.page` block — everything
+ * that used to live directly in `<body>`. Split out so the client-wide
+ * simulated export (T6) can embed several of these, one per project, inside
+ * one shared document instead of duplicating this markup.
+ */
+export const renderReportApprovalPage = (data: ReportApprovalData): string => {
+  const t = LABELS[data.lang];
+  const locale = localeFor(data.lang);
+  const money = (amount: number): string => formatCurrency(amount, locale);
+  const monthLabel = formatMonthLabel(data.month, data.lang);
+
+  const rowsHtml = data.rows
+    .map(
+      (row) => `
+        <tr>
+          <td>${escapeHtml(row.tag ?? '')}</td>
+          <td class="amount strong">${money(row.approvedAmount)}</td>
+          <td class="amount">${money(row.invoiceInclVat)}</td>
+          <td class="amount muted">${row.profitMarginPercent}%</td>
+          <td class="amount">${money(row.profitAmount)}</td>
+          <td class="amount">${money(row.afterProfitAmount)}</td>
+        </tr>`,
+    )
+    .join('');
+
+  const supplierRowsHtml = data.supplierRows
+    .map(
+      (row) => `
+        <tr>
+          <td>${escapeHtml(row.supplierName)}</td>
+          <td class="amount">${money(row.amount)}</td>
+        </tr>`,
+    )
+    .join('');
+
+  // No initiator on the project → the whole block is absent, not an empty
+  // heading or a zero row. Initiator with no payments this month → the name
+  // still prints, only the payment rows are conditional. See T7.
+  const initiatorInfoRowHtml = data.initiator
+    ? `<div class="info-row"><span class="label">${t.initiator}</span><span>${escapeHtml(data.initiator.name)}</span></div>`
+    : '';
+
+  const initiatorTableHtml =
+    data.initiator && data.initiator.rows.length > 0
+      ? `<table>
+      <thead>
+        <tr>
+          <th>${t.initiatorPaymentDescription}</th>
+          <th>${t.initiatorPaymentAmount}</th>
+        </tr>
+      </thead>
+      <tbody>${data.initiator.rows
+        .map(
+          (row) => `
+        <tr>
+          <td>${escapeHtml(row.description)}</td>
+          <td class="amount">${money(row.amount)}</td>
+        </tr>`,
+        )
+        .join('')}</tbody>
+    </table>`
+      : '';
+
+  return `<div class="page">
   <div class="header">
     <div class="identity">
       <div class="contractor-name">${escapeHtml(data.contractorName)}</div>
@@ -397,7 +391,19 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
       .join(' • ')}</div>
     <div>${data.companyEmail ? escapeHtml(data.companyEmail) : ''}</div>
   </div>
-</div>
+</div>`;
+};
+
+export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
+  const dir = dirFor(data.lang);
+  return `<!DOCTYPE html>
+<html dir="${dir}" lang="${data.lang}">
+<head>
+<meta charset="UTF-8" />
+<style>${reportApprovalStyles(dir)}</style>
+</head>
+<body>
+${renderReportApprovalPage(data)}
 </body>
 </html>`;
 };

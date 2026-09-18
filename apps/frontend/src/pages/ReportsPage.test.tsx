@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import ReportsPage from "./ReportsPage";
@@ -30,6 +30,7 @@ vi.mock("@/api/endpoints/initiators", () => ({
 }));
 vi.mock("@/api/endpoints/project-report-exports", () => ({
   useExportProjectReportsPdfMutation: vi.fn(),
+  useExportClientSimulatedPdfMutation: vi.fn(),
 }));
 
 import {
@@ -45,7 +46,10 @@ import {
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { useGetInitiatorsQuery } from "@/api/endpoints/initiators";
-import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
+import {
+  useExportProjectReportsPdfMutation,
+  useExportClientSimulatedPdfMutation,
+} from "@/api/endpoints/project-report-exports";
 
 const mockReports = [
   {
@@ -75,6 +79,10 @@ const createSpy = vi
   .mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
 
 const exportSpy = vi
+  .fn()
+  .mockReturnValue({ unwrap: vi.fn().mockResolvedValue(new Blob()) });
+
+const exportSimulatedSpy = vi
   .fn()
   .mockReturnValue({ unwrap: vi.fn().mockResolvedValue(new Blob()) });
 
@@ -141,6 +149,10 @@ describe("ReportsPage", () => {
       exportSpy,
       { isLoading: false },
     ] as unknown as ReturnType<typeof useExportProjectReportsPdfMutation>);
+    vi.mocked(useExportClientSimulatedPdfMutation).mockReturnValue([
+      exportSimulatedSpy,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useExportClientSimulatedPdfMutation>);
     vi.mocked(useUpdateIncomeEntryMutation).mockReturnValue([
       updateIncomeEntrySpy,
       { isLoading: false },
@@ -178,8 +190,9 @@ describe("ReportsPage", () => {
     expect(
       screen.getByRole("button", { name: "Tower Block" }),
     ).toBeInTheDocument();
-    // profit = 10,000 * 20% = 2,000
-    expect(screen.getByText("₪2,000")).toBeInTheDocument();
+    // profit = 10,000 * 20% = 2,000 — appears on the tile and, at the same
+    // default (un-overridden) margin, on the per-report simulator row below.
+    expect(screen.getAllByText("₪2,000").length).toBeGreaterThanOrEqual(1);
     // subcontractor payment = 10,000 - 2,000 - 0 = 8,000 (shown on the sheet
     // and again in the client-level "Total Sub Payments" header)
     expect(screen.getByText("Bob the Builder")).toBeInTheDocument();
@@ -192,15 +205,73 @@ describe("ReportsPage", () => {
     expect(screen.getByText(/Total Sub Payments/)).toBeInTheDocument();
   });
 
-  it("computes the inline profit simulator for the client", async () => {
-    renderPage();
-    await userEvent.click(screen.getByText("Acme Corp"));
-    // Enter a 10% simulated margin -> profit 1,000, sub payment 9,000.
-    // The inline simulator is the only number input in the detail view.
-    const marginInput = screen.getByRole("spinbutton");
-    await userEvent.type(marginInput, "10");
-    expect(screen.getByText("₪1,000")).toBeInTheDocument();
-    expect(screen.getByText("₪9,000")).toBeInTheDocument();
+  // T6 — per-report override. Each report's slider is independent, and
+  // dragging one must never move the read-only figures on the tiles above
+  // (totalSubcontractorPayments, computed from stored margins) or another
+  // report's simulated figures.
+  describe("per-report profit simulator (T6)", () => {
+    it("defaults every report's slider to its own saved margin", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+
+      const slider = screen.getByRole("slider");
+      expect(slider).toHaveValue("20"); // mockReports[0].profitMargin
+    });
+
+    it("overriding one report's margin updates only that report's simulated figures", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+
+      const slider = screen.getByRole("slider");
+      fireEvent.change(slider, { target: { value: "10" } });
+
+      // 10,000 * 10% = 1,000 profit (appears twice: the per-report row and
+      // the aggregate "Simulated Profit" summary, both driven by the same
+      // single overridden report); 10,000 - 1,000 - 0 = 9,000 remainder.
+      expect(screen.getAllByText("₪1,000").length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText("₪9,000")).toBeInTheDocument();
+      expect(screen.getByText("(overridden)")).toBeInTheDocument();
+
+      // The read-only tile above and the client-header total are computed
+      // from the *stored* margin (20%) and must not have moved: 10,000 -
+      // 2,000 - 0 = 8,000, shown on both the tile and the header total.
+      expect(screen.getAllByText("₪8,000").length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("resets to saved values", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+
+      const slider = screen.getByRole("slider");
+      fireEvent.change(slider, { target: { value: "10" } });
+      expect(screen.getByText("(overridden)")).toBeInTheDocument();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Reset to saved values" }),
+      );
+
+      expect(screen.queryByText("(overridden)")).not.toBeInTheDocument();
+      expect(slider).toHaveValue("20");
+    });
+
+    it("exports with the current overrides via the client-wide simulated endpoint", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+
+      const slider = screen.getByRole("slider");
+      fireEvent.change(slider, { target: { value: "10" } });
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Export with Simulator" }),
+      );
+
+      expect(exportSimulatedSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clientId: "c1",
+          overrides: [{ projectId: "p1", margin: 10 }],
+        }),
+      );
+    });
   });
 
   it("labels each income entry with its own tag", async () => {

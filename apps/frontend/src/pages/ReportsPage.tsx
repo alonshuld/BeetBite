@@ -12,7 +12,10 @@ import {
   type CreateProjectReportDto,
   type IncomeEntry,
 } from "@/api/endpoints/project-reports";
-import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
+import {
+  useExportProjectReportsPdfMutation,
+  useExportClientSimulatedPdfMutation,
+} from "@/api/endpoints/project-report-exports";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
 import {
   useGetProjectsQuery,
@@ -97,9 +100,17 @@ export default function ReportsPage() {
     useCreateProjectReportMutation();
   const [exportPdf, { isLoading: exporting }] =
     useExportProjectReportsPdfMutation();
+  const [exportClientSimulatedPdf, { isLoading: exportingSimulated }] =
+    useExportClientSimulatedPdfMutation();
   const [updateProject] = useUpdateProjectMutation();
 
-  const [simMargin, setSimMargin] = useState("");
+  // T6 — per-report profit margin override. Keyed by project id: within one
+  // client+month a project has at most one report, so this doubles as the
+  // shape the client-simulated export's override map wants. Absent from the
+  // map means "use the report's own saved margin" — never a global baseline.
+  const [simOverrides, setSimOverrides] = useState<Map<string, number>>(
+    new Map(),
+  );
 
   const [modalOpen, setModalOpen] = useState(false);
   const [clientId, setClientId] = useState("");
@@ -168,6 +179,36 @@ export default function ReportsPage() {
     }
   }
 
+  // T6 — client-wide simulated export. Overrides are transient UI state:
+  // never written back to a report, only sent along with this one request.
+  async function handleExportSimulated() {
+    if (!selectedClientId) return;
+
+    try {
+      const blob = await exportClientSimulatedPdf({
+        clientId: selectedClientId,
+        month: month + "-01",
+        overrides: Array.from(simOverrides.entries()).map(
+          ([projectId, margin]) => ({ projectId, margin }),
+        ),
+        lang,
+      }).unwrap();
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `simulated-report-${month}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast(t("exportWithSimulator"), "success");
+    } catch {
+      // The global RTK Query error listener already surfaces a toast with
+      // the server's message.
+    }
+  }
+
   const clientsInReports = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>();
     reports.forEach((r) => {
@@ -213,6 +254,30 @@ export default function ReportsPage() {
       }, 0),
     [selectedClientReports],
   );
+
+  // T6 — aggregate simulated profit across the client's reports, each at its
+  // own effective margin (overridden or saved). Independent of
+  // totalSubcontractorPayments above, which must never move.
+  const simulatedTotalProfit = useMemo(
+    () =>
+      selectedClientReports.reduce((sum, r) => {
+        const margin = simOverrides.get(r.project.id) ?? r.profitMargin;
+        return sum + r.totalIncome * (margin / 100);
+      }, 0),
+    [selectedClientReports, simOverrides],
+  );
+
+  function setSimOverride(projectId: string, margin: number) {
+    setSimOverrides((prev) => {
+      const next = new Map(prev);
+      next.set(projectId, margin);
+      return next;
+    });
+  }
+
+  useEffect(() => {
+    setSimOverrides(new Map());
+  }, [selectedClientId]);
 
   const filteredProjects = clientId
     ? projects.filter((p) => p.clientId === clientId)
@@ -457,67 +522,121 @@ export default function ReportsPage() {
                   />
                 ))}
               </div>
-              <div className="border border-border rounded-[var(--radius)] p-4 flex flex-col gap-3">
-                <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
-                  {t("profitSimulator")}
-                </h3>
-                <div className="flex items-end gap-3">
-                  <Input
-                    label={t("profitMarginPct")}
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.1}
-                    value={simMargin}
-                    onChange={(e) => setSimMargin(e.target.value)}
-                    className="w-32"
-                  />
+              <div className="border border-border rounded-[var(--radius)] p-4 flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
+                    {t("profitSimulator")}
+                  </h3>
+                  <ButtonGhost
+                    onClick={() => void handleExportSimulated()}
+                    disabled={exportingSimulated}
+                    className="text-xs py-1 px-3"
+                  >
+                    {t("exportWithSimulator")}
+                  </ButtonGhost>
                 </div>
-                {simMargin !== "" &&
-                  (() => {
-                    const margin = Number(simMargin);
-                    const totalIncome = selectedClientReports.reduce(
-                      (s, r) => s + r.totalIncome,
+
+                <div className="flex flex-col gap-3">
+                  {selectedClientReports.map((report) => {
+                    const overrideMargin = simOverrides.get(report.project.id);
+                    const effectiveMargin =
+                      overrideMargin ?? report.profitMargin;
+                    const hasOverride = overrideMargin !== undefined;
+                    const corpTotal = report.supplierPayments.reduce(
+                      (s, cp) => s + cp.amount,
                       0,
                     );
-                    const corpTotal = selectedClientReports.reduce(
-                      (s, r) =>
-                        s +
-                        r.supplierPayments.reduce(
-                          (cs, cp) => cs + cp.amount,
-                          0,
-                        ),
-                      0,
-                    );
-                    const profit = totalIncome * (margin / 100);
-                    const subPay = totalIncome - profit - corpTotal;
+                    const simProfit =
+                      report.totalIncome * (effectiveMargin / 100);
+                    const simSubPay =
+                      report.totalIncome - simProfit - corpTotal;
                     return (
-                      <div className="flex flex-col gap-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-text-muted">{t("income")}</span>
-                          <span className="text-text font-medium">
-                            ₪{Math.round(totalIncome).toLocaleString("he-IL")}
-                          </span>
+                      <div
+                        key={report.id}
+                        className="bg-surface-2 border border-border rounded p-3 flex flex-col gap-2"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium text-text">
+                              {report.project.name}
+                            </p>
+                            <p className="text-xs text-text-muted">
+                              {t("savedMarginLabel")}{" "}
+                              {report.profitMargin.toFixed(1)}%
+                              {hasOverride && (
+                                <span className="ms-2 text-beet-bright">
+                                  {t("overridden")}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-xs text-text-muted">
+                              {t("income")}
+                            </p>
+                            <p className="text-sm font-semibold text-text">
+                              ₪
+                              {Math.round(report.totalIncome).toLocaleString(
+                                "he-IL",
+                              )}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-text-muted">
-                            {t("profit")} ({margin}%)
-                          </span>
-                          <span className="text-success font-medium">
-                            ₪{Math.round(profit).toLocaleString("he-IL")}
-                          </span>
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs text-text-muted shrink-0 w-14">
+                            {effectiveMargin.toFixed(1)}%
+                          </label>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={0.1}
+                            value={effectiveMargin}
+                            onChange={(e) =>
+                              setSimOverride(
+                                report.project.id,
+                                parseFloat(e.target.value),
+                              )
+                            }
+                            className="flex-1 accent-beet"
+                          />
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between text-xs">
                           <span className="text-text-muted">
-                            {t("subcontractorPayment")}
+                            {t("simProfitLabel")}{" "}
+                            <span className="text-success font-medium">
+                              ₪{Math.round(simProfit).toLocaleString("he-IL")}
+                            </span>
                           </span>
-                          <span className="text-text font-medium">
-                            ₪{Math.round(subPay).toLocaleString("he-IL")}
+                          <span className="text-text-muted">
+                            {t("subcontractorPayment")}:{" "}
+                            <span className="text-text font-medium">
+                              ₪{Math.round(simSubPay).toLocaleString("he-IL")}
+                            </span>
                           </span>
                         </div>
                       </div>
                     );
-                  })()}
+                  })}
+                </div>
+
+                <div className="flex justify-between items-center text-sm border-t border-border pt-3">
+                  <span className="text-text-muted">
+                    {t("simulatedProfit")}:{" "}
+                    <span className="text-success font-semibold">
+                      ₪
+                      {Math.round(simulatedTotalProfit).toLocaleString("he-IL")}
+                    </span>
+                  </span>
+                  {simOverrides.size > 0 && (
+                    <ButtonGhost
+                      onClick={() => setSimOverrides(new Map())}
+                      className="text-xs py-1 px-2"
+                    >
+                      {t("resetToSavedValues")}
+                    </ButtonGhost>
+                  )}
+                </div>
               </div>
             </>
           )}

@@ -74,10 +74,6 @@ export const router = createBrowserRouter([
                 path: "settings/vat",
                 element: wrap(SettingsVatPage),
               },
-              {
-                path: "simulator",
-                element: <Navigate to="/reports" replace />,
-              },
             ],
           },
         ],
