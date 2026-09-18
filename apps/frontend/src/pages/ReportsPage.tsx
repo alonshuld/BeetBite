@@ -41,6 +41,7 @@ import { FormRow } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
 import { useToast } from "@/contexts/useToast";
 import { formatISODate } from "@/utils/formatMonth";
+import { computeSubcontractorRemainder } from "@/utils/subcontractorPayment";
 
 interface CorpPaymentDraft {
   supplierId: string;
@@ -244,14 +245,16 @@ export default function ReportsPage() {
 
   const totalSubcontractorPayments = useMemo(
     () =>
-      selectedClientReports.reduce((sum, r) => {
-        const profit = r.totalIncome * (r.profitMargin / 100);
-        const corpTotal = r.supplierPayments.reduce(
-          (s, cp) => s + cp.amount,
-          0,
-        );
-        return sum + (r.totalIncome - profit - corpTotal);
-      }, 0),
+      selectedClientReports.reduce(
+        (sum, r) =>
+          sum +
+          computeSubcontractorRemainder({
+            totalIncome: r.totalIncome,
+            profitMargin: r.profitMargin,
+            supplierPayments: r.supplierPayments,
+          }).subcontractorPayment,
+        0,
+      ),
     [selectedClientReports],
   );
 
@@ -542,14 +545,14 @@ export default function ReportsPage() {
                     const effectiveMargin =
                       overrideMargin ?? report.profitMargin;
                     const hasOverride = overrideMargin !== undefined;
-                    const corpTotal = report.supplierPayments.reduce(
-                      (s, cp) => s + cp.amount,
-                      0,
-                    );
-                    const simProfit =
-                      report.totalIncome * (effectiveMargin / 100);
-                    const simSubPay =
-                      report.totalIncome - simProfit - corpTotal;
+                    const {
+                      profit: simProfit,
+                      subcontractorPayment: simSubPay,
+                    } = computeSubcontractorRemainder({
+                      totalIncome: report.totalIncome,
+                      profitMargin: effectiveMargin,
+                      supplierPayments: report.supplierPayments,
+                    });
                     return (
                       <div
                         key={report.id}
@@ -999,9 +1002,12 @@ function ProjectSheet({
     return tag === OPENING_BALANCE_TAG ? t("openingBalanceTag") : tag;
   }
 
-  const profit = report.totalIncome * (report.profitMargin / 100);
-  const corpTotal = report.supplierPayments.reduce((s, cp) => s + cp.amount, 0);
-  const subPayment = report.totalIncome - profit - corpTotal;
+  const { profit, subcontractorPayment: subPayment } =
+    computeSubcontractorRemainder({
+      totalIncome: report.totalIncome,
+      profitMargin: report.profitMargin,
+      supplierPayments: report.supplierPayments,
+    });
 
   const [tagsModalOpen, setTagsModalOpen] = useState(false);
 
