@@ -25,6 +25,9 @@ vi.mock("@/api/endpoints/subcontractors", () => ({
 vi.mock("@/api/endpoints/suppliers", () => ({
   useGetSuppliersQuery: vi.fn(),
 }));
+vi.mock("@/api/endpoints/initiators", () => ({
+  useGetInitiatorsQuery: vi.fn(),
+}));
 vi.mock("@/api/endpoints/project-report-exports", () => ({
   useExportProjectReportsPdfMutation: vi.fn(),
 }));
@@ -41,6 +44,7 @@ import {
 } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
+import { useGetInitiatorsQuery } from "@/api/endpoints/initiators";
 import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
 
 const mockReports = [
@@ -126,6 +130,9 @@ describe("ReportsPage", () => {
     vi.mocked(useGetSuppliersQuery).mockReturnValue({
       data: [{ id: "co1", name: "Flooring Ltd" }],
     } as unknown as ReturnType<typeof useGetSuppliersQuery>);
+    vi.mocked(useGetInitiatorsQuery).mockReturnValue({
+      data: [{ id: "init1", name: "Yaniv Goldman" }],
+    } as unknown as ReturnType<typeof useGetInitiatorsQuery>);
     vi.mocked(useCreateProjectReportMutation).mockReturnValue([
       createSpy,
       { isLoading: false },
@@ -286,6 +293,114 @@ describe("ReportsPage", () => {
     expect(
       screen.getByRole("heading", { name: "Add Project Reports" }),
     ).toBeInTheDocument();
+  });
+
+  // T7 — the tile shows the initiator's name and payment rows purely as
+  // informational display, never affecting the subcontractor payment above.
+  it("shows the initiator name and payment rows on the tile when the project has one", async () => {
+    setReports([
+      {
+        ...mockReports[0],
+        project: { ...mockReports[0].project, initiatorName: "Yaniv Goldman" },
+        initiatorPayments: [
+          {
+            id: "ip1",
+            initiator: { id: "init1", name: "Yaniv Goldman" },
+            amount: 3000,
+            date: null,
+            description: "Consulting fee",
+          },
+        ],
+      },
+    ]);
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+
+    expect(screen.getByText(/Yaniv Goldman/)).toBeInTheDocument();
+    expect(screen.getByText("Consulting fee")).toBeInTheDocument();
+    expect(screen.getByText("₪3,000")).toBeInTheDocument();
+    // Unaffected: subcontractor payment is still 10,000 - 2,000 - 0 = 8,000.
+    expect(screen.getAllByText("₪8,000").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows no initiator section on the tile when the project has no initiator", async () => {
+    renderPage();
+    await userEvent.click(screen.getByText("Acme Corp"));
+
+    expect(screen.queryByText(/Yaniv Goldman/)).not.toBeInTheDocument();
+  });
+
+  // T7 — initiator payment rows only ever appear for a project that actually
+  // has an initiator linked. Never enters any calculation.
+  describe("initiator payments in the add-report modal (T7)", () => {
+    function mockProjectsWithInitiator() {
+      vi.mocked(useGetProjectsQuery).mockReturnValue({
+        data: [
+          {
+            id: "p1",
+            name: "Tower Block",
+            clientId: "c1",
+            description: "Shell + finishing work",
+            estimatedAmount: 100000,
+            isDone: false,
+            lastApprovedFor: null,
+            initiatorId: null,
+          },
+          {
+            id: "p2",
+            name: "Riverside",
+            clientId: "c1",
+            description: "Riverside project",
+            estimatedAmount: 50000,
+            isDone: false,
+            lastApprovedFor: null,
+            initiatorId: "init1",
+          },
+        ],
+      } as unknown as ReturnType<typeof useGetProjectsQuery>);
+    }
+
+    it("does not show the initiator payments section for a project with no initiator", async () => {
+      mockProjectsWithInitiator();
+      renderPage();
+      await userEvent.click(
+        screen.getAllByRole("button", { name: "+ Add" })[0],
+      );
+      await userEvent.selectOptions(screen.getByLabelText("Project"), "p1");
+
+      expect(screen.queryByText("Initiator Payments")).not.toBeInTheDocument();
+    });
+
+    it("shows the initiator payments section and submits it for a project with an initiator", async () => {
+      mockProjectsWithInitiator();
+      renderPage();
+      await userEvent.click(
+        screen.getAllByRole("button", { name: "+ Add" })[0],
+      );
+      await userEvent.selectOptions(screen.getByLabelText("Project"), "p2");
+
+      expect(screen.getByText("Initiator Payments")).toBeInTheDocument();
+
+      const addButtons = screen.getAllByRole("button", { name: "+ Add" });
+      await userEvent.click(addButtons[addButtons.length - 1]);
+      const initiatorSelects = screen.getAllByRole("combobox");
+      const rowSelect = initiatorSelects[initiatorSelects.length - 1];
+      await userEvent.selectOptions(rowSelect, "init1");
+      await userEvent.type(screen.getByPlaceholderText("Amount (₪)"), "3000");
+      await userEvent.type(screen.getByLabelText("Income (₪)"), "10000");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          initiatorPayments: [
+            expect.objectContaining({
+              initiatorId: "init1",
+              amount: 3000,
+            }),
+          ],
+        }),
+      );
+    });
   });
 
   // T13 — total income per client, beside the existing subcontractor total.

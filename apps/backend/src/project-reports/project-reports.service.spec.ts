@@ -123,6 +123,57 @@ describe('ProjectReportsService', () => {
       expect(mockTx.projectReport.create).toHaveBeenCalledTimes(1);
     });
 
+    it('creates initiator payments via createMany when provided', async () => {
+      const mockReport = makeProjectReport();
+      mockTx.projectReport.create.mockResolvedValue(mockReport);
+
+      await service.create({
+        ...baseCreateDto,
+        initiatorPayments: [
+          {
+            initiatorId: 'initiator-1',
+            amount: 5000,
+            date: '2024-05-10',
+            description: 'Consulting fee',
+          },
+        ],
+      });
+
+      expect(mockTx.projectReport.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            initiatorPayments: {
+              createMany: {
+                data: [
+                  {
+                    initiatorId: 'initiator-1',
+                    amount: 5000,
+                    date: new Date('2024-05-10'),
+                    description: 'Consulting fee',
+                  },
+                ],
+              },
+            },
+          }) as Record<string, unknown>,
+        }),
+      );
+    });
+
+    it('creates no initiator payments when the field is omitted', async () => {
+      const mockReport = makeProjectReport();
+      mockTx.projectReport.create.mockResolvedValue(mockReport);
+
+      await service.create(baseCreateDto);
+
+      expect(mockTx.projectReport.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            initiatorPayments: { createMany: { data: [] } },
+          }) as Record<string, unknown>,
+        }),
+      );
+    });
+
     it('should inherit subcontractorId from previous month when not provided', async () => {
       mockPrismaService.projectReport.findUnique.mockResolvedValue({
         profitMargin: new Prisma.Decimal('15'),
@@ -431,6 +482,64 @@ describe('ProjectReportsService', () => {
 
       expect(result.profit).toBe(0);
       expect(result.subcontractor.payment).toBe(7000); // 10000 - 0 - 3000
+    });
+
+    // 🔴 T7 — the test that defines the task: an initiator payment is
+    // documentation only. If it ever leaked into subPayment/profit, this
+    // is what would catch it.
+    it('does not change profit or subcontractorPayment when initiator payments are present', async () => {
+      const withoutInitiator = makeFullReport({
+        supplierPayments: [
+          {
+            id: 'cp-1',
+            amount: new Prisma.Decimal('2000'),
+            supplier: { id: 'corp-1', name: 'Corp 1' },
+          },
+        ],
+        initiatorPayments: [],
+      });
+      const withInitiator = makeFullReport({
+        supplierPayments: [
+          {
+            id: 'cp-1',
+            amount: new Prisma.Decimal('2000'),
+            supplier: { id: 'corp-1', name: 'Corp 1' },
+          },
+        ],
+        initiatorPayments: [
+          {
+            id: 'ip-1',
+            amount: new Prisma.Decimal('5000'),
+            date: null,
+            description: 'Consulting fee',
+            initiator: { id: 'initiator-1', name: 'Yaniv Goldman' },
+          },
+        ],
+      });
+
+      mockPrismaService.projectReport.findUnique
+        .mockResolvedValueOnce({ date: new Date('2024-05-01T00:00:00.000Z') })
+        .mockResolvedValueOnce(withoutInitiator);
+      const before = await service.findOne('report-1');
+
+      mockPrismaService.projectReport.findUnique
+        .mockResolvedValueOnce({ date: new Date('2024-05-01T00:00:00.000Z') })
+        .mockResolvedValueOnce(withInitiator);
+      const after = await service.findOne('report-1');
+
+      expect(after.profit).toBe(before.profit);
+      expect(after.subcontractor.payment).toBe(before.subcontractor.payment);
+      expect(after.totalIncome).toBe(before.totalIncome);
+      // The payment is recorded and displayed, just never arithmetic.
+      expect(after.initiatorPayments).toEqual([
+        {
+          id: 'ip-1',
+          amount: 5000,
+          date: null,
+          description: 'Consulting fee',
+          initiator: { id: 'initiator-1', name: 'Yaniv Goldman' },
+        },
+      ]);
     });
   });
 

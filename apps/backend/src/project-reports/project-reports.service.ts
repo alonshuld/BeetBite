@@ -21,6 +21,7 @@ import { ProjectReportNotFoundError } from './errors/project-report-not-found.ex
 import { UpdateProjectReportDto } from './dto/update-project-report.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { SupplierNotFoundError } from 'src/suppliers/errors/supplier-not-found.error';
+import { InitiatorNotFoundError } from 'src/initiators/errors/initiator-not-found.error';
 import { IncomeEntryResponseDto } from './dto/income-entry-response.dto';
 import { CreateIncomeEntryDto } from './dto/create-income-entry.dto';
 import { UpdateIncomeEntryDto } from './dto/update-income-entry.dto';
@@ -33,6 +34,7 @@ const REPORT_INCLUDE = {
       description: true,
       location: true,
       requesterName: true,
+      initiator: { select: { name: true } },
       client: { select: { id: true, name: true } },
     },
   },
@@ -50,7 +52,40 @@ const REPORT_INCLUDE = {
       supplier: { select: { id: true, name: true } },
     },
   },
+  initiatorPayments: {
+    select: {
+      id: true,
+      amount: true,
+      date: true,
+      description: true,
+      initiator: { select: { id: true, name: true } },
+    },
+  },
 } as const;
+
+/**
+ * `REPORT_INCLUDE.project` selects `initiator: { name }` (Prisma nests the
+ * relation), but every mapper and DTO flattens it to `initiatorName` — the
+ * shape the frontend and PDF actually consume. Applied right after fetching,
+ * so every downstream step (client resolution, mappers) only ever sees the
+ * flattened shape.
+ */
+type WithFlattenedInitiator<T extends { project: object }> = Omit<
+  T,
+  'project'
+> & {
+  project: Omit<T['project'], 'initiator'> & { initiatorName: string | null };
+};
+
+function withFlattenedInitiator<
+  T extends { project: { initiator: { name: string } | null } },
+>(report: T): WithFlattenedInitiator<T> {
+  const { initiator, ...restProject } = report.project;
+  return {
+    ...report,
+    project: { ...restProject, initiatorName: initiator?.name ?? null },
+  } as WithFlattenedInitiator<T>;
+}
 
 @Injectable()
 export class ProjectReportsService {
@@ -148,6 +183,16 @@ export class ProjectReportsService {
                 })),
               },
             },
+            initiatorPayments: {
+              createMany: {
+                data: (enriched.initiatorPayments ?? []).map((ip) => ({
+                  initiatorId: ip.initiatorId,
+                  amount: ip.amount,
+                  date: ip.date ? new Date(ip.date) : null,
+                  description: ip.description?.trim() || null,
+                })),
+              },
+            },
           },
           include: REPORT_INCLUDE,
         });
@@ -155,13 +200,17 @@ export class ProjectReportsService {
       });
 
       this.logger.log(`Project report created: ${created.id}`);
-      return toProjectReportListItem(created);
+      return toProjectReportListItem(withFlattenedInitiator(created));
     } catch (error) {
       if (!(error instanceof PrismaClientKnownRequestError)) throw error;
 
       switch (error.code) {
-        case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
+        case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED: {
+          const fieldName = (error.meta?.field_name as string) ?? '';
+          if (fieldName.toLowerCase().includes('initiatorid'))
+            throw new InitiatorNotFoundError();
           throw new SupplierNotFoundError();
+        }
         case PRISMA_ERROR_CODES.NOT_FOUND: {
           const model = (error.meta?.model as string) ?? '';
           if (model.toLowerCase().includes('project'))
@@ -198,10 +247,12 @@ export class ProjectReportsService {
 
     this.logger.log(`Retrieved ${projectReports.length} project reports`);
     return toProjectReportList(
-      await this.withResolvedClients(
-        projectReports,
-        paginatedMonthQueryDto.month,
-      ),
+      (
+        await this.withResolvedClients(
+          projectReports,
+          paginatedMonthQueryDto.month,
+        )
+      ).map(withFlattenedInitiator),
     );
   }
 
@@ -265,7 +316,7 @@ export class ProjectReportsService {
       [projectReport],
       projectReport.date,
     );
-    return toProjectReportListItem(resolved);
+    return toProjectReportListItem(withFlattenedInitiator(resolved));
   }
 
   async findProjectReportForPreviousMonth(
@@ -293,7 +344,7 @@ export class ProjectReportsService {
       );
 
     this.logger.log(`Project report retrieved: ${projectReport.id}`);
-    return toProjectReportListItem(projectReport);
+    return toProjectReportListItem(withFlattenedInitiator(projectReport));
   }
 
   async findOne(id: string): Promise<ProjectReportResponseDto> {
@@ -346,6 +397,7 @@ export class ProjectReportsService {
               description: true,
               location: true,
               requesterName: true,
+              initiator: { select: { name: true } },
             },
           },
           incomeEntries: {
@@ -357,6 +409,15 @@ export class ProjectReportsService {
               amount: true,
               vatPercentage: true,
               supplier: { select: { id: true, name: true } },
+            },
+          },
+          initiatorPayments: {
+            select: {
+              id: true,
+              amount: true,
+              date: true,
+              description: true,
+              initiator: { select: { id: true, name: true } },
             },
           },
           subcontractor: {
@@ -374,29 +435,26 @@ export class ProjectReportsService {
 
     if (!reportWithSubPayments) throw new ProjectReportNotFoundError(id);
 
+    const flattened = withFlattenedInitiator(reportWithSubPayments);
+
     this.logger.log(`Project report retrieved: ${id}`);
 
-    const totalIncome = reportWithSubPayments.incomeEntries.reduce(
+    const totalIncome = flattened.incomeEntries.reduce(
       (sum, e) => sum + e.amount.toNumber(),
       0,
     );
-    const profit =
-      totalIncome * (reportWithSubPayments.profitMargin.toNumber() / 100);
-    const corpTotal = reportWithSubPayments.supplierPayments.reduce(
+    const profit = totalIncome * (flattened.profitMargin.toNumber() / 100);
+    const corpTotal = flattened.supplierPayments.reduce(
       (sum, cp) => sum + cp.amount.toNumber(),
       0,
     );
     const subcontractorPayment = totalIncome - profit - corpTotal;
 
     this.logger.log(
-      `Profit for project ${reportWithSubPayments.projectId} in ${reportWithSubPayments.date.toDateString()}: ${profit}. Subcontractor owed: ${subcontractorPayment}.`,
+      `Profit for project ${flattened.projectId} in ${flattened.date.toDateString()}: ${profit}. Subcontractor owed: ${subcontractorPayment}.`,
     );
 
-    return toProjectReportResponse(
-      reportWithSubPayments,
-      profit,
-      subcontractorPayment,
-    );
+    return toProjectReportResponse(flattened, profit, subcontractorPayment);
   }
 
   async update(
@@ -417,6 +475,7 @@ export class ProjectReportsService {
         updateProjectReportDto.date ?? existing.date.toISOString().slice(0, 10),
       incomeEntries: updateProjectReportDto.incomeEntries ?? [],
       supplierPayments: updateProjectReportDto.supplierPayments ?? [],
+      initiatorPayments: updateProjectReportDto.initiatorPayments ?? [],
     });
 
     try {
@@ -451,15 +510,37 @@ export class ProjectReportsService {
                   },
                 }
               : undefined,
+          initiatorPayments:
+            updateProjectReportDto.initiatorPayments !== undefined
+              ? {
+                  deleteMany: {},
+                  createMany: {
+                    data: updateProjectReportDto.initiatorPayments.map(
+                      (ip) => ({
+                        initiatorId: ip.initiatorId,
+                        amount: ip.amount,
+                        date: ip.date ? new Date(ip.date) : null,
+                        description: ip.description?.trim() || null,
+                      }),
+                    ),
+                  },
+                }
+              : undefined,
         },
         include: REPORT_INCLUDE,
       });
       this.logger.log(`Project report ${id} updated`);
-      return toProjectReportListItem(updated);
+      return toProjectReportListItem(withFlattenedInitiator(updated));
     } catch (error) {
       if (!(error instanceof PrismaClientKnownRequestError)) throw error;
 
       switch (error.code) {
+        case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED: {
+          const fieldName = (error.meta?.field_name as string) ?? '';
+          if (fieldName.toLowerCase().includes('initiatorid'))
+            throw new InitiatorNotFoundError();
+          throw new SupplierNotFoundError();
+        }
         case PRISMA_ERROR_CODES.NOT_FOUND: {
           const model = (error.meta?.model as string) ?? '';
           if (model.toLowerCase().includes('projectreport'))

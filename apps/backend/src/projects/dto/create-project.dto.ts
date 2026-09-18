@@ -85,6 +85,16 @@ export class CreateProjectDto {
   location!: string;
 
   @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description:
+      "Optional ID of the project's initiator (יזם), if one exists. Unlike clientId, this is nullable — most projects have no initiator at all.",
+    nullable: true,
+  })
+  initiatorId?: string | null;
+
+  @IsOptional()
   @ValidateNested()
   @Type(() => OpeningBalanceDto)
   @ApiPropertyOptional({

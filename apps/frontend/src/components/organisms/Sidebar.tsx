@@ -42,6 +42,7 @@ const MANAGEMENT_ITEMS: NavItem[] = [
   { path: "/clients", labelKey: "clients", icon: "👤" },
   { path: "/subcontractors", labelKey: "subcontractors", icon: "🔧" },
   { path: "/suppliers", labelKey: "suppliers", icon: "🏛️" },
+  { path: "/initiators", labelKey: "initiators", icon: "🎯" },
 ];
 
 const SETTINGS_ITEMS: NavItem[] = [

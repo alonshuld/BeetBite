@@ -12,6 +12,11 @@ export interface ReportApprovalSupplierRow {
   amount: number;
 }
 
+export interface ReportApprovalInitiatorRow {
+  description: string;
+  amount: number;
+}
+
 export interface ReportApprovalData {
   lang: 'en' | 'he';
   contractorName: string;
@@ -26,6 +31,13 @@ export interface ReportApprovalData {
   rows: ReportApprovalRow[];
   supplierRows: ReportApprovalSupplierRow[];
   supplierTotal: number;
+  /**
+   * Absent (not empty) when the project has no initiator — the whole
+   * initiator block is then omitted entirely, not rendered with a zero row.
+   * Present with an empty `rows` array when there is an initiator but no
+   * payments this month: the name still prints, per T7.
+   */
+  initiator: { name: string; rows: ReportApprovalInitiatorRow[] } | null;
   totalIncome: number;
   totalAfterProfit: number;
   paymentExclVat: number;
@@ -54,6 +66,9 @@ const LABELS = {
     supplierName: 'שם הספק',
     supplierInvoice: 'חשבונית ספקים (ללא מע"מ)',
     supplierTotal: 'סה"כ קיזוזי ספקים',
+    initiator: 'יזם:',
+    initiatorPaymentDescription: 'תיאור',
+    initiatorPaymentAmount: 'סכום',
     monthlySummary: 'סיכום חודשי',
     totalIncome: 'סה"כ הכנסות',
     totalAfterProfit: 'סה"כ הכנסות לאחר קיזוז רווח קבלני',
@@ -78,6 +93,9 @@ const LABELS = {
     supplierName: 'Supplier',
     supplierInvoice: 'Supplier Invoice (excl. VAT)',
     supplierTotal: 'Total Supplier Deductions',
+    initiator: 'Initiator:',
+    initiatorPaymentDescription: 'Description',
+    initiatorPaymentAmount: 'Amount',
     monthlySummary: 'Monthly Summary',
     totalIncome: 'Total Income',
     totalAfterProfit: 'Total Income After Profit Cut',
@@ -138,6 +156,34 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
         </tr>`,
     )
     .join('');
+
+  // No initiator on the project → the whole block is absent, not an empty
+  // heading or a zero row. Initiator with no payments this month → the name
+  // still prints, only the payment rows are conditional. See T7.
+  const initiatorInfoRowHtml = data.initiator
+    ? `<div class="info-row"><span class="label">${t.initiator}</span><span>${escapeHtml(data.initiator.name)}</span></div>`
+    : '';
+
+  const initiatorTableHtml =
+    data.initiator && data.initiator.rows.length > 0
+      ? `<table>
+      <thead>
+        <tr>
+          <th>${t.initiatorPaymentDescription}</th>
+          <th>${t.initiatorPaymentAmount}</th>
+        </tr>
+      </thead>
+      <tbody>${data.initiator.rows
+        .map(
+          (row) => `
+        <tr>
+          <td>${escapeHtml(row.description)}</td>
+          <td class="amount">${money(row.amount)}</td>
+        </tr>`,
+        )
+        .join('')}</tbody>
+    </table>`
+      : '';
 
   return `<!DOCTYPE html>
 <html dir="${dir}" lang="${data.lang}">
@@ -290,6 +336,7 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
       <div class="info-row"><span class="label">${t.mainContractor}</span><span>${escapeHtml(data.contractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.contractorCompanyNumber)}</span></div>
       <div class="info-row"><span class="label">${t.subcontractor}</span><span>${escapeHtml(data.subcontractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.subcontractorCompanyNumber)}</span></div>
       <div class="info-row"><span class="label">${t.approvedFor}</span><span>${escapeHtml(data.approvedFor)} • ${escapeHtml(data.projectName)}</span></div>
+      ${initiatorInfoRowHtml}
     </div>
 
     <table>
@@ -321,6 +368,8 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
         </tr>
       </tfoot>
     </table>
+
+    ${initiatorTableHtml}
 
     <div class="lower">
       <div class="summary-box">

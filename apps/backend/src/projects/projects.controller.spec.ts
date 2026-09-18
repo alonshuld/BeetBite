@@ -58,6 +58,7 @@ describe('ProjectsController', () => {
         requesterName: 'Jane Doe',
         location: '123 Main St, Tel Aviv',
         lastApprovedFor: null,
+        initiatorId: null,
       };
 
       mockProjectsService.create.mockResolvedValue(expectedResult);
@@ -98,6 +99,7 @@ describe('ProjectsController', () => {
           description: 'Description 1',
           isDone: false,
           lastApprovedFor: null,
+          initiatorId: null,
           hasReports: true,
           paymentProgress: { totalPaid: 2000 },
           requesterName: 'Jane Doe',
@@ -112,6 +114,7 @@ describe('ProjectsController', () => {
           description: 'Description 2',
           isDone: false,
           lastApprovedFor: null,
+          initiatorId: null,
           hasReports: true,
           paymentProgress: { totalPaid: 5000 },
           requesterName: 'John Smith',
@@ -140,6 +143,7 @@ describe('ProjectsController', () => {
           description: 'Description 3',
           isDone: false,
           lastApprovedFor: null,
+          initiatorId: null,
           hasReports: false,
           paymentProgress: { totalPaid: 0 },
           requesterName: 'Jane Doe',
@@ -175,6 +179,7 @@ describe('ProjectsController', () => {
         description: 'Description 1',
         isDone: false,
         lastApprovedFor: null,
+        initiatorId: null,
         hasReports: true,
         paymentProgress: { totalPaid: 2000 },
         requesterName: 'Jane Doe',
@@ -226,6 +231,7 @@ describe('ProjectsController', () => {
         requesterName: 'John Smith',
         location: '456 Side St, Haifa',
         lastApprovedFor: null,
+        initiatorId: null,
       };
 
       mockProjectsService.update.mockResolvedValue(expectedResult);

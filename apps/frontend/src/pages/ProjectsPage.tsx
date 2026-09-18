@@ -9,6 +9,7 @@ import {
 } from "@/api/endpoints/projects";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
+import { useGetInitiatorsQuery } from "@/api/endpoints/initiators";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { SearchInput } from "@/components/molecules/SearchInput";
 import { FormGroup, FormRow } from "@/components/molecules/FormGroup";
@@ -78,6 +79,8 @@ interface FormState {
   estimatedAmount: string;
   requesterName: string;
   location: string;
+  // T7 — optional link to an initiator (יזם). Empty string means none.
+  initiatorId: string;
   // T11 — optional opening balance. Empty strings mean "not filled in", which
   // is the normal case; the whole section is skipped unless an amount is typed.
   openingAmount: string;
@@ -97,6 +100,7 @@ const EMPTY_FORM: FormState = {
   estimatedAmount: "",
   requesterName: "",
   location: "",
+  initiatorId: "",
   openingAmount: "",
   openingMonth: "",
   openingSubcontractorId: "",
@@ -108,6 +112,7 @@ export default function ProjectsPage() {
   const { data: projects = [], isLoading } = useGetProjectsQuery();
   const { data: clients = [] } = useGetClientsQuery();
   const { data: subcontractors = [] } = useGetSubcontractorsQuery();
+  const { data: initiators = [] } = useGetInitiatorsQuery();
   const [createProject, { isLoading: creating }] = useCreateProjectMutation();
   const [updateProject, { isLoading: updating }] = useUpdateProjectMutation();
   const [deleteProject, { isLoading: deleting }] = useDeleteProjectMutation();
@@ -177,6 +182,7 @@ export default function ProjectsPage() {
       estimatedAmount: String(project.estimatedAmount),
       requesterName: project.requesterName,
       location: project.location,
+      initiatorId: project.initiatorId ?? "",
     });
     setFormOpen(true);
   }
@@ -217,6 +223,7 @@ export default function ProjectsPage() {
       clientId: form.clientId,
       requesterName: form.requesterName.trim(),
       location: form.location.trim(),
+      initiatorId: form.initiatorId || null,
     };
 
     if (editing) {
@@ -544,6 +551,21 @@ export default function ProjectsPage() {
             />
           </FormGroup>
         </FormRow>
+        <FormGroup>
+          <Select
+            id="proj-initiator"
+            label={t("initiator")}
+            value={form.initiatorId}
+            onChange={(e) => setField("initiatorId", e.target.value)}
+          >
+            <option value="">{t("noInitiatorOption")}</option>
+            {initiators.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.name}
+              </option>
+            ))}
+          </Select>
+        </FormGroup>
         <FormGroup>
           <Textarea
             id="proj-desc"

@@ -16,12 +16,19 @@ export interface ProjectReport {
   totalIncome: number;
   incomeEntries: IncomeEntry[];
   supplierPayments: SupplierPaymentRow[];
+  /**
+   * Documentation-only payments to the project's initiator this month, if it
+   * has one. Never enters any financial calculation — see T7.
+   */
+  initiatorPayments: InitiatorPaymentRow[];
   project: {
     id: string;
     name: string;
     description: string;
     location: string;
     requesterName: string;
+    /** Null when the project has no initiator — gates the whole section. */
+    initiatorName: string | null;
     client: { id: string; name: string };
   };
   subcontractor: { id: string; name: string };
@@ -36,6 +43,14 @@ export interface SupplierPaymentRow {
   effectiveTotal?: number;
 }
 
+export interface InitiatorPaymentRow {
+  id: string;
+  initiator: { id: string; name: string };
+  amount: number;
+  date?: string | null;
+  description?: string | null;
+}
+
 export interface ProjectReportDetail {
   id: string;
   date: string;
@@ -43,9 +58,10 @@ export interface ProjectReportDetail {
   profit: number;
   totalIncome: number;
   incomeEntries: IncomeEntry[];
-  project: { id: string; name: string };
+  project: { id: string; name: string; initiatorName: string | null };
   subcontractor: { id: string; name: string; payment: number };
   supplierPayments: SupplierPaymentRow[];
+  initiatorPayments: InitiatorPaymentRow[];
 }
 
 // Matches backend CreateProjectReportDto
@@ -60,6 +76,12 @@ export interface CreateProjectReportDto {
     amount: number;
     date: string;
     vatPercentage?: number;
+  }[];
+  initiatorPayments?: {
+    initiatorId: string;
+    amount: number;
+    date?: string;
+    description?: string;
   }[];
 }
 

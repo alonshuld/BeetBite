@@ -34,4 +34,12 @@ export class NestedProjectDto {
       'Name of the person who commissioned this specific project (may differ from the client)',
   })
   requesterName!: string;
+
+  @ApiProperty({
+    example: 'Yaniv Goldman',
+    description:
+      "Name of the project's initiator (יזם), if one exists — null when the project has no initiator",
+    nullable: true,
+  })
+  initiatorName!: string | null;
 }

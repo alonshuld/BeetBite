@@ -58,6 +58,7 @@ describe('PdfExportService', () => {
       id: 'project-1',
       name: 'Wine City, plot 309 — Ashkelon',
       requesterName: 'Moshe Cohen',
+      initiatorName: null,
       client: { id: 'client-1', name: 'Bar Yam Ltd.' },
     },
     subcontractor: { id: 'sub-1', name: 'Israelov Engineering' },
@@ -104,6 +105,13 @@ describe('PdfExportService', () => {
         supplier: { id: 'corp-3', name: 'Django Corp' },
       },
     ],
+    initiatorPayments: [] as {
+      id: string;
+      amount: number;
+      date: string | null;
+      description: string | null;
+      initiator: { id: string; name: string };
+    }[],
   };
 
   beforeEach(async () => {
@@ -371,5 +379,79 @@ describe('PdfExportService', () => {
 
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+  });
+
+  // T7 — gating: the initiator block is absent, name-only, or name+rows,
+  // strictly following whether the project has an initiator and whether it
+  // has payments this month. Never an empty heading, never a zero row.
+  describe('initiator block gating (T7)', () => {
+    // The report renders in Hebrew by default (dto carries no `lang`), so the
+    // label under test is the Hebrew one — 'יזם:'.
+    it('renders no initiator block at all when the project has no initiator', async () => {
+      const html = await renderHtml();
+
+      expect(html).not.toContain('יזם:');
+      expect(html).not.toContain('Yaniv Goldman');
+    });
+
+    it("prints the initiator's name but no payment rows when it has none this month", async () => {
+      mockProjectReportsService.findOneForExport.mockResolvedValue({
+        ...mockReport,
+        project: { ...mockReport.project, initiatorName: 'Yaniv Goldman' },
+        initiatorPayments: [],
+      });
+
+      const html = await renderHtml();
+
+      expect(html).toContain('יזם:');
+      expect(html).toContain('Yaniv Goldman');
+      expect(html).not.toContain('Consulting fee');
+    });
+
+    it('prints the initiator name and payment rows when payments exist', async () => {
+      mockProjectReportsService.findOneForExport.mockResolvedValue({
+        ...mockReport,
+        project: { ...mockReport.project, initiatorName: 'Yaniv Goldman' },
+        initiatorPayments: [
+          {
+            id: 'ip-1',
+            amount: 5000,
+            date: '2026-03-10T00:00:00.000Z',
+            description: 'Consulting fee',
+            initiator: { id: 'initiator-1', name: 'Yaniv Goldman' },
+          },
+        ],
+      });
+
+      const html = await renderHtml();
+
+      expect(html).toContain('יזם:');
+      expect(html).toContain('Yaniv Goldman');
+      expect(html).toContain('Consulting fee');
+      expect(html).toContain('5,000.00');
+    });
+
+    it('renders the initiator block in English when lang is en', async () => {
+      const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
+      const mockPage = {
+        setContent: jest.fn<void, [string, unknown]>(),
+        pdf: jest.fn().mockResolvedValue(Uint8Array.from([1])),
+      };
+      puppeteer.launch.mockResolvedValue({
+        newPage: jest.fn().mockResolvedValue(mockPage),
+        close: jest.fn(),
+      });
+      mockProjectReportsService.findOneForExport.mockResolvedValue({
+        ...mockReport,
+        project: { ...mockReport.project, initiatorName: 'Yaniv Goldman' },
+        initiatorPayments: [],
+      });
+
+      await service.exportProjectReportsPdf({ ...dto, lang: 'en' });
+      const html = mockPage.setContent.mock.calls[0][0];
+
+      expect(html).toContain('Initiator:');
+      expect(html).toContain('Yaniv Goldman');
+    });
   });
 });

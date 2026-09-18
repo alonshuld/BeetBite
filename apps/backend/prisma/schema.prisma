@@ -33,13 +33,29 @@ model Project {
   requesterName   String
   location        String
   lastApprovedFor String?
+  /// Optional — who initiated (יזם) this project, if anyone. Nullable unlike
+  /// clientId: most projects have no initiator at all. See T7.
+  initiatorId     String?
 
   client                Client                    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   reports               ProjectReport[]
   subcontractorPayments SubcontractorPayment[]
   clientAssignments     ProjectClientAssignment[]
+  initiator             Initiator?                @relation(fields: [initiatorId], references: [id])
 
   @@map("projects")
+}
+
+/// A project's initiator (יזם) — documentation only. Payments to an initiator
+/// never enter any financial calculation; see InitiatorPayment.
+model Initiator {
+  id   String @id @default(cuid())
+  name String @unique
+
+  projects Project[]
+  payments InitiatorPayment[]
+
+  @@map("initiators")
 }
 
 /// Effective-dated ownership of a project by a client.
@@ -86,13 +102,32 @@ model ProjectReport {
   date            DateTime @db.Date
   profitMargin    Decimal  @db.Decimal(5, 2)
 
-  project          Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  subcontractor    Subcontractor         @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
-  supplierPayments SupplierPayment[]
-  incomeEntries    ProjectReportIncome[]
+  project           Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subcontractor     Subcontractor         @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+  supplierPayments  SupplierPayment[]
+  incomeEntries     ProjectReportIncome[]
+  initiatorPayments InitiatorPayment[]
 
   @@unique([projectId, date])
   @@map("project_reports")
+}
+
+/// A documentation-only payment to a project's initiator (יזם). Never enters
+/// any financial calculation — recorded and displayed, nothing else. See T7.
+/// Deliberately missing isFuture/vatPercentage: those exist on SupplierPayment
+/// to drive VAT resolution, machinery a documentation-only row does not need.
+model InitiatorPayment {
+  id              String    @id @default(cuid())
+  projectReportId String
+  initiatorId     String
+  amount          Decimal   @db.Decimal(12, 2)
+  date            DateTime? @db.Date
+  description     String?
+
+  projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
+  initiator     Initiator     @relation(fields: [initiatorId], references: [id], onDelete: Cascade)
+
+  @@map("initiator_payments")
 }
 
 model ProjectReportIncome {

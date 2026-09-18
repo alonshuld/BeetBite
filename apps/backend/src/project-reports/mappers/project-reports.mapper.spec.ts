@@ -26,6 +26,7 @@ describe('project-reports mapper', () => {
       description: 'A project',
       location: '123 Main St, Tel Aviv',
       requesterName: 'Jane Doe',
+      initiatorName: null,
       client: { id: 'client-1', name: 'Client 1' },
     },
     subcontractor: { id: 'sub-1', name: 'Sub 1' },
@@ -35,6 +36,13 @@ describe('project-reports mapper', () => {
       amount: Prisma.Decimal;
       vatPercentage: Prisma.Decimal | null;
       supplier: { id: string; name: string };
+    }[],
+    initiatorPayments: [] as {
+      id: string;
+      amount: Prisma.Decimal;
+      date: Date | null;
+      description: string | null;
+      initiator: { id: string; name: string };
     }[],
   });
 
@@ -46,6 +54,7 @@ describe('project-reports mapper', () => {
       description: 'A project',
       location: '123 Main St, Tel Aviv',
       requesterName: 'Jane Doe',
+      initiatorName: null,
     },
     subcontractor: {
       id: 'sub-1',
@@ -57,6 +66,13 @@ describe('project-reports mapper', () => {
       amount: Prisma.Decimal;
       vatPercentage: Prisma.Decimal | null;
       supplier: { id: string; name: string };
+    }[],
+    initiatorPayments: [] as {
+      id: string;
+      amount: Prisma.Decimal;
+      date: Date | null;
+      description: string | null;
+      initiator: { id: string; name: string };
     }[],
     incomeEntries,
   });
@@ -82,6 +98,7 @@ describe('project-reports mapper', () => {
           description: 'A project',
           location: '123 Main St, Tel Aviv',
           requesterName: 'Jane Doe',
+          initiatorName: null,
           client: { id: 'client-1', name: 'Client 1' },
         },
         subcontractor: { id: 'sub-1', name: 'Sub 1' },
@@ -92,6 +109,7 @@ describe('project-reports mapper', () => {
           { id: 'entry-1', amount: 10000, incomeDate: null, tag: 'שלד' },
         ],
         supplierPayments: [],
+        initiatorPayments: [],
       });
     });
   });
@@ -117,6 +135,7 @@ describe('project-reports mapper', () => {
           description: 'A project',
           location: '123 Main St, Tel Aviv',
           requesterName: 'Jane Doe',
+          initiatorName: null,
         },
         date: '2024-05-01T00:00:00.000Z',
         profitMargin: 10,
@@ -131,6 +150,7 @@ describe('project-reports mapper', () => {
           payment: 8000,
         },
         supplierPayments: [],
+        initiatorPayments: [],
       });
     });
   });

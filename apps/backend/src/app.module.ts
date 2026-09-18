@@ -19,6 +19,8 @@ import { CompanySettingsModule } from './company-settings/company-settings.modul
 import { VatRatesModule } from './vat-rates/vat-rates.module';
 import { ProjectClientAssignmentsModule } from './project-client-assignments/project-client-assignments.module';
 import { PdfExportModule } from './pdf-export/pdf-export.module';
+import { InitiatorsModule } from './initiators/initiators.module';
+import { InitiatorPaymentsModule } from './initiator-payments/initiator-payments.module';
 
 @Module({
   imports: [
@@ -43,6 +45,8 @@ import { PdfExportModule } from './pdf-export/pdf-export.module';
     CompanySettingsModule,
     VatRatesModule,
     PdfExportModule,
+    InitiatorsModule,
+    InitiatorPaymentsModule,
   ],
   providers: [
     {

@@ -19,6 +19,8 @@ export interface Project {
   location: string;
   /** The "approved for" text from this project's most recent PDF export, if any. */
   lastApprovedFor: string | null;
+  /** ID of the project's initiator (יזם), if one exists — nullable, unlike clientId. */
+  initiatorId: string | null;
 }
 
 /**
@@ -41,6 +43,7 @@ export interface CreateProjectDto {
   isDone?: boolean;
   requesterName: string;
   location: string;
+  initiatorId?: string | null;
   openingBalance?: OpeningBalanceDto;
 }
 

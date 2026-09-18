@@ -3,6 +3,7 @@ import { NestedProjectWithClientDto } from './nested-project-with-client.dto';
 import { NestedSubcontractorDto } from './nested-subcontractor.dto';
 import { IncomeEntryResponseDto } from './income-entry-response.dto';
 import { NestedSupplierPaymentDto } from './nested-supplier-payment.dto';
+import { NestedInitiatorPaymentDto } from './nested-initiator-payment.dto';
 
 export class ProjectReportListItemDto {
   @ApiProperty({
@@ -53,4 +54,11 @@ export class ProjectReportListItemDto {
     type: [NestedSupplierPaymentDto],
   })
   supplierPayments!: NestedSupplierPaymentDto[];
+
+  @ApiProperty({
+    description:
+      "Documentation-only payments to the project's initiator this month, if it has one",
+    type: [NestedInitiatorPaymentDto],
+  })
+  initiatorPayments!: NestedInitiatorPaymentDto[];
 }

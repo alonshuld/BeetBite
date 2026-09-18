@@ -20,6 +20,7 @@ import {
 } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
+import { useGetInitiatorsQuery } from "@/api/endpoints/initiators";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import {
   ButtonPrimary,
@@ -42,6 +43,13 @@ interface CorpPaymentDraft {
   supplierId: string;
   amount: string;
   date: string;
+}
+
+interface InitiatorPaymentDraft {
+  initiatorId: string;
+  amount: string;
+  date: string;
+  description: string;
 }
 
 interface IncomeEntryDraft {
@@ -84,6 +92,7 @@ export default function ReportsPage() {
   const { data: projects = [] } = useGetProjectsQuery();
   const { data: subcontractors = [] } = useGetSubcontractorsQuery();
   const { data: suppliers = [] } = useGetSuppliersQuery();
+  const { data: initiators = [] } = useGetInitiatorsQuery();
   const [createReport, { isLoading: saving }] =
     useCreateProjectReportMutation();
   const [exportPdf, { isLoading: exporting }] =
@@ -102,6 +111,9 @@ export default function ReportsPage() {
   ]);
   const [profitMarginPercent, setProfitMarginPercent] = useState("");
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
+  const [initiatorPayments, setInitiatorPayments] = useState<
+    InitiatorPaymentDraft[]
+  >([]);
 
   // Export is per report: a report is already one project for one month, so
   // the dialog asks for the free-text approval line, plus — as a convenience
@@ -206,6 +218,11 @@ export default function ReportsPage() {
     ? projects.filter((p) => p.clientId === clientId)
     : projects;
 
+  // T7 — initiator payment rows only appear when the selected project
+  // actually has an initiator linked. No initiator on the project → no
+  // section at all, not an empty one.
+  const selectedProjectForModal = projects.find((p) => p.id === projectId);
+
   function handleProjectChange(pid: string) {
     setProjectId(pid);
     if (!pid) {
@@ -238,6 +255,7 @@ export default function ReportsPage() {
     setIncomeEntries([{ amount: "", incomeDate: "", tag: "" }]);
     setProfitMarginPercent("");
     setCorpPayments([]);
+    setInitiatorPayments([]);
     setModalOpen(true);
   }
 
@@ -261,6 +279,14 @@ export default function ReportsPage() {
           supplierId: cp.supplierId,
           amount: Number(cp.amount),
           date: cp.date,
+        })),
+      initiatorPayments: initiatorPayments
+        .filter((ip) => ip.initiatorId !== "")
+        .map((ip) => ({
+          initiatorId: ip.initiatorId,
+          amount: Number(ip.amount),
+          date: ip.date || undefined,
+          description: ip.description.trim() || undefined,
         })),
     };
     await createReport(dto);
@@ -298,6 +324,26 @@ export default function ReportsPage() {
   function updateCorpPayment(idx: number, patch: Partial<CorpPaymentDraft>) {
     setCorpPayments((prev) =>
       prev.map((cp, i) => (i === idx ? { ...cp, ...patch } : cp)),
+    );
+  }
+
+  function addInitiatorPayment() {
+    setInitiatorPayments((prev) => [
+      ...prev,
+      { initiatorId: "", amount: "", date: todayISO(), description: "" },
+    ]);
+  }
+
+  function removeInitiatorPayment(idx: number) {
+    setInitiatorPayments((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function updateInitiatorPayment(
+    idx: number,
+    patch: Partial<InitiatorPaymentDraft>,
+  ) {
+    setInitiatorPayments((prev) =>
+      prev.map((ip, i) => (i === idx ? { ...ip, ...patch } : ip)),
     );
   }
 
@@ -674,6 +720,81 @@ export default function ReportsPage() {
               </div>
             ))}
           </div>
+
+          {selectedProjectForModal?.initiatorId && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+                  {t("initiatorPayments")}
+                </span>
+                <ButtonGhost
+                  onClick={addInitiatorPayment}
+                  className="text-xs py-1 px-3"
+                >
+                  + {t("add")}
+                </ButtonGhost>
+              </div>
+
+              {initiatorPayments.map((ip, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col gap-2 p-3 rounded bg-surface-2 border border-border"
+                >
+                  <div className="grid grid-cols-4 gap-2 items-end">
+                    <Select
+                      value={ip.initiatorId}
+                      onChange={(e) =>
+                        updateInitiatorPayment(i, {
+                          initiatorId: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">— {t("initiator")} —</option>
+                      {initiators.map((init) => (
+                        <option key={init.id} value={init.id}>
+                          {init.name}
+                        </option>
+                      ))}
+                    </Select>
+                    <Input
+                      placeholder={t("amountILS")}
+                      type="number"
+                      min={0}
+                      value={ip.amount}
+                      onChange={(e) =>
+                        updateInitiatorPayment(i, { amount: e.target.value })
+                      }
+                    />
+                    <Input
+                      label={t("date")}
+                      type="date"
+                      value={ip.date}
+                      onChange={(e) =>
+                        updateInitiatorPayment(i, { date: e.target.value })
+                      }
+                    />
+                    <Input
+                      placeholder={t("initiatorPaymentDescriptionPlaceholder")}
+                      value={ip.description}
+                      onChange={(e) =>
+                        updateInitiatorPayment(i, {
+                          description: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <ButtonDanger
+                      onClick={() => removeInitiatorPayment(i)}
+                      className="text-xs py-1 px-3"
+                    >
+                      {t("remove")}
+                    </ButtonDanger>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </FormModal>
 
@@ -862,6 +983,26 @@ function ProjectSheet({
           ₪{Math.round(subPayment).toLocaleString("he-IL")}
         </span>
       </div>
+
+      {/* T7 — informational only: an initiator payment never participates in
+          the subtotal above, so it is styled distinctly and lives below the
+          divider. No initiator on the project → this section is absent. */}
+      {report.project.initiatorName && (
+        <div className="flex flex-col gap-1 pt-1 mt-1 border-t border-dashed border-border">
+          <span className="text-[11px] text-text-dim italic">
+            {t("initiator")}: {report.project.initiatorName}
+          </span>
+          {report.initiatorPayments.map((ip) => (
+            <div
+              key={ip.id}
+              className="flex justify-between items-center text-xs text-text-dim italic"
+            >
+              <span>{ip.description || t("initiator")}</span>
+              <span>₪{ip.amount.toLocaleString("he-IL")}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

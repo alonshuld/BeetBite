@@ -13,6 +13,7 @@ import {
 } from 'class-validator';
 import { CreateSupplierPaymentDto } from './create-supplier-payment.dto';
 import { CreateIncomeEntryDto } from './create-income-entry.dto';
+import { CreateInitiatorPaymentDto } from './create-initiator-payment.dto';
 import { Transform, Type } from 'class-transformer';
 import { normalizeToMonthStartForTransform } from 'src/common/utils/date.utils';
 
@@ -76,4 +77,15 @@ export class CreateProjectReportDto {
     type: [CreateSupplierPaymentDto],
   })
   supplierPayments!: CreateSupplierPaymentDto[];
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => CreateInitiatorPaymentDto)
+  @ValidateNested({ each: true })
+  @ApiPropertyOptional({
+    description:
+      "Documentation-only payments to the project's initiator this month, if it has one. Never enters any financial calculation. Omit entirely for a project with no initiator.",
+    type: [CreateInitiatorPaymentDto],
+  })
+  initiatorPayments?: CreateInitiatorPaymentDto[];
 }

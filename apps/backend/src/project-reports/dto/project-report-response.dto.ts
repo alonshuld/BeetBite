@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { NestedSupplierPaymentDto } from './nested-supplier-payment.dto';
+import { NestedInitiatorPaymentDto } from './nested-initiator-payment.dto';
 import { NestedProjectDto } from './nested-project.dto';
 import { NestedSubcontractorWithPaymentDto } from './nested-subcontractor-with-payment.dto';
 import { IncomeEntryResponseDto } from './income-entry-response.dto';
@@ -54,6 +55,13 @@ export class ProjectReportResponseDto {
     type: [NestedSupplierPaymentDto],
   })
   supplierPayments!: NestedSupplierPaymentDto[];
+
+  @ApiProperty({
+    description:
+      "Documentation-only payments to the project's initiator this month, if it has one",
+    type: [NestedInitiatorPaymentDto],
+  })
+  initiatorPayments!: NestedInitiatorPaymentDto[];
 
   @ApiProperty({
     description:

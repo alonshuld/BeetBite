@@ -17,6 +17,30 @@ type SupplierPaymentRaw = {
   supplier: { id: string; name: string };
 };
 
+type InitiatorPaymentRaw = {
+  id: string;
+  amount: Prisma.Decimal;
+  date: Date | null;
+  description: string | null;
+  initiator: { id: string; name: string };
+};
+
+function mapInitiatorPayments(payments: InitiatorPaymentRaw[]): {
+  id: string;
+  initiator: { id: string; name: string };
+  amount: number;
+  date: string | null;
+  description: string | null;
+}[] {
+  return (payments ?? []).map((p) => ({
+    id: p.id,
+    initiator: p.initiator,
+    amount: p.amount.toNumber(),
+    date: p.date?.toISOString() ?? null,
+    description: p.description,
+  }));
+}
+
 function mapIncomeEntries(entries: IncomeEntryRaw[]): IncomeEntryResponseDto[] {
   return entries.map((e) => ({
     id: e.id,
@@ -36,6 +60,7 @@ type ProjectWithClientRaw = {
   description: string;
   location: string;
   requesterName: string;
+  initiatorName: string | null;
   client: { id: string; name: string };
 };
 
@@ -45,6 +70,7 @@ export const toProjectReportListItem = (
     subcontractor: { id: string; name: string };
     incomeEntries: IncomeEntryRaw[];
     supplierPayments: SupplierPaymentRaw[];
+    initiatorPayments: InitiatorPaymentRaw[];
   },
 ): ProjectReportListItemDto => {
   const entries = mapIncomeEntries(projectReport.incomeEntries);
@@ -69,6 +95,7 @@ export const toProjectReportListItem = (
         supplier: cp.supplier,
       };
     }),
+    initiatorPayments: mapInitiatorPayments(projectReport.initiatorPayments),
   };
 };
 
@@ -78,6 +105,7 @@ export const toProjectReportList = (
     subcontractor: { id: string; name: string };
     incomeEntries: IncomeEntryRaw[];
     supplierPayments: SupplierPaymentRaw[];
+    initiatorPayments: InitiatorPaymentRaw[];
   })[],
 ): ProjectReportListItemDto[] => projectReports.map(toProjectReportListItem);
 
@@ -89,6 +117,7 @@ export const toProjectReportResponse = (
       description: string;
       location: string;
       requesterName: string;
+      initiatorName: string | null;
     };
     subcontractor: {
       id: string;
@@ -96,6 +125,7 @@ export const toProjectReportResponse = (
       payments: { id: string }[];
     };
     supplierPayments: SupplierPaymentRaw[];
+    initiatorPayments: InitiatorPaymentRaw[];
     incomeEntries: IncomeEntryRaw[];
   },
   profit: number,
@@ -118,4 +148,5 @@ export const toProjectReportResponse = (
     amount: cp.amount.toNumber(),
     supplier: cp.supplier,
   })),
+  initiatorPayments: mapInitiatorPayments(projectReport.initiatorPayments),
 });

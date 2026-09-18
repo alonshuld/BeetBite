@@ -13,6 +13,7 @@ import {
   renderReportApprovalHtml,
   ReportApprovalRow,
   ReportApprovalSupplierRow,
+  ReportApprovalInitiatorRow,
 } from './templates/report-approval.template';
 
 /**
@@ -80,6 +81,18 @@ export class PdfExportService {
         amount: payment.amount,
       }));
 
+    // No initiator on the project → absent entirely, not an empty heading or
+    // a zero row. Initiator with no payments this month → name still prints,
+    // only the rows are conditional on there being payments. See T7.
+    const initiatorRows: ReportApprovalInitiatorRow[] =
+      report.initiatorPayments.map((payment) => ({
+        description: payment.description ?? '',
+        amount: payment.amount,
+      }));
+    const initiator = report.project.initiatorName
+      ? { name: report.project.initiatorName, rows: initiatorRows }
+      : null;
+
     const supplierTotal = supplierRows.reduce(
       (sum, row) => sum + row.amount,
       0,
@@ -111,6 +124,7 @@ export class PdfExportService {
       rows,
       supplierRows,
       supplierTotal,
+      initiator,
       totalIncome,
       totalAfterProfit,
       paymentExclVat,

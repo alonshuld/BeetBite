@@ -274,6 +274,18 @@ export const translations = {
     // Income tag editing
     editTags: "Edit Tags",
     editIncomeTags: "Edit Income Tags",
+    // Initiators (T7)
+    initiators: "Initiators",
+    initiatorsSubtitle: "Initiator (יזם) database — optional link on a project",
+    addInitiator: "Add Initiator",
+    editInitiator: "Edit Initiator",
+    noInitiatorsYet: "No initiators yet",
+    addFirstInitiatorHint: "Add your first initiator to get started",
+    initiatorNamePlaceholder: "Initiator name",
+    initiator: "Initiator",
+    noInitiatorOption: "— No initiator —",
+    initiatorPayments: "Initiator Payments",
+    initiatorPaymentDescriptionPlaceholder: "e.g. Consulting fee",
   },
   he: {
     // Nav
@@ -539,6 +551,18 @@ export const translations = {
     // Income tag editing
     editTags: "עריכת תיאורים",
     editIncomeTags: "עריכת תיאורי הכנסה",
+    // Initiators (T7)
+    initiators: "יזמים",
+    initiatorsSubtitle: "מאגר יזמים — קישור אופציונלי לפרויקט",
+    addInitiator: "הוסף יזם",
+    editInitiator: "ערוך יזם",
+    noInitiatorsYet: "אין יזמים עדיין",
+    addFirstInitiatorHint: "הוסף את היזם הראשון כדי להתחיל",
+    initiatorNamePlaceholder: "שם היזם",
+    initiator: "יזם",
+    noInitiatorOption: "— ללא יזם —",
+    initiatorPayments: "תשלומי יזם",
+    initiatorPaymentDescriptionPlaceholder: "לדוגמה: שכר ייעוץ",
   },
 } as const;
 

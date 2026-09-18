@@ -19,6 +19,10 @@ vi.mock("@/api/endpoints/subcontractors", () => ({
   useGetSubcontractorsQuery: vi.fn(),
 }));
 
+vi.mock("@/api/endpoints/initiators", () => ({
+  useGetInitiatorsQuery: vi.fn(),
+}));
+
 import {
   useGetProjectsQuery,
   useCreateProjectMutation,
@@ -27,6 +31,7 @@ import {
 } from "@/api/endpoints/projects";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
+import { useGetInitiatorsQuery } from "@/api/endpoints/initiators";
 
 const mockProjects = [
   {
@@ -79,6 +84,10 @@ describe("ProjectsPage", () => {
       data: [{ id: "s1", name: "Dan Levi", companyNumber: "515222020" }],
       isLoading: false,
     } as unknown as ReturnType<typeof useGetSubcontractorsQuery>);
+    vi.mocked(useGetInitiatorsQuery).mockReturnValue({
+      data: [{ id: "init1", name: "Yaniv Goldman" }],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useGetInitiatorsQuery>);
     vi.mocked(useCreateProjectMutation).mockReturnValue([
       noopMutation,
       { isLoading: false },
@@ -393,5 +402,73 @@ describe("ProjectsPage", () => {
     expect(
       screen.getByDisplayValue("123 Main St, Tel Aviv"),
     ).toBeInTheDocument();
+  });
+
+  // T7 — initiator link is optional; the select defaults to "none" and lists
+  // every managed initiator.
+  describe("initiator link (T7)", () => {
+    it("offers a 'no initiator' option plus every initiator", async () => {
+      renderProjectsPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: /add project/i }),
+      );
+
+      const select = screen.getByLabelText("Initiator");
+      expect(select).toHaveValue("");
+      expect(screen.getByText("— No initiator —")).toBeInTheDocument();
+      expect(screen.getByText("Yaniv Goldman")).toBeInTheDocument();
+    });
+
+    it("sends the selected initiatorId when creating a project", async () => {
+      renderProjectsPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: /add project/i }),
+      );
+
+      await userEvent.type(screen.getByLabelText("Name"), "New Project");
+      await userEvent.type(screen.getByLabelText(/Estimated Amount/i), "80000");
+      await userEvent.selectOptions(screen.getByLabelText("Client"), "c1");
+      await userEvent.type(screen.getByLabelText("Requester"), "Someone");
+      await userEvent.type(screen.getByLabelText("Location"), "Somewhere");
+      await userEvent.selectOptions(
+        screen.getByLabelText("Initiator"),
+        "init1",
+      );
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(noopMutation).toHaveBeenCalledWith(
+        expect.objectContaining({ initiatorId: "init1" }),
+      );
+    });
+
+    it("sends null initiatorId when left as 'no initiator'", async () => {
+      renderProjectsPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: /add project/i }),
+      );
+
+      await userEvent.type(screen.getByLabelText("Name"), "New Project");
+      await userEvent.type(screen.getByLabelText(/Estimated Amount/i), "80000");
+      await userEvent.selectOptions(screen.getByLabelText("Client"), "c1");
+      await userEvent.type(screen.getByLabelText("Requester"), "Someone");
+      await userEvent.type(screen.getByLabelText("Location"), "Somewhere");
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(noopMutation).toHaveBeenCalledWith(
+        expect.objectContaining({ initiatorId: null }),
+      );
+    });
+
+    it("prefills the initiator select when editing a project that has one", async () => {
+      vi.mocked(useGetProjectsQuery).mockReturnValue({
+        data: [{ ...mockProjects[0], initiatorId: "init1" }],
+        isLoading: false,
+      } as unknown as ReturnType<typeof useGetProjectsQuery>);
+
+      renderProjectsPage();
+      await userEvent.click(screen.getAllByTitle("Edit")[0]);
+
+      expect(screen.getByLabelText("Initiator")).toHaveValue("init1");
+    });
   });
 });

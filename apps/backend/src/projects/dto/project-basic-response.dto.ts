@@ -66,4 +66,12 @@ export class ProjectBasicResponseDto {
     nullable: true,
   })
   lastApprovedFor!: string | null;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: "ID of the project's initiator (יזם), if one exists",
+    type: 'string',
+    nullable: true,
+  })
+  initiatorId!: string | null;
 }

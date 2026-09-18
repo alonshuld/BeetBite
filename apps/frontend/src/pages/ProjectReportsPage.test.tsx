@@ -38,6 +38,14 @@ vi.mock("@/api/endpoints/subcontractors", () => ({
 vi.mock("@/api/endpoints/suppliers", () => ({
   useGetSuppliersQuery: vi.fn(),
 }));
+vi.mock("@/api/endpoints/initiators", () => ({
+  useGetInitiatorsQuery: vi.fn(),
+}));
+vi.mock("@/api/endpoints/initiator-payments", () => ({
+  useCreateInitiatorPaymentMutation: vi.fn(),
+  useUpdateInitiatorPaymentMutation: vi.fn(),
+  useDeleteInitiatorPaymentMutation: vi.fn(),
+}));
 vi.mock("@/api/endpoints/subcontractor-payments", () => ({
   useGetSubcontractorPaymentsQuery: vi.fn(),
 }));
@@ -57,9 +65,15 @@ import {
   useUpdateSupplierPaymentMutation,
   useDeleteSupplierPaymentMutation,
 } from "@/api/endpoints/supplier-payments";
+import {
+  useCreateInitiatorPaymentMutation,
+  useUpdateInitiatorPaymentMutation,
+  useDeleteInitiatorPaymentMutation,
+} from "@/api/endpoints/initiator-payments";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
+import { useGetInitiatorsQuery } from "@/api/endpoints/initiators";
 import { useGetSubcontractorPaymentsQuery } from "@/api/endpoints/subcontractor-payments";
 
 const mockProject = {
@@ -96,6 +110,9 @@ const mockDetail = {
 
 const deleteEntrySpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
 const updateEntrySpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
+const createInitSpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
+const updateInitSpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
+const deleteInitSpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
 
 function mut(spy = vi.fn().mockReturnValue({ unwrap: vi.fn() })) {
   return [spy, { isLoading: false }] as unknown as never;
@@ -154,6 +171,18 @@ describe("ProjectReportsPage", () => {
     vi.mocked(useUpdateSupplierPaymentMutation).mockReturnValue(mut());
     vi.mocked(useDeleteSupplierPaymentMutation).mockReturnValue(mut());
     vi.mocked(useDeleteProjectReportMutation).mockReturnValue(mut());
+    vi.mocked(useGetInitiatorsQuery).mockReturnValue({
+      data: [{ id: "init1", name: "Yaniv Goldman" }],
+    } as unknown as ReturnType<typeof useGetInitiatorsQuery>);
+    vi.mocked(useCreateInitiatorPaymentMutation).mockReturnValue(
+      mut(createInitSpy),
+    );
+    vi.mocked(useUpdateInitiatorPaymentMutation).mockReturnValue(
+      mut(updateInitSpy),
+    );
+    vi.mocked(useDeleteInitiatorPaymentMutation).mockReturnValue(
+      mut(deleteInitSpy),
+    );
     setMonthlyPayments([]);
   });
 
@@ -235,5 +264,124 @@ describe("ProjectReportsPage", () => {
     expect(updateEntrySpy).toHaveBeenCalledWith(
       expect.objectContaining({ id: "ie1", tag: "Foundation" }),
     );
+  });
+
+  // T7 — documentation-only initiator payments, gated on the project
+  // actually having an initiator linked, on this per-project drill-down.
+  // This is the surface most likely to be forgotten.
+  describe("initiator payments (T7)", () => {
+    it("does not show the initiator payments section when the project has no initiator", () => {
+      renderPage();
+      expect(screen.queryByText("Initiator Payments")).not.toBeInTheDocument();
+    });
+
+    it("shows the initiator payments section and lists existing rows when the project has one", () => {
+      vi.mocked(useGetProjectsQuery).mockReturnValue({
+        data: [{ ...mockProject, initiatorId: "init1" }],
+      } as unknown as ReturnType<typeof useGetProjectsQuery>);
+      setDetail({
+        ...mockDetail,
+        initiatorPayments: [
+          {
+            id: "ip1",
+            initiator: { id: "init1", name: "Yaniv Goldman" },
+            amount: 3000,
+            date: null,
+            description: "Consulting fee",
+          },
+        ],
+      });
+
+      renderPage();
+
+      expect(screen.getByText("Initiator Payments")).toBeInTheDocument();
+      expect(screen.getByText("Consulting fee")).toBeInTheDocument();
+      expect(screen.getByText("₪3,000")).toBeInTheDocument();
+      // Unaffected: the subcontractor payment is still the fixture's 6,500.
+      expect(screen.getByText("₪6,500")).toBeInTheDocument();
+    });
+
+    it("adds a new initiator payment via the single-payment endpoint", async () => {
+      vi.mocked(useGetProjectsQuery).mockReturnValue({
+        data: [{ ...mockProject, initiatorId: "init1" }],
+      } as unknown as ReturnType<typeof useGetProjectsQuery>);
+      setDetail({ ...mockDetail, initiatorPayments: [] });
+
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: "+ Initiator Payments" }),
+      );
+
+      const selects = screen.getAllByRole("combobox");
+      await userEvent.selectOptions(selects[selects.length - 1], "init1");
+      await userEvent.type(screen.getByLabelText("Amount (₪)"), "3000");
+      await userEvent.click(screen.getByRole("button", { name: "Add" }));
+
+      expect(createInitSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectReportId: "r1",
+          initiatorId: "init1",
+          amount: 3000,
+        }),
+      );
+    });
+
+    it("deletes an initiator payment", async () => {
+      vi.mocked(useGetProjectsQuery).mockReturnValue({
+        data: [{ ...mockProject, initiatorId: "init1" }],
+      } as unknown as ReturnType<typeof useGetProjectsQuery>);
+      setDetail({
+        ...mockDetail,
+        initiatorPayments: [
+          {
+            id: "ip1",
+            initiator: { id: "init1", name: "Yaniv Goldman" },
+            amount: 3000,
+            date: null,
+            description: "Consulting fee",
+          },
+        ],
+      });
+
+      renderPage();
+      const removeButtons = screen.getAllByRole("button", { name: "Remove" });
+      await userEvent.click(removeButtons[removeButtons.length - 1]);
+
+      expect(deleteInitSpy).toHaveBeenCalledWith("ip1");
+    });
+
+    it("edits an initiator payment inline", async () => {
+      vi.mocked(useGetProjectsQuery).mockReturnValue({
+        data: [{ ...mockProject, initiatorId: "init1" }],
+      } as unknown as ReturnType<typeof useGetProjectsQuery>);
+      setDetail({
+        ...mockDetail,
+        initiatorPayments: [
+          {
+            id: "ip1",
+            initiator: { id: "init1", name: "Yaniv Goldman" },
+            amount: 3000,
+            date: null,
+            description: "Consulting fee",
+          },
+        ],
+      });
+
+      renderPage();
+      const editButtons = screen.getAllByRole("button", { name: "Edit" });
+      await userEvent.click(editButtons[editButtons.length - 1]);
+      const amountInput = screen.getByLabelText("Amount (₪)");
+      await userEvent.clear(amountInput);
+      await userEvent.type(amountInput, "4500");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateInitSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "ip1",
+          projectReportId: "r1",
+          amount: 4500,
+        }),
+      );
+    });
   });
 });
