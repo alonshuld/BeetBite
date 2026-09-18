@@ -32,6 +32,8 @@ dbTest.describe('PDF export', () => {
         name: 'Export Project',
         estimatedAmount: 200000,
         description: 'PDF export tests',
+        requesterName: 'Test Requester',
+        location: 'Test Location',
       },
     });
     projectId = project.id;

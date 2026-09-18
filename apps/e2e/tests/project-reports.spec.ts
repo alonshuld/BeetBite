@@ -12,6 +12,8 @@ async function seedBaseData(db: ReturnType<typeof Object>) {
       name: 'Reports Project',
       estimatedAmount: 200000,
       description: 'For e2e report tests',
+      requesterName: 'Test Requester',
+      location: 'Test Location',
     },
   });
   const subcontractor = await db.subcontractor.create({

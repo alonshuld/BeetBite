@@ -21,6 +21,8 @@ dbTest.describe('Supplier Payments Page', () => {
           name: 'CorpPay Project',
           estimatedAmount: 300000,
           description: 'Corp payment test',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
         },
       });
       const subcontractor = await db.subcontractor.create({
@@ -103,6 +105,8 @@ dbTest.describe('Supplier Payments Page', () => {
             name,
             estimatedAmount: 200000,
             description: 'Batch entry test',
+            requesterName: 'Test Requester',
+            location: 'Test Location',
           },
         });
         await db.projectReport.create({
@@ -160,6 +164,8 @@ dbTest.describe('Supplier Payments Page', () => {
         name: 'Paid Project',
         estimatedAmount: 100000,
         description: 'Paid test',
+        requesterName: 'Test Requester',
+        location: 'Test Location',
       },
     });
     const report = await db.projectReport.create({

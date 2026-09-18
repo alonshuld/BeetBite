@@ -40,6 +40,7 @@ const testWithDb = base.extend<DbFixture>({
     await prisma.client.deleteMany();
     await prisma.subcontractor.deleteMany();
     await prisma.supplier.deleteMany();
+    await prisma.initiator.deleteMany();
 
     // VAT rates and company settings are not business rows — they are suite
     // baseline. Drop only the rates a test added (anything after the baseline

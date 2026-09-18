@@ -24,6 +24,8 @@ dbTest.describe('Project transfer between clients', () => {
         name: 'Transferred Tower',
         estimatedAmount: 500000,
         description: 'Changes hands mid-build',
+        requesterName: 'Test Requester',
+        location: 'Test Location',
       },
     });
 

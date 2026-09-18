@@ -25,6 +25,8 @@ dbTest.describe('Reports list', () => {
         name: 'Grid Project',
         estimatedAmount: 300000,
         description: 'Reports grid tests',
+        requesterName: 'Test Requester',
+        location: 'Test Location',
       },
     });
     projectId = project.id;
@@ -70,6 +72,8 @@ dbTest.describe('Reports list', () => {
           name: 'Quiet Project',
           estimatedAmount: 1000,
           description: 'Different month',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
         },
       });
       const sub = await db.subcontractor.create({
@@ -102,7 +106,11 @@ dbTest.describe('Reports list', () => {
       await expect(
         page.getByRole('heading', { name: 'Grid Client' }),
       ).toBeVisible();
-      await expect(page.getByText('Grid Project')).toBeVisible();
+      // The project name also appears in the client-wide simulator's
+      // per-project row (T6) — scope to the sheet's own clickable header.
+      await expect(
+        page.getByRole('button', { name: 'Grid Project' }),
+      ).toBeVisible();
     },
   );
 
@@ -160,11 +168,15 @@ dbTest.describe('Reports list', () => {
         await route.fallback();
       });
 
-      await page.getByLabel('Profit Margin %').fill('25');
+      // T6 harvested the per-project override into a range slider (no
+      // associated <label>), so it is not reachable via getByLabel.
+      await page.locator('input[type="range"]').first().fill('25');
 
       // 40,000 × 25% = 10,000 profit, leaving 30,000 for the subcontractor.
-      await expect(page.getByText('₪10,000')).toBeVisible();
-      await expect(page.getByText('₪30,000')).toBeVisible();
+      // With a single project, the per-row figure and the panel's total
+      // agree and both render the same text — assert at least one shows it.
+      await expect(page.getByText('₪10,000').first()).toBeVisible();
+      await expect(page.getByText('₪30,000').first()).toBeVisible();
 
       expect(writes).toBe(0);
       const reports = await db.projectReport.findMany();
@@ -209,6 +221,8 @@ dbTest.describe('Reports list', () => {
           name: 'Second Grid Project',
           estimatedAmount: 90000,
           description: 'Created via modal',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
         },
       });
 

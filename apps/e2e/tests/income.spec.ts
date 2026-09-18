@@ -19,6 +19,8 @@ dbTest.describe('Monthly Income', () => {
           name: 'Income Project',
           estimatedAmount: 300000,
           description: 'Monthly income test',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
         },
       });
       await db.projectReport.create({
@@ -65,6 +67,8 @@ dbTest.describe('Monthly Income', () => {
             name: `${name} Project`,
             estimatedAmount: 500000,
             description: 'gt',
+            requesterName: 'Test Requester',
+            location: 'Test Location',
           },
         });
         await db.projectReport.create({

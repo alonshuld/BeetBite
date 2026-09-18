@@ -18,6 +18,8 @@ dbTest.describe('Subcontractor Payments', () => {
         name: 'SubPay Project',
         estimatedAmount: 200000,
         description: 'Subcontractor payment tests',
+        requesterName: 'Test Requester',
+        location: 'Test Location',
       },
     });
     projectId = project.id;
@@ -117,6 +119,8 @@ dbTest.describe('Subcontractor Payments', () => {
           name: 'Dates Project',
           estimatedAmount: 100000,
           description: 'Payment date test',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
         },
       });
       const report = await db.projectReport.create({

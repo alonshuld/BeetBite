@@ -26,6 +26,8 @@ dbTest.describe('Projects CRUD', () => {
     await page.selectOption('#proj-client', { value: client.id });
     await page.fill('#proj-desc', 'Created by e2e test');
     await page.fill('#proj-amount', '100000');
+    await page.fill('#proj-requester', 'E2E Requester');
+    await page.fill('#proj-location', 'E2E Location');
     await page.getByRole('button', { name: /save/i }).click();
 
     await expect(page.getByText('E2E Automation Project')).toBeVisible({
@@ -43,6 +45,8 @@ dbTest.describe('Projects CRUD', () => {
         name: 'Project To Edit',
         estimatedAmount: 50000,
         description: 'Original',
+        requesterName: 'Test Requester',
+        location: 'Test Location',
       },
     });
 
@@ -75,6 +79,8 @@ dbTest.describe('Projects CRUD', () => {
         name: 'Project To Delete',
         estimatedAmount: 50000,
         description: 'For deletion',
+        requesterName: 'Test Requester',
+        location: 'Test Location',
       },
     });
 
@@ -112,6 +118,8 @@ dbTest.describe('Projects CRUD', () => {
           name: 'Active Project',
           estimatedAmount: 100000,
           description: 'Active',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
         },
       });
       const closedProject = await db.project.create({
@@ -121,6 +129,8 @@ dbTest.describe('Projects CRUD', () => {
           estimatedAmount: 100000,
           description: 'Closed',
           isDone: true,
+          requesterName: 'Test Requester',
+          location: 'Test Location',
         },
       });
       await db.project.create({
@@ -129,6 +139,8 @@ dbTest.describe('Projects CRUD', () => {
           name: 'Future Project',
           estimatedAmount: 100000,
           description: 'Future',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
         },
       });
 
@@ -173,6 +185,8 @@ dbTest.describe('Projects CRUD', () => {
         name: 'Taken Name',
         estimatedAmount: 1000,
         description: 'Already here',
+        requesterName: 'Test Requester',
+        location: 'Test Location',
       },
     });
 
@@ -188,6 +202,8 @@ dbTest.describe('Projects CRUD', () => {
     await page.selectOption('#proj-client', { value: client.id });
     await page.fill('#proj-desc', 'Duplicate attempt');
     await page.fill('#proj-amount', '5000');
+    await page.fill('#proj-requester', 'E2E Requester');
+    await page.fill('#proj-location', 'E2E Location');
     await page.getByRole('button', { name: /save/i }).click();
 
     await expect(page.getByText(/already exists/i)).toBeVisible({
@@ -206,6 +222,8 @@ dbTest.describe('Projects CRUD', () => {
         name: 'Toggle Project',
         estimatedAmount: 1000,
         description: 'Toggle test',
+        requesterName: 'Test Requester',
+        location: 'Test Location',
       },
     });
 
@@ -252,6 +270,8 @@ dbTest.describe('Projects CRUD', () => {
         await page.selectOption('#proj-client', { value: client.id });
         await page.fill('#proj-desc', 'Entered part-way through');
         await page.fill('#proj-amount', '200000');
+        await page.fill('#proj-requester', 'E2E Requester');
+        await page.fill('#proj-location', 'E2E Location');
 
         await page.fill('#proj-opening-amount', '45000');
         await page.fill('#proj-opening-month', '2026-04');
@@ -306,6 +326,8 @@ dbTest.describe('Projects CRUD', () => {
         await page.selectOption('#proj-client', { value: client.id });
         await page.fill('#proj-desc', 'No opening balance');
         await page.fill('#proj-amount', '50000');
+        await page.fill('#proj-requester', 'E2E Requester');
+        await page.fill('#proj-location', 'E2E Location');
         await page.getByRole('button', { name: /save/i }).click();
 
         await expect(page.getByText('Plain Project')).toBeVisible({
@@ -346,6 +368,8 @@ dbTest.describe('Projects CRUD', () => {
             name: 'Doomed Project',
             description: 'Should never exist',
             estimatedAmount: 10000,
+            requesterName: 'E2E Requester',
+            location: 'E2E Location',
             openingBalance: {
               amount: 45000,
               month: '2026-04-01',
