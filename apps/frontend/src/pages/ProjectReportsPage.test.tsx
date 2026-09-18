@@ -110,6 +110,8 @@ const mockDetail = {
 
 const deleteEntrySpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
 const updateEntrySpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
+const addEntrySpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
+const updateReportSpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
 const createInitSpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
 const updateInitSpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
 const deleteInitSpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
@@ -158,9 +160,11 @@ describe("ProjectReportsPage", () => {
     vi.mocked(useGetSuppliersQuery).mockReturnValue({
       data: [{ id: "co1", name: "Flooring Ltd" }],
     } as unknown as ReturnType<typeof useGetSuppliersQuery>);
-    vi.mocked(useUpdateProjectReportMutation).mockReturnValue(mut());
+    vi.mocked(useUpdateProjectReportMutation).mockReturnValue(
+      mut(updateReportSpy),
+    );
     vi.mocked(useCreateProjectReportMutation).mockReturnValue(mut());
-    vi.mocked(useAddIncomeEntryMutation).mockReturnValue(mut());
+    vi.mocked(useAddIncomeEntryMutation).mockReturnValue(mut(addEntrySpy));
     vi.mocked(useUpdateIncomeEntryMutation).mockReturnValue(
       mut(updateEntrySpy),
     );
@@ -227,6 +231,82 @@ describe("ProjectReportsPage", () => {
     expect(
       screen.getByRole("heading", { name: "Edit Project Reports" }),
     ).toBeInTheDocument();
+  });
+
+  // General edit-report modal — regression coverage for the bug flagged in
+  // T12's handover: this modal used to send a full `incomeEntries` array
+  // through the report-update DTO, which the backend applies as
+  // deleteMany + createMany, destroying every income row's id (and any tag
+  // this modal never even shows) on every save. Income entries must instead
+  // be reconciled through the dedicated per-entry endpoints, and the report
+  // DTO must never carry `incomeEntries`.
+  describe("edit-report modal — income entry reconciliation", () => {
+    it("saving with no entry changes updates the existing entry by id and omits incomeEntries from the report DTO", async () => {
+      renderPage();
+      await userEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateEntrySpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "ie1",
+          amount: 10000,
+          incomeDate: "2025-03-10",
+        }),
+      );
+      expect(addEntrySpy).not.toHaveBeenCalled();
+      expect(deleteEntrySpy).not.toHaveBeenCalled();
+      expect(updateReportSpy).toHaveBeenCalledTimes(1);
+      const dto = updateReportSpy.mock.calls[0][0] as Record<string, unknown>;
+      expect(dto).not.toHaveProperty("incomeEntries");
+    });
+
+    it("adding a new row in the modal creates it via addIncomeEntry, leaving the existing entry's id untouched", async () => {
+      renderPage();
+      await userEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+
+      const addButtons = screen.getAllByRole("button", { name: /add income/i });
+      await userEvent.click(addButtons[addButtons.length - 1]);
+
+      const amountInputs = screen.getAllByLabelText("Income (₪)");
+      await userEvent.type(amountInputs[amountInputs.length - 1], "500");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(addEntrySpy).toHaveBeenCalledWith(
+        expect.objectContaining({ reportId: "r1", amount: 500 }),
+      );
+      // The pre-existing entry is still reconciled by its own id, not
+      // recreated alongside the new one.
+      expect(updateEntrySpy).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "ie1" }),
+      );
+      expect(deleteEntrySpy).not.toHaveBeenCalled();
+    });
+
+    it("removing a row in the modal deletes only that entry via deleteIncomeEntry", async () => {
+      setDetail({
+        ...mockDetail,
+        incomeEntries: [
+          { id: "ie1", amount: 10000, incomeDate: "2025-03-10", tag: "Shell" },
+          { id: "ie2", amount: 2000, incomeDate: null, tag: null },
+        ],
+      });
+      renderPage();
+      await userEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+
+      // Remove buttons inside the modal's income-entry rows; the last one
+      // corresponds to the second draft row (ie2).
+      const removeButtons = screen.getAllByRole("button", { name: "Remove" });
+      await userEvent.click(removeButtons[removeButtons.length - 1]);
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(deleteEntrySpy).toHaveBeenCalledWith("ie2");
+      expect(updateEntrySpy).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "ie1" }),
+      );
+      expect(updateEntrySpy).not.toHaveBeenCalledWith(
+        expect.objectContaining({ id: "ie2" }),
+      );
+    });
   });
 
   it("reveals the inline add-income form", async () => {

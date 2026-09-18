@@ -49,6 +49,8 @@ interface CorpPaymentDraft {
 }
 
 interface IncomeEntryDraft {
+  /** Set for entries that already exist on the report; absent for new rows. */
+  id?: string;
   amount: string;
   incomeDate: string;
 }
@@ -179,6 +181,7 @@ export default function ProjectReportsPage() {
     setReportMonth(report.date.slice(0, 7));
     setIncomeEntries(
       report.incomeEntries.map((e) => ({
+        id: e.id,
         amount: String(e.amount),
         incomeDate: e.incomeDate ? e.incomeDate.slice(0, 10) : "",
       })),
@@ -199,14 +202,39 @@ export default function ProjectReportsPage() {
       }));
 
     if (editingId !== null) {
+      // Income entries are reconciled through the dedicated per-entry
+      // endpoints below, never through this DTO's `incomeEntries` field:
+      // the backend replaces that whole relation (deleteMany + createMany)
+      // on every write, which would churn row ids and silently wipe tags
+      // this form never shows. Leaving the key out of the payload keeps
+      // untouched rows — and their tags — untouched.
+      const originalEntries = currentReport?.incomeEntries ?? [];
+      const keptIds = new Set(
+        validEntries.flatMap((e) => (e.id ? [e.id] : [])),
+      );
+      const removedEntries = originalEntries.filter((e) => !keptIds.has(e.id));
+
+      await Promise.all([
+        ...validEntries.map((e) =>
+          e.id
+            ? updateIncomeEntry({
+                id: e.id,
+                amount: Number(e.amount),
+                incomeDate: e.incomeDate || null,
+              })
+            : addIncomeEntry({
+                reportId: editingId,
+                amount: Number(e.amount),
+                incomeDate: e.incomeDate || undefined,
+              }),
+        ),
+        ...removedEntries.map((e) => deleteIncomeEntry(e.id)),
+      ]);
+
       const dto: UpdateProjectReportDto = {
         projectId,
         subcontractorId: subcontractorId || undefined,
         date: reportMonth + "-01",
-        incomeEntries: validEntries.map((e) => ({
-          amount: Number(e.amount),
-          incomeDate: e.incomeDate || undefined,
-        })),
         profitMargin: Number(profitMarginPercent) || undefined,
         supplierPayments: corpPaymentsDto,
       };
