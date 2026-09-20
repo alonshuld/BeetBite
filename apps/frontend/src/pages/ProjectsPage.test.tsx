@@ -256,6 +256,12 @@ describe("ProjectsPage", () => {
       );
     }
 
+    async function openOpeningSection() {
+      await userEvent.click(
+        screen.getByRole("button", { name: /already received/i }),
+      );
+    }
+
     async function fillRequiredFields() {
       await userEvent.type(screen.getByLabelText("Name"), "New Project");
       await userEvent.type(screen.getByLabelText(/Estimated Amount/i), "80000");
@@ -264,12 +270,32 @@ describe("ProjectsPage", () => {
       await userEvent.type(screen.getByLabelText("Location"), "New Location");
     }
 
-    it("offers the section when adding a project", async () => {
+    // Only used to import pre-BeetBite data, so it must not crowd the form
+    // for everyday project creation.
+    it("offers the section collapsed when adding a project", async () => {
       renderProjectsPage();
       await openAddForm();
+      const toggle = screen.getByRole("button", { name: /already received/i });
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(
+        screen.queryByLabelText("Amount already received"),
+      ).not.toBeInTheDocument();
+
+      await userEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
       expect(
         screen.getByLabelText("Amount already received"),
       ).toBeInTheDocument();
+    });
+
+    it("collapses again on a second click", async () => {
+      renderProjectsPage();
+      await openAddForm();
+      await openOpeningSection();
+      await openOpeningSection();
+      expect(
+        screen.queryByLabelText("Amount already received"),
+      ).not.toBeInTheDocument();
     });
 
     // There is nothing to back-date once the project is already in the system
@@ -277,6 +303,9 @@ describe("ProjectsPage", () => {
     it("does not offer the section when editing", async () => {
       renderProjectsPage();
       await userEvent.click(screen.getAllByTitle("Edit")[0]);
+      expect(
+        screen.queryByRole("button", { name: /already received/i }),
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByLabelText("Amount already received"),
       ).not.toBeInTheDocument();
@@ -299,6 +328,7 @@ describe("ProjectsPage", () => {
       renderProjectsPage();
       await openAddForm();
       await fillRequiredFields();
+      await openOpeningSection();
 
       await userEvent.type(
         screen.getByLabelText("Amount already received"),
@@ -337,6 +367,7 @@ describe("ProjectsPage", () => {
       renderProjectsPage();
       await openAddForm();
       await fillRequiredFields();
+      await openOpeningSection();
       await userEvent.type(
         screen.getByLabelText("Amount already received"),
         "45000",
@@ -347,6 +378,45 @@ describe("ProjectsPage", () => {
       expect(screen.getByRole("alert")).toHaveTextContent(
         /month, subcontractor and profit margin/i,
       );
+    });
+
+    // 🔴 The warning lives inside the section. If the user half-fills it and
+    // folds it away, a silent blocked submit would leave nothing on screen
+    // explaining why Save did nothing.
+    it("reopens a collapsed half-filled section on submit", async () => {
+      renderProjectsPage();
+      await openAddForm();
+      await fillRequiredFields();
+      await openOpeningSection();
+      await userEvent.type(
+        screen.getByLabelText("Amount already received"),
+        "45000",
+      );
+      await openOpeningSection();
+      expect(
+        screen.queryByLabelText("Amount already received"),
+      ).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(createSpy).not.toHaveBeenCalled();
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /month, subcontractor and profit margin/i,
+      );
+      expect(screen.getByLabelText("Amount already received")).toHaveValue(
+        45000,
+      );
+    });
+
+    it("starts collapsed again after the form is closed and reopened", async () => {
+      renderProjectsPage();
+      await openAddForm();
+      await openOpeningSection();
+      await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+      await openAddForm();
+      expect(
+        screen.queryByLabelText("Amount already received"),
+      ).not.toBeInTheDocument();
     });
   });
 

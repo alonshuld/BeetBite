@@ -131,6 +131,9 @@ export default function ProjectsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [transferTarget, setTransferTarget] = useState<Project | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  // The opening balance is for importing pre-BeetBite data, so it stays
+  // collapsed until asked for.
+  const [openingOpen, setOpeningOpen] = useState(false);
 
   function toggleFilter(key: keyof FilterState) {
     setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -169,6 +172,7 @@ export default function ProjectsPage() {
   function openAdd() {
     setEditing(null);
     setForm({ ...EMPTY_FORM, openingMonth: currentYearMonth() });
+    setOpeningOpen(false);
     setFormOpen(true);
   }
 
@@ -191,6 +195,7 @@ export default function ProjectsPage() {
     setFormOpen(false);
     setEditing(null);
     setForm(EMPTY_FORM);
+    setOpeningOpen(false);
   }
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -232,7 +237,11 @@ export default function ProjectsPage() {
       return;
     }
 
-    if (openingBalanceStarted && !openingBalanceComplete) return;
+    if (openingBalanceStarted && !openingBalanceComplete) {
+      // The warning lives inside the section; make sure it is on screen.
+      setOpeningOpen(true);
+      return;
+    }
 
     const result = await createProject({
       ...payload,
@@ -592,80 +601,107 @@ export default function ProjectsPage() {
           </FormGroup>
         </FormRow>
 
-        {/* Projects are often entered part-way through the work, so ask
-            what has already come in. Creation only: there is nothing to
-            back-date once the project has reports of its own. */}
+        {/* Projects are often entered part-way through the work, so let the
+            user record what has already come in. Collapsed because it only
+            serves migrating old data; once a contractor is fully on BeetBite
+            they create monthly reports instead. Creation only: there is
+            nothing to back-date once the project has reports of its own. */}
         {!editing && (
           <div className="flex flex-col gap-3 border-t border-border pt-4">
-            <div>
-              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+            <button
+              type="button"
+              onClick={() => setOpeningOpen((o) => !o)}
+              aria-expanded={openingOpen}
+              className="flex items-center justify-between gap-2 text-start"
+            >
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
                 {t("openingBalanceTitle")}
-              </h3>
-              <p className="text-xs text-text-muted mt-1">
-                {t("openingBalanceHint")}
-              </p>
-            </div>
-            <FormRow>
-              <FormGroup>
-                <Input
-                  id="proj-opening-amount"
-                  label={t("openingBalanceAmount")}
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={form.openingAmount}
-                  onChange={(e) => setField("openingAmount", e.target.value)}
-                  placeholder="0"
-                />
-              </FormGroup>
-              <FormGroup>
-                <Input
-                  id="proj-opening-month"
-                  label={t("openingBalanceMonth")}
-                  type="month"
-                  value={form.openingMonth}
-                  onChange={(e) => setField("openingMonth", e.target.value)}
-                />
-              </FormGroup>
-            </FormRow>
-            <FormRow>
-              <FormGroup>
-                <Select
-                  id="proj-opening-subcontractor"
-                  label={t("subcontractor")}
-                  value={form.openingSubcontractorId}
-                  onChange={(e) =>
-                    setField("openingSubcontractorId", e.target.value)
-                  }
-                >
-                  <option value="">{t("chooseSubcontractor")}</option>
-                  {subcontractors.map((sc) => (
-                    <option key={sc.id} value={sc.id}>
-                      {sc.name}
-                    </option>
-                  ))}
-                </Select>
-              </FormGroup>
-              <FormGroup>
-                <Input
-                  id="proj-opening-margin"
-                  label={t("profitMargin")}
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={form.openingProfitMargin}
-                  onChange={(e) =>
-                    setField("openingProfitMargin", e.target.value)
-                  }
-                  placeholder="0"
-                />
-              </FormGroup>
-            </FormRow>
-            {openingBalanceStarted && !openingBalanceComplete && (
-              <p className="text-xs text-warning" role="alert">
-                {t("openingBalanceIncomplete")}
-              </p>
+              </span>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`h-4 w-4 shrink-0 text-text-muted transition-transform ${
+                  openingOpen ? "rotate-180" : ""
+                }`}
+              >
+                <path d="M5 8l5 5 5-5" />
+              </svg>
+            </button>
+            {openingOpen && (
+              <>
+                <p className="text-xs text-text-muted -mt-1">
+                  {t("openingBalanceHint")}
+                </p>
+                <FormRow>
+                  <FormGroup>
+                    <Input
+                      id="proj-opening-amount"
+                      label={t("openingBalanceAmount")}
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={form.openingAmount}
+                      onChange={(e) =>
+                        setField("openingAmount", e.target.value)
+                      }
+                      placeholder="0"
+                    />
+                  </FormGroup>
+                  <FormGroup>
+                    <Input
+                      id="proj-opening-month"
+                      label={t("openingBalanceMonth")}
+                      type="month"
+                      value={form.openingMonth}
+                      onChange={(e) => setField("openingMonth", e.target.value)}
+                    />
+                  </FormGroup>
+                </FormRow>
+                <FormRow>
+                  <FormGroup>
+                    <Select
+                      id="proj-opening-subcontractor"
+                      label={t("subcontractor")}
+                      value={form.openingSubcontractorId}
+                      onChange={(e) =>
+                        setField("openingSubcontractorId", e.target.value)
+                      }
+                    >
+                      <option value="">{t("chooseSubcontractor")}</option>
+                      {subcontractors.map((sc) => (
+                        <option key={sc.id} value={sc.id}>
+                          {sc.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormGroup>
+                  <FormGroup>
+                    <Input
+                      id="proj-opening-margin"
+                      label={t("profitMargin")}
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={form.openingProfitMargin}
+                      onChange={(e) =>
+                        setField("openingProfitMargin", e.target.value)
+                      }
+                      placeholder="0"
+                    />
+                  </FormGroup>
+                </FormRow>
+                {openingBalanceStarted && !openingBalanceComplete && (
+                  <p className="text-xs text-warning" role="alert">
+                    {t("openingBalanceIncomplete")}
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}
