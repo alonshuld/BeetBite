@@ -1,5 +1,12 @@
+import { OPENING_BALANCE_TAG } from 'src/common/constants';
+
 export interface ReportApprovalRow {
   tag: string | null;
+  /**
+   * When the income arrived, null while it is still pending. Only read when
+   * the page carries `screen` details; the plain approval has no status column.
+   */
+  incomeDate?: string | null;
   approvedAmount: number;
   invoiceInclVat: number;
   profitMarginPercent: number;
@@ -15,6 +22,23 @@ export interface ReportApprovalSupplierRow {
 export interface ReportApprovalInitiatorRow {
   description: string;
   amount: number;
+}
+
+/**
+ * What the Reports screen shows for a project on top of the approval figures.
+ * Only the client-simulated export supplies it, so the single-report
+ * document keeps its fixed layout.
+ */
+export interface ReportApprovalScreenDetails {
+  projectLocation: string;
+  projectDescription: string;
+  /** Margin in force on this page — simulated, or stored when not overridden. */
+  marginPercent: number;
+  /**
+   * The stored margin and the profit it would give, present only when the
+   * simulation moved this project — the sheet's "saved margin" line.
+   */
+  saved: { marginPercent: number; profitAmount: number } | null;
 }
 
 export interface ReportApprovalData {
@@ -48,6 +72,7 @@ export interface ReportApprovalData {
   companyAddress: string | null;
   logo: string | null;
   signature: string | null;
+  screen?: ReportApprovalScreenDetails;
 }
 
 const LABELS = {
@@ -77,6 +102,15 @@ const LABELS = {
     paymentInclVat: 'לתשלום כולל מע"מ',
     signature: 'חתימה וחותמת מאשר',
     companyNumberPrefix: 'ח.פ.',
+    incomeStatus: 'סטטוס',
+    received: 'התקבל',
+    pending: 'ממתין',
+    openingBalance: 'יתרת פתיחה',
+    profit: 'רווח',
+    location: 'מיקום:',
+    projectDescription: 'תיאור הפרויקט:',
+    savedMargin: '% רווח שמור:',
+    simulated: 'מדומה',
   },
   en: {
     subtitlePrefix: 'Account Approval –',
@@ -104,12 +138,22 @@ const LABELS = {
     paymentInclVat: 'Payable Incl. VAT',
     signature: 'Approving Signature & Stamp',
     companyNumberPrefix: 'Reg.',
+    incomeStatus: 'Status',
+    received: 'Received',
+    pending: 'Pending',
+    openingBalance: 'Opening balance',
+    profit: 'Profit',
+    location: 'Location:',
+    projectDescription: 'Description:',
+    savedMargin: 'Saved Margin %:',
+    simulated: 'Simulated',
   },
 } as const;
 
 import {
   escapeHtml,
   formatCurrency,
+  formatDate,
   formatMonthLabel,
   localeFor,
   dirFor,
@@ -166,6 +210,18 @@ export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
   }
   .info-row { display: flex; gap: 10px; padding: 3px 0; font-size: 12px; }
   .info-row .label { color: #667; font-weight: 700; min-width: 118px; }
+  .sim-badge {
+    display: inline-block;
+    background: #c9a24b;
+    color: #1f2a44;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    border-radius: 3px;
+    padding: 1px 6px;
+    margin-inline-start: 6px;
+  }
 
   table { width: 100%; border-collapse: collapse; margin-bottom: 26px; }
   th, td {
@@ -260,11 +316,26 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
   const money = (amount: number): string => formatCurrency(amount, locale);
   const monthLabel = formatMonthLabel(data.month, data.lang);
 
+  // The backend writes the opening-balance tag in one fixed language, so it is
+  // translated here to read right in either document language.
+  const tagLabel = (tag: string | null): string =>
+    tag === OPENING_BALANCE_TAG ? t.openingBalance : (tag ?? '');
+
+  const statusCellHtml = (row: ReportApprovalRow): string =>
+    data.screen
+      ? `<td>${
+          row.incomeDate
+            ? `${t.received} ${formatDate(row.incomeDate, data.lang)}`
+            : t.pending
+        }</td>`
+      : '';
+
   const rowsHtml = data.rows
     .map(
       (row) => `
         <tr>
-          <td>${escapeHtml(row.tag ?? '')}</td>
+          <td>${escapeHtml(tagLabel(row.tag))}</td>
+          ${statusCellHtml(row)}
           <td class="amount strong">${money(row.approvedAmount)}</td>
           <td class="amount">${money(row.invoiceInclVat)}</td>
           <td class="amount muted">${row.profitMarginPercent}%</td>
@@ -312,6 +383,42 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
     </table>`
       : '';
 
+  // Empty when the caller has no approval text (the simulated export), so the
+  // row does not open with a stray bullet.
+  const approvedForValue = [data.approvedFor, data.projectName]
+    .filter(Boolean)
+    .map(escapeHtml)
+    .join(' • ');
+
+  // Only the client-simulated export passes `screen`: the project's location
+  // and description, and — where the simulation moved its margin — the stored
+  // margin and profit it replaced, exactly as the project sheet shows them.
+  const screenInfoRowsHtml = data.screen
+    ? [
+        data.screen.projectLocation
+          ? `<div class="info-row"><span class="label">${t.location}</span><span>${escapeHtml(data.screen.projectLocation)}</span></div>`
+          : '',
+        data.screen.projectDescription
+          ? `<div class="info-row"><span class="label">${t.projectDescription}</span><span>${escapeHtml(data.screen.projectDescription)}</span></div>`
+          : '',
+        data.screen.saved
+          ? `<div class="info-row"><span class="label">${t.savedMargin}</span><span>${data.screen.saved.marginPercent}% • ${money(data.screen.saved.profitAmount)}</span></div>`
+          : '',
+      ].join('')
+    : '';
+
+  const simulatedBadgeHtml = data.screen?.saved
+    ? `<span class="sim-badge">${t.simulated}</span>`
+    : '';
+
+  const statusHeaderHtml = data.screen ? `<th>${t.incomeStatus}</th>` : '';
+
+  // The project sheet's "Profit (x%)" line: what the contractor keeps before
+  // the suppliers and the subcontractor are paid.
+  const profitSummaryRowHtml = data.screen
+    ? `<div class="summary-row"><span>${t.profit} (${data.screen.marginPercent}%)</span><span>${money(data.totalIncome - data.totalAfterProfit)}</span></div>`
+    : '';
+
   return `<div class="page">
   <div class="header">
     <div class="identity">
@@ -329,7 +436,8 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
       <div class="info-row"><span class="label">${t.client}</span><span>${escapeHtml(data.requesterName)}</span></div>
       <div class="info-row"><span class="label">${t.mainContractor}</span><span>${escapeHtml(data.contractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.contractorCompanyNumber)}</span></div>
       <div class="info-row"><span class="label">${t.subcontractor}</span><span>${escapeHtml(data.subcontractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.subcontractorCompanyNumber)}</span></div>
-      <div class="info-row"><span class="label">${t.approvedFor}</span><span>${escapeHtml(data.approvedFor)} • ${escapeHtml(data.projectName)}</span></div>
+      <div class="info-row"><span class="label">${t.approvedFor}</span><span>${approvedForValue}${simulatedBadgeHtml}</span></div>
+      ${screenInfoRowsHtml}
       ${initiatorInfoRowHtml}
     </div>
 
@@ -337,6 +445,7 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
       <thead>
         <tr>
           <th>${t.tag}</th>
+          ${statusHeaderHtml}
           <th>${t.approvedAmount}</th>
           <th>${t.invoiceInclVat}</th>
           <th>${t.profitMarginPercent}</th>
@@ -369,6 +478,7 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
       <div class="summary-box">
         <div class="summary-title">${t.monthlySummary}</div>
         <div class="summary-row"><span>${t.totalIncome}</span><span>${money(data.totalIncome)}</span></div>
+        ${profitSummaryRowHtml}
         <div class="summary-row"><span>${t.totalAfterProfit}</span><span>${money(data.totalAfterProfit)}</span></div>
         <div class="summary-row"><span>${t.totalDeductions}</span><span>${money(data.supplierTotal)}</span></div>
         <div class="summary-payable">
