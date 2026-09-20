@@ -35,7 +35,7 @@ export interface ReportApprovalData {
    * Absent (not empty) when the project has no initiator — the whole
    * initiator block is then omitted entirely, not rendered with a zero row.
    * Present with an empty `rows` array when there is an initiator but no
-   * payments this month: the name still prints, per T7.
+   * payments this month: the name still prints.
    */
   initiator: { name: string; rows: ReportApprovalInitiatorRow[] } | null;
   totalIncome: number;
@@ -117,7 +117,7 @@ import {
 
 /**
  * The CSS shared by every account-approval-style page. Exported so the
- * client-wide simulated export (T6) can wrap several of these pages plus its
+ * client-wide simulated export can wrap several of these pages plus its
  * own summary page in one document without duplicating the stylesheet.
  */
 export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
@@ -251,7 +251,7 @@ export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
 /**
  * Renders one account-approval report as a single `.page` block — everything
  * that used to live directly in `<body>`. Split out so the client-wide
- * simulated export (T6) can embed several of these, one per project, inside
+ * simulated export can embed several of these, one per project, inside
  * one shared document instead of duplicating this markup.
  */
 export const renderReportApprovalPage = (data: ReportApprovalData): string => {
@@ -286,7 +286,7 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
 
   // No initiator on the project → the whole block is absent, not an empty
   // heading or a zero row. Initiator with no payments this month → the name
-  // still prints, only the payment rows are conditional. See T7.
+  // still prints, only the payment rows are conditional.
   const initiatorInfoRowHtml = data.initiator
     ? `<div class="info-row"><span class="label">${t.initiator}</span><span>${escapeHtml(data.initiator.name)}</span></div>`
     : '';

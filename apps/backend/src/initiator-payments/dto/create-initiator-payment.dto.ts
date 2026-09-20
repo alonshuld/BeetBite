@@ -9,8 +9,8 @@ import {
 } from 'class-validator';
 
 /**
- * Data Transfer Object for creating an initiator payment. Documentation only —
- * see T7: never enters any financial calculation.
+ * Data Transfer Object for creating an initiator payment. Documentation only:
+ * never enters any financial calculation.
  */
 export class CreateInitiatorPaymentDto {
   @IsString()

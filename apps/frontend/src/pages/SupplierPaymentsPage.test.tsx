@@ -257,7 +257,7 @@ describe("SupplierPaymentsPage", () => {
     });
   });
 
-  // T5 — the page is worked supplier by supplier, not as a flat list.
+  // The page is worked supplier by supplier, not as a flat list.
   describe("grouping and settlement", () => {
     it("renders one group per supplier rather than repeating the name per row", () => {
       renderSupplierPaymentsPage();

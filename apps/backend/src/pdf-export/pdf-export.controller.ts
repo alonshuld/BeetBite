@@ -55,7 +55,7 @@ export class PdfExportController {
   }
 
   /**
-   * Renders the client-wide simulated PDF (T6) — a summary page followed by
+   * Renders the client-wide simulated PDF — a summary page followed by
    * one account-approval-style page per project, all of a client's reports
    * for one month, at simulated (never persisted) profit margins.
    * @param dto Export parameters (client, month, per-project margin overrides, language)

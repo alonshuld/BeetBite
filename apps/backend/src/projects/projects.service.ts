@@ -62,7 +62,7 @@ export class ProjectsService {
     try {
       // The project, its first client assignment and any opening-balance report
       // are created together: a project with no assignment resolves to no
-      // client and would vanish from every month-scoped view (T14), and a
+      // client and would vanish from every month-scoped view, and a
       // project left holding a half-made opening balance misstates its income.
       const { openingBalance, ...projectFields } = createProjectDto;
 

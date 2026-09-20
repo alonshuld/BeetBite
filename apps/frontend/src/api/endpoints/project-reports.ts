@@ -18,7 +18,7 @@ export interface ProjectReport {
   supplierPayments: SupplierPaymentRow[];
   /**
    * Documentation-only payments to the project's initiator this month, if it
-   * has one. Never enters any financial calculation — see T7.
+   * has one. Never enters any financial calculation.
    */
   initiatorPayments: InitiatorPaymentRow[];
   project: {

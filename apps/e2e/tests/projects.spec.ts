@@ -244,7 +244,7 @@ dbTest.describe('Projects CRUD', () => {
     }).toPass({ timeout: 5000 });
   });
 
-  // T11 — a project entered part-way through the work carries money that has
+  // A project entered part-way through the work carries money that has
   // already come in. It is recorded as a real back-dated report, so these
   // assert the report exists and behaves like any hand-made one.
   dbTest.describe('opening balance', () => {

@@ -105,7 +105,7 @@ export class PdfExportService {
    * A summary page followed by one account-approval-style page per project —
    * every report of a client for one month, rendered at simulated margins.
    * Simulated margins are transient: applied here at render time only, never
-   * written to any ProjectReport. See T6.
+   * written to any ProjectReport.
    */
   async exportClientSimulatedPdf(
     dto: ExportClientSimulatedPdfDto,
@@ -121,8 +121,8 @@ export class PdfExportService {
       await this.projectReportsService.findProjectReportsInMonth({
         month: normalizedMonth,
       });
-    // "All of a client's reports for the month" means the *resolved* client
-    // (T14) — findProjectReportsInMonth already resolves report.project.client
+    // "All of a client's reports for the month" means the *resolved* client —
+    // findProjectReportsInMonth already resolves report.project.client
     // per report's own month, so a transferred-away project never lands under
     // the wrong client's simulated export.
     const clientReports = allReports.filter(
@@ -237,8 +237,9 @@ export class PdfExportService {
    * Builds the shared per-report page data used by both the single-report
    * export and each detail page of the client-simulated export. `effectiveMargin`
    * is the only thing that differs between the two callers — the real stored
-   * margin for a normal export, a simulated one for T6 — everything else
-   * (income entries, supplier/initiator payments) always reflects real data.
+   * margin for a normal export, a simulated one for the client-wide export —
+   * everything else (income entries, supplier/initiator payments) always
+   * reflects real data.
    */
   private buildReportApprovalData(args: {
     report: ProjectReportListItemDto;
@@ -281,7 +282,7 @@ export class PdfExportService {
 
     // No initiator on the project → absent entirely, not an empty heading or
     // a zero row. Initiator with no payments this month → name still prints,
-    // only the rows are conditional on there being payments. See T7.
+    // only the rows are conditional on there being payments.
     const initiatorRows: ReportApprovalInitiatorRow[] =
       report.initiatorPayments.map((payment) => ({
         description: payment.description ?? '',

@@ -3,7 +3,7 @@ import { NestedInitiatorDto } from './nested-initiator.dto';
 
 /**
  * Represents an initiator payment nested in project report responses.
- * Documentation only — see T7.
+ * Documentation only.
  */
 export class NestedInitiatorPaymentDto {
   @ApiProperty({

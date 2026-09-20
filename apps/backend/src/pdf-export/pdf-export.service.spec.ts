@@ -386,10 +386,10 @@ describe('PdfExportService', () => {
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
   });
 
-  // T7 — gating: the initiator block is absent, name-only, or name+rows,
+  // Gating: the initiator block is absent, name-only, or name+rows,
   // strictly following whether the project has an initiator and whether it
   // has payments this month. Never an empty heading, never a zero row.
-  describe('initiator block gating (T7)', () => {
+  describe('initiator block gating', () => {
     // The report renders in Hebrew by default (dto carries no `lang`), so the
     // label under test is the Hebrew one — 'יזם:'.
     it('renders no initiator block at all when the project has no initiator', async () => {
@@ -460,7 +460,7 @@ describe('PdfExportService', () => {
     });
   });
 
-  // T6 — client-wide simulated export: summary page + one detail page per
+  // Client-wide simulated export: summary page + one detail page per
   // project, all of a client's reports for the month, at simulated margins.
   describe('exportClientSimulatedPdf', () => {
     const simDto: ExportClientSimulatedPdfDto = {

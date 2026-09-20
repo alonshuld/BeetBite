@@ -107,7 +107,7 @@ dbTest.describe('Reports list', () => {
         page.getByRole('heading', { name: 'Grid Client' }),
       ).toBeVisible();
       // The project name also appears in the client-wide simulator's
-      // per-project row (T6) — scope to the sheet's own clickable header.
+      // per-project row — scope to the sheet's own clickable header.
       await expect(
         page.getByRole('button', { name: 'Grid Project' }),
       ).toBeVisible();

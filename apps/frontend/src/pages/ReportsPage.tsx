@@ -174,7 +174,7 @@ export default function ReportsPage() {
     }
   }
 
-  // T6 — client-wide simulated export. Overrides are transient UI state:
+  // Client-wide simulated export. Overrides are transient UI state:
   // never written back to a report, only sent along with this one request.
   async function handleExportSimulated() {
     if (!selectedClientId) return;
@@ -227,7 +227,7 @@ export default function ReportsPage() {
     [reports, selectedClientId],
   );
 
-  // T6 — the whole client's simulation state. Transient: cleared whenever the
+  // The whole client's simulation state. Transient: cleared whenever the
   // client or the month changes, and never written back to a report. The
   // sheets, the client-header totals and the simulated PDF export all read
   // their margins from here, so the page shows one consistent set of numbers.
@@ -250,7 +250,7 @@ export default function ReportsPage() {
     setSimulatorOpen(false);
   }, [selectedClientId, month]);
 
-  // T13 — the income side of the same figure, for the selected month only.
+  // The income side of the same figure, for the selected month only.
   // Income is never simulated: only the margin split moves.
   const totalClientIncome = simulation.totals.income;
   const totalSubcontractorPayments = simulation.totals.subcontractorPayment;
@@ -259,7 +259,7 @@ export default function ReportsPage() {
     ? projects.filter((p) => p.clientId === clientId)
     : projects;
 
-  // T7 — initiator payment rows only appear when the selected project
+  // Initiator payment rows only appear when the selected project
   // actually has an initiator linked. No initiator on the project → no
   // section at all, not an empty one.
   const selectedProjectForModal = projects.find((p) => p.id === projectId);
@@ -878,7 +878,7 @@ interface ProjectSheetProps {
   lang: string;
   month: string;
   /**
-   * T6 — margin currently dialled in on the simulator, when it differs from
+   * Margin currently dialled in on the simulator, when it differs from
    * the report's saved one. Undefined means the sheet shows stored figures.
    */
   simulatedMargin?: number;
@@ -896,7 +896,7 @@ function ProjectSheet({
   const { t } = useLang();
 
   // Tags are free text the user typed, shown verbatim — except the one the
-  // backend writes itself on an opening-balance report (T11), which is stored
+  // backend writes itself on an opening-balance report, which is stored
   // in one fixed language and translated here so it reads right either way.
   function incomeTagLabel(tag: string): string {
     return tag === OPENING_BALANCE_TAG ? t("openingBalanceTag") : tag;
@@ -1051,7 +1051,7 @@ function ProjectSheet({
         </span>
       </div>
 
-      {/* T7 — informational only: an initiator payment never participates in
+      {/* Informational only: an initiator payment never participates in
           the subtotal above, so it is styled distinctly and lives below the
           divider. No initiator on the project → this section is absent. */}
       {report.project.initiatorName && (

@@ -266,7 +266,7 @@ export const translations = {
       "Only projects with a report for this month are listed — create the report first if one is missing.",
     noReportsThisMonthHint:
       "No project has a report for this month yet, so there is nothing to record a payment against.",
-    // Requester (T2) + Location (T8)
+    // Requester + Location
     requester: "Requester",
     requesterPlaceholder: "Who commissioned this project?",
     location: "Location",
@@ -276,7 +276,7 @@ export const translations = {
     // Income tag editing
     editTags: "Edit Tags",
     editIncomeTags: "Edit Income Tags",
-    // Initiators (T7)
+    // Initiators
     initiators: "Initiators",
     initiatorsSubtitle: "Initiator (יזם) database — optional link on a project",
     addInitiator: "Add Initiator",
@@ -288,7 +288,7 @@ export const translations = {
     noInitiatorOption: "— No initiator —",
     initiatorPayments: "Initiator Payments",
     initiatorPaymentDescriptionPlaceholder: "e.g. Consulting fee",
-    // T6 — client-wide simulated export
+    // Client-wide simulated export
     exportWithSimulator: "Export with Simulator",
   },
   he: {
@@ -547,7 +547,7 @@ export const translations = {
       "מוצגים רק פרוייקטים שיש להם דוח לחודש זה — צרו דוח תחילה אם חסר.",
     noReportsThisMonthHint:
       "לאף פרוייקט אין דוח לחודש זה, אז אין מול מה לתעד תשלום.",
-    // Requester (T2) + Location (T8)
+    // Requester + Location
     requester: "מזמין",
     requesterPlaceholder: "מי הזמין את הפרויקט?",
     location: "מיקום",
@@ -557,7 +557,7 @@ export const translations = {
     // Income tag editing
     editTags: "עריכת תיאורים",
     editIncomeTags: "עריכת תיאורי הכנסה",
-    // Initiators (T7)
+    // Initiators
     initiators: "יזמים",
     initiatorsSubtitle: "מאגר יזמים — קישור אופציונלי לפרויקט",
     addInitiator: "הוסף יזם",
@@ -569,7 +569,7 @@ export const translations = {
     noInitiatorOption: "— ללא יזם —",
     initiatorPayments: "תשלומי יזם",
     initiatorPaymentDescriptionPlaceholder: "לדוגמה: שכר ייעוץ",
-    // T6 — client-wide simulated export
+    // Client-wide simulated export
     exportWithSimulator: "ייצוא עם סימולטור",
   },
 } as const;

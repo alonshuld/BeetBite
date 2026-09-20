@@ -210,7 +210,7 @@ describe("SubcontractorPaymentsPage", () => {
     expect(screen.getByPlaceholderText("0 – 8000")).toBeInTheDocument();
   });
 
-  // T9 + T10 — the day the money moved, and what is still outstanding.
+  // The day the money moved, and what is still outstanding.
   describe("payment dates and balance", () => {
     it("shows the balance beside owed and paid", () => {
       setPayments(makePayments([makePayment({ amount: 3000 })], 3000));

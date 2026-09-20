@@ -8,7 +8,7 @@ export interface ExportProjectReportsPdfDto {
 }
 
 /**
- * T6 — a summary page + one account-approval-style page per project, every
+ * A summary page + one account-approval-style page per project, every
  * report of a client for one month, rendered at simulated margins. Never
  * persisted: the override map is transient, applied server-side at render
  * time only.

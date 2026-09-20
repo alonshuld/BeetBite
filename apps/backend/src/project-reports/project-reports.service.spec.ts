@@ -484,9 +484,8 @@ describe('ProjectReportsService', () => {
       expect(result.subcontractor.payment).toBe(7000); // 10000 - 0 - 3000
     });
 
-    // 🔴 T7 — the test that defines the task: an initiator payment is
-    // documentation only. If it ever leaked into subPayment/profit, this
-    // is what would catch it.
+    // 🔴 An initiator payment is documentation only. If it ever leaked into
+    // subPayment/profit, this is what would catch it.
     it('does not change profit or subcontractorPayment when initiator payments are present', async () => {
       const withoutInitiator = makeFullReport({
         supplierPayments: [

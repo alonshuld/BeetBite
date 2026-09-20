@@ -809,7 +809,7 @@ describe('SupplierPaymentsService', () => {
       expect(mockPrismaService.supplierPayment.create).toHaveBeenCalledTimes(3);
     });
 
-    // 🔴 The most important test in T5. A stack half-recorded, with nothing to
+    // 🔴 The most important createBatch test. A stack half-recorded, with nothing to
     // say which half, is worse than a clean failure — so one bad row must
     // write nothing at all.
     it('writes nothing when any row is rejected', async () => {

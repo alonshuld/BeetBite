@@ -280,7 +280,7 @@ export default function SubcontractorPaymentsPage() {
                       {t("paid")}: {formatILS(card.totalPaid)}
                     </p>
                   )}
-                  {/* T10 — the balance is the number actually acted on, so it
+                  {/* The balance is the number actually acted on, so it
                       is styled to stand out and coloured like the statuses:
                       settled at zero, outstanding above it. */}
                   <p
@@ -444,7 +444,7 @@ export default function SubcontractorPaymentsPage() {
                           </td>
                         </tr>
 
-                        {/* T9 — each recorded payment as its own line: the
+                        {/* Each recorded payment as its own line: the
                             day the money moved on one side, the amount on the
                             other. A month settled in three instalments shows
                             three dated lines. */}

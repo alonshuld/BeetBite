@@ -79,9 +79,9 @@ interface FormState {
   estimatedAmount: string;
   requesterName: string;
   location: string;
-  // T7 — optional link to an initiator (יזם). Empty string means none.
+  // Optional link to an initiator (יזם). Empty string means none.
   initiatorId: string;
-  // T11 — optional opening balance. Empty strings mean "not filled in", which
+  // Optional opening balance. Empty strings mean "not filled in", which
   // is the normal case; the whole section is skipped unless an amount is typed.
   openingAmount: string;
   openingMonth: string;
@@ -592,7 +592,7 @@ export default function ProjectsPage() {
           </FormGroup>
         </FormRow>
 
-        {/* T11 — projects are often entered part-way through the work, so ask
+        {/* Projects are often entered part-way through the work, so ask
             what has already come in. Creation only: there is nothing to
             back-date once the project has reports of its own. */}
         {!editing && (

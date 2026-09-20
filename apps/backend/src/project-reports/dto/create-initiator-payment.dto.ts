@@ -10,7 +10,7 @@ import {
 
 /**
  * A documentation-only payment to a project's initiator (יזם), nested inside a
- * project report create/update payload. See T7 — never enters any financial
+ * project report create/update payload. Never enters any financial
  * calculation, and deliberately has no isFuture/vatPercentage.
  */
 export class CreateInitiatorPaymentDto {

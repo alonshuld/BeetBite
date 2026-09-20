@@ -26,7 +26,7 @@ dbTest.describe('Routing and error surfaces', () => {
     'the retired simulator route no longer exists',
     async ({ page, db }) => {
       void db;
-      // T6 deleted ProfitSimulatorPage and its router entry outright — there
+      // ProfitSimulatorPage and its router entry were deleted outright — there
       // is no redirect stub left, so this now falls through to the 404 route
       // like any other unknown path.
       await page.goto(`${BASE}/simulator`);

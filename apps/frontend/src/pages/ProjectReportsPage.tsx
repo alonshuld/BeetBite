@@ -152,7 +152,7 @@ export default function ProjectReportsPage() {
   const [newCorpAmount, setNewCorpAmount] = useState("");
   const [newCorpDate, setNewCorpDate] = useState(todayISO);
 
-  // Inline initiator payment editing state (T7) — documentation only, gated
+  // Inline initiator payment editing state — documentation only, gated
   // on the project actually having an initiator linked.
   const [editingInitId, setEditingInitId] = useState<string | null>(null);
   const [editInitInitiatorId, setEditInitInitiatorId] = useState("");
@@ -812,7 +812,7 @@ export default function ProjectReportsPage() {
               </ButtonGhost>
             )}
 
-            {/* T7 — documentation-only initiator payments, gated on the
+            {/* Documentation-only initiator payments, gated on the
                 project actually having an initiator linked. Styled distinctly
                 (muted/italic) so it reads as not part of the calc above. */}
             {project?.initiatorId && (

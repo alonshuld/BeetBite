@@ -76,7 +76,7 @@ describe('ProjectClientAssignmentsService', () => {
   });
 
   describe('resolveClientsForMonth', () => {
-    // 🔴 The test that defines T14. History is frozen: a month that has already
+    // 🔴 The defining test. History is frozen: a month that has already
     // happened keeps whichever client owned it, whatever happens later.
     it('resolves a month to the client that owned the project THAT month', async () => {
       // Project transferred from A to B effective March 2026.

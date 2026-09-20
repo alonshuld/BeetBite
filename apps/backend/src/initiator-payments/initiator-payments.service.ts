@@ -13,7 +13,7 @@ import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
 
 /**
  * Documentation-only payments to a project's initiator (יזם). Never enters any
- * financial calculation — see T7.
+ * financial calculation.
  */
 const INITIATOR_PAYMENT_SELECT = {
   id: true,

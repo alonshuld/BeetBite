@@ -233,13 +233,12 @@ describe("ProjectReportsPage", () => {
     ).toBeInTheDocument();
   });
 
-  // General edit-report modal — regression coverage for the bug flagged in
-  // T12's handover: this modal used to send a full `incomeEntries` array
-  // through the report-update DTO, which the backend applies as
-  // deleteMany + createMany, destroying every income row's id (and any tag
-  // this modal never even shows) on every save. Income entries must instead
-  // be reconciled through the dedicated per-entry endpoints, and the report
-  // DTO must never carry `incomeEntries`.
+  // General edit-report modal — regression coverage for a past bug: this
+  // modal used to send a full `incomeEntries` array through the report-update
+  // DTO, which the backend applies as deleteMany + createMany, destroying
+  // every income row's id (and any tag this modal never even shows) on every
+  // save. Income entries must instead be reconciled through the dedicated
+  // per-entry endpoints, and the report DTO must never carry `incomeEntries`.
   describe("edit-report modal — income entry reconciliation", () => {
     it("saving with no entry changes updates the existing entry by id and omits incomeEntries from the report DTO", async () => {
       renderPage();
@@ -346,10 +345,10 @@ describe("ProjectReportsPage", () => {
     );
   });
 
-  // T7 — documentation-only initiator payments, gated on the project
+  // Documentation-only initiator payments, gated on the project
   // actually having an initiator linked, on this per-project drill-down.
   // This is the surface most likely to be forgotten.
-  describe("initiator payments (T7)", () => {
+  describe("initiator payments", () => {
     it("does not show the initiator payments section when the project has no initiator", () => {
       renderPage();
       expect(screen.queryByText("Initiator Payments")).not.toBeInTheDocument();

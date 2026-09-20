@@ -2,7 +2,7 @@ import { baseApi } from "@/api/baseApi";
 
 /**
  * Documentation-only payments to a project's initiator (יזם). Never enters
- * any financial calculation — see T7. No batch/paid machinery, unlike
+ * any financial calculation. No batch/paid machinery, unlike
  * supplier payments: these attach directly to a report.
  */
 export interface InitiatorPayment {

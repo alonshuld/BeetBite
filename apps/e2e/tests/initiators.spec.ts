@@ -9,7 +9,7 @@ const MONTH = '2026-05';
 const MONTH_DATE = new Date(`${MONTH}-01`);
 
 /**
- * Initiator (יזם) — a documentation-only entity, added in T7. Payments
+ * Initiator (יזם) — a documentation-only entity. Payments
  * recorded against one are printed on the PDF but never enter any financial
  * calculation (see the invariant in project-reports.spec.ts and the backend's
  * own dedicated tests). This spec covers the CRUD page, linking an initiator

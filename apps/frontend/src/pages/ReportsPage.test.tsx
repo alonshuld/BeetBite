@@ -205,11 +205,11 @@ describe("ReportsPage", () => {
     expect(screen.getByText(/Total Sub Payments/)).toBeInTheDocument();
   });
 
-  // T6 — the simulator rail. A master slider drives every project at once;
+  // The simulator rail. A master slider drives every project at once;
   // moving one project's own slider pins it, so later master moves leave it
   // alone. Everything the simulation touches (sheets, client header) moves
   // together; nothing is ever written back.
-  describe("profit simulator (T6)", () => {
+  describe("profit simulator", () => {
     const secondReport = {
       id: "r2",
       date: "2025-03-01",
@@ -542,7 +542,7 @@ describe("ReportsPage", () => {
     ).toBeInTheDocument();
   });
 
-  // T7 — the tile shows the initiator's name and payment rows purely as
+  // The tile shows the initiator's name and payment rows purely as
   // informational display, never affecting the subcontractor payment above.
   it("shows the initiator name and payment rows on the tile when the project has one", async () => {
     setReports([
@@ -577,9 +577,9 @@ describe("ReportsPage", () => {
     expect(screen.queryByText(/Yaniv Goldman/)).not.toBeInTheDocument();
   });
 
-  // T7 — initiator payment rows only ever appear for a project that actually
+  // Initiator payment rows only ever appear for a project that actually
   // has an initiator linked. Never enters any calculation.
-  describe("initiator payments in the add-report modal (T7)", () => {
+  describe("initiator payments in the add-report modal", () => {
     function mockProjectsWithInitiator() {
       vi.mocked(useGetProjectsQuery).mockReturnValue({
         data: [
@@ -650,7 +650,7 @@ describe("ReportsPage", () => {
     });
   });
 
-  // T13 — total income per client, beside the existing subcontractor total.
+  // Total income per client, beside the existing subcontractor total.
   describe("client income total", () => {
     it("shows total income beside total subcontractor payments in the header", async () => {
       renderPage();

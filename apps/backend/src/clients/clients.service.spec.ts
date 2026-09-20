@@ -257,7 +257,7 @@ describe('ClientsService', () => {
     // 🔴 Regression test for a real data-loss bug. remove() used to hard-cascade
     // through every project whose cached clientId was this client, deleting
     // their reports, income entries and payments. Once a project can be
-    // transferred (T14) that cascade destroys months belonging to a *different*
+    // transferred that cascade destroys months belonging to a *different*
     // client. Deleting a client that has ever held a project must refuse.
     it('should refuse to delete a client whose project has since been transferred away', async () => {
       mockPrismaService.client.findUnique.mockResolvedValue(mockClient);

@@ -239,7 +239,7 @@ describe("ProjectsPage", () => {
     ).toBeInTheDocument();
   });
 
-  describe("opening balance (T11)", () => {
+  describe("opening balance", () => {
     const createSpy = vi.fn().mockResolvedValue({ data: { id: "new" } });
 
     beforeEach(() => {
@@ -404,9 +404,9 @@ describe("ProjectsPage", () => {
     ).toBeInTheDocument();
   });
 
-  // T7 — initiator link is optional; the select defaults to "none" and lists
+  // Initiator link is optional; the select defaults to "none" and lists
   // every managed initiator.
-  describe("initiator link (T7)", () => {
+  describe("initiator link", () => {
     it("offers a 'no initiator' option plus every initiator", async () => {
       renderProjectsPage();
       await userEvent.click(

@@ -123,7 +123,7 @@ export class ClientsService {
    *
    * This used to hard-cascade through the client's projects, reports, income
    * entries and payments. Once projects can be transferred between clients
-   * (T14) that cascade destroys data belonging to somebody else: a project
+   * that cascade destroys data belonging to somebody else: a project
    * moved from client B to client A carries B's months with it, so deleting A
    * would take B's history too. A client that has ever held a project is
    * therefore refused, and the message names the projects standing in the way.

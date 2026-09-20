@@ -54,7 +54,7 @@ describe('ProjectsService', () => {
   };
 
   // create() now writes the project and its first client assignment in one
-  // transaction (T14). Running the callback against the same mock keeps every
+  // transaction. Running the callback against the same mock keeps every
   // existing project.create expectation below working unchanged. Assigned after
   // the literal so the type is not self-referential.
   mockPrismaService.$transaction.mockImplementation(
@@ -166,7 +166,7 @@ describe('ProjectsService', () => {
       );
     });
 
-    describe('opening balance (T11)', () => {
+    describe('opening balance', () => {
       const openingBalance = {
         amount: 45000,
         month: '2026-03-01T00:00:00.000Z',

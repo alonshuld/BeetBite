@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsString, Max, Min } from 'class-validator';
 
 /**
- * One project's simulated profit margin for the client-wide export (T6).
+ * One project's simulated profit margin for the client-wide export.
  * Never persisted — applied at render time only.
  */
 export class MarginOverrideDto {

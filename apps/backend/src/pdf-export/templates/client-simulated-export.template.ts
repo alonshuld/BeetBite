@@ -33,7 +33,7 @@ export interface ClientSimulatedExportData {
   /**
    * One full account-approval-style page per project, already computed at
    * the simulated margin. Rendered after the summary page, in the same
-   * document — see T6.
+   * document.
    */
   detailPages: ReportApprovalData[];
   companyPhone: string | null;

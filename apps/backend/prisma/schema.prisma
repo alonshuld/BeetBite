@@ -24,7 +24,7 @@ model Project {
   /// DERIVED CACHE of the *current* client — the clientAssignment with the
   /// latest effectiveFrom. Written only by ProjectClientAssignmentsService.
   /// NEVER read this to answer a historical question ("who owned this project
-  /// in month M?") — use resolveClientsForMonth() instead. See T14.
+  /// in month M?") — use resolveClientsForMonth() instead.
   clientId        String
   name            String  @unique
   estimatedAmount Decimal @db.Decimal(12, 2)
@@ -34,7 +34,7 @@ model Project {
   location        String
   lastApprovedFor String?
   /// Optional — who initiated (יזם) this project, if anyone. Nullable unlike
-  /// clientId: most projects have no initiator at all. See T7.
+  /// clientId: most projects have no initiator at all.
   initiatorId     String?
 
   client                Client                    @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -113,7 +113,7 @@ model ProjectReport {
 }
 
 /// A documentation-only payment to a project's initiator (יזם). Never enters
-/// any financial calculation — recorded and displayed, nothing else. See T7.
+/// any financial calculation — recorded and displayed, nothing else.
 /// Deliberately missing isFuture/vatPercentage: those exist on SupplierPayment
 /// to drive VAT resolution, machinery a documentation-only row does not need.
 model InitiatorPayment {
