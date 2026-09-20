@@ -49,6 +49,28 @@ function d(iso: string): Date {
   return new Date(iso);
 }
 
+// Deterministic PRNG so the income tags picked below are the same on every run.
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const rand = mulberry32(20260701);
+
+const oneOf = <T>(values: readonly T[]): T =>
+  values[Math.floor(rand() * values.length)];
+
+/** Short work labels — the chunk of work an income entry covers. */
+const WORK_TAGS = [
+  'Structure', 'Finishing', 'Infrastructure', 'Concrete',
+  'Cladding', 'Landscaping', 'Waterproofing', 'Systems',
+] as const;
+
 // CompanySettings stores images as base64 data URLs — there is no upload infra —
 // so the demo logo and signature ship as PNGs next to this file and are inlined
 // at seed time. The Dockerfile copies the whole prisma/ directory, so the path
@@ -56,7 +78,9 @@ function d(iso: string): Date {
 const dataUrl = (file: string): string =>
   `data:image/png;base64,${fs.readFileSync(path.join(__dirname, 'demo-assets', file)).toString('base64')}`;
 
-type IncomeEntryInput = { amount: number; incomeDate: string | null };
+// An entry without an explicit tag gets a random work label, so no seeded income
+// entry is ever untagged.
+type IncomeEntryInput = { amount: number; incomeDate: string | null; tag?: string };
 
 type ReportInput = {
   projectId: string;
@@ -82,6 +106,7 @@ async function report(r: ReportInput) {
         create: r.incomeEntries.map((e) => ({
           amount: e.amount,
           incomeDate: e.incomeDate ? d(e.incomeDate) : null,
+          tag: e.tag ?? oneOf(WORK_TAGS),
         })),
       },
     },
@@ -541,8 +566,8 @@ async function seedMockData(): Promise<void> {
     date: '2026-05-01',
     profitMargin: 10,
     incomeEntries: [
-      { amount: 30000, incomeDate: '2026-05-12' },  // advance received
-      { amount: 22000, incomeDate: null },            // balance pending
+      { amount: 30000, incomeDate: '2026-05-12', tag: 'Structure' },  // advance received
+      { amount: 22000, incomeDate: null, tag: 'Finishing' },          // balance pending
     ],
   });
 
@@ -552,8 +577,8 @@ async function seedMockData(): Promise<void> {
     date: '2026-05-01',
     profitMargin: 12,
     incomeEntries: [
-      { amount: 12000, incomeDate: '2026-05-08' },
-      { amount: 8000,  incomeDate: null },
+      { amount: 12000, incomeDate: '2026-05-08', tag: 'Concrete' },
+      { amount: 8000,  incomeDate: null, tag: 'Cladding' },
     ],
   });
 
@@ -563,9 +588,9 @@ async function seedMockData(): Promise<void> {
     date: '2026-05-01',
     profitMargin: 11,
     incomeEntries: [
-      { amount: 10000, incomeDate: '2026-05-15' },
-      { amount: 6000,  incomeDate: '2026-05-22' },
-      { amount: 4000,  incomeDate: null },
+      { amount: 10000, incomeDate: '2026-05-15', tag: 'Infrastructure' },
+      { amount: 6000,  incomeDate: '2026-05-22', tag: 'Systems' },
+      { amount: 4000,  incomeDate: null, tag: 'Finishing' },
     ],
   });
 
@@ -575,9 +600,9 @@ async function seedMockData(): Promise<void> {
     date: '2026-05-01',
     profitMargin: 12,
     incomeEntries: [
-      { amount: 50000, incomeDate: '2026-05-05' },  // advance
-      { amount: 30000, incomeDate: '2026-05-20' },  // mid-month
-      { amount: 25000, incomeDate: null },            // final pending
+      { amount: 50000, incomeDate: '2026-05-05', tag: 'Structure' },  // advance
+      { amount: 30000, incomeDate: '2026-05-20', tag: 'Cladding' },   // mid-month
+      { amount: 25000, incomeDate: null, tag: 'Systems' },            // final pending
     ],
   });
 
@@ -587,8 +612,8 @@ async function seedMockData(): Promise<void> {
     date: '2026-05-01',
     profitMargin: 10,
     incomeEntries: [
-      { amount: 20000, incomeDate: '2026-05-14' },
-      { amount: 18000, incomeDate: null },
+      { amount: 20000, incomeDate: '2026-05-14', tag: 'Waterproofing' },
+      { amount: 18000, incomeDate: null, tag: 'Finishing' },
     ],
   });
 
@@ -598,8 +623,8 @@ async function seedMockData(): Promise<void> {
     date: '2026-05-01',
     profitMargin: 13,
     incomeEntries: [
-      { amount: 45000, incomeDate: '2026-05-09' },
-      { amount: 38000, incomeDate: null },
+      { amount: 45000, incomeDate: '2026-05-09', tag: 'Structure' },
+      { amount: 38000, incomeDate: null, tag: 'Landscaping' },
     ],
   });
 
@@ -711,7 +736,7 @@ async function seedMockData(): Promise<void> {
     showJerusalem, showMamilla, showHerzliya,
   ];
 
-  console.log('✅ Seed complete: 30 clients, 5 initiators, 35 projects with client assignments, May 2026 showcase month with multiple income entries & corp payments');
+  console.log('✅ Seed complete: 30 clients, 5 initiators, 35 projects with client assignments, May 2026 showcase month with multiple tagged income entries & corp payments');
 }
 
 async function main(): Promise<void> {
