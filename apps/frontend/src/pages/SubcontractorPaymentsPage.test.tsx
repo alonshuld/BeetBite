@@ -221,11 +221,39 @@ describe("SubcontractorPaymentsPage", () => {
       expect(screen.getByText(/Balance: ₪5,000/)).toBeInTheDocument();
     });
 
+    it("shows a zero paid amount on a card with no payments yet", () => {
+      renderPage();
+
+      expect(screen.getByText(/Paid: ₪0/)).toBeInTheDocument();
+      expect(screen.getByText(/Balance: ₪8,000/)).toBeInTheDocument();
+    });
+
     it("shows a zero balance once the card is fully paid", () => {
       setPayments(makePayments([makePayment({ amount: 8000 })], 8000));
       renderPage();
 
       expect(screen.getByText(/Balance: ₪0/)).toBeInTheDocument();
+    });
+
+    it("shows the amount already paid on each project row", async () => {
+      setPayments(makePayments([makePayment({ amount: 3000 })], 3000));
+      renderPage();
+      await openPanel();
+
+      expect(
+        screen.getByRole("columnheader", { name: "Amount Paid" }),
+      ).toBeInTheDocument();
+      const row = screen.getByText("Tower Block").closest("tr") as HTMLElement;
+      expect(within(row).getByText("₪8,000")).toBeInTheDocument();
+      expect(within(row).getByText("₪3,000")).toBeInTheDocument();
+    });
+
+    it("shows a zero amount paid for a project with no payments", async () => {
+      renderPage();
+      await openPanel();
+
+      const row = screen.getByText("Tower Block").closest("tr") as HTMLElement;
+      expect(within(row).getByText("₪0")).toBeInTheDocument();
     });
 
     it("offers an editable payment date defaulting to today", async () => {
