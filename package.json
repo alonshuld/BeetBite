@@ -1,0 +1,28 @@
+{
+  "name": "BeetBite",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "pnpm -r test",
+    "dev": "pnpm -r dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint && pnpm -r typecheck",
+    "lint:check": "pnpm -r lint:check && pnpm -r typecheck",
+    "format": "pnpm -r format",
+    "format:check": "pnpm -r format:check",
+    "prepare": "pnpm exec husky",
+    "postinstall": "pnpm --filter backend exec prisma generate",
+    "infra:up": "docker compose up db backend -d --build --force-recreate",
+    "infra:down": "docker compose stop db backend",
+    "test:e2e": "pnpm --filter e2e exec playwright test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.28.0",
+  "private": true,
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}

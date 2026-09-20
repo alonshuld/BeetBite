@@ -1,0 +1,14 @@
+packages:
+  - apps/*
+
+onlyBuiltDependencies:
+  - '@nestjs/core'
+  - '@prisma/engines'
+  - '@scarf/scarf'
+  - '@swc/core'
+  - bcrypt
+  - cpu-features
+  - prisma
+  - protobufjs
+  - puppeteer
+  - ssh2

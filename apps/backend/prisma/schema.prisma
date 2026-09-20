@@ -1,0 +1,216 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Client {
+  id   String @id @default(cuid())
+  name String @unique
+
+  projects           Project[]
+  clientAssignments  ProjectClientAssignment[]
+
+  @@map("clients")
+}
+
+model Project {
+  id String @id @default(cuid())
+
+  /// DERIVED CACHE of the *current* client — the clientAssignment with the
+  /// latest effectiveFrom. Written only by ProjectClientAssignmentsService.
+  /// NEVER read this to answer a historical question ("who owned this project
+  /// in month M?") — use resolveClientsForMonth() instead.
+  clientId        String
+  name            String  @unique
+  estimatedAmount Decimal @db.Decimal(12, 2)
+  description     String
+  isDone          Boolean @default(false)
+  requesterName   String
+  location        String
+  lastApprovedFor String?
+  /// Optional — who initiated (יזם) this project, if anyone. Nullable unlike
+  /// clientId: most projects have no initiator at all.
+  initiatorId     String?
+
+  client                Client                    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  reports               ProjectReport[]
+  subcontractorPayments SubcontractorPayment[]
+  clientAssignments     ProjectClientAssignment[]
+  initiator             Initiator?                @relation(fields: [initiatorId], references: [id])
+
+  @@map("projects")
+}
+
+/// A project's initiator (יזם) — documentation only. Payments to an initiator
+/// never enter any financial calculation; see InitiatorPayment.
+model Initiator {
+  id   String @id @default(cuid())
+  name String @unique
+
+  projects Project[]
+  payments InitiatorPayment[]
+
+  @@map("initiators")
+}
+
+/// Effective-dated ownership of a project by a client.
+/// The client for a report is the assignment with the greatest effectiveFrom
+/// that is <= the report's date. Every project has at least one assignment.
+model ProjectClientAssignment {
+  id            String   @id @default(cuid())
+  projectId     String
+  clientId      String
+  effectiveFrom DateTime @db.Date
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  client  Client  @relation(fields: [clientId], references: [id])
+
+  @@unique([projectId, effectiveFrom])
+  @@index([projectId, effectiveFrom])
+  @@map("project_client_assignments")
+}
+
+model Subcontractor {
+  id            String @id @default(cuid())
+  name          String @unique
+  companyNumber String @unique
+
+  reports  ProjectReport[]
+  payments SubcontractorPayment[]
+
+  @@map("subcontractors")
+}
+
+model Supplier {
+  id   String @id @default(cuid())
+  name String @unique
+
+  payments SupplierPayment[]
+
+  @@map("suppliers")
+}
+
+model ProjectReport {
+  id              String   @id @default(cuid())
+  projectId       String
+  subcontractorId String
+  date            DateTime @db.Date
+  profitMargin    Decimal  @db.Decimal(5, 2)
+
+  project           Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subcontractor     Subcontractor         @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+  supplierPayments  SupplierPayment[]
+  incomeEntries     ProjectReportIncome[]
+  initiatorPayments InitiatorPayment[]
+
+  @@unique([projectId, date])
+  @@map("project_reports")
+}
+
+/// A documentation-only payment to a project's initiator (יזם). Never enters
+/// any financial calculation — recorded and displayed, nothing else.
+/// Deliberately missing isFuture/vatPercentage: those exist on SupplierPayment
+/// to drive VAT resolution, machinery a documentation-only row does not need.
+model InitiatorPayment {
+  id              String    @id @default(cuid())
+  projectReportId String
+  initiatorId     String
+  amount          Decimal   @db.Decimal(12, 2)
+  date            DateTime? @db.Date
+  description     String?
+
+  projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
+  initiator     Initiator     @relation(fields: [initiatorId], references: [id], onDelete: Cascade)
+
+  @@map("initiator_payments")
+}
+
+model ProjectReportIncome {
+  id              String    @id @default(cuid())
+  projectReportId String
+  amount          Decimal   @db.Decimal(12, 2)
+  incomeDate      DateTime? @db.Date
+  tag             String?
+
+  projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
+
+  @@map("project_report_incomes")
+}
+
+model SupplierPayment {
+  id              String    @id @default(cuid())
+  projectReportId String
+  supplierId      String
+  amount          Decimal   @db.Decimal(12, 2)
+  date            DateTime? @db.Date
+  description     String?
+  isFuture        Boolean   @default(false)
+  vatPercentage   Decimal?  @db.Decimal(5, 2)
+  /// Whether the money has actually left. A stack of paperwork is usually
+  /// settled as one transfer, so this is also toggled per supplier per month.
+  isPaid          Boolean   @default(false)
+
+  projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
+  supplier      Supplier      @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@map("supplier_payments")
+}
+
+model SubcontractorPayment {
+  id              String    @id @default(cuid())
+  subcontractorId String
+  projectId       String
+  /// Which month this settles — always the first of that month. NOT the day the
+  /// money moved; that is paymentDate.
+  serviceDate     DateTime  @db.Date
+  amount          Decimal   @db.Decimal(12, 2)
+  isPaid          Boolean   @default(false)
+  /// The day the money actually moved, chosen by the user. Nullable because
+  /// rows recorded before this column existed have no honest answer.
+  paymentDate     DateTime? @db.Date
+
+  subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("subcontractor_payments")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+model VatRate {
+  id             String   @id @default(cuid())
+  effectiveMonth DateTime @unique @db.Date
+  percentage     Decimal  @db.Decimal(5, 2)
+  createdAt      DateTime @default(now())
+
+  @@map("vat_rates")
+}
+
+model CompanySettings {
+  id            String   @id @default("company-settings")
+  name          String?
+  description   String?
+  companyNumber String?
+  phone         String?
+  email         String?
+  addressStreet String?
+  addressCity   String?
+  logo          String?
+  signature     String?
+  updatedAt     DateTime @updatedAt
+
+  @@map("company_settings")
+}

@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "composite": true,
+    // Composite projects must emit. Without an outDir the emit lands next to
+    // the source as vite.config.js, which Vite resolves *before* vite.config.ts
+    // (DEFAULT_CONFIG_FILES order) — so a stale build output would silently
+    // shadow the real config.
+    "outDir": "./node_modules/.tmp/tsconfig-node",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "strict": true,
+    "skipLibCheck": true,
+    // vite.config.ts is genuinely Node code (`resolve`, `__dirname`), so this is
+    // the one project that should see @types/node. Declared explicitly so no
+    // other @types package leaks in by auto-inclusion.
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts", "vite.config.e2e.ts", "vitest.config.ts"]
+}
