@@ -5,6 +5,13 @@ export interface SupplierPaymentEntry {
   projectReport: { id: string; projectId: string; projectName: string };
   amount: number;
   date: string | null;
+  /** Whether this line carries VAT. The one thing the user chooses. */
+  includesVat: boolean;
+  /**
+   * Derived by the backend from the global VAT rate for the report's month —
+   * never entered. Null when VAT is off, or when no rate is configured for that
+   * month yet.
+   */
   vatPercentage: number | null;
   vatAmount?: number;
   effectiveTotal?: number;
@@ -34,7 +41,8 @@ export interface CreateSupplierPaymentDto {
   date: string;
   isFuture: boolean;
   description?: string;
-  vatPercentage?: number;
+  /** Omitted on create means VAT is charged; omitted on update leaves it as is. */
+  includesVat?: boolean;
 }
 
 /** One line of a supplier's paperwork. */
@@ -43,6 +51,8 @@ export interface BatchSupplierPaymentRow {
   amount: number;
   date: string;
   description?: string;
+  /** Defaults to true on the backend. */
+  includesVat?: boolean;
 }
 
 export const supplierPaymentsApi = baseApi.injectEndpoints({
@@ -117,27 +127,20 @@ export const supplierPaymentsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["SupplierPayments"],
     }),
-    patchSupplierPaymentVat: build.mutation<
+    /**
+     * Turns VAT on or off for one payment. Only the choice is sent — the
+     * percentage is the global rate for the month, derived by the backend.
+     */
+    setSupplierPaymentIncludesVat: build.mutation<
       { id: string },
-      {
-        entry: SupplierPaymentEntry;
-        supplierId: string;
-        vatPercentage: number | null;
-      }
+      { id: string; includesVat: boolean }
     >({
-      query: ({ entry, supplierId, vatPercentage }) => ({
-        url: `/suppliers/payments/${entry.id}`,
-        method: "PUT",
-        body: {
-          projectReportId: entry.projectReport.id,
-          supplierId,
-          amount: entry.amount,
-          date: entry.date ?? new Date().toISOString(),
-          isFuture: entry.isFuture ?? false,
-          description: entry.description ?? undefined,
-          vatPercentage: vatPercentage ?? undefined,
-        },
+      query: ({ id, includesVat }) => ({
+        url: `/suppliers/payments/${id}/vat`,
+        method: "PATCH",
+        body: { includesVat },
       }),
+      // The project report screen shows each payment's VAT too.
       invalidatesTags: ["ProjectReports", "SupplierPayments"],
     }),
   }),
@@ -148,7 +151,7 @@ export const {
   useCreateSupplierPaymentMutation,
   useUpdateSupplierPaymentMutation,
   useDeleteSupplierPaymentMutation,
-  usePatchSupplierPaymentVatMutation,
+  useSetSupplierPaymentIncludesVatMutation,
   useBatchCreateSupplierPaymentsMutation,
   useSetSupplierPaymentPaidMutation,
   useSetSupplierPaymentsPaidMutation,

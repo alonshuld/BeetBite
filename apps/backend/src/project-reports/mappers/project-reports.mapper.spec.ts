@@ -34,7 +34,7 @@ describe('project-reports mapper', () => {
     supplierPayments: [] as {
       id: string;
       amount: Prisma.Decimal;
-      vatPercentage: Prisma.Decimal | null;
+      includesVat: boolean;
       supplier: { id: string; name: string };
     }[],
     initiatorPayments: [] as {
@@ -64,7 +64,7 @@ describe('project-reports mapper', () => {
     supplierPayments: [] as {
       id: string;
       amount: Prisma.Decimal;
-      vatPercentage: Prisma.Decimal | null;
+      includesVat: boolean;
       supplier: { id: string; name: string };
     }[],
     initiatorPayments: [] as {
@@ -79,17 +79,17 @@ describe('project-reports mapper', () => {
 
   describe('toProjectReportListItem — FK leak prevention', () => {
     it('should not include projectId in the response', () => {
-      const result = toProjectReportListItem(makeListItemInput());
+      const result = toProjectReportListItem(makeListItemInput(), []);
       expect(result).not.toHaveProperty('projectId');
     });
 
     it('should not include subcontractorId in the response', () => {
-      const result = toProjectReportListItem(makeListItemInput());
+      const result = toProjectReportListItem(makeListItemInput(), []);
       expect(result).not.toHaveProperty('subcontractorId');
     });
 
     it('should include all expected DTO fields', () => {
-      const result = toProjectReportListItem(makeListItemInput());
+      const result = toProjectReportListItem(makeListItemInput(), []);
       expect(result).toEqual({
         id: 'report-1',
         project: {
@@ -110,6 +110,65 @@ describe('project-reports mapper', () => {
         ],
         supplierPayments: [],
         initiatorPayments: [],
+      });
+    });
+  });
+
+  describe('toProjectReportListItem — supplier payment VAT', () => {
+    const rates = [
+      {
+        effectiveMonth: new Date('2024-01-01T00:00:00.000Z'),
+        percentage: new Prisma.Decimal('17'),
+      },
+      {
+        effectiveMonth: new Date('2024-05-01T00:00:00.000Z'),
+        percentage: new Prisma.Decimal('18'),
+      },
+    ];
+    const supplier = { id: 'supplier-1', name: 'Supplier 1' };
+
+    it("derives VAT from the rate for the report's own month", () => {
+      const input = makeListItemInput();
+      input.supplierPayments = [
+        {
+          id: 'payment-1',
+          amount: new Prisma.Decimal('1000'),
+          includesVat: true,
+          supplier,
+        },
+      ];
+
+      const [payment] = toProjectReportListItem(input, rates).supplierPayments;
+
+      expect(payment).toEqual({
+        id: 'payment-1',
+        amount: 1000,
+        includesVat: true,
+        vatPercentage: 18,
+        vatAmount: 180,
+        effectiveTotal: 1180,
+        supplier,
+      });
+    });
+
+    it('adds no VAT to a payment that does not include it', () => {
+      const input = makeListItemInput();
+      input.supplierPayments = [
+        {
+          id: 'payment-1',
+          amount: new Prisma.Decimal('1000'),
+          includesVat: false,
+          supplier,
+        },
+      ];
+
+      const [payment] = toProjectReportListItem(input, rates).supplierPayments;
+
+      expect(payment).toMatchObject({
+        includesVat: false,
+        vatPercentage: null,
+        vatAmount: 0,
+        effectiveTotal: 1000,
       });
     });
   });

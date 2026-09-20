@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
   useGetSupplierPaymentsByMonthQuery,
-  usePatchSupplierPaymentVatMutation,
+  useSetSupplierPaymentIncludesVatMutation,
   useSetSupplierPaymentPaidMutation,
   useSetSupplierPaymentsPaidMutation,
   type SupplierPaymentEntry,
@@ -10,6 +10,7 @@ import {
 } from "@/api/endpoints/supplier-payments";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { ButtonPrimary, ButtonGhost, EmptyState } from "@/components/atoms";
+import { Badge } from "@/components/atoms/Badge";
 import { SupplierPaymentsBatchModal } from "@/components/organisms/SupplierPaymentsBatchModal";
 import { useLang } from "@/contexts/useLang";
 import { formatYM } from "@/utils/formatMonth";
@@ -18,50 +19,107 @@ function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
 }
 
-function VatInput({
-  entry,
-  supplierId,
+type Align = "start" | "center" | "end";
+
+/**
+ * Logical values, so "end" is the right in English and the left in Hebrew.
+ * The `!` is deliberate: globals.css forces `[dir="rtl"] th, td` to
+ * `text-align: right`, which outranks plain utilities — and Tailwind's `rtl:`
+ * variants, which compile to a zero-specificity `:where()` selector. Without
+ * it a centred header is right-aligned in Hebrew while the flex-centred
+ * checkbox beneath it stays put, and the two look offset.
+ */
+const ALIGN: Record<Align, string> = {
+  start: "!text-start",
+  center: "!text-center",
+  end: "!text-end",
+};
+
+/** A header cell aligned the same way as the cells beneath it. */
+function Th({
+  align = "start",
+  className = "",
+  children,
 }: {
-  entry: SupplierPaymentEntry;
-  supplierId: string;
+  align?: Align;
+  className?: string;
+  children: ReactNode;
 }) {
-  const [value, setValue] = useState(
-    entry.vatPercentage != null ? String(entry.vatPercentage) : "",
+  return (
+    <th
+      className={`py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted ${ALIGN[align]} ${className}`}
+    >
+      {children}
+    </th>
   );
-  const [patchVat] = usePatchSupplierPaymentVatMutation();
+}
 
-  const originalStr =
-    entry.vatPercentage != null ? String(entry.vatPercentage) : "";
-  const isDirty = value !== originalStr;
+/** Native checkboxes are inline, so left alone they ride the text baseline. */
+const CHECKBOX = "block h-4 w-4 shrink-0 cursor-pointer accent-beet";
 
-  function handleSave() {
-    const parsed = value === "" ? null : Number(value);
-    if (parsed !== null && (isNaN(parsed) || parsed < 0)) return;
-    void patchVat({ entry, supplierId, vatPercentage: parsed });
-  }
+/**
+ * A cell holding a control, centred on the row's text line (h-5 matches the
+ * text-sm line height) so checkboxes sit level with the text and each other.
+ */
+function ControlCell({ children }: { children: ReactNode }) {
+  return (
+    <td className="py-2 px-3">
+      <div className="flex h-5 items-center justify-center gap-2">
+        {children}
+      </div>
+    </td>
+  );
+}
+
+/**
+ * Whether one payment carries VAT.
+ *
+ * The percentage is never typed: it is the global VAT rate for the report's
+ * month, derived by the backend and shown read-only beside the choice. Editing
+ * the rate happens once, in the VAT settings, and every payment follows.
+ */
+function VatCell({ entry }: { entry: SupplierPaymentEntry }) {
+  const { t } = useLang();
+  const [setIncludesVat] = useSetSupplierPaymentIncludesVatMutation();
 
   return (
-    <div className="flex items-center gap-1">
-      <input
-        type="number"
-        min={0}
-        max={100}
-        step={0.1}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="—"
-        aria-label={`VAT for ${entry.projectReport.projectName}`}
-        className="w-20 rounded border border-border bg-surface px-2 py-1 text-right text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary rtl:text-left"
-      />
-      <button
-        onClick={handleSave}
-        disabled={!isDirty}
-        className="flex h-6 w-6 items-center justify-center rounded bg-beet text-white text-xs font-bold transition-opacity disabled:pointer-events-none disabled:opacity-0"
-        aria-label="Save VAT"
-      >
-        ✓
-      </button>
-    </div>
+    <td className="py-2 px-3">
+      {/* The box sits at the column's exact centre, under its header and level
+          with the Paid box; the derived percentage hangs off its trailing
+          side. The side tracks are equal (minmax(0,1fr)) so the box stays
+          centred however wide the badge is, and the grid mirrors in Hebrew. */}
+      <div className="grid h-5 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+        <input
+          type="checkbox"
+          checked={entry.includesVat}
+          onChange={() =>
+            void setIncludesVat({
+              id: entry.id,
+              includesVat: !entry.includesVat,
+            })
+          }
+          aria-label={`${t("includeVat")} — ${entry.projectReport.projectName}`}
+          className={`${CHECKBOX} col-start-2`}
+        />
+        <span className="col-start-3 flex items-center">
+          {!entry.includesVat ? (
+            <span className="text-text-dim">—</span>
+          ) : entry.vatPercentage != null ? (
+            <Badge variant="beet">{`${entry.vatPercentage}%`}</Badge>
+          ) : (
+            // VAT is on but the month has no rate yet, so none is added.
+            <span
+              role="img"
+              aria-label={t("vatRateMissing")}
+              title={t("vatRateMissing")}
+              className="text-warning"
+            >
+              ⚠
+            </span>
+          )}
+        </span>
+      </div>
+    </td>
   );
 }
 
@@ -113,27 +171,30 @@ function SupplierGroup({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
+        {/* Every supplier block is its own table so it can carry its own
+            header, but auto-sized tables size columns to their own content —
+            the same column would land at a different x in every block. A fixed
+            layout with one shared set of widths keeps them aligned down the
+            page; the min width scrolls on a phone instead of squashing, and the
+            description — optional and usually empty — gives up its column
+            there so the controls are not pushed off-screen. */}
+        <table className="w-full min-w-[520px] table-fixed border-collapse text-sm sm:min-w-[760px]">
+          <colgroup>
+            <col className="w-[26%]" />
+            <col className="hidden w-[22%] sm:table-column" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[10%]" />
+          </colgroup>
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                {t("project")}
-              </th>
-              <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
-                {t("description")}
-              </th>
-              <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
-                {t("amountILS")}
-              </th>
-              <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
-                {t("vatPct")}
-              </th>
-              <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
-                {t("totalPaid")}
-              </th>
-              <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
-                {t("paid")}
-              </th>
+              <Th>{t("project")}</Th>
+              <Th className="hidden sm:table-cell">{t("description")}</Th>
+              <Th align="end">{t("amountILS")}</Th>
+              <Th align="center">{t("vatPct")}</Th>
+              <Th align="end">{t("totalInclVat")}</Th>
+              <Th align="center">{t("paid")}</Th>
             </tr>
           </thead>
           <tbody>
@@ -144,24 +205,30 @@ function SupplierGroup({
                   payment.isPaid ? "opacity-60" : ""
                 }`}
               >
-                <td className="py-2 px-3 text-text">
+                <td
+                  className={`truncate py-2 px-3 text-text ${ALIGN.start}`}
+                  title={payment.projectReport.projectName}
+                >
                   {payment.projectReport.projectName}
                 </td>
-                <td className="py-2 px-3 text-text-muted">
+                <td
+                  className={`hidden truncate py-2 px-3 text-text-muted sm:table-cell ${ALIGN.start}`}
+                  title={payment.description ?? undefined}
+                >
                   {payment.description ?? "—"}
                 </td>
-                <td className="py-2 px-3 text-right text-warning font-medium rtl:text-left">
+                <td
+                  className={`py-2 px-3 font-medium tabular-nums text-warning ${ALIGN.end}`}
+                >
                   {formatILS(payment.amount)}
                 </td>
-                <td className="py-2 px-3 text-right rtl:text-left">
-                  {payment.isFuture === false && (
-                    <VatInput entry={payment} supplierId={group.supplier.id} />
-                  )}
-                </td>
-                <td className="py-2 px-3 text-right font-medium rtl:text-left">
+                <VatCell entry={payment} />
+                <td
+                  className={`py-2 px-3 font-medium tabular-nums ${ALIGN.end}`}
+                >
                   {formatILS(payment.effectiveTotal ?? payment.amount)}
                 </td>
-                <td className="py-2 px-3 text-right rtl:text-left">
+                <ControlCell>
                   <input
                     type="checkbox"
                     checked={payment.isPaid}
@@ -172,9 +239,9 @@ function SupplierGroup({
                       })
                     }
                     aria-label={`${t("paid")} — ${payment.projectReport.projectName}`}
-                    className="h-4 w-4 accent-beet"
+                    className={CHECKBOX}
                   />
-                </td>
+                </ControlCell>
               </tr>
             ))}
           </tbody>

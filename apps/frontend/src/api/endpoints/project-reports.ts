@@ -39,6 +39,7 @@ export interface SupplierPaymentRow {
   id: string;
   supplier: { id: string; name: string };
   amount: number;
+  includesVat?: boolean;
   vatPercentage?: number | null;
   effectiveTotal?: number;
 }
@@ -75,7 +76,6 @@ export interface CreateProjectReportDto {
     supplierId: string;
     amount: number;
     date: string;
-    vatPercentage?: number;
   }[];
   initiatorPayments?: {
     initiatorId: string;

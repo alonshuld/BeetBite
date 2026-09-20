@@ -11,6 +11,7 @@ import { MonthQueryDto } from 'src/common/month-query.dto';
 import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
 import { PaginatedMonthQueryDto } from 'src/common/paginated-month-query.dto';
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
+import { Prisma } from 'src/generated/client';
 
 describe('SupplierPaymentsService', () => {
   let service: SupplierPaymentsService;
@@ -32,8 +33,13 @@ describe('SupplierPaymentsService', () => {
   };
 
   const mockVatRatesService = {
-    resolveForMonth: jest.fn(),
+    findAllEntries: jest.fn(),
   };
+
+  const vatRate = (effectiveMonth: string, percentage: string) => ({
+    effectiveMonth: new Date(effectiveMonth),
+    percentage: new Prisma.Decimal(percentage),
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -53,7 +59,7 @@ describe('SupplierPaymentsService', () => {
     service = module.get<SupplierPaymentsService>(SupplierPaymentsService);
 
     jest.clearAllMocks();
-    mockVatRatesService.resolveForMonth.mockResolvedValue(18);
+    mockVatRatesService.findAllEntries.mockResolvedValue([]);
     // Run transaction callbacks against the same mock.
     mockPrismaService.$transaction.mockImplementation(
       (callback: (tx: typeof mockPrismaService) => unknown) =>
@@ -82,7 +88,7 @@ describe('SupplierPaymentsService', () => {
       date: new Date('2023-01-01'),
       description: null,
       isFuture: false,
-      vatPercentage: null,
+      includesVat: false,
       projectReportId: 'report-1',
       supplierId: 'corp-1',
       supplier: {
@@ -91,6 +97,7 @@ describe('SupplierPaymentsService', () => {
       },
       projectReport: {
         id: 'report-1',
+        date: new Date('2023-01-01T00:00:00.000Z'),
         projectId: 'project-1',
         project: {
           id: 'project-1',
@@ -110,6 +117,7 @@ describe('SupplierPaymentsService', () => {
         date: mockPayment.date.toISOString(),
         description: null,
         isFuture: false,
+        includesVat: false,
         vatPercentage: null,
         vatAmount: 0,
         effectiveTotal: 1000,
@@ -127,7 +135,7 @@ describe('SupplierPaymentsService', () => {
         data: {
           ...createDto,
           date: new Date(createDto.date),
-          vatPercentage: 18,
+          includesVat: true,
         },
         select: {
           id: true,
@@ -135,13 +143,14 @@ describe('SupplierPaymentsService', () => {
           date: true,
           description: true,
           isFuture: true,
-          vatPercentage: true,
+          includesVat: true,
           isPaid: true,
           projectReportId: true,
           supplierId: true,
           projectReport: {
             select: {
               id: true,
+              date: true,
               projectId: true,
               project: {
                 select: {
@@ -159,9 +168,6 @@ describe('SupplierPaymentsService', () => {
           },
         },
       });
-      expect(mockVatRatesService.resolveForMonth).toHaveBeenCalledWith(
-        createDto.date,
-      );
     });
 
     it('should throw SupplierPaymentNotFoundError on foreign key error', async () => {
@@ -196,15 +202,14 @@ describe('SupplierPaymentsService', () => {
       );
     });
 
-    it('should default vatPercentage to the resolved VAT rate when not future and no VAT is supplied', async () => {
+    it('charges VAT by default when includesVat is not stated', async () => {
       mockPrismaService.supplierPayment.create.mockResolvedValue(mockPayment);
-      mockVatRatesService.resolveForMonth.mockResolvedValue(20);
 
       await service.create({ ...createDto, isFuture: false });
 
       expect(mockPrismaService.supplierPayment.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ vatPercentage: 20 }) as Record<
+          data: expect.objectContaining({ includesVat: true }) as Record<
             string,
             unknown
           >,
@@ -212,23 +217,7 @@ describe('SupplierPaymentsService', () => {
       );
     });
 
-    it('should leave vatPercentage undefined when no VAT rate has ever been configured', async () => {
-      mockPrismaService.supplierPayment.create.mockResolvedValue(mockPayment);
-      mockVatRatesService.resolveForMonth.mockResolvedValue(null);
-
-      await service.create({ ...createDto, isFuture: false });
-
-      expect(mockPrismaService.supplierPayment.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ vatPercentage: undefined }) as Record<
-            string,
-            unknown
-          >,
-        }),
-      );
-    });
-
-    it('should NOT default vatPercentage for a future payment', async () => {
+    it('does not charge VAT by default on a future payment', async () => {
       mockPrismaService.supplierPayment.create.mockResolvedValue({
         ...mockPayment,
         isFuture: true,
@@ -238,23 +227,22 @@ describe('SupplierPaymentsService', () => {
 
       expect(mockPrismaService.supplierPayment.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ vatPercentage: undefined }) as Record<
+          data: expect.objectContaining({ includesVat: false }) as Record<
             string,
             unknown
           >,
         }),
       );
-      expect(mockVatRatesService.resolveForMonth).not.toHaveBeenCalled();
     });
 
-    it('should preserve an explicitly supplied vatPercentage instead of overriding it with 18', async () => {
+    it('respects an explicit includesVat: false', async () => {
       mockPrismaService.supplierPayment.create.mockResolvedValue(mockPayment);
 
-      await service.create({ ...createDto, isFuture: false, vatPercentage: 9 });
+      await service.create({ ...createDto, includesVat: false });
 
       expect(mockPrismaService.supplierPayment.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ vatPercentage: 9 }) as Record<
+          data: expect.objectContaining({ includesVat: false }) as Record<
             string,
             unknown
           >,
@@ -262,14 +250,14 @@ describe('SupplierPaymentsService', () => {
       );
     });
 
-    it('should preserve an explicit vatPercentage of 0 (not treat it as missing)', async () => {
+    it('respects an explicit includesVat: true even on a future payment', async () => {
       mockPrismaService.supplierPayment.create.mockResolvedValue(mockPayment);
 
-      await service.create({ ...createDto, isFuture: false, vatPercentage: 0 });
+      await service.create({ ...createDto, isFuture: true, includesVat: true });
 
       expect(mockPrismaService.supplierPayment.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ vatPercentage: 0 }) as Record<
+          data: expect.objectContaining({ includesVat: true }) as Record<
             string,
             unknown
           >,
@@ -277,18 +265,46 @@ describe('SupplierPaymentsService', () => {
       );
     });
 
-    it('should expose computed vatAmount and effectiveTotal in the response', async () => {
+    it('never stores a VAT percentage', async () => {
+      mockPrismaService.supplierPayment.create.mockResolvedValue(mockPayment);
+
+      await service.create(createDto);
+
+      const [{ data }] = mockPrismaService.supplierPayment.create.mock
+        .calls[0] as [{ data: Record<string, unknown> }];
+      expect(data).not.toHaveProperty('vatPercentage');
+    });
+
+    it("derives vatAmount and effectiveTotal from the global rate for the report's month", async () => {
       mockPrismaService.supplierPayment.create.mockResolvedValue({
         ...mockPayment,
-        amount: { toNumber: () => 1000 },
-        vatPercentage: { toNumber: () => 18 },
+        includesVat: true,
+      });
+      mockVatRatesService.findAllEntries.mockResolvedValue([
+        vatRate('2022-01-01T00:00:00.000Z', '17'),
+        vatRate('2023-01-01T00:00:00.000Z', '18'),
+      ]);
+
+      const result = await service.create(createDto);
+
+      expect(result.includesVat).toBe(true);
+      expect(result.vatPercentage).toBe(18);
+      expect(result.vatAmount).toBeCloseTo(180); // 1000 * 18%
+      expect(result.effectiveTotal).toBeCloseTo(1180);
+    });
+
+    it('adds no VAT when it is included but no rate is configured yet', async () => {
+      mockPrismaService.supplierPayment.create.mockResolvedValue({
+        ...mockPayment,
+        includesVat: true,
       });
 
       const result = await service.create(createDto);
 
-      expect(result.vatPercentage).toBe(18);
-      expect(result.vatAmount).toBeCloseTo(180); // 1000 * 18%
-      expect(result.effectiveTotal).toBeCloseTo(1180);
+      expect(result.includesVat).toBe(true);
+      expect(result.vatPercentage).toBeNull();
+      expect(result.vatAmount).toBe(0);
+      expect(result.effectiveTotal).toBe(1000);
     });
   });
 
@@ -301,7 +317,7 @@ describe('SupplierPaymentsService', () => {
           id: 'payment-1',
           amount: { toNumber: () => 1000 },
           date: new Date('2023-01-10'),
-          vatPercentage: null,
+          includesVat: false,
           isFuture: false,
           description: null,
           isPaid: false,
@@ -311,6 +327,7 @@ describe('SupplierPaymentsService', () => {
           },
           projectReport: {
             id: 'report-1',
+            date: new Date('2023-01-01T00:00:00.000Z'),
             projectId: 'project-1',
             project: {
               id: 'project-1',
@@ -322,7 +339,7 @@ describe('SupplierPaymentsService', () => {
           id: 'payment-2',
           amount: { toNumber: () => 500 },
           date: new Date('2023-01-20'),
-          vatPercentage: null,
+          includesVat: false,
           isFuture: false,
           description: null,
           isPaid: false,
@@ -334,6 +351,7 @@ describe('SupplierPaymentsService', () => {
           },
           projectReport: {
             id: 'report-2',
+            date: new Date('2023-01-01T00:00:00.000Z'),
             projectId: 'project-2',
             project: {
               id: 'project-2',
@@ -369,6 +387,7 @@ describe('SupplierPaymentsService', () => {
             },
             amount: 1000,
             date: payments[0].date.toISOString(),
+            includesVat: false,
             vatPercentage: null,
             vatAmount: 0,
             effectiveTotal: 1000,
@@ -385,6 +404,7 @@ describe('SupplierPaymentsService', () => {
             },
             amount: 500,
             date: payments[1].date.toISOString(),
+            includesVat: false,
             vatPercentage: null,
             vatAmount: 0,
             effectiveTotal: 500,
@@ -414,13 +434,14 @@ describe('SupplierPaymentsService', () => {
               id: true,
               amount: true,
               date: true,
-              vatPercentage: true,
+              includesVat: true,
               isFuture: true,
               description: true,
               isPaid: true,
               projectReport: {
                 select: {
                   id: true,
+                  date: true,
                   project: {
                     select: {
                       id: true,
@@ -433,6 +454,70 @@ describe('SupplierPaymentsService', () => {
           },
         },
       });
+    });
+
+    it("derives each payment's VAT from the rate for its report's month", async () => {
+      mockPrismaService.supplier.findUnique.mockResolvedValue({
+        id: 'corp-1',
+        name: 'Corp 1',
+        payments: [
+          {
+            id: 'with-vat',
+            amount: { toNumber: () => 1000 },
+            date: new Date('2023-01-10'),
+            includesVat: true,
+            isFuture: false,
+            description: null,
+            isPaid: false,
+            projectReport: {
+              id: 'report-1',
+              date: new Date('2023-01-01T00:00:00.000Z'),
+              project: { id: 'project-1', name: 'Project 1' },
+            },
+          },
+          {
+            id: 'without-vat',
+            amount: { toNumber: () => 500 },
+            date: new Date('2023-01-20'),
+            includesVat: false,
+            isFuture: false,
+            description: null,
+            isPaid: false,
+            projectReport: {
+              id: 'report-2',
+              date: new Date('2023-01-01T00:00:00.000Z'),
+              project: { id: 'project-2', name: 'Project 2' },
+            },
+          },
+        ],
+      });
+      mockVatRatesService.findAllEntries.mockResolvedValue([
+        vatRate('2022-06-01T00:00:00.000Z', '17'),
+        vatRate('2023-01-01T00:00:00.000Z', '18'),
+        vatRate('2023-09-01T00:00:00.000Z', '19'),
+      ]);
+
+      const result = await service.findSupplierMonthlyPayments(
+        'corp-1',
+        monthQueryDto,
+      );
+
+      expect(result.projectPayments[0]).toMatchObject({
+        id: 'with-vat',
+        includesVat: true,
+        vatPercentage: 18,
+        vatAmount: 180,
+        effectiveTotal: 1180,
+      });
+      expect(result.projectPayments[1]).toMatchObject({
+        id: 'without-vat',
+        includesVat: false,
+        vatPercentage: null,
+        vatAmount: 0,
+        effectiveTotal: 500,
+      });
+      // The rate history is read once for the whole listing, not per row.
+      expect(mockVatRatesService.findAllEntries).toHaveBeenCalledTimes(1);
     });
 
     it('should throw error when supplier not found', async () => {
@@ -461,12 +546,13 @@ describe('SupplierPaymentsService', () => {
               id: 'payment-1',
               amount: { toNumber: (): number => 1000 },
               date: new Date('2023-01-10'),
-              vatPercentage: null,
+              includesVat: false,
               isFuture: false,
               description: null,
               projectReportId: 'report-1',
               projectReport: {
                 id: 'report-1',
+                date: new Date('2023-01-01T00:00:00.000Z'),
                 projectId: 'project-1',
                 project: {
                   id: 'project-1',
@@ -484,12 +570,13 @@ describe('SupplierPaymentsService', () => {
               id: 'payment-2',
               amount: { toNumber: (): number => 500 },
               date: new Date('2023-01-20'),
-              vatPercentage: null,
+              includesVat: false,
               isFuture: false,
               description: null,
               projectReportId: 'report-2',
               projectReport: {
                 id: 'report-2',
+                date: new Date('2023-01-01T00:00:00.000Z'),
                 projectId: 'project-2',
                 project: {
                   id: 'project-2',
@@ -538,13 +625,14 @@ describe('SupplierPaymentsService', () => {
               id: true,
               amount: true,
               date: true,
-              vatPercentage: true,
+              includesVat: true,
               isFuture: true,
               description: true,
               isPaid: true,
               projectReport: {
                 select: {
                   id: true,
+                  date: true,
                   project: {
                     select: {
                       id: true,
@@ -593,7 +681,7 @@ describe('SupplierPaymentsService', () => {
       date: new Date('2023-01-15'),
       description: null,
       isFuture: false,
-      vatPercentage: null,
+      includesVat: false,
       projectReportId: 'report-1',
       supplierId: 'corp-1',
       supplier: {
@@ -602,6 +690,7 @@ describe('SupplierPaymentsService', () => {
       },
       projectReport: {
         id: 'report-1',
+        date: new Date('2023-01-01T00:00:00.000Z'),
         projectId: 'project-1',
         project: {
           id: 'project-1',
@@ -623,6 +712,7 @@ describe('SupplierPaymentsService', () => {
         date: mockUpdatedPayment.date.toISOString(),
         description: null,
         isFuture: false,
+        includesVat: false,
         vatPercentage: null,
         vatAmount: 0,
         effectiveTotal: 1500,
@@ -641,7 +731,6 @@ describe('SupplierPaymentsService', () => {
         data: {
           ...updateDto,
           date: new Date(updateDto.date),
-          vatPercentage: 18,
         },
         select: {
           id: true,
@@ -649,13 +738,14 @@ describe('SupplierPaymentsService', () => {
           date: true,
           description: true,
           isFuture: true,
-          vatPercentage: true,
+          includesVat: true,
           isPaid: true,
           projectReportId: true,
           supplierId: true,
           projectReport: {
             select: {
               id: true,
+              date: true,
               projectId: true,
               project: {
                 select: {
@@ -673,8 +763,37 @@ describe('SupplierPaymentsService', () => {
           },
         },
       });
-      expect(mockVatRatesService.resolveForMonth).toHaveBeenCalledWith(
-        updateDto.date,
+    });
+
+    // Re-saving a payment (to fix its amount, say) must not silently switch its
+    // VAT back on.
+    it('leaves includesVat untouched when the update does not mention it', async () => {
+      mockPrismaService.supplierPayment.update.mockResolvedValue(
+        mockUpdatedPayment,
+      );
+
+      await service.update('payment-1', updateDto);
+
+      const [{ data }] = mockPrismaService.supplierPayment.update.mock
+        .calls[0] as [{ data: Record<string, unknown> }];
+      expect(data).not.toHaveProperty('includesVat');
+      expect(data).not.toHaveProperty('vatPercentage');
+    });
+
+    it('writes includesVat when the update states it', async () => {
+      mockPrismaService.supplierPayment.update.mockResolvedValue(
+        mockUpdatedPayment,
+      );
+
+      await service.update('payment-1', { ...updateDto, includesVat: false });
+
+      expect(mockPrismaService.supplierPayment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ includesVat: false }) as Record<
+            string,
+            unknown
+          >,
+        }),
       );
     });
 
@@ -777,12 +896,13 @@ describe('SupplierPaymentsService', () => {
         date: new Date('2026-03-05'),
         description: null,
         isFuture: false,
-        vatPercentage: { toNumber: () => 18 },
+        includesVat: true,
         isPaid: false,
         projectReportId: 'report-1',
         supplierId: SUPPLIER_ID,
         projectReport: {
           id: 'report-1',
+          date: new Date('2023-01-01T00:00:00.000Z'),
           projectId: 'project-1',
           project: { id: 'project-1', name: 'Project 1' },
         },
@@ -836,37 +956,62 @@ describe('SupplierPaymentsService', () => {
       ).rejects.toThrow();
     });
 
-    it('resolves VAT per row, as the single-create path does', async () => {
+    it('charges VAT on every line by default', async () => {
       mockPrismaService.supplierPayment.create.mockResolvedValue(
         createdRow('p1'),
       );
 
       await service.createBatch(SUPPLIER_ID, batchDto);
 
-      // One resolution per line, against that line's own date.
-      expect(mockVatRatesService.resolveForMonth).toHaveBeenCalledTimes(3);
-      expect(mockVatRatesService.resolveForMonth).toHaveBeenCalledWith(
-        '2026-03-05',
-      );
-      expect(mockPrismaService.supplierPayment.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ vatPercentage: 18 }) as unknown,
-        }) as unknown,
-      );
+      for (const call of mockPrismaService.supplierPayment.create.mock
+        .calls as [{ data: { includesVat: boolean } }][]) {
+        expect(call[0].data.includesVat).toBe(true);
+      }
     });
 
-    it('writes nothing when a row\u2019s month has no VAT rate', async () => {
-      // Resolution happens before the transaction opens precisely so that this
-      // fails clean rather than half-written.
-      mockVatRatesService.resolveForMonth.mockRejectedValue(
-        new Error('No VAT rate configured'),
+    it('honors a line that opts out of VAT', async () => {
+      mockPrismaService.supplierPayment.create.mockResolvedValue(
+        createdRow('p1'),
       );
 
-      await expect(
-        service.createBatch(SUPPLIER_ID, batchDto),
-      ).rejects.toThrow();
-      expect(mockPrismaService.supplierPayment.create).not.toHaveBeenCalled();
-      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+      await service.createBatch(SUPPLIER_ID, {
+        payments: [
+          { projectReportId: 'report-1', amount: 1000, date: '2026-03-05' },
+          {
+            projectReportId: 'report-2',
+            amount: 2000,
+            date: '2026-03-06',
+            includesVat: false,
+          },
+        ],
+      });
+
+      const calls = mockPrismaService.supplierPayment.create.mock.calls as [
+        { data: { projectReportId: string; includesVat: boolean } },
+      ][];
+      expect(calls.map(([{ data }]) => data.includesVat)).toEqual([
+        true,
+        false,
+      ]);
+    });
+
+    it('derives the response VAT from the global rate history, loaded once', async () => {
+      mockPrismaService.supplierPayment.create.mockResolvedValue(
+        createdRow('p1'),
+      );
+      mockVatRatesService.findAllEntries.mockResolvedValue([
+        vatRate('2022-01-01T00:00:00.000Z', '18'),
+      ]);
+
+      const result = await service.createBatch(SUPPLIER_ID, batchDto);
+
+      expect(result[0]).toMatchObject({
+        includesVat: true,
+        vatPercentage: 18,
+        vatAmount: 180,
+        effectiveTotal: 1180,
+      });
+      expect(mockVatRatesService.findAllEntries).toHaveBeenCalledTimes(1);
     });
 
     it('rejects an unknown supplier before touching anything', async () => {
@@ -874,6 +1019,91 @@ describe('SupplierPaymentsService', () => {
 
       await expect(service.createBatch('nope', batchDto)).rejects.toThrow();
       expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('includesVat flag', () => {
+    const payment = {
+      id: 'p1',
+      amount: { toNumber: () => 1000 },
+      date: new Date('2023-01-05'),
+      description: null,
+      isFuture: false,
+      includesVat: true,
+      isPaid: false,
+      projectReportId: 'report-1',
+      supplierId: 'supplier-1',
+      projectReport: {
+        id: 'report-1',
+        projectId: 'project-1',
+        date: new Date('2023-01-01T00:00:00.000Z'),
+        project: { id: 'project-1', name: 'Project 1' },
+      },
+      supplier: { id: 'supplier-1', name: 'Supplier 1' },
+    };
+
+    it('writes only the choice, never a percentage', async () => {
+      mockPrismaService.supplierPayment.update.mockResolvedValue(payment);
+
+      await service.setIncludesVat('p1', { includesVat: true });
+
+      expect(mockPrismaService.supplierPayment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'p1' },
+          data: { includesVat: true },
+        }) as unknown,
+      );
+    });
+
+    it("returns the payment with VAT derived for its report's month", async () => {
+      mockPrismaService.supplierPayment.update.mockResolvedValue(payment);
+      mockVatRatesService.findAllEntries.mockResolvedValue([
+        vatRate('2023-01-01T00:00:00.000Z', '18'),
+      ]);
+
+      const result = await service.setIncludesVat('p1', { includesVat: true });
+
+      expect(result).toMatchObject({
+        id: 'p1',
+        includesVat: true,
+        vatPercentage: 18,
+        vatAmount: 180,
+        effectiveTotal: 1180,
+      });
+    });
+
+    it('turns VAT off', async () => {
+      mockPrismaService.supplierPayment.update.mockResolvedValue({
+        ...payment,
+        includesVat: false,
+      });
+      mockVatRatesService.findAllEntries.mockResolvedValue([
+        vatRate('2023-01-01T00:00:00.000Z', '18'),
+      ]);
+
+      const result = await service.setIncludesVat('p1', {
+        includesVat: false,
+      });
+
+      expect(result).toMatchObject({
+        includesVat: false,
+        vatPercentage: null,
+        vatAmount: 0,
+        effectiveTotal: 1000,
+      });
+    });
+
+    it('throws when the payment does not exist', async () => {
+      mockPrismaService.supplierPayment.update.mockRejectedValue(
+        new PrismaClientKnownRequestError('Not found', {
+          code: PRISMA_ERROR_CODES.NOT_FOUND,
+          clientVersion: 'test',
+        }),
+      );
+
+      await expect(
+        service.setIncludesVat('nope', { includesVat: true }),
+      ).rejects.toThrow(SupplierPaymentNotFoundError);
     });
   });
 
@@ -901,12 +1131,13 @@ describe('SupplierPaymentsService', () => {
         date: new Date('2026-03-05'),
         description: null,
         isFuture: false,
-        vatPercentage: null,
+        includesVat: false,
         isPaid: true,
         projectReportId: 'report-1',
         supplierId: 'supplier-1',
         projectReport: {
           id: 'report-1',
+          date: new Date('2023-01-01T00:00:00.000Z'),
           projectId: 'project-1',
           project: { id: 'project-1', name: 'Project 1' },
         },

@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateSupplierPaymentDto } from './dto/create-supplier-payment.dto';
 import { BatchCreateSupplierPaymentsDto } from './dto/batch-create-supplier-payments.dto';
 import { SetSupplierPaymentPaidDto } from './dto/set-supplier-payment-paid.dto';
+import { SetSupplierPaymentVatDto } from './dto/set-supplier-payment-vat.dto';
 import { SetSupplierPaymentsPaidDto } from './dto/set-supplier-payments-paid.dto';
 import { MonthlySupplierPaymentsResponseDto } from './dto/monthly-supplier-payments-response.dto';
 import { SupplierPaymentNotFoundError } from './errors/supplier-payment-not-found.error';
@@ -36,13 +37,15 @@ const SUPPLIER_PAYMENT_SELECT = {
   date: true,
   description: true,
   isFuture: true,
-  vatPercentage: true,
+  includesVat: true,
   isPaid: true,
   projectReportId: true,
   supplierId: true,
   projectReport: {
     select: {
       id: true,
+      // The month the payment's VAT rate is looked up for.
+      date: true,
       projectId: true,
       project: { select: { id: true, name: true } },
     },
@@ -87,23 +90,16 @@ export class SupplierPaymentsService {
     createSupplierPaymentDto: CreateSupplierPaymentDto,
   ): Promise<SupplierPaymentResponseDto> {
     try {
-      const defaultVatPercentage =
-        !createSupplierPaymentDto.isFuture &&
-        createSupplierPaymentDto.vatPercentage === undefined
-          ? await this.vatRatesService.resolveForMonth(
-              createSupplierPaymentDto.date,
-            )
-          : undefined;
-
       const data = {
         ...createSupplierPaymentDto,
         date: createSupplierPaymentDto.date
           ? new Date(createSupplierPaymentDto.date)
           : null,
-        vatPercentage:
-          createSupplierPaymentDto.vatPercentage ??
-          defaultVatPercentage ??
-          undefined,
+        // Not stated means the usual: VAT is charged, unless the payment is
+        // not yet invoiced.
+        includesVat:
+          createSupplierPaymentDto.includesVat ??
+          !createSupplierPaymentDto.isFuture,
       };
 
       const supplierPayment = await this.prismaService.supplierPayment.create({
@@ -115,7 +111,10 @@ export class SupplierPaymentsService {
         `Created supplier payment with ID: ${supplierPayment.id}`,
       );
 
-      return toSupplierPaymentResponseDto(supplierPayment);
+      return toSupplierPaymentResponseDto(
+        supplierPayment,
+        await this.vatRatesService.findAllEntries(),
+      );
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
@@ -173,13 +172,14 @@ export class SupplierPaymentsService {
             id: true,
             amount: true,
             date: true,
-            vatPercentage: true,
+            includesVat: true,
             isFuture: true,
             description: true,
             isPaid: true,
             projectReport: {
               select: {
                 id: true,
+                date: true,
                 project: {
                   select: {
                     id: true,
@@ -201,7 +201,10 @@ export class SupplierPaymentsService {
       `Fetched ${supplier.payments.length} payments for supplier ID: ${supplierId} and month: ${monthQueryDto.month}`,
     );
 
-    return toMonthlySupplierPaymentsResponse(supplier);
+    return toMonthlySupplierPaymentsResponse(
+      supplier,
+      await this.vatRatesService.findAllEntries(),
+    );
   }
 
   /**
@@ -235,13 +238,14 @@ export class SupplierPaymentsService {
             id: true,
             amount: true,
             date: true,
-            vatPercentage: true,
+            includesVat: true,
             isFuture: true,
             description: true,
             isPaid: true,
             projectReport: {
               select: {
                 id: true,
+                date: true,
                 project: {
                   select: {
                     id: true,
@@ -259,11 +263,16 @@ export class SupplierPaymentsService {
       `Fetched payments for ${suppliers.length} suppliers for month: ${monthQueryDto.month}`,
     );
 
-    return toMultipleMonthlySuppliersPaymentsResponse(suppliers);
+    return toMultipleMonthlySuppliersPaymentsResponse(
+      suppliers,
+      await this.vatRatesService.findAllEntries(),
+    );
   }
 
   /**
    * Updates an existing supplier payment with the provided ID using the data from the UpdateSupplierPaymentDto. Handles potential errors such as not found, foreign key constraints, and unique constraint violations.
+   *
+   * An omitted `includesVat` leaves the payment's current choice untouched, so re-saving a payment (e.g. to fix its amount) can never silently switch its VAT back on.
    * @param supplierPaymentId Supplier payment ID of the payment to be updated
    * @param updateSupplierPaymentDto Supplier payment update DTO containing the new data for the supplier payment
    * @returns SupplierPaymentResponseDto representing the updated supplier payment
@@ -273,23 +282,11 @@ export class SupplierPaymentsService {
     updateSupplierPaymentDto: UpdateSupplierPaymentDto,
   ): Promise<SupplierPaymentResponseDto> {
     try {
-      const defaultVatPercentage =
-        !updateSupplierPaymentDto.isFuture &&
-        updateSupplierPaymentDto.vatPercentage === undefined
-          ? await this.vatRatesService.resolveForMonth(
-              updateSupplierPaymentDto.date,
-            )
-          : undefined;
-
       const data = {
         ...updateSupplierPaymentDto,
         date: updateSupplierPaymentDto.date
           ? new Date(updateSupplierPaymentDto.date)
           : null,
-        vatPercentage:
-          updateSupplierPaymentDto.vatPercentage ??
-          defaultVatPercentage ??
-          undefined,
       };
 
       const updatedSupplierPayment =
@@ -301,7 +298,10 @@ export class SupplierPaymentsService {
 
       this.logger.log(`Updated supplier payment with ID: ${supplierPaymentId}`);
 
-      return toSupplierPaymentResponseDto(updatedSupplierPayment);
+      return toSupplierPaymentResponseDto(
+        updatedSupplierPayment,
+        await this.vatRatesService.findAllEntries(),
+      );
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
@@ -364,9 +364,8 @@ export class SupplierPaymentsService {
    * half-recorded, with nothing to say which half, is worse than a clean
    * failure.
    *
-   * VAT is resolved per row exactly as the single-create path does — resolved
-   * up front so that a month with no configured rate fails before anything is
-   * written.
+   * Each row says whether it carries VAT (default: it does); the percentage is
+   * never stored, so there is nothing to resolve at write time.
    *
    * @param supplierId Supplier the paperwork came from
    * @param dto The payment lines
@@ -383,19 +382,10 @@ export class SupplierPaymentsService {
     });
     if (!supplier) throw new SupplierNotFoundError(supplierId);
 
-    // Resolve every row's VAT before opening the transaction: a missing rate
-    // should fail the whole stack, not leave part of it written.
-    const rows = await Promise.all(
-      dto.payments.map(async (payment) => ({
-        ...payment,
-        vatPercentage: await this.vatRatesService.resolveForMonth(payment.date),
-      })),
-    );
-
     try {
       const created = await this.prismaService.$transaction(async (tx) =>
         Promise.all(
-          rows.map((row) =>
+          dto.payments.map((row) =>
             tx.supplierPayment.create({
               data: {
                 supplierId,
@@ -403,7 +393,7 @@ export class SupplierPaymentsService {
                 amount: row.amount,
                 date: new Date(row.date),
                 description: row.description ?? null,
-                vatPercentage: row.vatPercentage,
+                includesVat: row.includesVat ?? true,
               },
               select: SUPPLIER_PAYMENT_SELECT,
             }),
@@ -414,7 +404,10 @@ export class SupplierPaymentsService {
       this.logger.log(
         `Recorded ${created.length} payments for supplier ${supplierId} in one batch`,
       );
-      return created.map(toSupplierPaymentResponseDto);
+      const vatRates = await this.vatRatesService.findAllEntries();
+      return created.map((payment) =>
+        toSupplierPaymentResponseDto(payment, vatRates),
+      );
     } catch (error) {
       if (
         error instanceof PrismaClientKnownRequestError &&
@@ -452,7 +445,44 @@ export class SupplierPaymentsService {
         data: { isPaid: dto.isPaid },
         select: SUPPLIER_PAYMENT_SELECT,
       });
-      return toSupplierPaymentResponseDto(updated);
+      return toSupplierPaymentResponseDto(
+        updated,
+        await this.vatRatesService.findAllEntries(),
+      );
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_ERROR_CODES.NOT_FOUND
+      ) {
+        throw new SupplierPaymentNotFoundError(paymentId);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Turns VAT on or off for one payment. Only the choice is written — the
+   * percentage is the global rate for the payment's report month, read back
+   * with the response.
+   * @param paymentId Payment to change
+   * @param dto Whether the payment carries VAT
+   * @returns The updated payment
+   * @throws SupplierPaymentNotFoundError when no payment has that id
+   */
+  async setIncludesVat(
+    paymentId: string,
+    dto: SetSupplierPaymentVatDto,
+  ): Promise<SupplierPaymentResponseDto> {
+    try {
+      const updated = await this.prismaService.supplierPayment.update({
+        where: { id: paymentId },
+        data: { includesVat: dto.includesVat },
+        select: SUPPLIER_PAYMENT_SELECT,
+      });
+      return toSupplierPaymentResponseDto(
+        updated,
+        await this.vatRatesService.findAllEntries(),
+      );
     } catch (error) {
       if (
         error instanceof PrismaClientKnownRequestError &&

@@ -150,7 +150,11 @@ model SupplierPayment {
   date            DateTime? @db.Date
   description     String?
   isFuture        Boolean   @default(false)
-  vatPercentage   Decimal?  @db.Decimal(5, 2)
+  /// Whether this payment carries VAT. Only the choice is stored: the
+  /// percentage is looked up from the VatRate history for the report's month at
+  /// read time, so it can never drift from the global setting. The API defaults
+  /// this to true; rows written without it (nested in a report) stay VAT-free.
+  includesVat     Boolean   @default(false)
   /// Whether the money has actually left. A stack of paperwork is usually
   /// settled as one transfer, so this is also toggled per supplier per month.
   isPaid          Boolean   @default(false)

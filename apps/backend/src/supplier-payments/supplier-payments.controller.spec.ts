@@ -16,6 +16,7 @@ describe('SupplierPaymentsController', () => {
     findSupplierMonthlyPayments: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
+    setIncludesVat: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -251,6 +252,33 @@ describe('SupplierPaymentsController', () => {
       await expect(controller.remove(id)).rejects.toThrow(
         SupplierPaymentNotFoundError,
       );
+    });
+  });
+
+  describe('setIncludesVat', () => {
+    it('should turn VAT on or off for a payment', async () => {
+      const updated = { id: 'payment-1', includesVat: false };
+      mockSupplierPaymentsService.setIncludesVat.mockResolvedValue(updated);
+
+      const result = await controller.setIncludesVat('payment-1', {
+        includesVat: false,
+      });
+
+      expect(result).toBe(updated);
+      expect(mockSupplierPaymentsService.setIncludesVat).toHaveBeenCalledWith(
+        'payment-1',
+        { includesVat: false },
+      );
+    });
+
+    it('should propagate SupplierPaymentNotFoundError', async () => {
+      mockSupplierPaymentsService.setIncludesVat.mockRejectedValue(
+        new SupplierPaymentNotFoundError('nope'),
+      );
+
+      await expect(
+        controller.setIncludesVat('nope', { includesVat: true }),
+      ).rejects.toThrow(SupplierPaymentNotFoundError);
     });
   });
 });

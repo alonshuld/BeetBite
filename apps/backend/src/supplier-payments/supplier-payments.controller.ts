@@ -31,6 +31,7 @@ import { MultipleMonthlySupplierPaymentsResponseDto } from './dto/multiple-month
 import { UpdateSupplierPaymentDto } from './dto/update-supplier-payment.dto';
 import { BatchCreateSupplierPaymentsDto } from './dto/batch-create-supplier-payments.dto';
 import { SetSupplierPaymentPaidDto } from './dto/set-supplier-payment-paid.dto';
+import { SetSupplierPaymentVatDto } from './dto/set-supplier-payment-vat.dto';
 import { SetSupplierPaymentsPaidDto } from './dto/set-supplier-payments-paid.dto';
 
 @ApiTags('suppliers/payments')
@@ -179,10 +180,7 @@ export class SupplierPaymentsController {
   @ApiParam({ name: 'supplierId', description: 'Supplier receiving payment' })
   @ApiCreatedResponse({ type: [SupplierPaymentResponseDto] })
   @ApiNotFoundResponse({ description: 'Supplier or project report not found' })
-  @ApiBadRequestResponse({
-    description:
-      'Invalid rows, or no VAT rate configured for a row\u2019s month',
-  })
+  @ApiBadRequestResponse({ description: 'Invalid rows' })
   async createBatch(
     @Param('supplierId') supplierId: string,
     @Body() dto: BatchCreateSupplierPaymentsDto,
@@ -206,6 +204,25 @@ export class SupplierPaymentsController {
     @Body() dto: SetSupplierPaymentPaidDto,
   ): Promise<SupplierPaymentResponseDto> {
     return await this.supplierPaymentsService.setPaid(id, dto);
+  }
+
+  /**
+   * Turn VAT on or off for a single supplier payment. The percentage is never
+   * supplied — it is the global VAT rate for the payment's report month.
+   * @param id Payment to change
+   * @param dto Whether the payment carries VAT
+   * @returns The updated payment
+   */
+  @Patch('/suppliers/payments/:id/vat')
+  @ApiOperation({ summary: 'Turn VAT on or off for a supplier payment' })
+  @ApiParam({ name: 'id', description: 'Supplier payment to change' })
+  @ApiOkResponse({ type: SupplierPaymentResponseDto })
+  @ApiNotFoundResponse({ description: 'Supplier payment not found' })
+  async setIncludesVat(
+    @Param('id') id: string,
+    @Body() dto: SetSupplierPaymentVatDto,
+  ): Promise<SupplierPaymentResponseDto> {
+    return await this.supplierPaymentsService.setIncludesVat(id, dto);
   }
 
   /**

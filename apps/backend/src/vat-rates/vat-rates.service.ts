@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma } from 'src/generated/client';
+import { Prisma, VatRate } from 'src/generated/client';
 import { normalizeToMonthStart } from 'src/common/utils/date.utils';
 import { UpsertVatRateDto } from './dto/upsert-vat-rate.dto';
 import { VatRateResponseDto } from './dto/vat-rate-response.dto';
@@ -46,6 +46,16 @@ export class VatRatesService {
     });
 
     return vatRates.map(toVatRateResponse);
+  }
+
+  /**
+   * Loads the whole rate history, for resolving many months in memory with
+   * `resolveVatPercentage` instead of querying once per row.
+   */
+  async findAllEntries(): Promise<VatRate[]> {
+    return this.prismaService.vatRate.findMany({
+      orderBy: { effectiveMonth: 'asc' },
+    });
   }
 
   /**

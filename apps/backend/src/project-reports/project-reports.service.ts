@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
+import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 import { CreateProjectReportDto } from './dto/create-project-report.dto';
 import { ProjectReportListItemDto } from './dto/project-report-list-item.dto';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
@@ -48,7 +49,7 @@ const REPORT_INCLUDE = {
     select: {
       id: true,
       amount: true,
-      vatPercentage: true,
+      includesVat: true,
       supplier: { select: { id: true, name: true } },
     },
   },
@@ -94,6 +95,7 @@ export class ProjectReportsService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly assignmentsService: ProjectClientAssignmentsService,
+    private readonly vatRatesService: VatRatesService,
   ) {}
 
   private async enrichCreateProjectReportDto(
@@ -200,7 +202,10 @@ export class ProjectReportsService {
       });
 
       this.logger.log(`Project report created: ${created.id}`);
-      return toProjectReportListItem(withFlattenedInitiator(created));
+      return toProjectReportListItem(
+        withFlattenedInitiator(created),
+        await this.vatRatesService.findAllEntries(),
+      );
     } catch (error) {
       if (!(error instanceof PrismaClientKnownRequestError)) throw error;
 
@@ -253,6 +258,7 @@ export class ProjectReportsService {
           paginatedMonthQueryDto.month,
         )
       ).map(withFlattenedInitiator),
+      await this.vatRatesService.findAllEntries(),
     );
   }
 
@@ -316,7 +322,10 @@ export class ProjectReportsService {
       [projectReport],
       projectReport.date,
     );
-    return toProjectReportListItem(withFlattenedInitiator(resolved));
+    return toProjectReportListItem(
+      withFlattenedInitiator(resolved),
+      await this.vatRatesService.findAllEntries(),
+    );
   }
 
   async findProjectReportForPreviousMonth(
@@ -344,7 +353,10 @@ export class ProjectReportsService {
       );
 
     this.logger.log(`Project report retrieved: ${projectReport.id}`);
-    return toProjectReportListItem(withFlattenedInitiator(projectReport));
+    return toProjectReportListItem(
+      withFlattenedInitiator(projectReport),
+      await this.vatRatesService.findAllEntries(),
+    );
   }
 
   async findOne(id: string): Promise<ProjectReportResponseDto> {
@@ -407,7 +419,7 @@ export class ProjectReportsService {
             select: {
               id: true,
               amount: true,
-              vatPercentage: true,
+              includesVat: true,
               supplier: { select: { id: true, name: true } },
             },
           },
@@ -530,7 +542,10 @@ export class ProjectReportsService {
         include: REPORT_INCLUDE,
       });
       this.logger.log(`Project report ${id} updated`);
-      return toProjectReportListItem(withFlattenedInitiator(updated));
+      return toProjectReportListItem(
+        withFlattenedInitiator(updated),
+        await this.vatRatesService.findAllEntries(),
+      );
     } catch (error) {
       if (!(error instanceof PrismaClientKnownRequestError)) throw error;
 
