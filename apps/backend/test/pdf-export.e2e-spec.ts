@@ -8,6 +8,7 @@ import {
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
 import { execSync } from 'child_process';
+import type { Server } from 'http';
 import * as path from 'path';
 import request from 'supertest';
 
@@ -83,7 +84,7 @@ describe('PDF Export Integration Tests', () => {
   let moduleRef: TestingModule;
   let service: PdfExportService;
   let prisma: PrismaService;
-  let app: INestApplication;
+  let app: INestApplication<Server>;
   let token: string;
 
   let clientId: string;

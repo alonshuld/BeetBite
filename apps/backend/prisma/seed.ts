@@ -1,3 +1,5 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { PrismaClient } from '../src/generated/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
@@ -47,6 +49,13 @@ function d(iso: string): Date {
   return new Date(iso);
 }
 
+// CompanySettings stores images as base64 data URLs — there is no upload infra —
+// so the demo logo and signature ship as PNGs next to this file and are inlined
+// at seed time. The Dockerfile copies the whole prisma/ directory, so the path
+// resolves the same in the container as it does locally.
+const dataUrl = (file: string): string =>
+  `data:image/png;base64,${fs.readFileSync(path.join(__dirname, 'demo-assets', file)).toString('base64')}`;
+
 type IncomeEntryInput = { amount: number; incomeDate: string | null };
 
 type ReportInput = {
@@ -84,14 +93,19 @@ async function report(r: ReportInput) {
 async function seedMockData(): Promise<void> {
   console.log('Seeding mock data (this wipes all existing business data)...');
 
+  await prisma.initiatorPayment.deleteMany({});
   await prisma.subcontractorPayment.deleteMany({});
   await prisma.supplierPayment.deleteMany({});
   await prisma.projectReportIncome.deleteMany({});
   await prisma.projectReport.deleteMany({});
+  await prisma.projectClientAssignment.deleteMany({});
   await prisma.project.deleteMany({});
   await prisma.client.deleteMany({});
   await prisma.subcontractor.deleteMany({});
   await prisma.supplier.deleteMany({});
+  await prisma.initiator.deleteMany({});
+  await prisma.companySettings.deleteMany({});
+  await prisma.vatRate.deleteMany({});
 
   // ── Clients (30) ──────────────────────────────────────────────────────────
   const clients = await Promise.all([
@@ -162,6 +176,37 @@ async function seedMockData(): Promise<void> {
     prisma.supplier.create({ data: { name: 'LandscapeDesign Pro' } }),         // 11
   ]);
 
+  // ── Initiators (5) ────────────────────────────────────────────────────────
+  const initiators = await Promise.all([
+    prisma.initiator.create({ data: { name: 'Oren Building Consultants' } }),   // 0
+    prisma.initiator.create({ data: { name: 'Amir Real Estate Partners' } }),    // 1
+    prisma.initiator.create({ data: { name: 'Nir Development Group' } }),        // 2
+    prisma.initiator.create({ data: { name: 'Tali Urban Planning' } }),          // 3
+    prisma.initiator.create({ data: { name: 'Gideon Construction Advisory' } }), // 4
+  ]);
+
+  // ── Company Settings ──────────────────────────────────────────────────────
+  await prisma.companySettings.upsert({
+    where: { id: 'company-settings' },
+    update: {},
+    create: {
+      id: 'company-settings',
+      name: 'BuildPro Contractors Ltd',
+      description: 'Professional construction and project management services',
+      companyNumber: '514123456',
+      phone: '+972123456789',
+      email: 'office@buildpro.co.il',
+      addressStreet: '42 Rothschild Blvd',
+      addressCity: 'Tel Aviv',
+      logo: dataUrl('logo-en.png'),
+      signature: dataUrl('signature-en.png'),
+    },
+  });
+
+  // ── VAT Rates (effective from 2024) ──────────────────────────────────────
+  // Only set once per effective period; changed only when rate changes
+  await prisma.vatRate.create({ data: { effectiveMonth: d('2024-01-01'), percentage: 18 } });
+
   // ── Projects ──────────────────────────────────────────────────────────────
   const closedProjects = await Promise.all([
     prisma.project.create({
@@ -182,15 +227,15 @@ async function seedMockData(): Promise<void> {
   ]);
 
   const activeProjects = await Promise.all([
-    prisma.project.create({ data: { clientId: clients[0].id, name: 'Dizengoff Tower Renovation', requesterName: 'Ilan Dahan', location: 'Dizengoff Tower', estimatedAmount: 500000, description: 'Full renovation of a 12-story tower on Dizengoff St' } }),        // 0
+    prisma.project.create({ data: { clientId: clients[0].id, name: 'Dizengoff Tower Renovation', requesterName: 'Ilan Dahan', location: 'Dizengoff Tower', estimatedAmount: 500000, description: 'Full renovation of a 12-story tower on Dizengoff St', initiatorId: initiators[0].id } }),        // 0
     prisma.project.create({ data: { clientId: clients[0].id, name: 'Yarkon Park Residence', requesterName: 'Michal Rosenblum', location: 'Yarkon Park', estimatedAmount: 200000, description: 'Residential complex near Yarkon Park' } }),                           // 1
-    prisma.project.create({ data: { clientId: clients[0].id, name: 'Florentin Lofts Conversion', requesterName: 'Gil Schwartz', location: 'Florentin Lofts', estimatedAmount: 180000, description: 'Industrial loft conversion in Florentin neighborhood' } }),      // 2
+    prisma.project.create({ data: { clientId: clients[0].id, name: 'Florentin Lofts Conversion', requesterName: 'Gil Schwartz', location: 'Florentin Lofts', estimatedAmount: 180000, description: 'Industrial loft conversion in Florentin neighborhood', initiatorId: initiators[1].id } }),      // 2
     prisma.project.create({ data: { clientId: clients[1].id, name: 'Haifa Harbor Complex', requesterName: 'Sarit Goldman', location: 'Haifa Harbor', estimatedAmount: 800000, description: 'Commercial complex at the Haifa harbor area' } }),                      // 3
     prisma.project.create({ data: { clientId: clients[1].id, name: 'Carmel Gardens Residences', requesterName: 'Nir Shalit', location: 'Carmel Gardens', estimatedAmount: 450000, description: 'Luxury residential complex on Mount Carmel' } }),                 // 4
-    prisma.project.create({ data: { clientId: clients[2].id, name: 'Jerusalem Old City Hotel', requesterName: 'Moshe Cohen', location: 'Jerusalem Old', estimatedAmount: 1200000, description: 'Boutique hotel construction near the Old City walls' } }),        // 5
+    prisma.project.create({ data: { clientId: clients[2].id, name: 'Jerusalem Old City Hotel', requesterName: 'Moshe Cohen', location: 'Jerusalem Old', estimatedAmount: 1200000, description: 'Boutique hotel construction near the Old City walls', initiatorId: initiators[2].id } }),        // 5
     prisma.project.create({ data: { clientId: clients[2].id, name: 'Mamilla Mall Extension', requesterName: 'Avi Levi', location: 'Mamilla Mall', estimatedAmount: 400000, description: 'Extension of the Mamilla open-air mall' } }),                        // 6
     prisma.project.create({ data: { clientId: clients[3].id, name: 'Raanana Villa Complex', requesterName: 'Dana Mizrahi', location: 'Raanana Villa', estimatedAmount: 350000, description: 'Upscale villa development in northern Raanana' } }),                  // 7
-    prisma.project.create({ data: { clientId: clients[4].id, name: 'Beer Sheva Tech Campus', requesterName: 'Yossi Peretz', location: 'Beer Sheva', estimatedAmount: 600000, description: 'Technology campus for the cyber district' } }),                      // 8
+    prisma.project.create({ data: { clientId: clients[4].id, name: 'Beer Sheva Tech Campus', requesterName: 'Yossi Peretz', location: 'Beer Sheva', estimatedAmount: 600000, description: 'Technology campus for the cyber district', initiatorId: initiators[3].id } }),                      // 8
     prisma.project.create({ data: { clientId: clients[5].id, name: 'Herzliya Marina Towers', requesterName: 'Ronit Ben-David', location: 'Herzliya Marina', estimatedAmount: 900000, description: 'Twin residential towers overlooking the marina' } }),                // 9
     prisma.project.create({ data: { clientId: clients[6].id, name: 'Netanya Beach Resort', requesterName: 'Ilan Dahan', location: 'Netanya Beach', estimatedAmount: 750000, description: 'Luxury beach resort on the northern coast' } }),                       // 10
     prisma.project.create({ data: { clientId: clients[6].id, name: 'Netanya Shopping Center', requesterName: 'Michal Rosenblum', location: 'Netanya Shopping', estimatedAmount: 300000, description: 'Modern shopping center in the city center' } }),                    // 11
@@ -639,6 +684,20 @@ async function seedMockData(): Promise<void> {
     ],
   });
 
+  // ── ProjectClientAssignments (one per project) ────────────────────────────
+  const allProjects = [...closedProjects, ...activeProjects];
+  await Promise.all(
+    allProjects.map((project) =>
+      prisma.projectClientAssignment.create({
+        data: {
+          projectId: project.id,
+          clientId: project.clientId,
+          effectiveFrom: d('2024-01-01'),
+        },
+      }),
+    ),
+  );
+
   void [
     reportsClosedTA, reportsClosedHaifa, reportsClosedRaanana,
     reportsClosedRehovot, reportsClosedPetah,
@@ -652,7 +711,7 @@ async function seedMockData(): Promise<void> {
     showJerusalem, showMamilla, showHerzliya,
   ];
 
-  console.log('✅ Seed complete: 30 clients, 35 projects, May 2026 showcase month with multiple income entries & corp payments');
+  console.log('✅ Seed complete: 30 clients, 5 initiators, 35 projects with client assignments, May 2026 showcase month with multiple income entries & corp payments');
 }
 
 async function main(): Promise<void> {
