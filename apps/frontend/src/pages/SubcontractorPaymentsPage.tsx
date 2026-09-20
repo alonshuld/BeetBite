@@ -272,14 +272,12 @@ export default function SubcontractorPaymentsPage() {
                       ? t("project")
                       : t("projects")}
                   </p>
-                  <p className="text-sm text-success font-semibold">
+                  <p className="text-sm text-danger font-semibold">
                     {t("owed")}: {formatILS(card.totalOwed)}
                   </p>
-                  {card.totalPaid > 0 && (
-                    <p className="text-xs text-text-muted">
-                      {t("paid")}: {formatILS(card.totalPaid)}
-                    </p>
-                  )}
+                  <p className="text-sm text-success font-semibold">
+                    {t("paid")}: {formatILS(card.totalPaid)}
+                  </p>
                   {/* The balance is the number actually acted on, so it
                       is styled to stand out and coloured like the statuses:
                       settled at zero, outstanding above it. */}
@@ -313,6 +311,9 @@ export default function SubcontractorPaymentsPage() {
                     </th>
                     <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
                       {t("amountOwed")}
+                    </th>
+                    <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
+                      {t("amountPaid")}
                     </th>
                     <th className="py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted text-center">
                       {t("paid")}?
@@ -360,6 +361,9 @@ export default function SubcontractorPaymentsPage() {
                             >
                               {formatILS(pb.owed)}
                             </span>
+                          </td>
+                          <td className="py-3 px-3 text-right font-medium text-success rtl:text-left">
+                            {formatILS(paid)}
                           </td>
                           <td className="py-3 px-3">
                             <div className="flex items-center justify-center gap-1.5">
@@ -572,7 +576,9 @@ export default function SubcontractorPaymentsPage() {
                     >
                       {formatILS(selectedCard.totalOwed)}
                     </td>
-                    <td />
+                    <td className="py-2 px-3 text-right font-bold text-success rtl:text-left">
+                      {formatILS(selectedCard.totalPaid)}
+                    </td>
                     <td />
                   </tr>
                 </tfoot>
