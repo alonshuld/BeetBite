@@ -1,2 +1,5 @@
-npx pnpm format:check
-npx pnpm lint:check
+# Cap the heap so a runaway tsc/eslint can't swap the machine out.
+export NODE_OPTIONS="--max-old-space-size=2048 ${NODE_OPTIONS:-}"
+
+pnpm format:check
+pnpm lint:check
