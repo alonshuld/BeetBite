@@ -157,7 +157,7 @@ dbTest.describe('Reports list', () => {
   });
 
   dbTest(
-    'the profit simulator previews without writing',
+    'the master slider previews every project without writing',
     async ({ page, db }) => {
       await openClient(page);
 
@@ -168,19 +168,56 @@ dbTest.describe('Reports list', () => {
         await route.fallback();
       });
 
-      // T6 harvested the per-project override into a range slider (no
-      // associated <label>), so it is not reachable via getByLabel.
-      await page.locator('input[type="range"]').first().fill('25');
+      // Closed by default — the bookmark tab on the far edge opens it.
+      await page.getByRole('button', { name: 'Profit Simulator' }).click();
+      await page.getByRole('slider', { name: 'All projects' }).fill('15');
 
-      // 40,000 × 25% = 10,000 profit, leaving 30,000 for the subcontractor.
-      // With a single project, the per-row figure and the panel's total
-      // agree and both render the same text — assert at least one shows it.
-      await expect(page.getByText('₪10,000').first()).toBeVisible();
-      await expect(page.getByText('₪30,000').first()).toBeVisible();
+      // 40,000 × 15% = 6,000 profit, leaving 34,000 for the subcontractor.
+      // Shown on the simulator rail and, since T-sim, on the sheet itself.
+      await expect(page.getByText('₪6,000').first()).toBeVisible();
+      await expect(page.getByText('₪34,000').first()).toBeVisible();
+      await expect(page.getByText('Profit (15%)')).toBeVisible();
 
       expect(writes).toBe(0);
       const reports = await db.projectReport.findMany();
       expect(Number(reports[0].profitMargin)).toBe(10);
+    },
+  );
+
+  dbTest(
+    "a project's own slider marks that sheet as simulated",
+    async ({ page, db }) => {
+      void db;
+      await openClient(page);
+
+      await page.getByRole('button', { name: 'Profit Simulator' }).click();
+      // 50% is past the slider's 0–20 range, so it goes in via the number box.
+      await page.getByRole('spinbutton', { name: 'Grid Project %' }).fill('50');
+
+      await expect(page.getByText('Simulated').first()).toBeVisible();
+      await expect(page.getByText('Profit (50%)')).toBeVisible();
+      // The saved margin stays on the sheet as the reference it replaced.
+      await expect(page.getByText(/Saved margin:\s*10%/).first()).toBeVisible();
+    },
+  );
+
+  dbTest(
+    'closing the simulator drops back to the stored figures',
+    async ({ page, db }) => {
+      void db;
+      await openClient(page);
+
+      await page.getByRole('button', { name: 'Profit Simulator' }).click();
+      await page.getByRole('slider', { name: 'All projects' }).fill('18');
+      await expect(page.getByText('Profit (18%)')).toBeVisible();
+
+      // The handle stays on screen while open and closes the drawer.
+      await page.getByRole('button', { name: 'Profit Simulator' }).click();
+
+      await expect(page.getByText('Simulated')).toHaveCount(0);
+      // Stored margin is 10%: 40,000 × 10% = 4,000.
+      await expect(page.getByText('Profit (10%)')).toBeVisible();
+      await expect(page.getByText('₪4,000').first()).toBeVisible();
     },
   );
 

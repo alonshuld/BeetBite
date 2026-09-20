@@ -205,45 +205,185 @@ describe("ReportsPage", () => {
     expect(screen.getByText(/Total Sub Payments/)).toBeInTheDocument();
   });
 
-  // T6 — per-report override. Each report's slider is independent, and
-  // dragging one must never move the read-only figures on the tiles above
-  // (totalSubcontractorPayments, computed from stored margins) or another
-  // report's simulated figures.
-  describe("per-report profit simulator (T6)", () => {
-    it("defaults every report's slider to its own saved margin", async () => {
+  // T6 — the simulator rail. A master slider drives every project at once;
+  // moving one project's own slider pins it, so later master moves leave it
+  // alone. Everything the simulation touches (sheets, client header) moves
+  // together; nothing is ever written back.
+  describe("profit simulator (T6)", () => {
+    const secondReport = {
+      id: "r2",
+      date: "2025-03-01",
+      project: {
+        id: "p2",
+        name: "Riverside",
+        description: "Low-rise block",
+        location: "2 River Rd",
+        requesterName: "Jane Doe",
+        client: { id: "c1", name: "Acme Corp" },
+      },
+      subcontractor: { id: "s2", name: "Alice Mason" },
+      totalIncome: 20000,
+      profitMargin: 16,
+      supplierPayments: [],
+      incomeEntries: [
+        { id: "ie3", amount: 20000, incomeDate: "2025-03-12", tag: "Shell" },
+      ],
+    };
+
+    /** [master, ...one per project] — the drawer renders them in that order. */
+    function sliders() {
+      return screen.getAllByRole("slider");
+    }
+
+    /** The drawer is closed by default; every slider test opens it first. */
+    async function openSimulator() {
+      await userEvent.click(
+        screen.getByRole("button", { name: "Profit Simulator" }),
+      );
+    }
+
+    it("stays closed until the bookmark tab is used, and shows stored figures", async () => {
       renderPage();
       await userEvent.click(screen.getByText("Acme Corp"));
 
-      const slider = screen.getByRole("slider");
-      expect(slider).toHaveValue("20"); // mockReports[0].profitMargin
+      expect(screen.queryByRole("slider")).not.toBeInTheDocument();
+      expect(screen.queryByText("Simulated")).not.toBeInTheDocument();
+      // 10,000 − 2,000 (saved 20%) = 8,000 on the sheet and in the header.
+      expect(screen.getAllByText("₪8,000").length).toBeGreaterThanOrEqual(2);
+
+      await openSimulator();
+      expect(screen.getAllByRole("slider").length).toBe(2);
     });
 
-    it("overriding one report's margin updates only that report's simulated figures", async () => {
+    it("ends the simulation when the drawer is closed", async () => {
       renderPage();
       await userEvent.click(screen.getByText("Acme Corp"));
+      await openSimulator();
 
-      const slider = screen.getByRole("slider");
-      fireEvent.change(slider, { target: { value: "10" } });
+      fireEvent.change(sliders()[1], { target: { value: "10" } });
+      expect(screen.getAllByText("Simulated").length).toBeGreaterThanOrEqual(1);
 
-      // 10,000 * 10% = 1,000 profit (appears twice: the per-report row and
-      // the aggregate "Simulated Profit" summary, both driven by the same
-      // single overridden report); 10,000 - 1,000 - 0 = 9,000 remainder.
-      expect(screen.getAllByText("₪1,000").length).toBeGreaterThanOrEqual(2);
-      expect(screen.getByText("₪9,000")).toBeInTheDocument();
-      expect(screen.getByText("(overridden)")).toBeInTheDocument();
+      // The same bookmark tab that opened it closes it — there is no ✕.
+      await userEvent.click(
+        screen.getByRole("button", { name: "Profit Simulator" }),
+      );
 
-      // The read-only tile above and the client-header total are computed
-      // from the *stored* margin (20%) and must not have moved: 10,000 -
-      // 2,000 - 0 = 8,000, shown on both the tile and the header total.
+      expect(screen.queryByRole("slider")).not.toBeInTheDocument();
+      expect(screen.queryByText("Simulated")).not.toBeInTheDocument();
+      // Back to the stored 20%: 10,000 − 2,000 = 8,000.
       expect(screen.getAllByText("₪8,000").length).toBeGreaterThanOrEqual(2);
+
+      // Re-opening starts clean, at the saved margin.
+      await openSimulator();
+      expect(sliders()[1]).toHaveValue("20");
+    });
+
+    it("defaults every project's slider to its own saved margin", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+      await openSimulator();
+
+      const [master, projectSlider] = sliders();
+      expect(projectSlider).toHaveValue("20"); // mockReports[0].profitMargin
+      // Sole report, so the average the master starts at is that same margin.
+      expect(master).toHaveValue("20");
+    });
+
+    it("the master slider moves every project at once", async () => {
+      setReports([...mockReports, secondReport]);
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+      await openSimulator();
+
+      const [master, first, second] = sliders();
+      // Average of 20% and 16% until moved.
+      expect(master).toHaveValue("18");
+
+      fireEvent.change(master, { target: { value: "10" } });
+
+      expect(first).toHaveValue("10");
+      expect(second).toHaveValue("10");
+      // 10,000 × 10% + 20,000 × 10% = 3,000 simulated profit.
+      expect(screen.getByText("₪3,000")).toBeInTheDocument();
+    });
+
+    it("pins a project against later master moves once its own slider is used", async () => {
+      setReports([...mockReports, secondReport]);
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+      await openSimulator();
+
+      const [master, first, second] = sliders();
+      fireEvent.change(second, { target: { value: "15" } });
+      fireEvent.change(master, { target: { value: "10" } });
+
+      expect(first).toHaveValue("10");
+      expect(second).toHaveValue("15");
+      expect(screen.getByText("(overridden)")).toBeInTheDocument();
+    });
+
+    it("overriding one project's margin leaves the other project alone", async () => {
+      setReports([...mockReports, secondReport]);
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+      await openSimulator();
+
+      const [, first, second] = sliders();
+      fireEvent.change(first, { target: { value: "10" } });
+
+      expect(second).toHaveValue("16");
+      // 10,000 × 10% = 1,000 for the overridden project; the other keeps its
+      // saved 20,000 × 16% = 3,200.
+      expect(screen.getAllByText("₪1,000").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("₪3,200").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("shows the simulated figures on the project sheet, with the saved ones beside them", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+      await openSimulator();
+
+      const [, projectSlider] = sliders();
+      fireEvent.change(projectSlider, { target: { value: "10" } });
+
+      const sheet = screen
+        .getByRole("button", { name: "Tower Block" })
+        .closest("div.bg-surface") as HTMLElement;
+      // Simulated: 10,000 × 10% = 1,000 profit, 9,000 left for the
+      // subcontractor. The saved 20% figure stays visible underneath.
+      expect(within(sheet).getByText("Profit (10%)")).toBeInTheDocument();
+      expect(within(sheet).getByText("₪1,000")).toBeInTheDocument();
+      expect(within(sheet).getByText("₪9,000")).toBeInTheDocument();
+      expect(
+        within(sheet).getByText(/Saved margin:\s*20%/),
+      ).toBeInTheDocument();
+      expect(within(sheet).getByText("₪2,000")).toBeInTheDocument();
+      expect(within(sheet).getByText("Simulated")).toBeInTheDocument();
+    });
+
+    it("moves the client header total with the simulation", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+      await openSimulator();
+
+      const header = screen
+        .getByText(/Total Sub Payments/)
+        .closest("div") as HTMLElement;
+      expect(within(header).getByText("₪8,000")).toBeInTheDocument();
+
+      const [, projectSlider] = sliders();
+      fireEvent.change(projectSlider, { target: { value: "10" } });
+
+      expect(within(header).getByText("₪9,000")).toBeInTheDocument();
     });
 
     it("resets to saved values", async () => {
       renderPage();
       await userEvent.click(screen.getByText("Acme Corp"));
+      await openSimulator();
 
-      const slider = screen.getByRole("slider");
-      fireEvent.change(slider, { target: { value: "10" } });
+      const [, projectSlider] = sliders();
+      fireEvent.change(projectSlider, { target: { value: "10" } });
       expect(screen.getByText("(overridden)")).toBeInTheDocument();
 
       await userEvent.click(
@@ -251,15 +391,16 @@ describe("ReportsPage", () => {
       );
 
       expect(screen.queryByText("(overridden)")).not.toBeInTheDocument();
-      expect(slider).toHaveValue("20");
+      expect(projectSlider).toHaveValue("20");
     });
 
     it("exports with the current overrides via the client-wide simulated endpoint", async () => {
       renderPage();
       await userEvent.click(screen.getByText("Acme Corp"));
+      await openSimulator();
 
-      const slider = screen.getByRole("slider");
-      fireEvent.change(slider, { target: { value: "10" } });
+      const [, projectSlider] = sliders();
+      fireEvent.change(projectSlider, { target: { value: "10" } });
 
       await userEvent.click(
         screen.getByRole("button", { name: "Export with Simulator" }),
@@ -270,6 +411,41 @@ describe("ReportsPage", () => {
           clientId: "c1",
           overrides: [{ projectId: "p1", margin: 10 }],
         }),
+      );
+    });
+
+    it("takes a margin above the slider's range from the number box", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+      await openSimulator();
+
+      const box = screen.getByRole("spinbutton", { name: "Tower Block %" });
+      fireEvent.change(box, { target: { value: "60" } });
+
+      expect(box).toHaveValue(60);
+      // The slider only spans 0–20, so its thumb parks at the top.
+      expect(sliders()[1]).toHaveValue("20");
+      // 10,000 × 60% = 6,000 profit, 4,000 left for the subcontractor.
+      expect(screen.getAllByText("₪6,000").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("₪4,000").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("sends no overrides for a project left at its saved margin", async () => {
+      setReports([...mockReports, secondReport]);
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+      await openSimulator();
+
+      const [, first] = sliders();
+      // Explicitly re-selecting the saved margin is not an override.
+      fireEvent.change(first, { target: { value: "20" } });
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Export with Simulator" }),
+      );
+
+      expect(exportSimulatedSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ overrides: [] }),
       );
     });
   });

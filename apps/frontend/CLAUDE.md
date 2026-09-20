@@ -98,7 +98,6 @@ Data router via `createBrowserRouter`. All authenticated routes are wrapped in `
 | `/subcontractors` | SubcontractorsPage |
 | `/suppliers` | SuppliersPage |
 | `/settings/company` | SettingsCompanyPage |
-| `/simulator` | ProfitSimulatorPage |
 | `*` | NotFoundPage |
 
 ## Styling
@@ -144,8 +143,6 @@ Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`, `setLang`) is provided at 
 
 **Management**: Projects, Clients, Subcontractors, Suppliers
 
-**Tools**: Profit Margin Simulator
-
 **Settings**: Company Settings (`/settings/company`)
 
 \* Income Per Month does not use the global month picker — exclude from `OVERVIEW_SCREENS`.
@@ -157,6 +154,7 @@ Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`, `setLang`) is provided at 
 - **Subcontractor company number**: required, unique, exactly 9 digits (Israeli company registration number). `SubcontractorsPage` strips non-digits and caps input length at 9 on change (`value.replace(/\D/g, "").slice(0, 9)`) rather than only relying on `pattern`/`maxLength`.
 - **Supplier payment fields**: `amount`, `description`, `date`, `isFuture` (bool), `vatPercentage` (number, default 18, shown only when `isFuture = false`).
 - **Project filters** (three independent toggles, Active on by default): Active (`isDone=false` + has reports), Future (no reports yet), Closed (`isDone=true`).
+- **Profit simulator**: lives on `ReportsPage`'s client drill-down as a drawer (`components/organisms/ProfitSimulatorPanel`, state in `features/simulator/useProfitSimulation`). **Closed by default** — a bookmark tab pinned to the edge opposite the sidebar (right in LTR, left in RTL) opens it, then rides out with the drawer and closes it — one handle, no ✕; closing it (handle or Esc) resets the simulation, so the page shows stored figures unless the user is actively simulating. It slides in from that edge (`fixed top-14`, below the app header, `transition-transform duration-200`, kept mounted for the slide-out) and from `md` up the page content is inset by `md:pe-[356px]` over the same 200ms, so the drawer pushes the sheets aside instead of covering them; below `md` there is no room to push, so it overlays. No backdrop — the sheets stay readable while a slider is dragged. Each row pairs a slider (0–20%, where margins actually land) with a number box (0–100%) for the rare margin above the track — the thumb parks at 20 then. A master slider sets one margin for every project; moving a project's own slider pins it, so later master moves skip it. Effective margin = pin → master → saved, with the master resting at the average saved margin until moved. Everything on the page reads it — project sheets (marked "Simulated", saved figure beneath) and the client header's Total Sub Payments — but nothing is written back; the only consumer is the client-simulated PDF export, which receives just the projects whose margin actually differs. Clears on client or month change.
 - **ProjectReportFormModal flow**: client picker → filtered project list → subcontractor prefills from last month → completion % prefills from last month → report month → income + date → profit margin % → supplier payments (multi-row).
 - **Date display in reports**: month + year only (`MMM YYYY`), no day. Use `formatISODate(iso, lang)` — locale-aware.
 - **MonthPicker**: click the label to open a popover with a year `<select>` (±10 years) and a 3×4 month button grid. No prev/next arrows. Month names in the picker also respect `lang` via `MONTH_NAMES[lang]` arrays defined in the component.
