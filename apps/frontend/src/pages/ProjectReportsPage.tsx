@@ -53,6 +53,7 @@ interface IncomeEntryDraft {
   id?: string;
   amount: string;
   incomeDate: string;
+  tag: string;
 }
 
 function todayISO(): string {
@@ -127,7 +128,7 @@ export default function ProjectReportsPage() {
   const [subcontractorId, setSubcontractorId] = useState("");
   const [reportMonth, setReportMonth] = useState(month);
   const [incomeEntries, setIncomeEntries] = useState<IncomeEntryDraft[]>([
-    { amount: "", incomeDate: "" },
+    { amount: "", incomeDate: "", tag: "" },
   ]);
   const [profitMarginPercent, setProfitMarginPercent] = useState("");
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
@@ -169,7 +170,7 @@ export default function ProjectReportsPage() {
     setEditingId(null);
     setSubcontractorId("");
     setReportMonth(month);
-    setIncomeEntries([{ amount: "", incomeDate: "" }]);
+    setIncomeEntries([{ amount: "", incomeDate: "", tag: "" }]);
     setProfitMarginPercent("");
     setCorpPayments([]);
     setModalOpen(true);
@@ -184,6 +185,7 @@ export default function ProjectReportsPage() {
         id: e.id,
         amount: String(e.amount),
         incomeDate: e.incomeDate ? e.incomeDate.slice(0, 10) : "",
+        tag: e.tag ?? "",
       })),
     );
     setProfitMarginPercent(String(report.profitMargin));
@@ -205,9 +207,8 @@ export default function ProjectReportsPage() {
       // Income entries are reconciled through the dedicated per-entry
       // endpoints below, never through this DTO's `incomeEntries` field:
       // the backend replaces that whole relation (deleteMany + createMany)
-      // on every write, which would churn row ids and silently wipe tags
-      // this form never shows. Leaving the key out of the payload keeps
-      // untouched rows — and their tags — untouched.
+      // on every write, which would churn row ids. Leaving the key out of
+      // the payload keeps untouched rows untouched.
       const originalEntries = currentReport?.incomeEntries ?? [];
       const keptIds = new Set(
         validEntries.flatMap((e) => (e.id ? [e.id] : [])),
@@ -221,11 +222,13 @@ export default function ProjectReportsPage() {
                 id: e.id,
                 amount: Number(e.amount),
                 incomeDate: e.incomeDate || null,
+                tag: e.tag.trim() || null,
               })
             : addIncomeEntry({
                 reportId: editingId,
                 amount: Number(e.amount),
                 incomeDate: e.incomeDate || undefined,
+                tag: e.tag.trim() || undefined,
               }),
         ),
         ...removedEntries.map((e) => deleteIncomeEntry(e.id)),
@@ -247,6 +250,7 @@ export default function ProjectReportsPage() {
         incomeEntries: validEntries.map((e) => ({
           amount: Number(e.amount),
           incomeDate: e.incomeDate || undefined,
+          tag: e.tag.trim() || undefined,
         })),
         profitMargin: Number(profitMarginPercent) || undefined,
         supplierPayments: corpPaymentsDto,
@@ -257,7 +261,10 @@ export default function ProjectReportsPage() {
   }
 
   function addIncomeEntryDraft() {
-    setIncomeEntries((prev) => [...prev, { amount: "", incomeDate: "" }]);
+    setIncomeEntries((prev) => [
+      ...prev,
+      { amount: "", incomeDate: "", tag: "" },
+    ]);
   }
 
   function removeIncomeEntryDraft(idx: number) {
@@ -1080,6 +1087,16 @@ export default function ProjectReportsPage() {
                   value={entry.incomeDate}
                   onChange={(e) =>
                     updateIncomeEntryDraft(i, { incomeDate: e.target.value })
+                  }
+                  className="flex-1"
+                />
+                <Input
+                  label={t("tag")}
+                  maxLength={100}
+                  placeholder={t("tagPlaceholder")}
+                  value={entry.tag}
+                  onChange={(e) =>
+                    updateIncomeEntryDraft(i, { tag: e.target.value })
                   }
                   className="flex-1"
                 />
