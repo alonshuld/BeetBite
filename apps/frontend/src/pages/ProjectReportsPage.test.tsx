@@ -236,8 +236,8 @@ describe("ProjectReportsPage", () => {
   // General edit-report modal — regression coverage for a past bug: this
   // modal used to send a full `incomeEntries` array through the report-update
   // DTO, which the backend applies as deleteMany + createMany, destroying
-  // every income row's id (and any tag this modal never even shows) on every
-  // save. Income entries must instead be reconciled through the dedicated
+  // every income row's id (and its tag) on every save. Income entries must
+  // instead be reconciled through the dedicated
   // per-entry endpoints, and the report DTO must never carry `incomeEntries`.
   describe("edit-report modal — income entry reconciliation", () => {
     it("saving with no entry changes updates the existing entry by id and omits incomeEntries from the report DTO", async () => {
@@ -257,6 +257,45 @@ describe("ProjectReportsPage", () => {
       expect(updateReportSpy).toHaveBeenCalledTimes(1);
       const dto = updateReportSpy.mock.calls[0][0] as Record<string, unknown>;
       expect(dto).not.toHaveProperty("incomeEntries");
+    });
+
+    it("shows each entry's tag in the modal and saves an edited tag on the existing entry", async () => {
+      renderPage();
+      await userEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+
+      const tagInput = screen.getByLabelText("Work");
+      expect(tagInput).toHaveValue("Shell");
+      await userEvent.clear(tagInput);
+      await userEvent.type(tagInput, "Foundation");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateEntrySpy).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "ie1", tag: "Foundation" }),
+      );
+      expect(addEntrySpy).not.toHaveBeenCalled();
+      const dto = updateReportSpy.mock.calls[0][0] as Record<string, unknown>;
+      expect(dto).not.toHaveProperty("incomeEntries");
+    });
+
+    it("saving with an untouched tag keeps it as is", async () => {
+      renderPage();
+      await userEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateEntrySpy).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "ie1", tag: "Shell" }),
+      );
+    });
+
+    it("clearing the tag in the modal sends null", async () => {
+      renderPage();
+      await userEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+      await userEvent.clear(screen.getByLabelText("Work"));
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateEntrySpy).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "ie1", tag: null }),
+      );
     });
 
     it("adding a new row in the modal creates it via addIncomeEntry, leaving the existing entry's id untouched", async () => {
