@@ -44,7 +44,7 @@ dbTest.describe('Subcontractor Payments', () => {
     await page.getByText('SubPay Worker').first().click();
   }
 
-  /** Fill the inline partial row for the seeded project and save it. */
+  /** Fill the inline instalment row for the seeded project and save it. */
   async function payPartial(
     page: import('@playwright/test').Page,
     amount: string,
@@ -90,18 +90,64 @@ dbTest.describe('Subcontractor Payments', () => {
   );
 
   dbTest(
-    'marking a project paid records the full amount owed',
+    'marking a project paid records the full amount owed on a chosen day',
     async ({ page, db }) => {
       void db;
       await openWorkerPanel(page);
 
+      // The green tick no longer writes on the click: it opens the instalment
+      // row with the outstanding balance filled in and waits for the day.
       await page.getByTitle('Paid', { exact: true }).first().click();
+      await expect(page.locator(`#partial-${projectId}`)).toHaveValue('45000');
+      await page.fill(`#payment-date-${projectId}`, '2026-05-21');
+      await page.getByTitle('Save', { exact: true }).first().click();
 
       // Owed = 45000, and the whole owed amount is recorded as one payment.
       await expect(async () => {
         const payments = await db.subcontractorPayment.findMany();
         expect(payments).toHaveLength(1);
         expect(Number(payments[0].amount)).toBe(45000);
+        expect(payments[0].paymentDate?.toISOString().slice(0, 10)).toBe(
+          '2026-05-21',
+        );
+        // The month being settled is untouched by the day chosen.
+        expect(payments[0].serviceDate.toISOString().slice(0, 10)).toBe(
+          '2026-05-01',
+        );
+      }).toPass({ timeout: 5000 });
+    },
+  );
+
+  dbTest(
+    'a second instalment is added beside the first, not in place of it',
+    async ({ page, db }) => {
+      await openWorkerPanel(page);
+
+      await page.getByTitle('Partial', { exact: true }).first().click();
+      await page.fill(`#partial-${projectId}`, '10000');
+      await page.fill(`#payment-date-${projectId}`, '2026-05-04');
+      await page.getByTitle('Save', { exact: true }).first().click();
+
+      await expect(async () => {
+        expect(await db.subcontractorPayment.count()).toBe(1);
+      }).toPass({ timeout: 5000 });
+
+      await page.getByTitle('Partial', { exact: true }).first().click();
+      await page.fill(`#partial-${projectId}`, '5000');
+      await page.fill(`#payment-date-${projectId}`, '2026-05-18');
+      await page.getByTitle('Save', { exact: true }).first().click();
+
+      // Two rows, two days, and the first instalment survived the second.
+      await expect(async () => {
+        const payments = await db.subcontractorPayment.findMany();
+        expect(payments).toHaveLength(2);
+        const byDay = [...payments].sort(
+          (a, b) => Number(a.paymentDate) - Number(b.paymentDate),
+        );
+        expect(byDay.map((row) => Number(row.amount))).toEqual([10000, 5000]);
+        expect(
+          byDay.map((row) => row.paymentDate?.toISOString().slice(0, 10)),
+        ).toEqual(['2026-05-04', '2026-05-18']);
       }).toPass({ timeout: 5000 });
     },
   );
