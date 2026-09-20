@@ -33,8 +33,15 @@ export class NestedProjectPaymentDto {
   date!: string | null;
 
   @ApiProperty({
+    example: true,
+    description: 'Whether this payment carries VAT',
+  })
+  includesVat!: boolean;
+
+  @ApiProperty({
     example: 18,
-    description: 'VAT percentage applied to this payment',
+    description:
+      "Derived, never stored: the global VAT rate effective for the payment's report month. Null when VAT is off, or when no rate is configured for that month yet",
     nullable: true,
   })
   vatPercentage!: number | null;

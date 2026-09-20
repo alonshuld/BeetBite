@@ -52,8 +52,15 @@ export class SupplierPaymentResponseDto {
   isFuture!: boolean;
 
   @ApiProperty({
+    example: true,
+    description: 'Whether this payment carries VAT',
+  })
+  includesVat!: boolean;
+
+  @ApiProperty({
     example: 18,
-    description: 'VAT percentage — only applicable when isFuture is false',
+    description:
+      "Derived, never stored: the global VAT rate effective for the payment's report month. Null when VAT is off, or when no rate is configured for that month yet",
     nullable: true,
   })
   vatPercentage!: number | null;

@@ -2,6 +2,10 @@ import { Prisma, ProjectReport } from 'src/generated/client';
 import { ProjectReportListItemDto } from '../dto/project-report-list-item.dto';
 import { ProjectReportResponseDto } from '../dto/project-report-response.dto';
 import { IncomeEntryResponseDto } from '../dto/income-entry-response.dto';
+import {
+  VatRateEntry,
+  derivePaymentVat,
+} from 'src/vat-rates/utils/payment-vat';
 
 type IncomeEntryRaw = {
   id: string;
@@ -13,7 +17,7 @@ type IncomeEntryRaw = {
 type SupplierPaymentRaw = {
   id: string;
   amount: Prisma.Decimal;
-  vatPercentage: Prisma.Decimal | null;
+  includesVat: boolean;
   supplier: { id: string; name: string };
 };
 
@@ -72,6 +76,7 @@ export const toProjectReportListItem = (
     supplierPayments: SupplierPaymentRaw[];
     initiatorPayments: InitiatorPaymentRaw[];
   },
+  vatRates: VatRateEntry[],
 ): ProjectReportListItemDto => {
   const entries = mapIncomeEntries(projectReport.incomeEntries);
   return {
@@ -84,14 +89,20 @@ export const toProjectReportListItem = (
     incomeEntries: entries,
     supplierPayments: projectReport.supplierPayments.map((cp) => {
       const amount = cp.amount.toNumber();
-      const vatPercentage = cp.vatPercentage?.toNumber() ?? null;
-      const vatAmount = vatPercentage ? amount * (vatPercentage / 100) : 0;
+      // VAT is looked up for the report's own month, never stored on the payment.
+      const { vatPercentage, vatAmount, effectiveTotal } = derivePaymentVat(
+        amount,
+        cp.includesVat,
+        vatRates,
+        projectReport.date,
+      );
       return {
         id: cp.id,
         amount,
+        includesVat: cp.includesVat,
         vatPercentage,
         vatAmount,
-        effectiveTotal: amount + vatAmount,
+        effectiveTotal,
         supplier: cp.supplier,
       };
     }),
@@ -107,7 +118,11 @@ export const toProjectReportList = (
     supplierPayments: SupplierPaymentRaw[];
     initiatorPayments: InitiatorPaymentRaw[];
   })[],
-): ProjectReportListItemDto[] => projectReports.map(toProjectReportListItem);
+  vatRates: VatRateEntry[],
+): ProjectReportListItemDto[] =>
+  projectReports.map((projectReport) =>
+    toProjectReportListItem(projectReport, vatRates),
+  );
 
 export const toProjectReportResponse = (
   projectReport: Omit<ProjectReport, 'income' | 'incomeDate'> & {

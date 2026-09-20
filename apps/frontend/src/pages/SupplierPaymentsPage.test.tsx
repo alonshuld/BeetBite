@@ -11,7 +11,7 @@ vi.mock("react-router-dom", async (importOriginal) => {
 
 vi.mock("@/api/endpoints/supplier-payments", () => ({
   useGetSupplierPaymentsByMonthQuery: vi.fn(),
-  usePatchSupplierPaymentVatMutation: vi.fn(),
+  useSetSupplierPaymentIncludesVatMutation: vi.fn(),
   useSetSupplierPaymentPaidMutation: vi.fn(),
   useSetSupplierPaymentsPaidMutation: vi.fn(),
   useBatchCreateSupplierPaymentsMutation: vi.fn(),
@@ -20,16 +20,20 @@ vi.mock("@/api/endpoints/suppliers", () => ({ useGetSuppliersQuery: vi.fn() }));
 vi.mock("@/api/endpoints/project-reports", () => ({
   useGetProjectReportsQuery: vi.fn(),
 }));
+vi.mock("@/api/endpoints/vatRates", () => ({
+  useGetResolvedVatRateQuery: vi.fn(),
+}));
 
 import {
   useGetSupplierPaymentsByMonthQuery,
-  usePatchSupplierPaymentVatMutation,
+  useSetSupplierPaymentIncludesVatMutation,
   useSetSupplierPaymentPaidMutation,
   useSetSupplierPaymentsPaidMutation,
   useBatchCreateSupplierPaymentsMutation,
 } from "@/api/endpoints/supplier-payments";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
+import { useGetResolvedVatRateQuery } from "@/api/endpoints/vatRates";
 
 const mockData = {
   suppliersPayments: [
@@ -44,6 +48,7 @@ const mockData = {
             projectName: "Tower Block",
           },
           amount: 5000,
+          includesVat: false,
           vatPercentage: null,
           effectiveTotal: undefined,
           isFuture: true,
@@ -62,6 +67,7 @@ const mockData = {
           id: "pp2",
           projectReport: { id: "r2", projectId: "p2", projectName: "Bridge" },
           amount: 3000,
+          includesVat: false,
           vatPercentage: null,
           effectiveTotal: undefined,
           isFuture: true,
@@ -77,7 +83,7 @@ const mockData = {
   total: 8000,
 };
 
-/** Data that includes a non-future payment so VatInput renders */
+/** A payment that carries VAT, at the 17% the backend derived for its month. */
 const mockDataWithVat = {
   suppliersPayments: [
     {
@@ -91,6 +97,7 @@ const mockDataWithVat = {
             projectName: "Tower Block",
           },
           amount: 5000,
+          includesVat: true,
           vatPercentage: 17,
           effectiveTotal: 5850,
           isFuture: false,
@@ -106,10 +113,6 @@ const mockDataWithVat = {
   total: 5850,
 };
 
-const noopMutation = vi
-  .fn()
-  .mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
-
 function renderSupplierPaymentsPage() {
   return renderWithProviders(<SupplierPaymentsPage />, {
     preloadedState: { auth: { token: "test-token" } },
@@ -118,6 +121,7 @@ function renderSupplierPaymentsPage() {
 }
 
 const setPaidSpy = vi.fn().mockResolvedValue({ data: {} });
+const setIncludesVatSpy = vi.fn().mockResolvedValue({ data: {} });
 const setAllPaidSpy = vi.fn().mockResolvedValue({ data: {} });
 const batchSpy = vi.fn().mockResolvedValue({ data: [] });
 
@@ -127,10 +131,15 @@ describe("SupplierPaymentsPage", () => {
       data: mockData,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetSupplierPaymentsByMonthQuery>);
-    vi.mocked(usePatchSupplierPaymentVatMutation).mockReturnValue([
-      noopMutation,
+    vi.mocked(useSetSupplierPaymentIncludesVatMutation).mockReturnValue([
+      setIncludesVatSpy,
       { isLoading: false },
-    ] as unknown as ReturnType<typeof usePatchSupplierPaymentVatMutation>);
+    ] as unknown as ReturnType<
+      typeof useSetSupplierPaymentIncludesVatMutation
+    >);
+    vi.mocked(useGetResolvedVatRateQuery).mockReturnValue({
+      data: { percentage: 18 },
+    } as unknown as ReturnType<typeof useGetResolvedVatRateQuery>);
     vi.mocked(useSetSupplierPaymentPaidMutation).mockReturnValue([
       setPaidSpy,
       { isLoading: false },
@@ -209,51 +218,101 @@ describe("SupplierPaymentsPage", () => {
     expect(screen.getAllByText(/₪/).length).toBeGreaterThan(0);
   });
 
-  describe("VAT input dirty-state save button", () => {
-    beforeEach(() => {
+  // The percentage is never typed: it is the global rate for the payment's
+  // month. The user only chooses whether a payment carries VAT.
+  describe("VAT toggle", () => {
+    function showPayments(data: unknown) {
       vi.mocked(useGetSupplierPaymentsByMonthQuery).mockReturnValue({
-        data: mockDataWithVat,
+        data,
         isLoading: false,
       } as unknown as ReturnType<typeof useGetSupplierPaymentsByMonthQuery>);
-    });
+    }
 
-    it("save button is disabled when VAT value is unchanged", () => {
+    it("ticks the box and shows the derived percentage when the payment includes VAT", () => {
+      showPayments(mockDataWithVat);
       renderSupplierPaymentsPage();
-      const saveBtn = screen.getByRole("button", { name: "Save VAT" });
-      expect(saveBtn).toBeDisabled();
-    });
 
-    it("save button becomes enabled after changing the VAT value", async () => {
-      renderSupplierPaymentsPage();
-      const input = screen.getByRole("spinbutton");
-      await userEvent.clear(input);
-      await userEvent.type(input, "20");
       expect(
-        screen.getByRole("button", { name: "Save VAT" }),
-      ).not.toBeDisabled();
+        screen.getByRole("checkbox", { name: /Include VAT — Tower Block/ }),
+      ).toBeChecked();
+      expect(screen.getByText("17%")).toBeInTheDocument();
     });
 
-    it("clicking enabled save button calls patchVat mutation", async () => {
-      const mockPatchVat = vi.fn().mockReturnValue({});
-      vi.mocked(usePatchSupplierPaymentVatMutation).mockReturnValue([
-        mockPatchVat,
-        { isLoading: false },
-      ] as unknown as ReturnType<typeof usePatchSupplierPaymentVatMutation>);
-
+    it("leaves the box unticked, with no percentage, when the payment has no VAT", () => {
       renderSupplierPaymentsPage();
-      const input = screen.getByRole("spinbutton");
-      await userEvent.clear(input);
-      await userEvent.type(input, "20");
-      await userEvent.click(screen.getByRole("button", { name: "Save VAT" }));
-      expect(mockPatchVat).toHaveBeenCalledOnce();
+
+      expect(
+        screen.getByRole("checkbox", { name: /Include VAT — Tower Block/ }),
+      ).not.toBeChecked();
+      // Only a bare figure such as "17%" — the column header also ends in %.
+      expect(screen.queryByText(/^\d+(\.\d+)?%$/)).toBeNull();
     });
 
-    it("save button stays disabled when VAT value is restored to original", async () => {
+    it("offers no field to type a VAT amount or percentage", () => {
+      showPayments(mockDataWithVat);
       renderSupplierPaymentsPage();
-      const input = screen.getByRole("spinbutton");
-      await userEvent.clear(input);
-      await userEvent.type(input, "17"); // same as vatPercentage: 17
-      expect(screen.getByRole("button", { name: "Save VAT" })).toBeDisabled();
+
+      expect(screen.queryByRole("spinbutton")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Save VAT" })).toBeNull();
+    });
+
+    it("shows the payment total including the derived VAT", () => {
+      showPayments(mockDataWithVat);
+      renderSupplierPaymentsPage();
+
+      // ₪5,000 + 17% — the row's total, and the grand total that sums them.
+      expect(screen.getAllByText("₪5,850").length).toBeGreaterThan(0);
+    });
+
+    it("turns VAT off, sending only the choice", async () => {
+      showPayments(mockDataWithVat);
+      renderSupplierPaymentsPage();
+
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: /Include VAT — Tower Block/ }),
+      );
+
+      expect(setIncludesVatSpy).toHaveBeenCalledWith({
+        id: "pp1",
+        includesVat: false,
+      });
+    });
+
+    it("turns VAT on, sending only the choice", async () => {
+      renderSupplierPaymentsPage();
+
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: /Include VAT — Tower Block/ }),
+      );
+
+      expect(setIncludesVatSpy).toHaveBeenCalledWith({
+        id: "pp1",
+        includesVat: true,
+      });
+    });
+
+    // Ticked but nothing added would otherwise look like a 0% rate.
+    it("flags a payment whose VAT is on but whose month has no rate yet", () => {
+      showPayments({
+        ...mockDataWithVat,
+        suppliersPayments: [
+          {
+            ...mockDataWithVat.suppliersPayments[0],
+            projectPayments: [
+              {
+                ...mockDataWithVat.suppliersPayments[0].projectPayments[0],
+                vatPercentage: null,
+                effectiveTotal: 5000,
+              },
+            ],
+          },
+        ],
+      });
+      renderSupplierPaymentsPage();
+
+      expect(
+        screen.getByRole("img", { name: /No VAT rate is set/ }),
+      ).toBeInTheDocument();
     });
   });
 

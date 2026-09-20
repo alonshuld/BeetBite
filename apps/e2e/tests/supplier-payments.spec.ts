@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import { test as dbTest, expect } from '../fixtures/db.fixture';
 
 const BASE = 'http://localhost:5174';
@@ -138,6 +139,8 @@ dbTest.describe('Supplier Payments Page', () => {
       await page.getByRole('button', { name: /add line/i }).click();
       await page.selectOption('#batch-report-1', { value: reports[1].id });
       await page.fill('#batch-amount-1', '6000');
+      // VAT is on by default; the second line's paperwork carries none.
+      await page.locator('label', { hasText: 'Include VAT' }).nth(1).click();
 
       await page.getByRole('button', { name: /save/i }).click();
 
@@ -147,8 +150,189 @@ dbTest.describe('Supplier Payments Page', () => {
           db.supplierPayment.count({ where: { supplierId: supplier.id } }),
         )
         .toBe(2);
+
+      // The choice is stored per line; no percentage is.
+      const payments = await db.supplierPayment.findMany({
+        where: { supplierId: supplier.id },
+        orderBy: { amount: 'asc' },
+      });
+      expect(
+        payments.map(
+          (payment: { includesVat: boolean }) => payment.includesVat,
+        ),
+      ).toEqual([true, false]);
     },
   );
+
+  // The contractor never types a VAT amount: they choose whether a payment
+  // carries VAT, and the percentage is the global rate for the report's month.
+  dbTest(
+    'VAT on a payment is a choice, and its percentage follows the global rate',
+    async ({ page, db }) => {
+      const client = await db.client.create({ data: { name: 'Vat Client' } });
+      const subcontractor = await db.subcontractor.create({
+        data: { name: 'Vat Sub', companyNumber: '515222011' },
+      });
+      const supplier = await db.supplier.create({
+        data: { name: 'Vat Supplier' },
+      });
+      const project = await db.project.create({
+        data: {
+          clientId: client.id,
+          name: 'Vat Project',
+          estimatedAmount: 100000,
+          description: 'Vat test',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
+        },
+      });
+      const report = await db.projectReport.create({
+        data: {
+          projectId: project.id,
+          subcontractorId: subcontractor.id,
+          date: new Date('2026-05-01'),
+          profitMargin: 20,
+        },
+      });
+      await db.supplierPayment.create({
+        data: {
+          projectReportId: report.id,
+          supplierId: supplier.id,
+          amount: 10000,
+          date: new Date('2026-05-05'),
+        },
+      });
+
+      await page.goto(`${BASE}/supplier-payments`);
+      await page.waitForLoadState('networkidle');
+
+      // Nothing to type: the choice is a checkbox, not an amount field.
+      await expect(page.getByRole('spinbutton')).toHaveCount(0);
+      const includeVat = page.getByRole('checkbox', { name: /include vat/i });
+      await expect(includeVat).not.toBeChecked();
+
+      // Controlled by the server's answer, so it ticks once that arrives.
+      await includeVat.click();
+      await expect(includeVat).toBeChecked();
+
+      // The baseline rate (18%) is looked up for the month, not stored.
+      await expect(page.getByText('18%')).toBeVisible();
+      await expect(page.getByText('₪11,800').first()).toBeVisible();
+      await expect
+        .poll(
+          async () =>
+            (
+              await db.supplierPayment.findFirstOrThrow({
+                where: { supplierId: supplier.id },
+              })
+            ).includesVat,
+        )
+        .toBe(true);
+
+      // The global rate for that month changes: the same payment follows,
+      // with nothing rewritten on it.
+      await db.vatRate.create({
+        data: { effectiveMonth: new Date('2026-05-01'), percentage: 20 },
+      });
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+      await expect(page.getByText('20%')).toBeVisible();
+      await expect(page.getByText('₪12,000').first()).toBeVisible();
+
+      await includeVat.click();
+      await expect(includeVat).not.toBeChecked();
+      await expect
+        .poll(
+          async () =>
+            (
+              await db.supplierPayment.findFirstOrThrow({
+                where: { supplierId: supplier.id },
+              })
+            ).includesVat,
+        )
+        .toBe(false);
+    },
+  );
+
+  // globals.css forces `[dir="rtl"] th, td` to text-align: right, which used to
+  // beat the centring on these headers in Hebrew while the flex-centred
+  // checkbox beneath stayed put — so the two drifted apart. Measured, not
+  // eyeballed: the header text and the box must share a vertical axis.
+  for (const lang of ['en', 'he']) {
+    dbTest(
+      `VAT and Paid checkboxes sit under their headers (${lang})`,
+      async ({ page, db }) => {
+        const client = await db.client.create({
+          data: { name: 'Align Client' },
+        });
+        const subcontractor = await db.subcontractor.create({
+          data: { name: 'Align Sub', companyNumber: '515222012' },
+        });
+        const supplier = await db.supplier.create({
+          data: { name: 'Align Supplier' },
+        });
+        const project = await db.project.create({
+          data: {
+            clientId: client.id,
+            name: 'Align Project',
+            estimatedAmount: 100000,
+            description: 'Alignment test',
+            requesterName: 'Test Requester',
+            location: 'Test Location',
+          },
+        });
+        const report = await db.projectReport.create({
+          data: {
+            projectId: project.id,
+            subcontractorId: subcontractor.id,
+            date: new Date('2026-05-01'),
+            profitMargin: 20,
+          },
+        });
+        await db.supplierPayment.create({
+          data: {
+            projectReportId: report.id,
+            supplierId: supplier.id,
+            amount: 10000,
+            date: new Date('2026-05-05'),
+            includesVat: true,
+          },
+        });
+
+        await page.addInitScript((value: string) => {
+          localStorage.setItem('beetbite.lang', value);
+        }, lang);
+        await page.goto(`${BASE}/supplier-payments`);
+        await page.waitForLoadState('networkidle');
+        await expect(page.getByRole('checkbox').first()).toBeVisible();
+
+        const offsets = await page.evaluate(() => {
+          const row = document.querySelector('section table tbody tr');
+          const headers = Array.from(
+            document.querySelectorAll('section table thead th'),
+          );
+          if (!row) throw new Error('no payment row rendered');
+          const centre = (rect: DOMRect) => (rect.left + rect.right) / 2;
+          return Array.from(row.querySelectorAll('input[type=checkbox]')).map(
+            (box) => {
+              const cell = box.closest('td') as HTMLElement;
+              const header = headers[Array.from(row.children).indexOf(cell)];
+              const text = document.createRange();
+              text.selectNodeContents(header);
+              return Math.abs(
+                centre(text.getBoundingClientRect()) -
+                  centre(box.getBoundingClientRect()),
+              );
+            },
+          );
+        });
+
+        // VAT and Paid.
+        expect(offsets).toHaveLength(2);
+        for (const offset of offsets) expect(offset).toBeLessThan(1.5);
+      },
+    );
+  }
 
   dbTest('mark a whole supplier stack paid', async ({ page, db }) => {
     const client = await db.client.create({ data: { name: 'Paid Client' } });

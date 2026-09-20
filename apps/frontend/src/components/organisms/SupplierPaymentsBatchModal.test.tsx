@@ -11,10 +11,14 @@ vi.mock("@/api/endpoints/suppliers", () => ({ useGetSuppliersQuery: vi.fn() }));
 vi.mock("@/api/endpoints/project-reports", () => ({
   useGetProjectReportsQuery: vi.fn(),
 }));
+vi.mock("@/api/endpoints/vatRates", () => ({
+  useGetResolvedVatRateQuery: vi.fn(),
+}));
 
 import { useBatchCreateSupplierPaymentsMutation } from "@/api/endpoints/supplier-payments";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
+import { useGetResolvedVatRateQuery } from "@/api/endpoints/vatRates";
 
 const batchSpy = vi.fn().mockResolvedValue({ data: [] });
 
@@ -22,6 +26,12 @@ function setReports(data: unknown) {
   vi.mocked(useGetProjectReportsQuery).mockReturnValue({
     data,
   } as unknown as ReturnType<typeof useGetProjectReportsQuery>);
+}
+
+function setVatRate(percentage: number | null) {
+  vi.mocked(useGetResolvedVatRateQuery).mockReturnValue({
+    data: { percentage },
+  } as unknown as ReturnType<typeof useGetResolvedVatRateQuery>);
 }
 
 function renderModal(open = true) {
@@ -52,6 +62,7 @@ describe("SupplierPaymentsBatchModal", () => {
       { id: "r1", project: { id: "p1", name: "Tower Block" } },
       { id: "r2", project: { id: "p2", name: "Bridge" } },
     ]);
+    setVatRate(18);
   });
 
   it("renders nothing when closed", () => {
@@ -161,5 +172,85 @@ describe("SupplierPaymentsBatchModal", () => {
     await userEvent.click(screen.getByRole("button", { name: /save/i }));
 
     expect(batchSpy).not.toHaveBeenCalled();
+  });
+
+  // The percentage is the global rate for the month — the user only decides,
+  // line by line, whether VAT applies.
+  describe("VAT", () => {
+    async function fillLine(index: number, reportId: string, amount: string) {
+      await userEvent.selectOptions(
+        screen.getAllByLabelText(/Project/)[index],
+        reportId,
+      );
+      await userEvent.type(screen.getAllByLabelText(/Amount/)[index], amount);
+    }
+
+    function sentVat(): boolean[] {
+      const call = batchSpy.mock.calls[0][0] as {
+        payments: { includesVat: boolean }[];
+      };
+      return call.payments.map((payment) => payment.includesVat);
+    }
+
+    it("shows the global rate that will apply instead of asking for one", () => {
+      renderModal();
+
+      expect(
+        screen.getByText(/VAT is added at the global rate for this month: 18%/),
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText(/VAT %/)).toBeNull();
+    });
+
+    it("warns when the month has no VAT rate yet", () => {
+      setVatRate(null);
+      renderModal();
+
+      expect(
+        screen.getByText(/No VAT rate is set for this month/),
+      ).toBeVisible();
+    });
+
+    it("includes VAT on a line by default", async () => {
+      renderModal();
+
+      expect(
+        screen.getByRole("checkbox", { name: "Include VAT" }),
+      ).toBeChecked();
+
+      await userEvent.selectOptions(screen.getByLabelText(/Supplier/), "s1");
+      await fillLine(0, "r1", "1000");
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(sentVat()).toEqual([true]);
+    });
+
+    it("lets a line opt out of VAT", async () => {
+      renderModal();
+
+      await userEvent.selectOptions(screen.getByLabelText(/Supplier/), "s1");
+      await fillLine(0, "r1", "1000");
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: "Include VAT" }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(sentVat()).toEqual([false]);
+    });
+
+    it("decides VAT per line, not for the whole stack", async () => {
+      renderModal();
+
+      await userEvent.selectOptions(screen.getByLabelText(/Supplier/), "s1");
+      await fillLine(0, "r1", "1000");
+      await userEvent.click(screen.getByRole("button", { name: /Add line/ }));
+      await fillLine(1, "r2", "2000");
+      // Untick only the second line.
+      await userEvent.click(
+        screen.getAllByRole("checkbox", { name: "Include VAT" })[1],
+      );
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(sentVat()).toEqual([true, false]);
+    });
   });
 });

@@ -62,13 +62,13 @@ export class CreateSupplierPaymentDto {
   })
   isFuture!: boolean;
 
-  @IsNumber()
+  @IsBoolean()
   @IsOptional()
-  @Min(0)
   @ApiProperty({
-    example: 18,
-    description: 'VAT percentage — only applicable when isFuture is false',
+    example: true,
+    description:
+      "Whether this payment carries VAT. The percentage is never supplied: it is the global VAT rate effective for the report's month. On create, omitting it means VAT is charged unless isFuture is true; on update, omitting it leaves the current choice unchanged.",
     required: false,
   })
-  vatPercentage?: number;
+  includesVat?: boolean;
 }

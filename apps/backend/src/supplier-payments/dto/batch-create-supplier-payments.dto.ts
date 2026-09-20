@@ -4,6 +4,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsISO8601,
   IsNotEmpty,
   IsNumber,
@@ -49,6 +50,16 @@ export class BatchSupplierPaymentRowDto {
     description: 'What this line covers',
   })
   description?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiPropertyOptional({
+    example: true,
+    default: true,
+    description:
+      "Whether this line carries VAT, at the global rate for the report's month. Defaults to true.",
+  })
+  includesVat?: boolean;
 }
 
 /**

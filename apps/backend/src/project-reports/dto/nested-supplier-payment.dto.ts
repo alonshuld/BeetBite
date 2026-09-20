@@ -24,8 +24,15 @@ export class NestedSupplierPaymentDto {
   amount!: number;
 
   @ApiPropertyOptional({
+    example: true,
+    description: 'Whether this payment carries VAT',
+  })
+  includesVat?: boolean;
+
+  @ApiPropertyOptional({
     example: 18,
-    description: 'VAT percentage applicable to this payment',
+    description:
+      "Derived, never stored: the global VAT rate effective for the report's month. Null when VAT is off, or when no rate is configured for that month yet",
     nullable: true,
   })
   vatPercentage?: number | null;

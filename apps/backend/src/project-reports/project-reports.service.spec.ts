@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectReportsService } from './project-reports.service';
 import { ProjectClientAssignmentsService } from '../project-client-assignments/project-client-assignments.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
 import { PRISMA_ERROR_CODES } from 'src/common/constants';
 import { Prisma } from 'src/generated/client';
@@ -48,6 +49,13 @@ describe('ProjectReportsService', () => {
     createInitialAssignment: jest.fn().mockResolvedValue(undefined),
   };
 
+  // No rate history: every payment's VAT resolves to none, which is what the
+  // assertions below were written against. Derivation is covered by the mapper
+  // and payment-vat specs.
+  const mockVatRatesService = {
+    findAllEntries: jest.fn().mockResolvedValue([]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -59,6 +67,10 @@ describe('ProjectReportsService', () => {
         {
           provide: ProjectClientAssignmentsService,
           useValue: mockAssignmentsService,
+        },
+        {
+          provide: VatRatesService,
+          useValue: mockVatRatesService,
         },
       ],
     }).compile();
