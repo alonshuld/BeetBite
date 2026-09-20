@@ -427,9 +427,23 @@ export class SubcontractorPaymentsService {
             }
           }
 
+          const { serviceDate, paymentDate, ...rest } =
+            updateSubcontractorPaymentDto;
+
           return tx.subcontractorPayment.update({
             where: { id },
-            data: updateSubcontractorPaymentDto,
+            // Build the row explicitly rather than spreading the DTO: the date
+            // fields arrive as strings, and only the keys actually sent should
+            // reach the update, so an omitted field keeps its stored value.
+            data: {
+              ...rest,
+              ...(serviceDate !== undefined && {
+                serviceDate: new Date(serviceDate),
+              }),
+              ...(paymentDate !== undefined && {
+                paymentDate: new Date(paymentDate),
+              }),
+            },
             select: {
               id: true,
               projectId: true,

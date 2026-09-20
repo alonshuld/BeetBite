@@ -185,10 +185,21 @@ describe("SubcontractorPaymentsPage", () => {
     expect(screen.getAllByText("Tower Block").length).toBeGreaterThan(0);
   });
 
-  it("marking a project paid creates a payment for the full amount owed", async () => {
+  it("marking a project paid asks for the date before recording anything", async () => {
     renderPage();
     await openPanel();
     await userEvent.click(screen.getByTitle("Paid"));
+
+    // Nothing is written on the click itself — the row opens with the whole
+    // outstanding balance filled in, waiting for the day it was paid.
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(screen.getByPlaceholderText("0 – 8000")).toHaveValue(8000);
+
+    const dateInput = screen.getByLabelText("Payment date");
+    await userEvent.clear(dateInput);
+    await userEvent.type(dateInput, "2025-03-28");
+    await userEvent.click(screen.getByTitle("Save"));
+
     expect(createSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         subcontractorId: "s1",
@@ -196,11 +207,18 @@ describe("SubcontractorPaymentsPage", () => {
         // The month being settled — unchanged by the new payment date.
         serviceDate: "2025-03-01",
         amount: 8000,
+        paymentDate: "2025-03-28",
       }),
     );
-    // The day the money moved defaults to today when left alone.
-    const call = createSpy.mock.calls[0][0] as { paymentDate: string };
-    expect(call.paymentDate).toBe(new Date().toISOString().slice(0, 10));
+  });
+
+  it("marking a partly paid project paid records only what is left", async () => {
+    setPayments(makePayments([makePayment({ amount: 3000 })], 3000));
+    renderPage();
+    await openPanel();
+    await userEvent.click(screen.getByTitle("Paid"));
+
+    expect(screen.getByPlaceholderText("0 – 5000")).toHaveValue(5000);
   });
 
   it("opens the inline partial-amount row", async () => {
@@ -321,6 +339,112 @@ describe("SubcontractorPaymentsPage", () => {
       await openPanel();
 
       expect(screen.getByText("No date recorded")).toBeInTheDocument();
+    });
+  });
+
+  // A month settled in instalments: each one is its own row, added, corrected
+  // and removed on its own.
+  describe("instalments", () => {
+    it("adds an instalment beside the ones already recorded", async () => {
+      setPayments(
+        makePayments(
+          [
+            makePayment({
+              id: "pay-1",
+              amount: 2000,
+              paymentDate: "2025-03-05T00:00:00.000Z",
+            }),
+          ],
+          2000,
+        ),
+      );
+      renderPage();
+      await openPanel();
+
+      await userEvent.click(screen.getByTitle("Partial"));
+      await userEvent.type(screen.getByPlaceholderText("0 – 6000"), "1500");
+      await userEvent.click(screen.getByTitle("Save"));
+
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 1500 }),
+      );
+      // The instalment already on record is untouched.
+      expect(deleteSpy).not.toHaveBeenCalled();
+    });
+
+    it("deletes one instalment without touching the others", async () => {
+      setPayments(
+        makePayments(
+          [
+            makePayment({
+              id: "pay-1",
+              amount: 2000,
+              paymentDate: "2025-03-05T00:00:00.000Z",
+            }),
+            makePayment({
+              id: "pay-2",
+              amount: 3000,
+              paymentDate: "2025-03-19T00:00:00.000Z",
+            }),
+          ],
+          5000,
+        ),
+      );
+      renderPage();
+      await openPanel();
+
+      const secondItem = screen.getAllByRole("listitem")[1];
+      await userEvent.click(within(secondItem).getByTitle("Delete"));
+
+      expect(deleteSpy).toHaveBeenCalledTimes(1);
+      expect(deleteSpy).toHaveBeenCalledWith("pay-2");
+    });
+
+    it("corrects the date on an instalment already recorded", async () => {
+      setPayments(
+        makePayments(
+          [
+            makePayment({
+              id: "pay-1",
+              amount: 2000,
+              paymentDate: "2025-03-05T00:00:00.000Z",
+            }),
+          ],
+          2000,
+        ),
+      );
+      renderPage();
+      await openPanel();
+
+      await userEvent.click(screen.getByText("5 Mar 2025"));
+      const dateInput = screen.getByLabelText("Payment date");
+      expect(dateInput).toHaveValue("2025-03-05");
+
+      await userEvent.clear(dateInput);
+      await userEvent.type(dateInput, "2025-03-07");
+
+      expect(updateSpy).toHaveBeenCalledWith({
+        id: "pay-1",
+        paymentDate: "2025-03-07",
+      });
+    });
+
+    it("fills in a date that was never recorded", async () => {
+      setPayments(
+        makePayments([makePayment({ amount: 2000, paymentDate: null })], 2000),
+      );
+      renderPage();
+      await openPanel();
+
+      await userEvent.click(screen.getByText("No date recorded"));
+      const dateInput = screen.getByLabelText("Payment date");
+      await userEvent.clear(dateInput);
+      await userEvent.type(dateInput, "2025-03-11");
+
+      expect(updateSpy).toHaveBeenCalledWith({
+        id: "i1",
+        paymentDate: "2025-03-11",
+      });
     });
   });
 });

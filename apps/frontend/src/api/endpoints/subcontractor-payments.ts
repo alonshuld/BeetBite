@@ -31,6 +31,8 @@ export interface UpdateSubcontractorPaymentDto {
   serviceDate: string;
   amount: number;
   isPaid?: boolean;
+  /** The day the money actually moved. */
+  paymentDate?: string;
 }
 
 export interface SubcontractorPaymentResponse {
