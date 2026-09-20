@@ -273,6 +273,9 @@ dbTest.describe('Projects CRUD', () => {
         await page.fill('#proj-requester', 'E2E Requester');
         await page.fill('#proj-location', 'E2E Location');
 
+        // The section is collapsed by default; it only exists for importing
+        // pre-BeetBite data.
+        await page.getByRole('button', { name: /already received/i }).click();
         await page.fill('#proj-opening-amount', '45000');
         await page.fill('#proj-opening-month', '2026-04');
         await page.selectOption('#proj-opening-subcontractor', {
