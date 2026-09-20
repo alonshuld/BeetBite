@@ -11,6 +11,7 @@ import { NoReportsForExportError } from './errors/no-reports-for-export.error';
 import { ExportProjectReportsPdfDto } from './dto/export-project-reports-pdf.dto';
 import { ExportClientSimulatedPdfDto } from './dto/export-client-simulated-pdf.dto';
 import { BadRequestException } from '@nestjs/common';
+import { OPENING_BALANCE_TAG } from 'src/common/constants';
 
 jest.mock('puppeteer', () => ({
   launch: jest.fn().mockResolvedValue({
@@ -386,6 +387,37 @@ describe('PdfExportService', () => {
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
   });
 
+  // The single-report document is the customer's fixed reference layout: what
+  // only the client-simulated export adds (income status, profit line) must
+  // not leak into it.
+  it('should not add the simulated export’s screen details to the single-report layout', async () => {
+    const html = await renderHtml();
+
+    expect(html).not.toContain('התקבל'); // received
+    expect(html).not.toContain('ממתין'); // pending
+    expect(html).not.toContain('(5%)'); // the "Profit (x%)" summary line
+    expect(html).not.toContain('class="sim-badge"');
+  });
+
+  it('should translate the opening-balance tag rather than print the stored English one', async () => {
+    mockProjectReportsService.findOneForExport.mockResolvedValue({
+      ...mockReport,
+      incomeEntries: [
+        {
+          id: 'entry-1',
+          amount: 1000,
+          incomeDate: null,
+          tag: OPENING_BALANCE_TAG,
+        },
+      ],
+    });
+
+    const html = await renderHtml();
+
+    expect(html).toContain('יתרת פתיחה');
+    expect(html).not.toContain(OPENING_BALANCE_TAG);
+  });
+
   // Gating: the initiator block is absent, name-only, or name+rows,
   // strictly following whether the project has an initiator and whether it
   // has payments this month. Never an empty heading, never a zero row.
@@ -682,6 +714,128 @@ describe('PdfExportService', () => {
       const html = mockPage.setContent.mock.calls[0][0];
 
       expect(html).toContain('Simulated Profit Report');
+    });
+
+    // The document mirrors the Reports screen: everything below is something
+    // that screen shows for a project, and the export used to leave out.
+    describe('mirrors the Reports screen', () => {
+      const withProject1 = (patch: Record<string, unknown>) =>
+        mockProjectReportsService.findProjectReportsInMonth.mockResolvedValue([
+          { ...reportsForClient1[0], ...patch },
+          reportsForClient1[1],
+        ]);
+
+      it("shows the stored margin and profit beside a simulated project's, and only there", async () => {
+        const html = await renderSimHtml({ ...simDto, lang: 'en' });
+
+        // project-1 moved 10% -> 15%; project-2 keeps its stored 20%.
+        expect(html.split('class="cell-sub">Saved:').length - 1).toBe(2);
+        expect(html).toContain('Saved: 10%');
+        expect(html).toContain('Saved: 1,000.00 ₪');
+        expect(html.split('class="sim-badge"').length - 1).toBe(2); // summary row + detail page
+      });
+
+      it('totals the simulated profit against the stored one', async () => {
+        const html = await renderSimHtml({ ...simDto, lang: 'en' });
+
+        // simulated 1,500 + 1,000; stored 1,000 + 1,000.
+        expect(html).toContain('Simulated Profit');
+        expect(html).toContain('Saved Profit');
+        expect(html).toContain('Delta vs Saved');
+        expect(html).toContain('+500.00 ₪');
+      });
+
+      it('shows a negative delta with a minus sign', async () => {
+        const html = await renderSimHtml({
+          ...simDto,
+          lang: 'en',
+          overrides: [{ projectId: 'project-1', margin: 5 }],
+        });
+
+        expect(html).toContain('−500.00 ₪'); // 500 vs the stored 1,000
+        expect(html).toContain('delta-down');
+      });
+
+      it('leaves out the stored-profit and delta lines when nothing was simulated', async () => {
+        const html = await renderSimHtml({
+          ...simDto,
+          lang: 'en',
+          overrides: [],
+        });
+
+        expect(html).toContain('Simulated Profit');
+        expect(html).not.toContain('Saved Profit');
+        expect(html).not.toContain('Delta vs Saved');
+        expect(html).not.toContain('class="sim-badge"');
+        expect(html).not.toContain('class="cell-sub">Saved:');
+      });
+
+      it("prints each project's location, description and subcontractor", async () => {
+        withProject1({
+          project: {
+            ...reportsForClient1[0].project,
+            location: 'Ashkelon, plot 309',
+            description: 'Lobby renovation',
+          },
+        });
+
+        const html = await renderSimHtml({ ...simDto, lang: 'en' });
+
+        // Location: once on the summary row, once on the detail page.
+        expect(html.split('Ashkelon, plot 309').length - 1).toBe(2);
+        expect(html).toContain('Lobby renovation');
+        expect(html).toContain('Subcontractor: Israelov Engineering');
+      });
+
+      it('marks each income entry received (with its date) or pending', async () => {
+        withProject1({
+          incomeEntries: [
+            {
+              id: 'e1',
+              amount: 6000,
+              incomeDate: '2026-03-10T00:00:00.000Z',
+              tag: 'Frame',
+            },
+            { id: 'e1b', amount: 4000, incomeDate: null, tag: 'Finish' },
+          ],
+        });
+
+        const html = await renderSimHtml({ ...simDto, lang: 'en' });
+
+        expect(html).toContain('Received 10/03/2026');
+        expect(html).toContain('<td>Pending</td>');
+      });
+
+      it('adds the sheet’s profit line, at the margin in force, to each monthly summary', async () => {
+        const html = await renderSimHtml({ ...simDto, lang: 'en' });
+
+        expect(html).toContain('Profit (15%)'); // project-1, simulated
+        expect(html).toContain('Profit (20%)'); // project-2, stored
+      });
+
+      it('translates the opening-balance tag', async () => {
+        withProject1({
+          incomeEntries: [
+            {
+              id: 'e1',
+              amount: 10000,
+              incomeDate: null,
+              tag: OPENING_BALANCE_TAG,
+            },
+          ],
+        });
+
+        const html = await renderSimHtml({ ...simDto, lang: 'he' });
+
+        expect(html).toContain('יתרת פתיחה');
+        expect(html).not.toContain(OPENING_BALANCE_TAG);
+      });
+
+      it('does not open the approved-for row with a stray bullet when there is no approval text', async () => {
+        const html = await renderSimHtml({ ...simDto, lang: 'en' });
+
+        expect(html).not.toMatch(/<span>\s*•/);
+      });
     });
   });
 });

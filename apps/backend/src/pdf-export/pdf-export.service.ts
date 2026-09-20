@@ -17,7 +17,10 @@ import {
   ReportApprovalSupplierRow,
   ReportApprovalInitiatorRow,
 } from './templates/report-approval.template';
-import { renderClientSimulatedExportHtml } from './templates/client-simulated-export.template';
+import {
+  ClientSimulatedProjectRow,
+  renderClientSimulatedExportHtml,
+} from './templates/client-simulated-export.template';
 import { ProjectReportListItemDto } from 'src/project-reports/dto/project-report-list-item.dto';
 import { normalizeToMonthStart } from 'src/common/utils/date.utils';
 
@@ -151,7 +154,7 @@ export class PdfExportService {
 
     const lang = dto.lang ?? 'he';
     const detailPages: ReportApprovalData[] = [];
-    const summaryRows = [];
+    const summaryRows: ClientSimulatedProjectRow[] = [];
     for (const report of clientReports) {
       const subcontractor = await this.subcontractorsService.findOne(
         report.subcontractor.id,
@@ -170,6 +173,9 @@ export class PdfExportService {
         // text, by design.
         approvedFor: '',
         lang,
+        // The document mirrors the Reports screen, so each page carries what
+        // that screen shows for the project, not just the approval figures.
+        includeScreenDetails: true,
       });
       detailPages.push(data);
 
@@ -181,9 +187,13 @@ export class PdfExportService {
       summaryRows.push({
         projectId: report.project.id,
         projectName: report.project.name,
+        projectLocation: report.project.location,
+        subcontractorName: subcontractor.name,
         totalIncome: report.totalIncome,
         simMargin: effectiveMargin,
+        savedMargin: report.profitMargin,
         profit,
+        savedProfit: report.totalIncome * (report.profitMargin / 100),
         supplierTotal,
         subcontractorPayment: report.totalIncome - profit - supplierTotal,
       });
@@ -239,7 +249,9 @@ export class PdfExportService {
    * is the only thing that differs between the two callers — the real stored
    * margin for a normal export, a simulated one for the client-wide export —
    * everything else (income entries, supplier/initiator payments) always
-   * reflects real data.
+   * reflects real data. `includeScreenDetails` adds what the Reports screen
+   * shows beyond the approval (see ReportApprovalScreenDetails); the
+   * single-report export leaves it off so its layout stays fixed.
    */
   private buildReportApprovalData(args: {
     report: ProjectReportListItemDto;
@@ -249,6 +261,7 @@ export class PdfExportService {
     companySettings: CompanySettingsForPdf;
     approvedFor: string;
     lang: 'en' | 'he';
+    includeScreenDetails?: boolean;
   }): ReportApprovalData {
     const {
       report,
@@ -258,6 +271,7 @@ export class PdfExportService {
       companySettings,
       approvedFor,
       lang,
+      includeScreenDetails = false,
     } = args;
 
     // One row per income entry: each is a chunk of approved work carrying its
@@ -266,6 +280,7 @@ export class PdfExportService {
       const profitAmount = entry.amount * (effectiveMargin / 100);
       return {
         tag: entry.tag,
+        incomeDate: entry.incomeDate,
         approvedAmount: entry.amount,
         invoiceInclVat: entry.amount * (1 + vatPercentage / 100),
         profitMarginPercent: effectiveMargin,
@@ -329,6 +344,21 @@ export class PdfExportService {
       companyAddress: this.formatCompanyAddress(companySettings),
       logo: companySettings.logo,
       signature: companySettings.signature,
+      screen: includeScreenDetails
+        ? {
+            projectLocation: report.project.location,
+            projectDescription: report.project.description,
+            marginPercent: effectiveMargin,
+            saved:
+              effectiveMargin === report.profitMargin
+                ? null
+                : {
+                    marginPercent: report.profitMargin,
+                    profitAmount:
+                      report.totalIncome * (report.profitMargin / 100),
+                  },
+          }
+        : undefined,
     };
   }
 

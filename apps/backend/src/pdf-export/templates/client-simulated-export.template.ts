@@ -7,6 +7,7 @@ import {
   escapeHtml,
   formatCurrency,
   formatMonthLabel,
+  formatSignedCurrency,
   localeFor,
   dirFor,
 } from './shared';
@@ -14,9 +15,15 @@ import {
 export interface ClientSimulatedProjectRow {
   projectId: string;
   projectName: string;
+  projectLocation: string;
+  subcontractorName: string;
   totalIncome: number;
+  /** Margin in force: the simulated one, or the stored one when not overridden. */
   simMargin: number;
+  savedMargin: number;
   profit: number;
+  /** Profit the stored margin would give — what the simulation replaced. */
+  savedProfit: number;
   supplierTotal: number;
   subcontractorPayment: number;
 }
@@ -56,6 +63,14 @@ const LABELS = {
     subcontractorPayment: 'יתרת קבלן משנה',
     total: 'סה"כ',
     companyNumberPrefix: 'ח.פ.',
+    projectCount: 'מספר פרויקטים:',
+    subcontractor: 'קבלן משנה:',
+    saved: 'שמור:',
+    simulated: 'מדומה',
+    simulationSummary: 'סיכום סימולציה',
+    simulatedProfit: 'רווח מדומה',
+    savedProfit: 'רווח שמור',
+    deltaVsSaved: 'הפרש מהשמור',
     simulatedNotice:
       'המסמך מבוסס על אחוזי רווח מדומים, לצורכי הדמיה בלבד — הנתונים השמורים במערכת לא השתנו.',
   },
@@ -71,6 +86,14 @@ const LABELS = {
     subcontractorPayment: 'Subcontractor Remainder',
     total: 'Total',
     companyNumberPrefix: 'Reg.',
+    projectCount: 'Projects:',
+    subcontractor: 'Subcontractor:',
+    saved: 'Saved:',
+    simulated: 'Simulated',
+    simulationSummary: 'Simulation Summary',
+    simulatedProfit: 'Simulated Profit',
+    savedProfit: 'Saved Profit',
+    deltaVsSaved: 'Delta vs Saved',
     simulatedNotice:
       'This document uses simulated profit margins for preview purposes only — no stored figures were changed.',
   },
@@ -82,29 +105,58 @@ const renderSummaryPage = (data: ClientSimulatedExportData): string => {
   const money = (amount: number): string => formatCurrency(amount, locale);
   const monthLabel = formatMonthLabel(data.month, data.lang);
 
+  // A second, muted line under a figure that the simulation moved — the
+  // stored value it replaced, as the project sheet shows it.
+  const savedLine = (isSimulated: boolean, saved: string): string =>
+    isSimulated ? `<span class="cell-sub">${t.saved} ${saved}</span>` : '';
+
   const rowsHtml = data.summaryRows
-    .map(
-      (row) => `
+    .map((row) => {
+      const isSimulated = row.simMargin !== row.savedMargin;
+      return `
         <tr>
-          <td>${escapeHtml(row.projectName)}</td>
+          <td>
+            ${escapeHtml(row.projectName)}${isSimulated ? `<span class="sim-badge">${t.simulated}</span>` : ''}
+            ${row.projectLocation ? `<span class="cell-sub">${escapeHtml(row.projectLocation)}</span>` : ''}
+            <span class="cell-sub">${t.subcontractor} ${escapeHtml(row.subcontractorName)}</span>
+          </td>
           <td class="amount">${money(row.totalIncome)}</td>
-          <td class="amount muted">${row.simMargin}%</td>
-          <td class="amount">${money(row.profit)}</td>
+          <td class="amount muted">${row.simMargin}%${savedLine(isSimulated, `${row.savedMargin}%`)}</td>
+          <td class="amount">${money(row.profit)}${savedLine(isSimulated, money(row.savedProfit))}</td>
           <td class="amount">${money(row.supplierTotal)}</td>
           <td class="amount strong">${money(row.subcontractorPayment)}</td>
-        </tr>`,
-    )
+        </tr>`;
+    })
     .join('');
 
   const totals = data.summaryRows.reduce(
     (acc, row) => ({
       totalIncome: acc.totalIncome + row.totalIncome,
       profit: acc.profit + row.profit,
+      savedProfit: acc.savedProfit + row.savedProfit,
       supplierTotal: acc.supplierTotal + row.supplierTotal,
       subcontractorPayment: acc.subcontractorPayment + row.subcontractorPayment,
     }),
-    { totalIncome: 0, profit: 0, supplierTotal: 0, subcontractorPayment: 0 },
+    {
+      totalIncome: 0,
+      profit: 0,
+      savedProfit: 0,
+      supplierTotal: 0,
+      subcontractorPayment: 0,
+    },
   );
+  const anySimulated = data.summaryRows.some(
+    (row) => row.simMargin !== row.savedMargin,
+  );
+  const profitDelta = totals.profit - totals.savedProfit;
+
+  // The simulator drawer's own totals: what the margins now add up to, and —
+  // only once something was actually moved — how far that is from the stored
+  // figures.
+  const deltaRowHtml = anySimulated
+    ? `<div class="summary-row"><span>${t.savedProfit}</span><span>${money(totals.savedProfit)}</span></div>
+        <div class="summary-row"><span>${t.deltaVsSaved}</span><span dir="ltr" class="${profitDelta >= 0 ? 'delta-up' : 'delta-down'}">${formatSignedCurrency(profitDelta, locale)}</span></div>`
+    : '';
 
   return `<div class="page">
   <div class="header">
@@ -122,6 +174,7 @@ const renderSummaryPage = (data: ClientSimulatedExportData): string => {
     <div class="info-box">
       <div class="info-row"><span class="label">${t.client}</span><span>${escapeHtml(data.clientName)}</span></div>
       <div class="info-row"><span class="label">${t.mainContractor}</span><span>${escapeHtml(data.contractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.contractorCompanyNumber)}</span></div>
+      <div class="info-row"><span class="label">${t.projectCount}</span><span>${data.summaryRows.length}</span></div>
     </div>
 
     <table>
@@ -148,7 +201,14 @@ const renderSummaryPage = (data: ClientSimulatedExportData): string => {
       </tfoot>
     </table>
 
-    <p style="font-size: 10.5px; color: #667; margin-top: -8px;">${t.simulatedNotice}</p>
+    <div class="lower">
+      <div class="summary-box">
+        <div class="summary-title">${t.simulationSummary}</div>
+        <div class="summary-row"><span>${t.simulatedProfit}</span><span>${money(totals.profit)}</span></div>
+        ${deltaRowHtml}
+      </div>
+      <p class="notice">${t.simulatedNotice}</p>
+    </div>
   </div>
 
   <div class="footer">
@@ -178,6 +238,12 @@ ${reportApprovalStyles(dir)}
    — without this, puppeteer would run them together as one continuous flow. */
 .page { break-after: page; }
 .page:last-child { break-after: auto; }
+/* A muted second line inside a summary cell — location, subcontractor, or the
+   stored figure a simulated one replaced. */
+.cell-sub { display: block; font-size: 9px; font-weight: 400; color: #667; margin-top: 2px; }
+.delta-up { color: #1e7a46; }
+.delta-down { color: #b4531a; }
+.notice { flex: 1; margin: 0; font-size: 10.5px; color: #667; }
 </style>
 </head>
 <body>
