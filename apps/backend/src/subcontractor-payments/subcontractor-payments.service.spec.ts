@@ -480,6 +480,44 @@ describe('SubcontractorPaymentsService', () => {
       );
     });
 
+    // 🔴 The day the money moved is correctable on its own: a wrong date must
+    // be fixable without restating the amount and re-running the guard.
+    it('should update only the payment date when that is all that was sent', async () => {
+      const mockPayment = {
+        id: 'clh0000000000000000000001',
+        projectId: 'project-1',
+        serviceDate: new Date('2023-01-01'),
+        amount: { toNumber: () => 900 },
+        isPaid: false,
+        paymentDate: new Date('2023-01-17'),
+        subcontractor: {
+          id: 'clh0000000000000000000001',
+          name: 'Test Subcontractor',
+        },
+      };
+      mockPrismaService.subcontractorPayment.update.mockResolvedValue(
+        mockPayment,
+      );
+
+      const result = await service.update('clh0000000000000000000001', {
+        paymentDate: '2023-01-17',
+      });
+
+      expect(mockPrismaService.projectReport.findFirst).not.toHaveBeenCalled();
+      const call = (
+        mockPrismaService.subcontractorPayment.update.mock.calls as [
+          { data: { paymentDate: Date; serviceDate?: Date } },
+        ][]
+      )[0][0];
+      expect(call.data.paymentDate).toBeInstanceOf(Date);
+      expect(call.data.paymentDate.toISOString()).toBe(
+        '2023-01-17T00:00:00.000Z',
+      );
+      // The month being settled is untouched by a date correction.
+      expect(call.data.serviceDate).toBeUndefined();
+      expect(result.paymentDate).toBe('2023-01-17T00:00:00.000Z');
+    });
+
     it('should throw SubcontractorPaymentOverpaymentError when updated amount exceeds amount owed', async () => {
       // amountOwed = 900. Other payments = 600. New amount = 400 → total 1000 > 900
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
@@ -569,7 +607,13 @@ describe('SubcontractorPaymentsService', () => {
         mockPrismaService.subcontractorPayment.update,
       ).toHaveBeenCalledWith({
         where: { id: 'clh0000000000000000000001' },
-        data: updateDto,
+        // The date arrives as a string and reaches Prisma as a Date.
+        data: {
+          subcontractorId: updateDto.subcontractorId,
+          projectId: updateDto.projectId,
+          serviceDate: new Date(updateDto.serviceDate),
+          amount: updateDto.amount,
+        },
         select: {
           id: true,
           projectId: true,
