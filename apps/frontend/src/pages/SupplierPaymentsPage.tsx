@@ -14,6 +14,8 @@ import { Badge } from "@/components/atoms/Badge";
 import { SupplierPaymentsBatchModal } from "@/components/organisms/SupplierPaymentsBatchModal";
 import { useLang } from "@/contexts/useLang";
 import { formatYM } from "@/utils/formatMonth";
+import { Icon } from "@/components/atoms/Icon";
+import { LoadingState } from "@/components/molecules/LoadingState";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
@@ -47,7 +49,7 @@ function Th({
 }) {
   return (
     <th
-      className={`py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted ${ALIGN[align]} ${className}`}
+      className={`py-2 px-3 text-label font-semibold text-text-muted ${ALIGN[align]} ${className}`}
     >
       {children}
     </th>
@@ -114,7 +116,7 @@ function VatCell({ entry }: { entry: SupplierPaymentEntry }) {
               title={t("vatRateMissing")}
               className="text-warning"
             >
-              ⚠
+              <Icon name="alert" size={14} />
             </span>
           )}
         </span>
@@ -146,11 +148,13 @@ function SupplierGroup({
   const allPaid = outstanding <= 0 && group.projectPayments.length > 0;
 
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="font-serif text-lg text-text">{group.supplier.name}</h2>
+    <section className="overflow-hidden rounded-lg border border-border bg-surface">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <h2 className="font-serif text-lead text-text">
+          {group.supplier.name}
+        </h2>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-text-muted">
+          <span className="tnum text-sm text-text-muted">
             {formatILS(group.totalPaid)} {t("ofAmountPaid")}{" "}
             {formatILS(group.total)}
           </span>
@@ -163,7 +167,7 @@ function SupplierGroup({
                 month,
               })
             }
-            className="text-xs py-1 px-3"
+            className="h-8 px-3 text-label"
           >
             {allPaid ? t("markAllUnpaid") : t("markAllPaid")}
           </ButtonGhost>
@@ -188,7 +192,7 @@ function SupplierGroup({
             <col className="w-[10%]" />
           </colgroup>
           <thead>
-            <tr className="border-b border-border">
+            <tr className="border-b border-border bg-surface-2">
               <Th>{t("project")}</Th>
               <Th className="hidden sm:table-cell">{t("description")}</Th>
               <Th align="end">{t("amountILS")}</Th>
@@ -201,8 +205,8 @@ function SupplierGroup({
             {group.projectPayments.map((payment) => (
               <tr
                 key={payment.id}
-                className={`border-b border-border transition-colors hover:bg-surface-2 ${
-                  payment.isPaid ? "opacity-60" : ""
+                className={`border-b border-border transition-colors last:border-0 hover:bg-surface-2 ${
+                  payment.isPaid ? "opacity-55" : ""
                 }`}
               >
                 <td
@@ -218,7 +222,7 @@ function SupplierGroup({
                   {payment.description ?? "—"}
                 </td>
                 <td
-                  className={`py-2 px-3 font-medium tabular-nums text-warning ${ALIGN.end}`}
+                  className={`py-2 px-3 font-medium tabular-nums text-text-muted ${ALIGN.end}`}
                 >
                   {formatILS(payment.amount)}
                 </td>
@@ -281,11 +285,22 @@ export default function SupplierPaymentsPage() {
         }
       />
 
+      {!isLoading && groups.length > 0 && (
+        <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-border bg-surface p-4">
+          <span className="text-lead font-semibold text-text">
+            {t("grandTotal")}
+          </span>
+          <span className="tnum text-title font-bold leading-none text-text">
+            {formatILS(grandTotal)}
+          </span>
+        </div>
+      )}
+
       {isLoading ? (
-        <p className="text-text-muted text-sm">{t("loading")}</p>
+        <LoadingState label={t("loading")} />
       ) : groups.length === 0 ? (
         <EmptyState
-          icon="🏢"
+          icon={<Icon name="receipt" size={22} />}
           title={`${t("noSupplierPaymentsFor")} ${formatYM(month, lang)}`}
           description={t("supplierPaymentsNote")}
           action={
@@ -302,22 +317,11 @@ export default function SupplierPaymentsPage() {
                 key={group.supplier.id}
                 /* A heavy rule between suppliers — the hairline used inside a
                    table is not enough to separate one supplier from the next. */
-                className={
-                  i > 0 ? "border-t-2 border-border pt-5 mt-5" : undefined
-                }
+                className={i > 0 ? "mt-4" : undefined}
               >
                 <SupplierGroup group={group} month={month} />
               </div>
             ))}
-          </div>
-
-          <div className="flex justify-end border-t-2 border-border pt-3">
-            <span className="text-sm text-text-muted">
-              {t("grandTotal")}:{" "}
-              <span className="text-warning font-bold text-[20px]">
-                {formatILS(grandTotal)}
-              </span>
-            </span>
           </div>
         </>
       )}

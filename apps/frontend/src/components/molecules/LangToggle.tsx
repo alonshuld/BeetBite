@@ -4,6 +4,11 @@ interface LangToggleProps {
   className?: string;
 }
 
+/*
+ * A segmented control rather than two buttons: the pair is one setting with
+ * two states, and showing both at once means the other language is always one
+ * click away instead of hidden behind a toggle's current value.
+ */
 export function LangToggle({
   lang,
   onChange,
@@ -11,16 +16,18 @@ export function LangToggle({
 }: LangToggleProps) {
   return (
     <div
-      className={`flex items-center bg-surface-2 border border-border rounded overflow-hidden ${className}`}
+      className={`inline-flex h-9 items-center gap-0.5 rounded border border-border bg-surface-2 p-0.5 ${className}`}
+      role="group"
     >
       {(["en", "he"] as const).map((l) => (
         <button
           key={l}
           onClick={() => onChange(l)}
-          className={`px-3 py-1 text-xs font-medium transition-colors ${
+          aria-pressed={lang === l}
+          className={`h-full rounded-sm px-2.5 text-label font-semibold transition-colors duration-150 ${
             lang === l
-              ? "bg-beet text-white"
-              : "text-text-muted hover:bg-surface-3"
+              ? "bg-surface text-text shadow-sm"
+              : "text-text-dim hover:text-text"
           }`}
         >
           {l === "en" ? "EN" : "עב"}

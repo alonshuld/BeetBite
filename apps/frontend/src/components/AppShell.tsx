@@ -58,8 +58,12 @@ export default function AppShell() {
           month={month}
           onMonthChange={setMonth}
         />
-        <main className="flex-1 overflow-auto p-7 max-[768px]:p-4">
-          <Outlet context={{ month }} />
+        <main className="flex-1 overflow-auto bg-[var(--bg)]">
+          {/* Capped so a table on a wide monitor does not stretch its rows
+              past a comfortable scan width. */}
+          <div className="mx-auto w-full max-w-[1400px] px-7 py-6 max-[768px]:px-4 max-[768px]:py-5">
+            <Outlet context={{ month }} />
+          </div>
         </main>
       </div>
     </div>

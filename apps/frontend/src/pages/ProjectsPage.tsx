@@ -11,6 +11,8 @@ import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetInitiatorsQuery } from "@/api/endpoints/initiators";
 import { PageHeader } from "@/components/molecules/PageHeader";
+import { LoadingState } from "@/components/molecules/LoadingState";
+import { completionBarClass } from "@/utils/completion";
 import { SearchInput } from "@/components/molecules/SearchInput";
 import { FormGroup, FormRow } from "@/components/molecules/FormGroup";
 import { Input } from "@/components/atoms/Input";
@@ -23,6 +25,7 @@ import {
   ButtonIcon,
   ButtonGhost,
   EmptyState,
+  Icon,
 } from "@/components/atoms";
 import { FormModal, ConfirmModal } from "@/components/organisms/Modal";
 import { ProjectTransferModal } from "@/components/organisms/ProjectTransferModal";
@@ -61,10 +64,11 @@ function FilterToggle({
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-1.5 rounded text-xs font-semibold border transition-colors ${
+      aria-pressed={active}
+      className={`h-9 rounded border px-3 text-label font-semibold transition-colors duration-150 ${
         active
-          ? "bg-beet text-white border-beet"
-          : "bg-transparent text-text-muted border-border hover:bg-surface-2"
+          ? "border-beet bg-beet text-white"
+          : "border-border bg-surface text-text-muted hover:border-border-strong hover:bg-surface-2 hover:text-text"
       }`}
     >
       {label}
@@ -304,42 +308,46 @@ export default function ProjectsPage() {
       />
 
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           <SearchInput
             placeholder={t("search")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-xs"
           />
-          <FilterToggle
-            label={t("active")}
-            active={filters.active}
-            onClick={() => toggleFilter("active")}
-          />
-          <FilterToggle
-            label={t("future")}
-            active={filters.future}
-            onClick={() => toggleFilter("future")}
-          />
-          <FilterToggle
-            label={t("closed")}
-            active={filters.closed}
-            onClick={() => toggleFilter("closed")}
-          />
+          <div className="flex items-center gap-1.5">
+            <FilterToggle
+              label={t("active")}
+              active={filters.active}
+              onClick={() => toggleFilter("active")}
+            />
+            <FilterToggle
+              label={t("future")}
+              active={filters.future}
+              onClick={() => toggleFilter("future")}
+            />
+            <FilterToggle
+              label={t("closed")}
+              active={filters.closed}
+              onClick={() => toggleFilter("closed")}
+            />
+          </div>
         </div>
-        <span className="text-sm text-text-muted">
-          {t("totalRemaining")}:{" "}
-          <span className="font-bold text-base text-text">
+        <div className="tnum flex flex-col gap-0.5 text-end">
+          <span className="text-label text-text-muted">
+            {t("totalRemaining")}
+          </span>
+          <span className="text-title font-semibold leading-none text-text">
             {formatILS(totalRemaining)}
           </span>
-        </span>
+        </div>
       </div>
 
       {isLoading ? (
-        <p className="text-text-muted text-sm">{t("loading")}</p>
+        <LoadingState label={t("loading")} />
       ) : filtered.length === 0 ? (
         <EmptyState
-          icon="🏗️"
+          icon={<Icon name="projects" size={22} />}
           title={query ? t("noResults") : t("noProjectsMatchFilters")}
           description={query ? undefined : t("tryTogglingFilters")}
           action={
@@ -349,26 +357,26 @@ export default function ProjectsPage() {
           }
         />
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+              <tr className="border-b border-border bg-surface-2">
+                <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("project")}
                 </th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("client")}
                 </th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("requester")}
                 </th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("estimated")}
                 </th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("remaining")}
                 </th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   <div className="flex items-center gap-1.5">
                     {t("completion")}
                     <button
@@ -380,27 +388,32 @@ export default function ProjectsPage() {
                             ? t("sortByProgressDesc")
                             : t("sortByProgressNone")
                       }
-                      className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] border transition-colors ${
+                      className={`inline-flex h-6 w-6 items-center justify-center rounded-sm border transition-colors ${
                         progressSort !== "none"
-                          ? "bg-beet text-white border-beet"
-                          : "bg-transparent text-text-muted border-border hover:bg-surface-2"
+                          ? "border-beet bg-beet text-white"
+                          : "border-border bg-transparent text-text-dim hover:bg-surface-2 hover:text-text"
                       }`}
                     >
-                      {progressSort === "asc"
-                        ? "↑"
-                        : progressSort === "desc"
-                          ? "↓"
-                          : "⇅"}
+                      <Icon
+                        name={
+                          progressSort === "asc"
+                            ? "arrowUp"
+                            : progressSort === "desc"
+                              ? "arrowDown"
+                              : "sortable"
+                        }
+                        size={13}
+                      />
                     </button>
                   </div>
                 </th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("status")}
                 </th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("done")}
                 </th>
-                <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
+                <th className="text-right py-3 px-4 text-label font-semibold text-text-muted rtl:text-left">
                   {t("actions")}
                 </th>
               </tr>
@@ -412,7 +425,7 @@ export default function ProjectsPage() {
                 return (
                   <tr
                     key={project.id}
-                    className="border-b border-border hover:bg-surface-2 transition-colors"
+                    className="border-b border-border transition-colors last:border-0 hover:bg-surface-2"
                   >
                     <td className="py-3 px-4 text-text font-medium">
                       {project.name}
@@ -437,12 +450,12 @@ export default function ProjectsPage() {
                     </td>
                     <td className="py-3 px-4 min-w-[100px]">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[11px] text-text-muted">
+                        <span className="tnum text-label font-semibold text-text-muted">
                           {pct}%
                         </span>
-                        <div className="h-[6px] w-full rounded-full bg-surface-3 overflow-hidden">
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
                           <div
-                            className={`h-full rounded-full transition-all ${pct <= 40 ? "bg-success" : pct <= 70 ? "bg-warning" : "bg-danger"}`}
+                            className={`h-full rounded-full transition-all ${completionBarClass(pct)}`}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
@@ -466,20 +479,20 @@ export default function ProjectsPage() {
                           onClick={() => openEdit(project)}
                           title={t("edit")}
                         >
-                          ✏️
+                          <Icon name="edit" size={15} />
                         </ButtonIcon>
                         <ButtonIcon
                           onClick={() => setTransferTarget(project)}
                           title={t("transferProject")}
                         >
-                          🔄
+                          <Icon name="transfer" size={15} />
                         </ButtonIcon>
                         <ButtonIcon
                           onClick={() => setDeleteTarget(project)}
                           title={t("delete")}
                           className="hover:text-danger hover:border-danger"
                         >
-                          🗑️
+                          <Icon name="trash" size={15} />
                         </ButtonIcon>
                       </div>
                     </td>
@@ -614,7 +627,7 @@ export default function ProjectsPage() {
               aria-expanded={openingOpen}
               className="flex items-center justify-between gap-2 text-start"
             >
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+              <span className="text-label font-semibold text-text-muted">
                 {t("openingBalanceTitle")}
               </span>
               <svg

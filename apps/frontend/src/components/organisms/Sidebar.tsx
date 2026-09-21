@@ -1,4 +1,5 @@
 import { NavLink, Link, useNavigate } from "react-router-dom";
+import { Icon, Logo, type IconName } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { logout } from "@/features/auth/authSlice";
@@ -19,35 +20,31 @@ interface SidebarProps {
 interface NavItem {
   path: string;
   labelKey: Parameters<ReturnType<typeof useLang>["t"]>[0];
-  icon: string;
+  icon: IconName;
 }
 
 const OVERVIEW_ITEMS: NavItem[] = [
-  { path: "/reports", labelKey: "projectReports", icon: "📊" },
-  { path: "/income", labelKey: "monthlyIncome", icon: "💰" },
-  {
-    path: "/supplier-payments",
-    labelKey: "supplierPayments",
-    icon: "🏢",
-  },
+  { path: "/reports", labelKey: "projectReports", icon: "reports" },
+  { path: "/income", labelKey: "monthlyIncome", icon: "income" },
+  { path: "/supplier-payments", labelKey: "supplierPayments", icon: "receipt" },
   {
     path: "/subcontractor-payments",
     labelKey: "subcontractorPayments",
-    icon: "👷",
+    icon: "subcontractors",
   },
 ];
 
 const MANAGEMENT_ITEMS: NavItem[] = [
-  { path: "/projects", labelKey: "projects", icon: "🏗️" },
-  { path: "/clients", labelKey: "clients", icon: "👤" },
-  { path: "/subcontractors", labelKey: "subcontractors", icon: "🔧" },
-  { path: "/suppliers", labelKey: "suppliers", icon: "🏛️" },
-  { path: "/initiators", labelKey: "initiators", icon: "🎯" },
+  { path: "/projects", labelKey: "projects", icon: "projects" },
+  { path: "/clients", labelKey: "clients", icon: "clients" },
+  { path: "/subcontractors", labelKey: "subcontractors", icon: "wrench" },
+  { path: "/suppliers", labelKey: "suppliers", icon: "suppliers" },
+  { path: "/initiators", labelKey: "initiators", icon: "initiators" },
 ];
 
 const SETTINGS_ITEMS: NavItem[] = [
-  { path: "/settings/company", labelKey: "companySettings", icon: "⚙️" },
-  { path: "/settings/vat", labelKey: "vatRate", icon: "🧾" },
+  { path: "/settings/company", labelKey: "companySettings", icon: "settings" },
+  { path: "/settings/vat", labelKey: "vatRate", icon: "percent" },
 ];
 
 function NavSection({
@@ -61,27 +58,38 @@ function NavSection({
 }) {
   const { t } = useLang();
   return (
-    <div className="mb-4">
-      <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-text-dim">
+    <div className="mb-5">
+      <p className="mb-1.5 px-3 text-label font-semibold text-text-dim">
         {label}
       </p>
-      {items.map((item) => (
-        <NavLink
-          key={item.path}
-          to={item.path}
-          onClick={onClose}
-          className={({ isActive }) =>
-            `flex items-center gap-2.5 px-3 py-2 rounded text-sm transition-colors ${
-              isActive
-                ? "bg-[var(--beet-glow)] text-beet-bright ltr:border-l-2 rtl:border-r-2 border-beet"
-                : "text-text-muted hover:bg-surface-2 ltr:border-l-2 rtl:border-r-2 border-transparent"
-            }`
-          }
-        >
-          <span className="text-base leading-none">{item.icon}</span>
-          {t(item.labelKey)}
-        </NavLink>
-      ))}
+      <ul className="flex flex-col gap-0.5">
+        {items.map((item) => (
+          <li key={item.path}>
+            <NavLink
+              to={item.path}
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center gap-2.5 rounded px-3 py-2 text-sm font-medium transition-colors duration-150 ${
+                  isActive
+                    ? "bg-beet-tint font-semibold text-beet"
+                    : "text-text-muted hover:bg-surface-2 hover:text-text"
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon
+                    name={item.icon}
+                    size={17}
+                    className={isActive ? "text-beet" : "text-text-dim"}
+                  />
+                  {t(item.labelKey)}
+                </>
+              )}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -105,14 +113,14 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     <>
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-30 animate-fadeIn bg-black/50 lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
         className={`
-          fixed top-0 bottom-0 z-40 w-[260px] bg-surface border-border flex flex-col transition-transform duration-200
+          fixed top-0 bottom-0 z-40 flex w-[264px] flex-col border-border bg-surface transition-transform duration-200
           ltr:left-0 ltr:border-r rtl:right-0 rtl:border-l
           lg:relative lg:w-[var(--sidebar-w)] lg:!translate-x-0 lg:z-auto
           ${open ? "translate-x-0" : "ltr:-translate-x-full rtl:translate-x-full"}
@@ -121,15 +129,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         <Link
           to="/"
           onClick={onClose}
-          className="flex items-center gap-2.5 px-4 py-4 border-b border-border shrink-0 hover:bg-surface-2 transition-colors"
+          className="flex shrink-0 items-center gap-2.5 px-4 py-[17px] transition-colors hover:bg-surface-2"
         >
-          <div className="w-8 h-8 rounded flex items-center justify-center text-base bg-beet shrink-0">
-            🫀
-          </div>
-          <span className="font-serif text-[19px] text-text">BeetBite</span>
+          <Logo size={26} />
+          <span className="font-serif text-title text-text">BeetBite</span>
         </Link>
 
-        <nav className="flex-1 overflow-y-auto px-2 py-3">
+        <nav className="flex-1 overflow-y-auto px-2.5 py-2">
           <NavSection
             label={t("overview")}
             items={OVERVIEW_ITEMS}
@@ -147,34 +153,23 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           />
         </nav>
 
-        <div className="flex items-center gap-2.5 px-3 py-3 border-t border-border shrink-0">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold bg-beet-dim text-white shrink-0">
+        <div className="flex shrink-0 items-center gap-2.5 border-t border-border px-3 py-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-beet text-sm font-semibold text-white">
             {initial}
           </div>
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-sm text-text truncate">{username}</span>
-            <span className="text-[11px] text-text-dim">{t("admin")}</span>
+          <div className="flex min-w-0 flex-1 flex-col leading-tight">
+            <span className="truncate text-sm font-medium text-text">
+              {username}
+            </span>
+            <span className="text-micro text-text-dim">{t("admin")}</span>
           </div>
           <button
             onClick={handleSignOut}
             title={t("signOut")}
-            className="p-1.5 rounded text-text-dim hover:text-text hover:bg-surface-2 transition-colors shrink-0"
+            aria-label={t("signOut")}
+            className="shrink-0 rounded p-1.5 text-text-dim transition-colors hover:bg-surface-2 hover:text-danger"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
+            <Icon name="logout" size={16} />
           </button>
         </div>
       </aside>

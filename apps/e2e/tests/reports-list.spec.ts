@@ -239,10 +239,14 @@ dbTest.describe('Reports list', () => {
       await openClient(page);
 
       // 40,000 income − 10% profit − no supplier payments. The same figure
-      // also appears on the project sheet, so scope to the header total.
-      await expect(page.getByText(/Total Sub Payments:/)).toContainText(
-        '36,000',
-      );
+      // also appears on the project sheet, so scope to the header total. The
+      // header renders the caption and the amount as two sibling spans, so the
+      // assertion has to run against the pair's wrapper — the caption element
+      // itself holds no digits.
+      const headerTotal = page
+        .getByText('Total Sub Payments', { exact: true })
+        .locator('..');
+      await expect(headerTotal).toContainText('36,000');
     },
   );
 

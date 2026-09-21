@@ -7,6 +7,11 @@ interface PageHeaderProps {
   className?: string;
 }
 
+/*
+ * The rule under the header is the only divider on most screens: it separates
+ * the page's chrome from its content, so everything below can sit on open
+ * paper without needing a box drawn round it.
+ */
 export function PageHeader({
   title,
   subtitle,
@@ -15,14 +20,18 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div
-      className={`flex items-start justify-between gap-3 max-[768px]:flex-col ${className}`}
+      className={`flex items-end justify-between gap-4 border-b border-border pb-4 max-[768px]:flex-col max-[768px]:items-stretch ${className}`}
     >
-      <div className="flex flex-col gap-0.5">
-        <h1 className="font-serif text-[26px] text-text">{title}</h1>
-        {subtitle && <p className="text-[13px] text-text-muted">{subtitle}</p>}
+      <div className="flex flex-col gap-1">
+        <h1 className="text-page text-text">{title}</h1>
+        {subtitle && (
+          <p className="max-w-[62ch] text-sm text-text-muted">{subtitle}</p>
+        )}
       </div>
       {actions && (
-        <div className="flex items-center gap-2 shrink-0">{actions}</div>
+        <div className="flex shrink-0 items-center gap-2 max-[768px]:justify-end">
+          {actions}
+        </div>
       )}
     </div>
   );

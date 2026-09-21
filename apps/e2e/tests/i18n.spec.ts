@@ -56,22 +56,20 @@ dbTest.describe('Language and direction', () => {
     },
   );
 
-  dbTest(
-    'the active nav indicator swaps edges under RTL',
-    async ({ page, db }) => {
-      void db;
-      // The accent border is declared as `ltr:border-l-2 rtl:border-r-2`, so the
-      // rendered edge is what proves the direction variant actually resolved.
-      const englishLink = page.getByRole('link', { name: /Clients/ });
-      await expect(englishLink).toHaveCSS('border-left-width', '2px');
-      await expect(englishLink).toHaveCSS('border-right-width', '0px');
+  dbTest('the sidebar swaps edges under RTL', async ({ page, db }) => {
+    void db;
+    // The sidebar's outer edge is declared as `ltr:border-r rtl:border-l`, so
+    // the rendered edge is what proves the direction variant actually resolved.
+    // (The active nav link carries no accent border of its own — it is marked
+    // by a tinted background, which is the same on both sides.)
+    const sidebar = page.locator('aside').first();
+    await expect(sidebar).toHaveCSS('border-right-width', '1px');
+    await expect(sidebar).toHaveCSS('border-left-width', '0px');
 
-      await page.getByRole('button', { name: 'עב' }).click();
-      await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await page.getByRole('button', { name: 'עב' }).click();
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
 
-      const hebrewLink = page.getByRole('link', { name: /לקוחות/ });
-      await expect(hebrewLink).toHaveCSS('border-right-width', '2px');
-      await expect(hebrewLink).toHaveCSS('border-left-width', '0px');
-    },
-  );
+    await expect(sidebar).toHaveCSS('border-left-width', '1px');
+    await expect(sidebar).toHaveCSS('border-right-width', '0px');
+  });
 });

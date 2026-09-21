@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ButtonGhost } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
 import type { ProfitSimulation } from "@/features/simulator/useProfitSimulation";
+import { Icon } from "@/components/atoms/Icon";
 
 /**
  * Slide duration, matched to the `duration-200` on the drawer and on the
@@ -156,7 +157,7 @@ export function ProfitSimulatorPanel({
       }`}
     >
       <span
-        className="text-[11px] font-semibold uppercase tracking-wide"
+        className="text-label font-semibold"
         style={{ writingMode: "vertical-rl" }}
       >
         {t("profitSimulator")}
@@ -179,7 +180,7 @@ export function ProfitSimulatorPanel({
         }`}
       >
         <div className="flex flex-col gap-0.5">
-          <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
+          <h3 className="text-label font-semibold text-text-muted">
             {t("profitSimulator")}
           </h3>
           <p className="text-[11px] text-text-dim">
@@ -232,7 +233,7 @@ export function ProfitSimulatorPanel({
                     aria-label={`${t("resetToSavedValues")}: ${row.report.project.name}`}
                     className="shrink-0 text-xs text-text-muted hover:text-text"
                   >
-                    ✕
+                    <Icon name="close" size={14} />
                   </button>
                 )}
               </div>

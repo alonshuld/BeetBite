@@ -25,26 +25,33 @@ describe("ThemeToggle", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows moon emoji when theme is light (default)", () => {
+  it("shows the moon icon when theme is light (default)", () => {
     renderThemeToggle();
     expect(
-      screen.getByRole("button", { name: "Toggle theme" }),
-    ).toHaveTextContent("🌙");
+      screen
+        .getByRole("button", { name: "Toggle theme" })
+        .querySelector("[data-icon]"),
+    ).toHaveAttribute("data-icon", "moon");
   });
 
-  it("switches to sun emoji when clicked (dark mode)", async () => {
+  it("switches to the sun icon when clicked (dark mode)", async () => {
     renderThemeToggle();
     await userEvent.click(screen.getByRole("button", { name: "Toggle theme" }));
     expect(
-      screen.getByRole("button", { name: "Toggle theme" }),
-    ).toHaveTextContent("☀️");
+      screen
+        .getByRole("button", { name: "Toggle theme" })
+        .querySelector("[data-icon]"),
+    ).toHaveAttribute("data-icon", "sun");
   });
 
-  it("toggles back to moon on second click", async () => {
+  it("toggles back to the moon icon on second click", async () => {
     renderThemeToggle();
     const btn = screen.getByRole("button", { name: "Toggle theme" });
     await userEvent.click(btn);
     await userEvent.click(btn);
-    expect(btn).toHaveTextContent("🌙");
+    expect(btn.querySelector("[data-icon]")).toHaveAttribute(
+      "data-icon",
+      "moon",
+    );
   });
 });
