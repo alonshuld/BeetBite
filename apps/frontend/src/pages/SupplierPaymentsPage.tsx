@@ -313,7 +313,7 @@ export default function SupplierPaymentsPage() {
             ))}
           </div>
 
-          <div className="tnum flex items-baseline justify-end gap-3 border-t-[3px] border-double border-text/45 pt-3">
+          <div className="tnum flex items-baseline justify-end gap-3 border-t border-text-muted pt-3">
             <span className="text-sm text-text-muted">{t("grandTotal")}</span>
             <span className="text-title font-bold text-text">
               {formatILS(grandTotal)}

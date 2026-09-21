@@ -2,14 +2,15 @@ import { HTMLAttributes, ReactNode } from "react";
 
 /*
  * The money screens all show the same shape: a column of labelled figures
- * whose rules carry the arithmetic. Borrowed straight from how an account is
- * set on paper —
+ * whose rules carry the arithmetic —
  *
- *   a single rule closes a subtotal,
- *   a double rule closes the figure everything else was working towards.
+ *   a faint rule closes a subtotal,
+ *   a darker rule closes the figure everything else was working towards.
  *
- * So the weight of a rule is information, not decoration, and the amounts sit
- * on one axis down the sheet with tabular figures keeping the digits aligned.
+ * Weight rather than count does the work: a true double rule is the printed
+ * convention, but at screen sizes it reads as a border drawn twice by mistake.
+ * The amounts sit on one axis down the sheet with tabular figures keeping the
+ * digits aligned.
  */
 
 type Tone = "default" | "positive" | "deduction" | "total" | "muted";
@@ -83,15 +84,12 @@ export function StatementRule({ className = "" }: { className?: string }) {
   );
 }
 
-/** Double rule: the figure below it is what the sheet was computing. */
+/** Closing rule: the figure below it is what the sheet was computing. */
 export function StatementTotalRule({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`my-1.5 flex flex-col gap-[2px] ${className}`}
+      className={`mb-1 mt-2 h-px bg-text-muted ${className}`}
       aria-hidden="true"
-    >
-      <span className="h-px bg-text/55" />
-      <span className="h-px bg-text/55" />
-    </div>
+    />
   );
 }

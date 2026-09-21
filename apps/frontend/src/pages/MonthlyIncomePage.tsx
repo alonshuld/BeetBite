@@ -111,7 +111,7 @@ export default function MonthlyIncomePage() {
       </div>
 
       {items.length > 0 && (
-        <div className="mt-4 flex shrink-0 flex-wrap items-end justify-between gap-3 rounded-lg border border-border border-t-[3px] border-t-text/45 [border-top-style:double] bg-surface p-4">
+        <div className="mt-4 flex shrink-0 flex-wrap items-end justify-between gap-3 rounded-lg border border-border border-t-text-muted bg-surface p-4">
           <span className="text-lead font-semibold text-text">
             {t("grandTotal")}
           </span>
