@@ -42,6 +42,7 @@ import { FormRow } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
 import { formatYM, formatISODate } from "@/utils/formatMonth";
 import { Icon } from "@/components/atoms/Icon";
+import { completionBarClass } from "@/utils/completion";
 
 interface CorpPaymentDraft {
   supplierId: string;
@@ -465,9 +466,7 @@ export default function ProjectReportsPage() {
             </span>
             <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
               <div
-                className={`h-full rounded-full transition-all ${
-                  completionPct >= 100 ? "bg-success" : "bg-beet"
-                }`}
+                className={`h-full rounded-full transition-all ${completionBarClass(completionPct)}`}
                 style={{ width: `${completionPct}%` }}
               />
             </div>

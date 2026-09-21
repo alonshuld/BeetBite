@@ -12,6 +12,7 @@ import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetInitiatorsQuery } from "@/api/endpoints/initiators";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { LoadingState } from "@/components/molecules/LoadingState";
+import { completionBarClass } from "@/utils/completion";
 import { SearchInput } from "@/components/molecules/SearchInput";
 import { FormGroup, FormRow } from "@/components/molecules/FormGroup";
 import { Input } from "@/components/atoms/Input";
@@ -454,9 +455,7 @@ export default function ProjectsPage() {
                         </span>
                         <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
                           <div
-                            className={`h-full rounded-full transition-all ${
-                              pct >= 100 ? "bg-success" : "bg-beet"
-                            }`}
+                            className={`h-full rounded-full transition-all ${completionBarClass(pct)}`}
                             style={{ width: `${pct}%` }}
                           />
                         </div>

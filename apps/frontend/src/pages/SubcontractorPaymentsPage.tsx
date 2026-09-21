@@ -20,10 +20,11 @@ function formatILS(n: number): string {
 
 type PaymentStatus = "Paid" | "Partial" | "Unpaid";
 
-const STATUS_VARIANT: Record<PaymentStatus, "green" | "yellow" | "muted"> = {
+// Red / amber / green, read as a traffic light across the whole screen.
+const STATUS_VARIANT: Record<PaymentStatus, "green" | "yellow" | "red"> = {
   Paid: "green",
   Partial: "yellow",
-  Unpaid: "muted",
+  Unpaid: "red",
 };
 
 function todayISO(): string {
@@ -219,7 +220,7 @@ export default function SubcontractorPaymentsPage() {
       ? "text-success"
       : aggregateStatus === "Partial"
         ? "text-warning"
-        : "text-text";
+        : "text-danger";
 
   return (
     <div className="flex flex-col gap-5">
@@ -294,7 +295,7 @@ export default function SubcontractorPaymentsPage() {
                       ? t("project")
                       : t("projects")}
                   </p>
-                  <p className="tnum text-sm font-medium text-text-muted">
+                  <p className="tnum text-sm font-semibold text-danger">
                     {t("owed")}: {formatILS(card.totalOwed)}
                   </p>
                   <p className="tnum text-sm font-semibold text-success">
@@ -307,7 +308,7 @@ export default function SubcontractorPaymentsPage() {
                     className={`tnum text-sm font-bold ${
                       card.totalOwed - card.totalPaid <= 0
                         ? "text-success"
-                        : "text-text"
+                        : "text-warning"
                     }`}
                   >
                     {t("balance")}: {formatILS(card.totalOwed - card.totalPaid)}
