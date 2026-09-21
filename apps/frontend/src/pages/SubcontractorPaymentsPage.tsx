@@ -396,7 +396,7 @@ export default function SubcontractorPaymentsPage() {
                                   void handleSetUnpaid(pb.projectId)
                                 }
                                 title={t("unpaid")}
-                                className="w-8 h-8 rounded-full border text-xs font-bold transition-colors disabled:opacity-50"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
                                 style={
                                   status === "Unpaid"
                                     ? {
@@ -423,7 +423,7 @@ export default function SubcontractorPaymentsPage() {
                                   openEntry(pb.projectId, String(remaining))
                                 }
                                 title={t("paid")}
-                                className="w-8 h-8 rounded-full border text-xs font-bold transition-colors disabled:opacity-50"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
                                 style={
                                   status === "Paid"
                                     ? {
@@ -451,7 +451,7 @@ export default function SubcontractorPaymentsPage() {
                                     : openEntry(pb.projectId, "")
                                 }
                                 title={t("partial")}
-                                className="w-8 h-8 rounded-full border text-xs font-bold transition-colors disabled:opacity-50"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
                                 style={
                                   status === "Partial"
                                     ? {
@@ -466,7 +466,7 @@ export default function SubcontractorPaymentsPage() {
                                       }
                                 }
                               >
-                                〜
+                                <Icon name="wave" size={14} />
                               </button>
                             </div>
                           </td>
@@ -615,7 +615,7 @@ export default function SubcontractorPaymentsPage() {
                                     void handleAddPayment(pb.projectId)
                                   }
                                   title={t("save")}
-                                  className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                                  className="inline-flex h-8 items-center justify-center rounded px-3 text-white transition-colors disabled:opacity-40"
                                   style={{ background: "var(--warning)" }}
                                 >
                                   <Icon name="check" size={14} />
@@ -623,7 +623,7 @@ export default function SubcontractorPaymentsPage() {
                                 <button
                                   onClick={() => closeEntry(pb.projectId)}
                                   title={t("cancel")}
-                                  className="px-2 py-1.5 rounded text-xs text-text-muted border border-border hover:bg-surface-2 transition-colors"
+                                  className="inline-flex h-8 items-center justify-center rounded border border-border px-2.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
                                 >
                                   <Icon name="close" size={14} />
                                 </button>

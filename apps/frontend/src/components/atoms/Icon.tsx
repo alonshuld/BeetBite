@@ -40,6 +40,8 @@ const PATHS = {
   logout:
     "M9 20.5H5.5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2H9M16 16.5l4.5-4.5L16 7.5M20.5 12H9",
   check: "M5 12.5l4.5 4.5L19 6.5",
+  // Partial settlement — the tilde this button used to carry as text.
+  wave: "M5 13.5c1.75-3.5 5.25-3.5 7 0s5.25 3.5 7 0",
   chevronDown: "M6 9.5 12 15.5l6-6",
   chevronLeft: "M14.5 5.5 8 12l6.5 6.5",
   chevronRight: "M9.5 5.5 16 12l-6.5 6.5",
