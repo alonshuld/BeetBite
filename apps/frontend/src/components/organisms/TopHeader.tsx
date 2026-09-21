@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { ButtonIcon } from "@/components/atoms";
+import { ButtonIcon, Icon } from "@/components/atoms";
 import { MonthPicker, LangToggle, ThemeToggle } from "@/components/molecules";
 import { useLang } from "@/contexts/useLang";
 
@@ -47,23 +47,30 @@ export function TopHeader({
   const labelKey = SCREEN_LABELS[rootPath];
 
   return (
-    <header className="h-14 flex items-center justify-between px-4 border-b border-border bg-surface shrink-0">
-      <div className="flex items-center gap-2">
+    <header className="flex h-[60px] shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-4">
+      <div className="flex min-w-0 items-center gap-2.5">
         <ButtonIcon
           className="lg:hidden"
           onClick={onMenuClick}
           aria-label="Open menu"
         >
-          ☰
+          <Icon name="menu" size={18} />
         </ButtonIcon>
         {labelKey && (
-          <span className="text-sm font-medium text-text">{t(labelKey)}</span>
+          <span className="truncate text-sm font-semibold text-text-muted">
+            {t(labelKey)}
+          </span>
         )}
       </div>
 
       <div className="flex items-center gap-2">
+        {/* The month is the working period for every overview screen, so it
+            sits apart from the display settings with a rule between them. */}
         {isOverviewScreen && (
-          <MonthPicker value={month} onChange={onMonthChange} />
+          <>
+            <MonthPicker value={month} onChange={onMonthChange} />
+            <span className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
+          </>
         )}
         <ThemeToggle />
         <LangToggle lang={lang} onChange={setLang} />

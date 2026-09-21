@@ -41,6 +41,7 @@ import { FormModal, ConfirmModal } from "@/components/organisms/Modal";
 import { FormRow } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
 import { formatYM, formatISODate } from "@/utils/formatMonth";
+import { Icon } from "@/components/atoms/Icon";
 
 interface CorpPaymentDraft {
   supplierId: string;
@@ -430,11 +431,12 @@ export default function ProjectReportsPage() {
                 `/reports${project?.clientId ? `?clientId=${project.clientId}` : ""}`,
               )
             }
-            className="mb-2 text-xs py-1 px-3"
+            className="mb-2 h-7 gap-1 border-none bg-transparent px-0 text-label text-text-muted hover:bg-transparent hover:text-beet"
           >
-            ← {t("projectReports")}
+            <Icon name="chevronLeft" size={13} className="rtl:rotate-180" />
+            {t("projectReports")}
           </ButtonGhost>
-          <h1 className="font-serif text-[26px] text-text">{projectName}</h1>
+          <h1 className="text-page text-text">{projectName}</h1>
           {project?.description && (
             <p className="text-text-muted text-sm mt-0.5">
               {project.description}
@@ -451,46 +453,51 @@ export default function ProjectReportsPage() {
         <StatCard
           label={t("totalPaidByClient")}
           value={`₪${totalPaid.toLocaleString("he-IL")}`}
-          style={{ color: "var(--success)" }}
+          tone="positive"
         />
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <div className="flex justify-between text-xs text-text-muted">
-          <span>{t("completion")}</span>
-          <span>{completionPct}%</span>
-        </div>
-        <div className="h-[6px] rounded-full bg-surface-3 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-success transition-all"
-            style={{ width: `${completionPct}%` }}
-          />
+        <div className="flex flex-col justify-between gap-2 rounded-lg border border-border bg-surface p-4">
+          <span className="tnum text-hero font-semibold leading-none text-text">
+            {completionPct}%
+          </span>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-text-muted">
+              {t("completion")}
+            </span>
+            <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  completionPct >= 100 ? "bg-success" : "bg-beet"
+                }`}
+                style={{ width: `${completionPct}%` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Monthly report panel */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
+          <h2 className="text-label font-semibold text-text-muted">
             {t("reportLabel")} — {formatYM(month, lang)}
           </h2>
           {currentReport ? (
             <div className="flex items-center gap-2">
               <ButtonGhost
                 onClick={() => openEdit(currentReport)}
-                className="text-xs py-1 px-3"
+                className="h-8 px-3 text-label"
               >
                 {t("edit")}
               </ButtonGhost>
               <ButtonDanger
                 onClick={() => setDeleteReportOpen(true)}
-                className="text-xs py-1 px-3"
+                className="h-8 px-3 text-label"
               >
                 {t("delete")}
               </ButtonDanger>
             </div>
           ) : (
-            <ButtonPrimary onClick={openAdd} className="text-xs py-1.5 px-3">
+            <ButtonPrimary onClick={openAdd} className="h-8 px-3 text-label">
               + {t("add")}
             </ButtonPrimary>
           )}
@@ -504,7 +511,7 @@ export default function ProjectReportsPage() {
             }
           />
         ) : (
-          <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-3">
+          <div className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
             {/* Income entries */}
             {currentReport.incomeEntries.map((entry) => {
               const isReceived = Boolean(entry.incomeDate);
@@ -825,7 +832,7 @@ export default function ProjectReportsPage() {
             {project?.initiatorId && (
               <>
                 <div className="border-t border-dashed border-border" />
-                <span className="text-[11px] font-medium uppercase tracking-wide text-text-dim">
+                <span className="text-label font-semibold text-text-dim">
                   {t("initiatorPayments")}
                 </span>
 
@@ -994,7 +1001,7 @@ export default function ProjectReportsPage() {
 
             <div className="bg-success/10 rounded p-3 flex justify-between items-center">
               <div className="flex flex-col">
-                <span className="text-xs text-success font-semibold uppercase tracking-wide">
+                <span className="text-label font-semibold text-success">
                   {t("subcontractorPayment")}
                 </span>
                 <span className="text-sm text-text">
@@ -1055,7 +1062,7 @@ export default function ProjectReportsPage() {
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+              <span className="text-label font-semibold text-text-muted">
                 {t("incomeEntries")}
               </span>
               <ButtonGhost
@@ -1115,7 +1122,7 @@ export default function ProjectReportsPage() {
           {editingId === null && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+                <span className="text-label font-semibold text-text-muted">
                   {t("supplierPayments")}
                 </span>
                 <ButtonGhost

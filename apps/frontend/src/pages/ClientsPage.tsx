@@ -11,8 +11,14 @@ import { PageHeader } from "@/components/molecules/PageHeader";
 import { SearchInput } from "@/components/molecules/SearchInput";
 import { FormGroup } from "@/components/molecules/FormGroup";
 import { Input } from "@/components/atoms/Input";
-import { ButtonPrimary, ButtonIcon, EmptyState } from "@/components/atoms";
+import {
+  ButtonPrimary,
+  ButtonIcon,
+  EmptyState,
+  Icon,
+} from "@/components/atoms";
 import { FormModal, ConfirmModal } from "@/components/organisms/Modal";
+import { LoadingState } from "@/components/molecules/LoadingState";
 
 export default function ClientsPage() {
   const { t } = useLang();
@@ -83,10 +89,10 @@ export default function ClientsPage() {
       />
 
       {isLoading ? (
-        <p className="text-text-muted text-sm">{t("loading")}</p>
+        <LoadingState label={t("loading")} />
       ) : filtered.length === 0 ? (
         <EmptyState
-          icon="👤"
+          icon={<Icon name="clients" size={22} />}
           title={query ? t("noResults") : t("noClientsYet")}
           description={query ? undefined : t("addFirstClientHint")}
           action={
@@ -98,14 +104,14 @@ export default function ClientsPage() {
           }
         />
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+              <tr className="border-b border-border bg-surface-2">
+                <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("name")}
                 </th>
-                <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
+                <th className="text-right py-3 px-4 text-label font-semibold text-text-muted rtl:text-left">
                   {t("actions")}
                 </th>
               </tr>
@@ -114,7 +120,7 @@ export default function ClientsPage() {
               {filtered.map((client) => (
                 <tr
                   key={client.id}
-                  className="border-b border-border hover:bg-surface-2 transition-colors"
+                  className="border-b border-border transition-colors last:border-0 hover:bg-surface-2"
                 >
                   <td className="py-3 px-4 text-text">{client.name}</td>
                   <td className="py-3 px-4">
@@ -123,14 +129,14 @@ export default function ClientsPage() {
                         onClick={() => openEdit(client)}
                         title={t("edit")}
                       >
-                        ✏️
+                        <Icon name="edit" size={15} />
                       </ButtonIcon>
                       <ButtonIcon
                         onClick={() => setDeleteTarget(client)}
                         title={t("delete")}
                         className="hover:text-danger hover:border-danger"
                       >
-                        🗑️
+                        <Icon name="trash" size={15} />
                       </ButtonIcon>
                     </div>
                   </td>

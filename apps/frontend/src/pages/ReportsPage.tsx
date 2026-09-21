@@ -28,14 +28,22 @@ import { PageHeader } from "@/components/molecules/PageHeader";
 import {
   ButtonPrimary,
   ButtonGhost,
+  ButtonQuiet,
   ButtonDanger,
   Badge,
   EmptyState,
+  Icon,
   Input,
   Select,
   Textarea,
   Divider,
 } from "@/components/atoms";
+import {
+  Statement,
+  StatementRow,
+  StatementRule,
+  StatementTotalRule,
+} from "@/components/molecules/Statement";
 import { FormModal } from "@/components/organisms/Modal";
 import { ProfitSimulatorPanel } from "@/components/organisms/ProfitSimulatorPanel";
 import { useProfitSimulation } from "@/features/simulator/useProfitSimulation";
@@ -444,44 +452,48 @@ export default function ReportsPage() {
         </>
       ) : (
         <>
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <ButtonGhost
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-4">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <button
                 onClick={() => setSelectedClientId(null)}
-                className="text-xs py-1 px-3"
+                className="inline-flex w-fit items-center gap-1 text-label font-semibold text-text-muted transition-colors hover:text-beet"
               >
-                ← {t("clients")}
-              </ButtonGhost>
-              <h1 className="font-serif text-[26px] text-text">
+                <Icon name="chevronLeft" size={13} className="rtl:rotate-180" />
+                {t("clients")}
+              </button>
+              <h1 className="truncate text-page text-text">
                 {selectedClientName}
               </h1>
             </div>
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="text-sm text-text-muted">
-                {t("totalIncome")}:{" "}
-                <span className="text-text font-semibold">
+
+            {/* The client's two running figures, set as a pair so they read
+                as one line of account rather than two loose captions. */}
+            <div className="flex flex-wrap items-end gap-6">
+              <div className="tnum flex flex-col gap-0.5">
+                <span className="text-label text-text-muted">
+                  {t("totalIncome")}
+                </span>
+                <span className="text-title font-semibold leading-none text-text">
                   ₪{Math.round(totalClientIncome).toLocaleString("he-IL")}
                 </span>
               </div>
-              <div className="text-sm text-text-muted">
-                {t("totalSubcontractorPayments")}:{" "}
+              <div className="tnum flex flex-col gap-0.5">
+                <span className="flex items-center gap-1.5 text-label text-text-muted">
+                  {t("totalSubcontractorPayments")}
+                  {simulation.isDirty && (
+                    <Badge variant="beet">{t("simulated")}</Badge>
+                  )}
+                </span>
                 <span
-                  className={
-                    simulation.isDirty
-                      ? "text-beet-bright font-semibold"
-                      : "text-text font-semibold"
-                  }
+                  className={`text-title font-semibold leading-none ${
+                    simulation.isDirty ? "text-beet-bright" : "text-text"
+                  }`}
                 >
                   ₪
                   {Math.round(totalSubcontractorPayments).toLocaleString(
                     "he-IL",
                   )}
                 </span>
-                {simulation.isDirty && (
-                  <span className="ms-1 text-[11px] text-beet-bright uppercase tracking-wide">
-                    {t("simulated")}
-                  </span>
-                )}
               </div>
               <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
             </div>
@@ -618,7 +630,7 @@ export default function ReportsPage() {
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+              <span className="text-label font-semibold text-text-muted">
                 {t("incomeEntries")}
               </span>
               <ButtonGhost
@@ -677,7 +689,7 @@ export default function ReportsPage() {
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+              <span className="text-label font-semibold text-text-muted">
                 {t("supplierPayments")}
               </span>
               <ButtonGhost
@@ -740,7 +752,7 @@ export default function ReportsPage() {
           {selectedProjectForModal?.initiatorId && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+                <span className="text-label font-semibold text-text-muted">
                   {t("initiatorPayments")}
                 </span>
                 <ButtonGhost
@@ -863,12 +875,21 @@ function ClientCard({ client, reportCount, onClick }: ClientCardProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-surface rounded-[var(--radius)] border border-border p-4 flex flex-col gap-2 transition-colors hover:border-beet/40 hover:bg-surface-2 active:scale-[0.99]"
+      className="group flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4 text-start transition-colors duration-150 hover:border-beet/45 hover:bg-beet-tint"
     >
-      <p className="font-medium text-text">{client.name}</p>
-      <p className="text-text-muted text-sm">
-        {reportCount} {t("projectReports").toLowerCase()}
-      </p>
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate text-lead font-semibold text-text">
+          {client.name}
+        </span>
+        <span className="tnum text-sm text-text-muted">
+          {reportCount} {t("projectReports").toLowerCase()}
+        </span>
+      </span>
+      <Icon
+        name="chevronRight"
+        size={18}
+        className="text-text-dim transition-colors group-hover:text-beet rtl:rotate-180"
+      />
     </button>
   );
 }
@@ -924,152 +945,146 @@ function ProjectSheet({
 
   return (
     <div
-      className={`bg-surface border rounded-[var(--radius)] p-4 flex flex-col gap-2 h-full ${
+      className={`flex h-full flex-col rounded-lg border bg-surface ${
         isSimulated ? "border-beet-bright" : "border-border"
       }`}
     >
-      <div className="flex items-start justify-between mb-1 gap-2">
-        <div className="flex flex-col gap-0.5 min-w-0">
+      {/* Sheet head: who and where, then the two things you can do with it. */}
+      <div className="flex items-start justify-between gap-3 border-b border-border p-4 pb-3">
+        <div className="flex min-w-0 flex-col items-start gap-0.5">
           <button
             onClick={onNavigate}
-            className="font-medium text-text hover:text-beet hover:underline transition-colors text-left rtl:text-right truncate"
+            className="max-w-full truncate text-start text-lead font-semibold text-text transition-colors hover:text-beet"
           >
             {report.project.name}
           </button>
           {isSimulated && (
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-beet-bright">
+            <Badge variant="beet" className="my-0.5">
               {t("simulated")}
+            </Badge>
+          )}
+          {report.project.location && (
+            <span className="truncate text-sm text-text-muted">
+              {report.project.location}
             </span>
           )}
-          <span className="text-xs text-text-muted truncate">
-            {report.project.location}
-          </span>
-          <span className="text-[11px] text-text-dim line-clamp-2">
-            {report.project.description}
-          </span>
+          {report.project.description && (
+            <span className="line-clamp-2 text-label text-text-dim">
+              {report.project.description}
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <ButtonGhost
-            onClick={() => setTagsModalOpen(true)}
-            className="text-xs py-1 px-2"
-          >
+        <div className="flex shrink-0 items-center gap-1.5">
+          <ButtonQuiet onClick={() => setTagsModalOpen(true)}>
             {t("editTags")}
-          </ButtonGhost>
-          <ButtonGhost onClick={onExport} className="text-xs py-1 px-2">
+          </ButtonQuiet>
+          <ButtonQuiet onClick={onExport} className="gap-1.5">
+            <Icon name="download" size={13} />
             {t("exportPdf")}
-          </ButtonGhost>
+          </ButtonQuiet>
         </div>
       </div>
 
-      {report.incomeEntries.map((entry) => {
-        const isReceived = Boolean(entry.incomeDate);
-        return (
-          <div
-            key={entry.id}
-            className="flex justify-between items-center text-sm"
-          >
-            <div className="flex items-center gap-2">
-              <TileTagEditor entry={entry} incomeTagLabel={incomeTagLabel} />
-              <Badge variant={isReceived ? "green" : "yellow"}>
-                {isReceived
-                  ? `${t("received")} ${formatISODate(entry.incomeDate!, lang as "en" | "he")}`
-                  : t("pending")}
-              </Badge>
+      {/* The account itself: income in, the contractor's cut and the
+          suppliers' cuts out, and what is left for the subcontractor. */}
+      <Statement className="flex-1 px-4 py-3">
+        {report.incomeEntries.map((entry) => {
+          const isReceived = Boolean(entry.incomeDate);
+          return (
+            <StatementRow
+              key={entry.id}
+              label={
+                <TileTagEditor entry={entry} incomeTagLabel={incomeTagLabel} />
+              }
+              meta={
+                <Badge variant={isReceived ? "green" : "yellow"}>
+                  {isReceived
+                    ? `${t("received")} ${formatISODate(entry.incomeDate!, lang as "en" | "he")}`
+                    : t("pending")}
+                </Badge>
+              }
+              amount={`₪${entry.amount.toLocaleString("he-IL")}`}
+            />
+          );
+        })}
+
+        {report.incomeEntries.length > 1 && (
+          <>
+            <StatementRule />
+            <StatementRow
+              label={t("totalIncome")}
+              amount={`₪${report.totalIncome.toLocaleString("he-IL")}`}
+              tone="total"
+            />
+          </>
+        )}
+
+        <StatementRule />
+
+        <StatementRow
+          label={`${t("profit")} (${effectiveMargin}%)`}
+          amount={`₪${Math.round(profit).toLocaleString("he-IL")}`}
+          tone={isSimulated ? "default" : "positive"}
+          className={isSimulated ? "text-beet-bright" : ""}
+        />
+        {isSimulated && (
+          <StatementRow
+            label={`${t("savedMarginLabel")} ${report.profitMargin}%`}
+            amount={`₪${Math.round(savedProfit).toLocaleString("he-IL")}`}
+            tone="muted"
+            className="text-micro"
+          />
+        )}
+
+        {report.supplierPayments.map((cp) => (
+          <StatementRow
+            key={cp.id}
+            label={cp.supplier.name}
+            amount={`− ₪${cp.amount.toLocaleString("he-IL")}`}
+            tone="deduction"
+          />
+        ))}
+
+        <StatementTotalRule />
+
+        <StatementRow
+          label={report.subcontractor.name}
+          amount={`₪${Math.round(subPayment).toLocaleString("he-IL")}`}
+          tone="total"
+          emphasis
+          className={isSimulated ? "text-beet-bright" : ""}
+        />
+      </Statement>
+
+      {/* Informational only: an initiator payment never participates in
+          the subtotal above, so it sits outside the account entirely. No
+          initiator on the project → this section is absent. */}
+      {report.project.initiatorName && (
+        <div className="tnum flex flex-col gap-1 border-t border-dashed border-border px-4 py-2.5">
+          <span className="text-micro font-semibold text-text-dim">
+            {t("initiator")}: {report.project.initiatorName}
+          </span>
+          {report.initiatorPayments.map((ip) => (
+            <div
+              key={ip.id}
+              className="flex items-center justify-between gap-3 text-label text-text-dim"
+            >
+              <span className="truncate">
+                {ip.description || t("initiator")}
+              </span>
+              <span className="shrink-0">
+                ₪{ip.amount.toLocaleString("he-IL")}
+              </span>
             </div>
-            <span className="text-text font-medium">
-              ₪{entry.amount.toLocaleString("he-IL")}
-            </span>
-          </div>
-        );
-      })}
+          ))}
+        </div>
+      )}
 
       <EditTagsModal
         report={report}
         open={tagsModalOpen}
         onClose={() => setTagsModalOpen(false)}
       />
-
-      {report.incomeEntries.length > 1 && (
-        <div className="flex justify-between items-center text-sm border-t border-border pt-1">
-          <span className="text-text-muted font-medium">
-            {t("totalIncome")}
-          </span>
-          <span className="text-text font-semibold">
-            ₪{report.totalIncome.toLocaleString("he-IL")}
-          </span>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-0.5">
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-text-muted">
-            {t("profit")} ({effectiveMargin}%)
-          </span>
-          <span
-            className={
-              isSimulated
-                ? "text-beet-bright font-medium"
-                : "text-success font-medium"
-            }
-          >
-            ₪{Math.round(profit).toLocaleString("he-IL")}
-          </span>
-        </div>
-        {isSimulated && (
-          <div className="flex justify-between items-center text-[11px] text-text-dim">
-            <span>
-              {t("savedMarginLabel")} {report.profitMargin}%
-            </span>
-            <span>₪{Math.round(savedProfit).toLocaleString("he-IL")}</span>
-          </div>
-        )}
-      </div>
-
-      {report.supplierPayments.map((cp) => (
-        <div key={cp.id} className="flex justify-between items-center text-sm">
-          <span className="text-text-muted">{cp.supplier.name}</span>
-          <span className="text-warning font-medium">
-            − ₪{cp.amount.toLocaleString("he-IL")}
-          </span>
-        </div>
-      ))}
-
-      <div className="border-t border-border my-1" />
-
-      <div className="flex justify-between items-center text-sm">
-        <span className="text-text font-medium">
-          {report.subcontractor.name}
-        </span>
-        <span
-          className={
-            isSimulated
-              ? "text-beet-bright font-semibold"
-              : "text-text font-semibold"
-          }
-        >
-          ₪{Math.round(subPayment).toLocaleString("he-IL")}
-        </span>
-      </div>
-
-      {/* Informational only: an initiator payment never participates in
-          the subtotal above, so it is styled distinctly and lives below the
-          divider. No initiator on the project → this section is absent. */}
-      {report.project.initiatorName && (
-        <div className="flex flex-col gap-1 pt-1 mt-1 border-t border-dashed border-border">
-          <span className="text-[11px] text-text-dim italic">
-            {t("initiator")}: {report.project.initiatorName}
-          </span>
-          {report.initiatorPayments.map((ip) => (
-            <div
-              key={ip.id}
-              className="flex justify-between items-center text-xs text-text-dim italic"
-            >
-              <span>{ip.description || t("initiator")}</span>
-              <span>₪{ip.amount.toLocaleString("he-IL")}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -1123,14 +1138,14 @@ function TileTagEditor({
         className="flex h-5 w-5 items-center justify-center rounded bg-beet text-white text-[10px] font-bold disabled:opacity-50"
         aria-label="Save tag"
       >
-        ✓
+        <Icon name="check" size={14} />
       </button>
       <button
         onClick={() => setEditing(false)}
         className="flex h-5 w-5 items-center justify-center rounded text-text-muted text-[10px]"
         aria-label="Cancel"
       >
-        ✕
+        <Icon name="close" size={14} />
       </button>
     </div>
   );

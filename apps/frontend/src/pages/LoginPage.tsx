@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Input, ButtonPrimary } from "@/components/atoms";
+import { Input, ButtonPrimary, BeetMark, Icon } from "@/components/atoms";
 import { LangToggle } from "@/components/molecules";
 import { useLang } from "@/contexts/useLang";
 import { useLoginMutation } from "@/api/endpoints/auth";
@@ -43,38 +43,35 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center bg-[var(--bg)] px-4">
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[var(--bg)] px-4">
+      {/* One wash of beet across the top edge, so the door to the app is
+          recognisably the app. Nothing else decorates this screen. */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[45vh]"
         style={{
           background:
-            "radial-gradient(ellipse 600px 400px at 50% 40%, oklch(52% 0.22 5 / 0.12), transparent)",
+            "linear-gradient(to bottom, var(--beet-glow), transparent 70%)",
         }}
       />
 
-      <div className="absolute top-4 right-4 rtl:right-auto rtl:left-4">
+      <div className="absolute top-4 ltr:right-4 rtl:left-4">
         <LangToggle lang={lang} onChange={setLang} />
       </div>
 
-      <div className="relative w-full max-w-[400px] flex flex-col gap-8">
+      <div className="relative flex w-full max-w-[380px] flex-col gap-7">
         <div className="flex flex-col items-center gap-3">
-          <div
-            className="w-[52px] h-[52px] flex items-center justify-center bg-beet text-[26px]"
-            style={{ borderRadius: 14 }}
-          >
-            🫀
-          </div>
+          <BeetMark size={44} className="text-beet" />
           <div className="text-center">
-            <h1 className="font-serif text-[32px] text-text leading-tight">
+            <h1 className="font-serif text-[30px] leading-tight text-text">
               BeetBite
             </h1>
-            <p className="text-[14px] text-text-muted">
+            <p className="text-sm text-text-muted">
               {t("constructionPlatform")}
             </p>
           </div>
         </div>
 
-        <div className="bg-surface rounded p-7">
+        <div className="rounded-lg border border-border bg-surface p-6 shadow-pop">
           <form
             onSubmit={(e) => {
               void handleSubmit(e);
@@ -100,21 +97,27 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
 
-            {error && <p className="text-sm text-danger">{error}</p>}
+            {error && (
+              <p
+                role="alert"
+                className="flex items-start gap-2 rounded-sm border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
+              >
+                <Icon name="alert" size={16} className="mt-0.5" />
+                {error}
+              </p>
+            )}
 
             <ButtonPrimary
               type="submit"
               disabled={isLoading}
-              className="w-full justify-center py-3"
+              className="mt-1 h-11 w-full"
             >
               {isLoading ? t("signingIn") : t("signIn")}
             </ButtonPrimary>
           </form>
         </div>
 
-        <p className="text-center text-[12px] text-text-dim">
-          {t("copyright")}
-        </p>
+        <p className="text-center text-label text-text-dim">{t("copyright")}</p>
       </div>
     </div>
   );

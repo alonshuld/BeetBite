@@ -44,32 +44,42 @@ export default function MonthlyIncomePage() {
               {items.map((item) => (
                 <div
                   key={item.clientId}
-                  className="bg-surface border border-border rounded-[var(--radius)] p-4"
+                  className="rounded-lg border border-border bg-surface p-4"
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="font-serif text-lg text-text">
+                  <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+                    <h2 className="font-serif text-lead text-text">
                       {item.clientName}
                     </h2>
-                    <div className="flex items-center gap-4">
-                      <span className="text-success font-bold">
-                        {formatILS(item.totalIncome)}
-                      </span>
-                      <span className="text-beet-bright font-bold">
-                        {formatILS(item.totalProfit)}
-                      </span>
+                    <div className="tnum flex items-end gap-5">
+                      <div className="flex flex-col gap-0.5 text-end">
+                        <span className="text-label text-text-muted">
+                          {t("income")}
+                        </span>
+                        <span className="font-bold leading-none text-success">
+                          {formatILS(item.totalIncome)}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-0.5 text-end">
+                        <span className="text-label text-text-muted">
+                          {t("profit")}
+                        </span>
+                        <span className="font-bold leading-none text-beet-bright">
+                          {formatILS(item.totalProfit)}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   <table className="w-full border-collapse text-sm">
                     <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                      <tr className="border-b border-border bg-surface-2">
+                        <th className="text-left py-2 px-3 text-label font-semibold text-text-muted rtl:text-right">
                           {t("project")}
                         </th>
-                        <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
+                        <th className="text-right py-2 px-3 text-label font-semibold text-text-muted rtl:text-left">
                           {t("income")}
                         </th>
-                        <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
+                        <th className="text-right py-2 px-3 text-label font-semibold text-text-muted rtl:text-left">
                           {t("profit")}
                         </th>
                       </tr>
@@ -101,15 +111,23 @@ export default function MonthlyIncomePage() {
       </div>
 
       {items.length > 0 && (
-        <div className="bg-surface border border-border rounded-[var(--radius)] p-4 mt-4 flex items-center justify-between shrink-0">
-          <span className="font-semibold text-text">{t("grandTotal")}</span>
-          <div className="flex items-center gap-4">
-            <span className="text-success font-bold">
-              {formatILS(grandTotalIncome)}
-            </span>
-            <span className="text-beet-bright font-bold">
-              {formatILS(grandTotalProfit)}
-            </span>
+        <div className="mt-4 flex shrink-0 flex-wrap items-end justify-between gap-3 rounded-lg border border-border border-t-[3px] border-t-text/45 [border-top-style:double] bg-surface p-4">
+          <span className="text-lead font-semibold text-text">
+            {t("grandTotal")}
+          </span>
+          <div className="tnum flex items-end gap-5">
+            <div className="flex flex-col gap-0.5 text-end">
+              <span className="text-label text-text-muted">{t("income")}</span>
+              <span className="text-title font-bold leading-none text-success">
+                {formatILS(grandTotalIncome)}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5 text-end">
+              <span className="text-label text-text-muted">{t("profit")}</span>
+              <span className="text-title font-bold leading-none text-beet-bright">
+                {formatILS(grandTotalProfit)}
+              </span>
+            </div>
           </div>
         </div>
       )}
