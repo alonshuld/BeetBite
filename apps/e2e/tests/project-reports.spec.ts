@@ -111,7 +111,9 @@ dbTest.describe('Project Reports — page header', () => {
     await page.goto(`${BASE}/reports/projects/${project.id}`);
     await page.waitForLoadState('networkidle');
 
-    await page.getByRole('button', { name: /← Project Reports/i }).click();
+    // The back control is an icon + label button: a `chevronLeft` SVG, so the
+    // accessible name is the label alone.
+    await page.getByRole('button', { name: /Project Reports/i }).click();
     // The back button returns to the reports list, scoped to the project's client
     // via an optional `?clientId=` query param.
     await expect(page).toHaveURL(new RegExp(`/reports(\\?clientId=.+)?$`));
