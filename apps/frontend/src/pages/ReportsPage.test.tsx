@@ -471,11 +471,12 @@ describe("ReportsPage", () => {
     expect(exportSpy).toHaveBeenCalledWith({
       projectReportId: "r1",
       approvedFor: "Shell + finishing",
+      description: "Shell + finishing work",
       lang: "en",
     });
   });
 
-  it("prefills the export dialog's description from the project and persists edits to it on submit", async () => {
+  it("prefills the export dialog's description from the project and sends edits to it with the export alone", async () => {
     renderPage();
     await userEvent.click(screen.getByText("Acme Corp"));
     await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
@@ -488,17 +489,18 @@ describe("ReportsPage", () => {
     await userEvent.type(screen.getByLabelText("Approved For"), "Approved");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(updateProjectSpy).toHaveBeenCalledWith({
-      id: "p1",
-      clientId: "c1",
-      name: "Tower Block",
-      estimatedAmount: 100000,
-      description: "Updated scope of work",
-      isDone: false,
-    });
+    expect(exportSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectReportId: "r1",
+        description: "Updated scope of work",
+      }),
+    );
+    // The description is printed on this one document only — the project
+    // record is untouched.
+    expect(updateProjectSpy).not.toHaveBeenCalled();
   });
 
-  it("does not persist an edited description when the dialog is cancelled", async () => {
+  it("exports nothing when the dialog is cancelled", async () => {
     renderPage();
     await userEvent.click(screen.getByText("Acme Corp"));
     await userEvent.click(screen.getByRole("button", { name: "Export PDF" }));
@@ -507,6 +509,7 @@ describe("ReportsPage", () => {
     await userEvent.type(screen.getByLabelText("Description"), "Never saved");
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
+    expect(exportSpy).not.toHaveBeenCalled();
     expect(updateProjectSpy).not.toHaveBeenCalled();
   });
 
@@ -746,19 +749,15 @@ describe("ReportsPage", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("edits every income entry's tag from the edit-tags modal", async () => {
+  it("gives each income entry its own inline editor, writing only the edited one", async () => {
     renderPage();
     await userEvent.click(screen.getByText("Acme Corp"));
 
-    await userEvent.click(screen.getByRole("button", { name: "Edit Tags" }));
-    expect(
-      screen.getByRole("heading", { name: /Edit Income Tags/ }),
-    ).toBeInTheDocument();
-
-    const tagInputs = screen.getAllByPlaceholderText("e.g. Shell");
-    await userEvent.clear(tagInputs[1]);
-    await userEvent.type(tagInputs[1], "Roofing");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(screen.getByText("Finishing"));
+    const tagInput = screen.getByPlaceholderText("e.g. Shell");
+    await userEvent.clear(tagInput);
+    await userEvent.type(tagInput, "Roofing");
+    await userEvent.click(screen.getByRole("button", { name: "Save tag" }));
 
     expect(updateIncomeEntrySpy).toHaveBeenCalledWith({
       id: "ie2",
