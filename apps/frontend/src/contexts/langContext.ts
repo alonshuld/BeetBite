@@ -237,7 +237,7 @@ export const translations = {
     // Export PDF
     exportPdf: "Export PDF",
     approvedForLabel: "Approved For",
-    approvedForPlaceholder: "What does this account approval cover?",
+    approvedForPlaceholder: "Who is this project report for?",
     transferProject: "Transfer to another client",
     transferProjectHint:
       "Months before the chosen month keep their current client. Only that month onward moves.",
@@ -278,10 +278,8 @@ export const translations = {
     location: "Location",
     projectLocationPlaceholder: "Project location",
     exportDescriptionHint:
-      "Editing this updates the project's description everywhere, not just this document.",
+      "Printed on this document only. The project's own description is edited from the projects page.",
     // Income tag editing
-    editTags: "Edit Tags",
-    editIncomeTags: "Edit Income Tags",
     // Initiators
     initiators: "Initiators",
     initiatorsSubtitle: "Initiator (יזם) database — optional link on a project",
@@ -295,7 +293,7 @@ export const translations = {
     initiatorPayments: "Initiator Payments",
     initiatorPaymentDescriptionPlaceholder: "e.g. Consulting fee",
     // Client-wide simulated export
-    exportWithSimulator: "Export with Simulator",
+    exportWithSimulator: "Export Simulation PDF",
   },
   he: {
     // Nav
@@ -523,7 +521,7 @@ export const translations = {
     // Export PDF
     exportPdf: "ייצוא PDF",
     approvedForLabel: "חשבון מאושר עבור",
-    approvedForPlaceholder: "מה כולל אישור חשבון זה?",
+    approvedForPlaceholder: "עבור מי דוח הפרויקט הזה?",
     transferProject: "העבר ללקוח אחר",
     transferProjectHint:
       "חודשים לפני החודש שנבחר נשארים אצל הלקוח הנוכחי. רק מאותו חודש ואילך עובר.",
@@ -564,10 +562,8 @@ export const translations = {
     location: "מיקום",
     projectLocationPlaceholder: "מיקום הפרויקט",
     exportDescriptionHint:
-      "עריכת שדה זה מעדכנת את תיאור הפרויקט בכל מקום, לא רק במסמך זה.",
+      "מודפס במסמך זה בלבד. תיאור הפרויקט עצמו נערך בעמוד הפרויקטים.",
     // Income tag editing
-    editTags: "עריכת תיאורים",
-    editIncomeTags: "עריכת תיאורי הכנסה",
     // Initiators
     initiators: "יזמים",
     initiatorsSubtitle: "מאגר יזמים — קישור אופציונלי לפרויקט",
@@ -581,7 +577,7 @@ export const translations = {
     initiatorPayments: "תשלומי יזם",
     initiatorPaymentDescriptionPlaceholder: "לדוגמה: שכר ייעוץ",
     // Client-wide simulated export
-    exportWithSimulator: "ייצוא עם סימולטור",
+    exportWithSimulator: "ייצוא PDF של הסימולציה",
   },
 } as const;
 

@@ -4,6 +4,11 @@ import type { Lang } from "@/contexts/langContext";
 export interface ExportProjectReportsPdfDto {
   projectReportId: string;
   approvedFor: string;
+  /**
+   * Description printed on this one document. Never written back to the
+   * project — its own description is edited from the projects page.
+   */
+  description?: string;
   lang?: Lang;
 }
 

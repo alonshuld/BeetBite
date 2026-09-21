@@ -403,7 +403,7 @@ describe("ReportsPage", () => {
       fireEvent.change(projectSlider, { target: { value: "10" } });
 
       await userEvent.click(
-        screen.getByRole("button", { name: "Export with Simulator" }),
+        screen.getByRole("button", { name: "Export Simulation PDF" }),
       );
 
       expect(exportSimulatedSpy).toHaveBeenCalledWith(
@@ -441,7 +441,7 @@ describe("ReportsPage", () => {
       fireEvent.change(first, { target: { value: "20" } });
 
       await userEvent.click(
-        screen.getByRole("button", { name: "Export with Simulator" }),
+        screen.getByRole("button", { name: "Export Simulation PDF" }),
       );
 
       expect(exportSimulatedSpy).toHaveBeenCalledWith(

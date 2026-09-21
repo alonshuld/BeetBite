@@ -17,10 +17,7 @@ import {
   useExportClientSimulatedPdfMutation,
 } from "@/api/endpoints/project-report-exports";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
-import {
-  useGetProjectsQuery,
-  useUpdateProjectMutation,
-} from "@/api/endpoints/projects";
+import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { useGetInitiatorsQuery } from "@/api/endpoints/initiators";
@@ -113,7 +110,6 @@ export default function ReportsPage() {
     useExportProjectReportsPdfMutation();
   const [exportClientSimulatedPdf, { isLoading: exportingSimulated }] =
     useExportClientSimulatedPdfMutation();
-  const [updateProject] = useUpdateProjectMutation();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [clientId, setClientId] = useState("");
@@ -130,9 +126,10 @@ export default function ReportsPage() {
   >([]);
 
   // Export is per report: a report is already one project for one month, so
-  // the dialog asks for the free-text approval line, plus — as a convenience
-  // reached from the same place the document is produced — the project's
-  // description.
+  // the dialog asks for the free-text approval line, plus the description to
+  // print on this one document. That description is seeded from the project's
+  // own but belongs to the export alone — editing it here never writes back,
+  // the projects screen is where the project's description is changed.
   const [exportReport, setExportReport] = useState<ProjectReport | null>(null);
   const [approvedFor, setApprovedFor] = useState("");
   const [exportDescription, setExportDescription] = useState("");
@@ -140,29 +137,11 @@ export default function ReportsPage() {
   async function handleExport() {
     if (!exportReport || !approvedFor.trim()) return;
 
-    const project = projects.find((p) => p.id === exportReport.project.id);
-    if (project) {
-      try {
-        await updateProject({
-          id: project.id,
-          clientId: project.clientId,
-          name: project.name,
-          estimatedAmount: project.estimatedAmount,
-          description: exportDescription,
-          isDone: project.isDone,
-          requesterName: project.requesterName,
-          location: project.location,
-        }).unwrap();
-      } catch {
-        // Surfaced by the global RTK Query error listener; the PDF export
-        // below is independent and should still be attempted.
-      }
-    }
-
     try {
       const blob = await exportPdf({
         projectReportId: exportReport.id,
         approvedFor: approvedFor.trim(),
+        description: exportDescription.trim() || undefined,
         lang,
       }).unwrap();
 
@@ -837,13 +816,12 @@ export default function ReportsPage() {
           <p className="text-sm text-text-muted">
             {exportReport?.project.name}
           </p>
-          <Textarea
+          <Input
             id="export-approved-for"
             label={t("approvedForLabel")}
             placeholder={t("approvedForPlaceholder")}
             value={approvedFor}
             onChange={(e) => setApprovedFor(e.target.value)}
-            rows={3}
           />
           <Divider />
           <div className="flex flex-col gap-1">
@@ -941,8 +919,6 @@ function ProjectSheet({
     supplierPayments: report.supplierPayments,
   });
 
-  const [tagsModalOpen, setTagsModalOpen] = useState(false);
-
   return (
     <div
       className={`flex h-full flex-col rounded-lg border bg-surface ${
@@ -975,9 +951,6 @@ function ProjectSheet({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <ButtonQuiet onClick={() => setTagsModalOpen(true)}>
-            {t("editTags")}
-          </ButtonQuiet>
           <ButtonQuiet onClick={onExport} className="gap-1.5">
             <Icon name="download" size={13} />
             {t("exportPdf")}
@@ -1079,12 +1052,6 @@ function ProjectSheet({
           ))}
         </div>
       )}
-
-      <EditTagsModal
-        report={report}
-        open={tagsModalOpen}
-        onClose={() => setTagsModalOpen(false)}
-      />
     </div>
   );
 }
@@ -1148,71 +1115,5 @@ function TileTagEditor({
         <Icon name="close" size={14} />
       </button>
     </div>
-  );
-}
-
-/**
- * Edit-report modal reachable from the tile, scoped to tags only. Every
- * change is written via the single-entry income endpoint, never through the
- * report update endpoint, so no income row is destroyed and recreated.
- */
-function EditTagsModal({
-  report,
-  open,
-  onClose,
-}: {
-  report: ProjectReport;
-  open: boolean;
-  onClose: () => void;
-}) {
-  const { t } = useLang();
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [updateIncomeEntry, { isLoading }] = useUpdateIncomeEntryMutation();
-
-  useEffect(() => {
-    if (!open) return;
-    setDrafts(
-      Object.fromEntries(report.incomeEntries.map((e) => [e.id, e.tag ?? ""])),
-    );
-  }, [open, report.incomeEntries]);
-
-  async function handleSaveAll() {
-    const changed = report.incomeEntries.filter(
-      (e) => (drafts[e.id] ?? "") !== (e.tag ?? ""),
-    );
-    await Promise.all(
-      changed.map((e) =>
-        updateIncomeEntry({
-          id: e.id,
-          tag: (drafts[e.id] ?? "").trim() || null,
-        }),
-      ),
-    );
-    onClose();
-  }
-
-  return (
-    <FormModal
-      open={open}
-      onClose={onClose}
-      onSubmit={() => void handleSaveAll()}
-      title={`${t("editIncomeTags")} — ${report.project.name}`}
-      loading={isLoading}
-    >
-      <div className="flex flex-col gap-3">
-        {report.incomeEntries.map((entry) => (
-          <Input
-            key={entry.id}
-            label={`₪${entry.amount.toLocaleString("he-IL")}`}
-            maxLength={100}
-            placeholder={t("tagPlaceholder")}
-            value={drafts[entry.id] ?? ""}
-            onChange={(e) =>
-              setDrafts((prev) => ({ ...prev, [entry.id]: e.target.value }))
-            }
-          />
-        ))}
-      </div>
-    </FormModal>
   );
 }

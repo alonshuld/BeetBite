@@ -159,8 +159,38 @@ dbTest.describe('PDF export', () => {
       expect(request.postDataJSON()).toEqual({
         projectReportId: reportId,
         approvedFor: 'Shell works',
+        // Seeded from the project, sent as part of this one document.
+        description: 'PDF export tests',
         lang: 'en',
       });
+    },
+  );
+
+  // The dialog's description belongs to the document being produced, not to
+  // the project. Editing it here used to write straight through to the
+  // project record; the projects page is now the only place that changes.
+  dbTest(
+    'editing the description prints it without touching the project',
+    async ({ page, db }) => {
+      await openExportModal(page);
+
+      await page.getByLabel('Approved For').fill('Shell works');
+      await page.locator('#export-project-description').fill('This month only');
+
+      const [request] = await Promise.all([
+        page.waitForRequest(EXPORT_ROUTE),
+        page.waitForEvent('download'),
+        page.getByRole('button', { name: 'Save' }).click(),
+      ]);
+
+      expect(request.postDataJSON()).toMatchObject({
+        description: 'This month only',
+      });
+
+      const project = await db.project.findUniqueOrThrow({
+        where: { id: projectId },
+      });
+      expect(project.description).toBe('PDF export tests');
     },
   );
 
