@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Input, ButtonPrimary, BeetMark, Icon } from "@/components/atoms";
+import { Input, ButtonPrimary, Logo, Icon } from "@/components/atoms";
 import { LangToggle } from "@/components/molecules";
 import { useLang } from "@/contexts/useLang";
 import { useLoginMutation } from "@/api/endpoints/auth";
@@ -60,7 +60,7 @@ export default function LoginPage() {
 
       <div className="relative flex w-full max-w-[380px] flex-col gap-7">
         <div className="flex flex-col items-center gap-3">
-          <BeetMark size={44} className="text-beet" />
+          <Logo size={64} />
           <div className="text-center">
             <h1 className="font-serif text-[30px] leading-tight text-text">
               BeetBite

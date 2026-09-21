@@ -1,5 +1,5 @@
 import { NavLink, Link, useNavigate } from "react-router-dom";
-import { Icon, BeetMark, type IconName } from "@/components/atoms";
+import { Icon, Logo, type IconName } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { logout } from "@/features/auth/authSlice";
@@ -131,7 +131,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           onClick={onClose}
           className="flex shrink-0 items-center gap-2.5 px-4 py-[17px] transition-colors hover:bg-surface-2"
         >
-          <BeetMark size={26} className="text-beet" />
+          <Logo size={26} />
           <span className="font-serif text-title text-text">BeetBite</span>
         </Link>
 

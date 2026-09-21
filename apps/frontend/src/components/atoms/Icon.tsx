@@ -91,39 +91,3 @@ export function Icon({ name, size = 18, className = "", ...props }: IconProps) {
     </svg>
   );
 }
-
-/**
- * The product mark: a beet, drawn rather than set. Two leaves, a root body and
- * a taproot — the only place in the app that carries a filled brand shape.
- */
-export function BeetMark({
-  size = 24,
-  className = "",
-  ...props
-}: Omit<IconProps, "name">) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      focusable="false"
-      className={className}
-      {...props}
-    >
-      <path
-        d="M12 21.5c-3.6 0-6.4-2.8-6.4-6.2 0-3 2-5.4 4.6-6.6.8 1.2 2.8 1.2 3.6 0 2.6 1.2 4.6 3.6 4.6 6.6 0 3.4-2.8 6.2-6.4 6.2Z"
-        fill="currentColor"
-      />
-      <path
-        d="M12 8.6V3.2M12 6.2c-1.6-2-3.4-2.6-5-2.4.2 1.7 1.3 3.2 3.2 3.6M12 6.6c1.5-2.2 3.3-2.9 5-2.7-.2 1.8-1.4 3.4-3.4 3.8"
-        stroke="currentColor"
-        strokeWidth={1.6}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity={0.85}
-      />
-    </svg>
-  );
-}

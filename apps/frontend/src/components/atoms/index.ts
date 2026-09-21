@@ -7,7 +7,8 @@ export {
   LinkButton,
 } from "./Button";
 export { Badge } from "./Badge";
-export { Icon, BeetMark, type IconName } from "./Icon";
+export { Icon, type IconName } from "./Icon";
+export { Logo } from "./Logo";
 export { Input } from "./Input";
 export { Select } from "./Select";
 export { Textarea } from "./Textarea";
