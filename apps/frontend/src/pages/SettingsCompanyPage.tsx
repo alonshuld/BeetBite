@@ -10,6 +10,7 @@ import {
   CompanySettingsForm,
   type CompanySettingsFormValue,
 } from "@/components/organisms/CompanySettingsForm";
+import { LoadingState } from "@/components/molecules/LoadingState";
 
 const BLANK_VALUE: CompanySettingsFormValue = {
   name: "",
@@ -69,7 +70,7 @@ export default function SettingsCompanyPage() {
       />
 
       {isLoading ? (
-        <p className="text-text-muted text-sm">{t("loading")}</p>
+        <LoadingState label={t("loading")} />
       ) : (
         <div className="bg-surface rounded p-7 max-w-[640px]">
           <CompanySettingsForm value={value} onChange={setValue} />

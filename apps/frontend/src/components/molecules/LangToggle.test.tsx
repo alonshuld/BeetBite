@@ -24,24 +24,27 @@ describe("LangToggle", () => {
     expect(onChange).toHaveBeenCalledWith("he");
   });
 
-  it("EN button has active style when lang is en", () => {
+  it("marks EN as the pressed option when lang is en", () => {
     render(<LangToggle lang="en" onChange={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "EN" }).className).toContain(
-      "bg-beet",
+    expect(screen.getByRole("button", { name: "EN" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
   });
 
-  it("HE button has active style when lang is he", () => {
+  it("marks HE as the pressed option when lang is he", () => {
     render(<LangToggle lang="he" onChange={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "עב" }).className).toContain(
-      "bg-beet",
+    expect(screen.getByRole("button", { name: "עב" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
   });
 
-  it("inactive button does not have bg-beet class", () => {
+  it("leaves the inactive option unpressed", () => {
     render(<LangToggle lang="en" onChange={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "עב" }).className).not.toContain(
-      "bg-beet",
+    expect(screen.getByRole("button", { name: "עב" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
     );
   });
 

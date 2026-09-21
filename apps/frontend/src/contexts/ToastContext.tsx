@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { Icon, type IconName } from "@/components/atoms/Icon";
 import {
   ToastContext,
   type ToastVariant,
@@ -12,18 +13,20 @@ interface Toast {
   variant: ToastVariant;
 }
 
+/*
+ * The accent is a rule on the reading edge, so it flips with the language
+ * rather than always sitting on the left as it did before.
+ */
 const VARIANT_CLASSES: Record<ToastVariant, string> = {
-  success:
-    "border-l-4 border-[var(--success)] bg-[var(--surface3)] text-[var(--success)]",
-  error:
-    "border-l-4 border-[var(--danger)] bg-[var(--surface3)] text-[var(--danger)]",
-  info: "border-l-4 border-[var(--border)] bg-[var(--surface3)] text-[var(--text-muted)]",
+  success: "border-s-[3px] border-s-[var(--success)] text-[var(--success)]",
+  error: "border-s-[3px] border-s-[var(--danger)] text-[var(--danger)]",
+  info: "border-s-[3px] border-s-[var(--border-strong)] text-[var(--text-muted)]",
 };
 
-const VARIANT_ICON: Record<ToastVariant, string> = {
-  success: "✓",
-  error: "✕",
-  info: "ℹ",
+const VARIANT_ICON: Record<ToastVariant, IconName> = {
+  success: "check",
+  error: "alert",
+  info: "inbox",
 };
 
 let nextId = 1;
@@ -56,24 +59,26 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {createPortal(
         <div
-          className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-[640px]:bottom-4 max-[640px]:right-2 max-[640px]:left-2"
+          className="fixed bottom-4 z-[100] flex flex-col gap-2 ltr:right-4 rtl:left-4 max-[640px]:inset-x-2"
           aria-live="polite"
         >
           {toasts.map((t) => (
             <div
               key={t.id}
-              className={`flex items-center gap-3 px-4 py-3 rounded-[var(--radius-sm)] shadow-lg text-sm min-w-[240px] max-w-[360px] animate-[fadeInUp_0.15s_ease] ${VARIANT_CLASSES[t.variant]}`}
+              className={`flex min-w-[260px] max-w-[380px] animate-[fadeInUp_0.15s_ease] items-start gap-2.5 rounded border border-border bg-[var(--surface)] px-3.5 py-3 text-sm shadow-pop ${VARIANT_CLASSES[t.variant]}`}
             >
-              <span className="shrink-0 text-base leading-none font-bold">
-                {VARIANT_ICON[t.variant]}
-              </span>
+              <Icon
+                name={VARIANT_ICON[t.variant]}
+                size={16}
+                className="mt-0.5"
+              />
               <span className="flex-1 text-[var(--text)]">{t.message}</span>
               <button
                 onClick={() => dismiss(t.id)}
-                className="shrink-0 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors text-sm leading-none"
+                className="-me-1 shrink-0 rounded p-1 text-[var(--text-dim)] transition-colors hover:text-[var(--text)]"
                 aria-label="Dismiss"
               >
-                ✕
+                <Icon name="close" size={14} />
               </button>
             </div>
           ))}

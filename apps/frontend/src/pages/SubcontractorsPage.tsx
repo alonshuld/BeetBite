@@ -11,8 +11,14 @@ import { PageHeader } from "@/components/molecules/PageHeader";
 import { SearchInput } from "@/components/molecules/SearchInput";
 import { FormGroup, FormRow } from "@/components/molecules/FormGroup";
 import { Input } from "@/components/atoms/Input";
-import { ButtonPrimary, ButtonIcon, EmptyState } from "@/components/atoms";
+import {
+  ButtonPrimary,
+  ButtonIcon,
+  EmptyState,
+  Icon,
+} from "@/components/atoms";
 import { FormModal, ConfirmModal } from "@/components/organisms/Modal";
+import { LoadingState } from "@/components/molecules/LoadingState";
 
 export default function SubcontractorsPage() {
   const { t } = useLang();
@@ -99,10 +105,10 @@ export default function SubcontractorsPage() {
       />
 
       {isLoading ? (
-        <p className="text-text-muted text-sm">{t("loading")}</p>
+        <LoadingState label={t("loading")} />
       ) : filtered.length === 0 ? (
         <EmptyState
-          icon="🔧"
+          icon={<Icon name="wrench" size={22} />}
           title={query ? t("noResults") : t("noSubcontractorsYet")}
           description={query ? undefined : t("addFirstSubcontractorHint")}
           action={
@@ -114,17 +120,17 @@ export default function SubcontractorsPage() {
           }
         />
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+              <tr className="border-b border-border bg-surface-2">
+                <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("name")}
                 </th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("companyNumberLabel")}
                 </th>
-                <th className="text-right py-3 px-4 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
+                <th className="text-right py-3 px-4 text-label font-semibold text-text-muted rtl:text-left">
                   {t("actions")}
                 </th>
               </tr>
@@ -133,7 +139,7 @@ export default function SubcontractorsPage() {
               {filtered.map((sub) => (
                 <tr
                   key={sub.id}
-                  className="border-b border-border hover:bg-surface-2 transition-colors"
+                  className="border-b border-border transition-colors last:border-0 hover:bg-surface-2"
                 >
                   <td className="py-3 px-4 text-text">{sub.name}</td>
                   <td className="py-3 px-4 text-text">{sub.companyNumber}</td>
@@ -143,14 +149,14 @@ export default function SubcontractorsPage() {
                         onClick={() => openEdit(sub)}
                         title={t("edit")}
                       >
-                        ✏️
+                        <Icon name="edit" size={15} />
                       </ButtonIcon>
                       <ButtonIcon
                         onClick={() => setDeleteTarget(sub)}
                         title={t("delete")}
                         className="hover:text-danger hover:border-danger"
                       >
-                        🗑️
+                        <Icon name="trash" size={15} />
                       </ButtonIcon>
                     </div>
                   </td>

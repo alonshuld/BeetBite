@@ -2,6 +2,7 @@ import { ChangeEvent, useId, useRef } from "react";
 import { useLang } from "@/contexts/useLang";
 import { useToast } from "@/contexts/useToast";
 import { ButtonGhost } from "@/components/atoms/Button";
+import { Icon } from "@/components/atoms/Icon";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_SIZE_BYTES = 3 * 1024 * 1024;
@@ -45,7 +46,7 @@ export function ImageUploadField({
     <div className="flex flex-col gap-1">
       <label
         htmlFor={inputId}
-        className="text-[12px] font-medium uppercase tracking-wide text-text-muted"
+        className="text-label font-semibold text-text-muted"
       >
         {label}
       </label>
@@ -66,7 +67,7 @@ export function ImageUploadField({
           onClick={() => inputRef.current?.click()}
           className="w-full flex flex-col items-center justify-center gap-1 px-3 py-6 rounded-sm bg-surface-3 border border-dashed border-border text-text-dim text-sm hover:border-beet hover:text-text-muted transition-colors"
         >
-          <span className="text-xl leading-none">🖼️</span>
+          <Icon name="image" size={20} className="text-text-dim" />
           {t("clickToUpload")}
         </button>
       )}

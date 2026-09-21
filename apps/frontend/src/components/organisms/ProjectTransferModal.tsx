@@ -13,6 +13,7 @@ import { FormGroup } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
 import { useToast } from "@/contexts/useToast";
 import { formatYM } from "@/utils/formatMonth";
+import { Icon } from "@/components/atoms/Icon";
 
 interface ProjectTransferModalProps {
   /** Project being transferred, or null when the modal is closed. */
@@ -119,7 +120,7 @@ export function ProjectTransferModal({
 
         {timeline.length > 0 && (
           <div className="flex flex-col gap-2 border-t border-border pt-3">
-            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+            <h3 className="text-label font-semibold text-text-muted">
               {t("ownershipTimeline")}
             </h3>
             <ul className="flex flex-col gap-1">
@@ -150,7 +151,7 @@ export function ProjectTransferModal({
                         title={t("removeTransfer")}
                         className="hover:text-danger hover:border-danger"
                       >
-                        ✕
+                        <Icon name="close" size={14} />
                       </ButtonIcon>
                     )}
                   </li>

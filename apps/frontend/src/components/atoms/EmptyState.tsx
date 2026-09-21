@@ -8,6 +8,10 @@ interface EmptyStateProps {
   className?: string;
 }
 
+/*
+ * An empty screen is an invitation, so the icon is drawn quietly and the
+ * action sits directly under the sentence that explains what to do.
+ */
 export function EmptyState({
   icon,
   title,
@@ -17,16 +21,20 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-3 py-16 text-center ${className}`}
+      className={`flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-border bg-surface/60 px-6 py-16 text-center ${className}`}
     >
-      {icon && <div className="text-[40px] opacity-40">{icon}</div>}
-      <div className="flex flex-col gap-1">
-        <p className="text-text text-sm font-medium">{title}</p>
+      {icon && (
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-text-dim">
+          {icon}
+        </div>
+      )}
+      <div className="flex max-w-[42ch] flex-col gap-1">
+        <p className="text-lead font-semibold text-text">{title}</p>
         {description && (
-          <p className="text-text-muted text-xs">{description}</p>
+          <p className="text-sm text-text-muted">{description}</p>
         )}
       </div>
-      {action && <div>{action}</div>}
+      {action && <div className="mt-1">{action}</div>}
     </div>
   );
 }

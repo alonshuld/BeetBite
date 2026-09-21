@@ -10,6 +10,7 @@ import {
   useGetResolvedVatRateQuery,
   useUpsertVatRateMutation,
 } from "@/api/endpoints/vatRates";
+import { LoadingState } from "@/components/molecules/LoadingState";
 
 function currentYM(): string {
   const now = new Date();
@@ -45,7 +46,7 @@ export default function SettingsVatPage() {
       <PageHeader title={t("vatRate")} subtitle={t("vatRateSubtitle")} />
 
       <div className="bg-surface rounded p-5 max-w-[480px] flex flex-col gap-1">
-        <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+        <span className="text-label font-semibold text-text-muted">
           {t("currentVatRate")}
         </span>
         <span className="text-2xl font-semibold text-text">
@@ -56,12 +57,12 @@ export default function SettingsVatPage() {
       </div>
 
       <div className="bg-surface rounded p-5 max-w-[480px] flex flex-col gap-3">
-        <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
+        <h3 className="text-label font-semibold text-text-muted">
           {t("setVatRate")}
         </h3>
         <div className="flex items-end gap-3 flex-wrap">
           <div className="flex flex-col gap-1">
-            <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+            <span className="text-label font-semibold text-text-muted">
               {t("effectiveFrom")}
             </span>
             <MonthPicker value={month} onChange={setMonth} />
@@ -86,11 +87,11 @@ export default function SettingsVatPage() {
       </div>
 
       <div className="bg-surface rounded p-5 max-w-[480px]">
-        <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">
+        <h3 className="text-label font-semibold text-text-muted mb-3">
           {t("vatRateHistory")}
         </h3>
         {isLoading ? (
-          <p className="text-text-muted text-sm">{t("loading")}</p>
+          <LoadingState label={t("loading")} />
         ) : history.length === 0 ? (
           <p className="text-text-muted text-sm">{t("noData")}</p>
         ) : (

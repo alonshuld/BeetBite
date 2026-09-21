@@ -59,7 +59,7 @@ src/
     langContext.ts          # createContext + translations object (en/he)
   pages/                    # One file per route, lazy-loaded
   styles/
-    globals.css             # :root CSS vars + Tailwind directives + scrollbar + grain
+    globals.css             # :root CSS vars + Tailwind directives + base type, focus, scrollbar
   utils/
     formatMonth.ts          # formatYM(ym, lang, format?) and formatISODate(iso, lang, opts?) — locale-aware date helpers
   router.tsx                # createBrowserRouter route table
@@ -102,9 +102,22 @@ Data router via `createBrowserRouter`. All authenticated routes are wrapped in `
 
 ## Styling
 
-Tailwind v3 with `tailwind.config.ts`. All colours map to CSS custom properties declared in `src/styles/globals.css`, which in turn use the oklch palette from the mockup. Use Tailwind utility classes; reach for raw CSS vars only when no utility maps to the token.
+Tailwind v3 with `tailwind.config.ts`. All colours map to CSS custom properties declared in `src/styles/globals.css`. Use Tailwind utility classes; reach for raw CSS vars only when no utility maps to the token.
 
-Design reference for all visual specs (colours, spacing, component shapes, animations): `apps/frontend/BeetBite.mockup.html`.
+### Design system
+
+- **Palette.** Every neutral sits on the beet hue (350) with real chroma, so paper, rules and ink read as tints of the brand rather than grey with an accent dropped on top. The app is pink on purpose. The exported account-approval PDF is the formal document and keeps its own restrained palette — screens do not imitate it.
+- **Accent vs. money.** `--beet` marks what you can *act on* (buttons, nav, focus). It never states an amount. Money has its own scale: `--success` for received/settled, `--warning` for pending or part-settled, plain ink for amounts outstanding or leaving. Owing money is the normal state of this business, so it is never coloured as an error; `--danger` is reserved for destructive actions and real faults.
+- **Type.** `Frank Ruhl Libre` (serif) for page, section and modal titles via `font-serif` and the base `h1–h3` rule; `Assistant` for everything else. Both carry full Hebrew. Sizes come from the named scale in `tailwind.config.ts` (`micro`/`label`/`sm`/`base`/`lead`/`title`/`page`/`hero`) rather than arbitrary pixel values.
+- **No ALL-CAPS labels.** Hebrew has no uppercase, so `uppercase` silently applied to only half the UI and the two languages rendered as different products. Labels are sentence case at `text-label`.
+- **Icons.** `components/atoms/Icon.tsx` — one hand-drawn stroke set on a 24-unit grid, plus `BeetMark` for the product mark. Never emoji: they ignore `currentColor`, can't dim with muted text, and render differently per OS. Each renders `data-icon={name}`, which is how tests assert on them.
+- **Surfaces.** Cards and tables get a border, never a shadow; shadow (`shadow-pop`, `shadow-modal`) is reserved for things that genuinely float. `rounded-lg` for panels, `rounded`/`rounded-sm` for controls.
+- **Money figures.** Set in containers carrying `.tnum` (or any `table`, which opts in via `globals.css`) so digits stay on their vertical rails. Wrap an amount in `dir="ltr"` when a sign is attached — otherwise bidi pushes the minus to the far side of the number in RTL.
+- **Statement rows.** `components/molecules/Statement.tsx` renders the money screens' shared shape, where rule weight is arithmetic: `StatementRule` (single) closes a subtotal, `StatementTotalRule` (double) closes the figure the sheet was computing.
+- **RTL.** Prefer logical properties (`ps-`/`pe-`/`ms-`/`me-`/`text-start`/`text-end`) over `ltr:`/`rtl:` pairs.
+- **Motion.** Reserved for what answers an action (modal open, dropdown). `prefers-reduced-motion` is honoured globally in `globals.css`.
+
+`apps/frontend/BeetBite.mockup.html` is the **superseded** pre-redesign mockup. Do not use it as a visual reference; `globals.css` plus the components are the source of truth.
 
 ## Provider tree
 

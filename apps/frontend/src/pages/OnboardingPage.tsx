@@ -64,9 +64,7 @@ export default function OnboardingPage() {
 
       <div className="relative w-full max-w-[520px] flex flex-col gap-6">
         <div className="text-center">
-          <h1 className="font-serif text-[28px] text-text leading-tight">
-            {t("onboardingHeading")}
-          </h1>
+          <h1 className="text-page text-text">{t("onboardingHeading")}</h1>
           <p className="text-[14px] text-text-muted mt-1">
             {t("onboardingSubtitle")}
           </p>

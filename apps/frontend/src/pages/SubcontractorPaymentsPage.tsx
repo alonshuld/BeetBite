@@ -12,6 +12,7 @@ import { Input } from "@/components/atoms/Input";
 import { Badge, EmptyState } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
 import { formatYM, formatISODate } from "@/utils/formatMonth";
+import { Icon } from "@/components/atoms/Icon";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
@@ -19,6 +20,7 @@ function formatILS(n: number): string {
 
 type PaymentStatus = "Paid" | "Partial" | "Unpaid";
 
+// Red / amber / green, read as a traffic light across the whole screen.
 const STATUS_VARIANT: Record<PaymentStatus, "green" | "yellow" | "red"> = {
   Paid: "green",
   Partial: "yellow",
@@ -229,7 +231,7 @@ export default function SubcontractorPaymentsPage() {
 
       {cards.length === 0 ? (
         <EmptyState
-          icon="👷"
+          icon={<Icon name="subcontractors" size={22} />}
           title={t("noSubcontractorReports")}
           description={t("subcontractorsNote")}
         />
@@ -293,17 +295,17 @@ export default function SubcontractorPaymentsPage() {
                       ? t("project")
                       : t("projects")}
                   </p>
-                  <p className="text-sm text-danger font-semibold">
+                  <p className="tnum text-sm font-semibold text-danger">
                     {t("owed")}: {formatILS(card.totalOwed)}
                   </p>
-                  <p className="text-sm text-success font-semibold">
+                  <p className="tnum text-sm font-semibold text-success">
                     {t("paid")}: {formatILS(card.totalPaid)}
                   </p>
                   {/* The balance is the number actually acted on, so it
                       is styled to stand out and coloured like the statuses:
                       settled at zero, outstanding above it. */}
                   <p
-                    className={`text-sm font-semibold ${
+                    className={`tnum text-sm font-bold ${
                       card.totalOwed - card.totalPaid <= 0
                         ? "text-success"
                         : "text-warning"
@@ -326,17 +328,17 @@ export default function SubcontractorPaymentsPage() {
               </div>
               <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-right">
+                  <tr className="border-b border-border bg-surface-2">
+                    <th className="text-left py-2 px-3 text-label font-semibold text-text-muted rtl:text-right">
                       {t("project")}
                     </th>
-                    <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
+                    <th className="text-right py-2 px-3 text-label font-semibold text-text-muted rtl:text-left">
                       {t("amountOwed")}
                     </th>
-                    <th className="text-right py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted rtl:text-left">
+                    <th className="text-right py-2 px-3 text-label font-semibold text-text-muted rtl:text-left">
                       {t("amountPaid")}
                     </th>
-                    <th className="py-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-text-muted text-center">
+                    <th className="py-2 px-3 text-label font-semibold text-text-muted text-center">
                       {t("paid")}?
                     </th>
                   </tr>
@@ -395,7 +397,7 @@ export default function SubcontractorPaymentsPage() {
                                   void handleSetUnpaid(pb.projectId)
                                 }
                                 title={t("unpaid")}
-                                className="w-8 h-8 rounded-full border text-xs font-bold transition-colors disabled:opacity-50"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
                                 style={
                                   status === "Unpaid"
                                     ? {
@@ -410,7 +412,7 @@ export default function SubcontractorPaymentsPage() {
                                       }
                                 }
                               >
-                                ✕
+                                <Icon name="close" size={14} />
                               </button>
 
                               {/* Green V — Paid in full: opens the row with the
@@ -422,7 +424,7 @@ export default function SubcontractorPaymentsPage() {
                                   openEntry(pb.projectId, String(remaining))
                                 }
                                 title={t("paid")}
-                                className="w-8 h-8 rounded-full border text-xs font-bold transition-colors disabled:opacity-50"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
                                 style={
                                   status === "Paid"
                                     ? {
@@ -437,7 +439,7 @@ export default function SubcontractorPaymentsPage() {
                                       }
                                 }
                               >
-                                ✓
+                                <Icon name="check" size={14} />
                               </button>
 
                               {/* Yellow ~ — Partial: one instalment, amount
@@ -450,7 +452,7 @@ export default function SubcontractorPaymentsPage() {
                                     : openEntry(pb.projectId, "")
                                 }
                                 title={t("partial")}
-                                className="w-8 h-8 rounded-full border text-xs font-bold transition-colors disabled:opacity-50"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
                                 style={
                                   status === "Partial"
                                     ? {
@@ -465,7 +467,7 @@ export default function SubcontractorPaymentsPage() {
                                       }
                                 }
                               >
-                                〜
+                                <Icon name="wave" size={14} />
                               </button>
                             </div>
                           </td>
@@ -493,7 +495,7 @@ export default function SubcontractorPaymentsPage() {
                                         type="date"
                                         autoFocus
                                         aria-label={t("paymentDate")}
-                                        className="px-1.5 py-0.5 rounded-sm bg-surface-3 border border-border text-text text-xs outline-none focus:border-beet"
+                                        className="px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-none focus:border-beet"
                                         defaultValue={
                                           payment.paymentDate?.slice(0, 10) ??
                                           todayISO()
@@ -548,9 +550,9 @@ export default function SubcontractorPaymentsPage() {
                                           )
                                         }
                                         title={t("delete")}
-                                        className="w-5 h-5 rounded-full border border-border text-[10px] text-text-muted hover:text-danger hover:border-danger transition-colors disabled:opacity-40"
+                                        className="inline-flex h-6 w-6 items-center justify-center rounded-sm border border-border text-text-dim transition-colors hover:border-danger hover:text-danger disabled:opacity-40"
                                       >
-                                        ✕
+                                        <Icon name="close" size={14} />
                                       </button>
                                     </span>
                                   </li>
@@ -614,17 +616,17 @@ export default function SubcontractorPaymentsPage() {
                                     void handleAddPayment(pb.projectId)
                                   }
                                   title={t("save")}
-                                  className="px-3 py-1.5 rounded text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                                  className="inline-flex h-8 items-center justify-center rounded px-3 text-white transition-colors disabled:opacity-40"
                                   style={{ background: "var(--warning)" }}
                                 >
-                                  ✓
+                                  <Icon name="check" size={14} />
                                 </button>
                                 <button
                                   onClick={() => closeEntry(pb.projectId)}
                                   title={t("cancel")}
-                                  className="px-2 py-1.5 rounded text-xs text-text-muted border border-border hover:bg-surface-2 transition-colors"
+                                  className="inline-flex h-8 items-center justify-center rounded border border-border px-2.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
                                 >
-                                  ✕
+                                  <Icon name="close" size={14} />
                                 </button>
                               </div>
                             </td>
@@ -653,10 +655,15 @@ export default function SubcontractorPaymentsPage() {
               </table>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-text-muted text-sm">
-                {t("selectSubcontractor")}
-              </p>
+            <div className="flex flex-1 items-center justify-center">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-text-dim">
+                  <Icon name="subcontractors" size={22} />
+                </div>
+                <p className="max-w-[32ch] text-sm text-text-muted">
+                  {t("selectSubcontractor")}
+                </p>
+              </div>
             </div>
           )}
         </div>

@@ -4,27 +4,37 @@ interface StatCardProps extends HTMLAttributes<HTMLDivElement> {
   label: string;
   value: string | number;
   sub?: string;
+  /** "positive" tints the figure alone, not its label. */
+  tone?: "default" | "positive";
 }
 
+/*
+ * A stat is a figure with a name, so the figure leads and the name sits under
+ * it. Tabular numerals keep a row of these aligned on the same digit rails
+ * even when the amounts differ in length.
+ */
 export function StatCard({
   label,
   value,
   sub,
+  tone = "default",
   className = "",
   ...props
 }: StatCardProps) {
   return (
     <div
-      className={`bg-surface border border-border rounded p-4 flex flex-col gap-1 ${className}`}
+      className={`flex flex-col gap-1 rounded-lg border border-border bg-surface p-4 ${className}`}
       {...props}
     >
-      <span className="text-[11px] uppercase tracking-wide text-text-dim font-medium">
-        {label}
-      </span>
-      <span className="text-[26px] font-bold text-text leading-none">
+      <span
+        className={`tnum text-hero font-semibold leading-none ${
+          tone === "positive" ? "text-success" : "text-text"
+        }`}
+      >
         {value}
       </span>
-      {sub && <span className="text-[12px] text-text-muted">{sub}</span>}
+      <span className="text-sm font-medium text-text-muted">{label}</span>
+      {sub && <span className="text-label text-text-dim">{sub}</span>}
     </div>
   );
 }

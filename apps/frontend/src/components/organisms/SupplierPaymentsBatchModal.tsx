@@ -162,7 +162,7 @@ export function SupplierPaymentsBatchModal({
           {rows.map((row, i) => (
             <div
               key={i}
-              className="border border-border rounded-[var(--radius)] p-3 flex flex-col gap-2"
+              className="rounded border border-border p-3 flex flex-col gap-2"
             >
               <div className="grid grid-cols-2 gap-2 max-[640px]:grid-cols-1">
                 <Select
