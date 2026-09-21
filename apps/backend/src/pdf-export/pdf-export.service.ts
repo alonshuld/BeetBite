@@ -85,6 +85,10 @@ export class PdfExportService {
       subcontractor,
       companySettings,
       approvedFor: dto.approvedFor,
+      // Typed in the export dialog for this document only. The project's own
+      // description is edited from the projects screen and is not touched
+      // here; an empty field simply prints no description row.
+      projectDescription: dto.description?.trim() || null,
       lang: dto.lang ?? 'he',
     });
 
@@ -172,6 +176,7 @@ export class PdfExportService {
         // export — it does not carry that flow's remembered "approved for"
         // text, by design.
         approvedFor: '',
+        projectDescription: report.project.description || null,
         lang,
         // The document mirrors the Reports screen, so each page carries what
         // that screen shows for the project, not just the approval figures.
@@ -260,6 +265,7 @@ export class PdfExportService {
     subcontractor: { name: string; companyNumber: string };
     companySettings: CompanySettingsForPdf;
     approvedFor: string;
+    projectDescription: string | null;
     lang: 'en' | 'he';
     includeScreenDetails?: boolean;
   }): ReportApprovalData {
@@ -270,6 +276,7 @@ export class PdfExportService {
       subcontractor,
       companySettings,
       approvedFor,
+      projectDescription,
       lang,
       includeScreenDetails = false,
     } = args;
@@ -328,6 +335,7 @@ export class PdfExportService {
       subcontractorName: subcontractor.name,
       subcontractorCompanyNumber: subcontractor.companyNumber,
       projectName: report.project.name,
+      projectDescription,
       approvedFor,
       month: report.date,
       rows,
@@ -347,7 +355,6 @@ export class PdfExportService {
       screen: includeScreenDetails
         ? {
             projectLocation: report.project.location,
-            projectDescription: report.project.description,
             marginPercent: effectiveMargin,
             saved:
               effectiveMargin === report.profitMargin

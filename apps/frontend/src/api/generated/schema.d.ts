@@ -2070,10 +2070,15 @@ export interface components {
        */
       projectReportId: string;
       /**
-       * @description Free text describing what the account approval covers; the project name is appended to it on the document
-       * @example עבודות שלד + גמר
+       * @description Name of the person or company this project report is for; the project name is appended to it on the document
+       * @example ישראל ישראלי
        */
       approvedFor: string;
+      /**
+       * @description Description printed on this document only. It is never written back to the project — the project's own description is edited from the projects screen.
+       * @example עבודות שלד + גמר
+       */
+      description?: string;
       /**
        * @description Language/direction of the rendered PDF
        * @default he

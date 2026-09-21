@@ -151,7 +151,9 @@ describe('PdfExportService', () => {
     mockProjectsService.updateLastApprovedFor.mockResolvedValue(undefined);
   });
 
-  const renderHtml = async (): Promise<string> => {
+  const renderHtml = async (
+    overrides: Partial<ExportProjectReportsPdfDto> = {},
+  ): Promise<string> => {
     const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
     const mockPage = {
       setContent: jest.fn<void, [string, unknown]>(),
@@ -162,7 +164,7 @@ describe('PdfExportService', () => {
       close: jest.fn(),
     });
 
-    await service.exportProjectReportsPdf(dto);
+    await service.exportProjectReportsPdf({ ...dto, ...overrides });
 
     return mockPage.setContent.mock.calls[0][0];
   };
@@ -274,6 +276,47 @@ describe('PdfExportService', () => {
 
     expect(html).toContain('<td>שלד</td>');
     expect(html).toContain('<td>גמר</td>');
+  });
+
+  // The description belongs to the document, not to the project: the dialog
+  // seeds it from the project but the export never writes it back — the
+  // projects screen is the only place the project's own description changes.
+  describe('per-document description', () => {
+    it("prints the description it was given, not the project's stored one", async () => {
+      mockProjectReportsService.findOneForExport.mockResolvedValue({
+        ...mockReport,
+        project: { ...mockReport.project, description: 'Stored description' },
+      });
+
+      const html = await renderHtml({ description: 'Shell works only' });
+
+      expect(html).toContain('Shell works only');
+      expect(html).not.toContain('Stored description');
+    });
+
+    it('leaves the row out entirely when no description was given', async () => {
+      const html = await renderHtml();
+
+      expect(html).not.toContain('תיאור הפרויקט:');
+    });
+
+    it('treats a whitespace-only description as none', async () => {
+      const html = await renderHtml({ description: '   ' });
+
+      expect(html).not.toContain('תיאור הפרויקט:');
+    });
+
+    it('writes nothing to the project beyond the remembered approval text', async () => {
+      await renderHtml({ description: 'Shell works only' });
+
+      expect(mockProjectsService.updateLastApprovedFor).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(mockProjectsService.updateLastApprovedFor).toHaveBeenCalledWith(
+        'project-1',
+        dto.approvedFor,
+      );
+    });
   });
 
   it('should name the project once, in the info box rather than per row', async () => {

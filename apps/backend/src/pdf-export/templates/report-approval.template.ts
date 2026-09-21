@@ -31,7 +31,6 @@ export interface ReportApprovalInitiatorRow {
  */
 export interface ReportApprovalScreenDetails {
   projectLocation: string;
-  projectDescription: string;
   /** Margin in force on this page — simulated, or stored when not overridden. */
   marginPercent: number;
   /**
@@ -50,6 +49,13 @@ export interface ReportApprovalData {
   subcontractorName: string;
   subcontractorCompanyNumber: string;
   projectName: string;
+  /**
+   * Description printed in the info box. The single-report export takes it
+   * from the export dialog — typed for that document alone, never written
+   * back to the project — and the client-simulated export from the project's
+   * stored description. Null prints no row at all.
+   */
+  projectDescription: string | null;
   approvedFor: string;
   month: string;
   rows: ReportApprovalRow[];
@@ -390,22 +396,20 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
     .map(escapeHtml)
     .join(' • ');
 
-  // Only the client-simulated export passes `screen`: the project's location
-  // and description, and — where the simulation moved its margin — the stored
-  // margin and profit it replaced, exactly as the project sheet shows them.
-  const screenInfoRowsHtml = data.screen
-    ? [
-        data.screen.projectLocation
-          ? `<div class="info-row"><span class="label">${t.location}</span><span>${escapeHtml(data.screen.projectLocation)}</span></div>`
-          : '',
-        data.screen.projectDescription
-          ? `<div class="info-row"><span class="label">${t.projectDescription}</span><span>${escapeHtml(data.screen.projectDescription)}</span></div>`
-          : '',
-        data.screen.saved
-          ? `<div class="info-row"><span class="label">${t.savedMargin}</span><span>${data.screen.saved.marginPercent}% • ${money(data.screen.saved.profitAmount)}</span></div>`
-          : '',
-      ].join('')
-    : '';
+  // The description row is on every document; the location and the stored
+  // margin it replaced come only from `screen`, which the client-simulated
+  // export alone passes, exactly as the project sheet shows them.
+  const infoRowsHtml = [
+    data.screen?.projectLocation
+      ? `<div class="info-row"><span class="label">${t.location}</span><span>${escapeHtml(data.screen.projectLocation)}</span></div>`
+      : '',
+    data.projectDescription
+      ? `<div class="info-row"><span class="label">${t.projectDescription}</span><span>${escapeHtml(data.projectDescription)}</span></div>`
+      : '',
+    data.screen?.saved
+      ? `<div class="info-row"><span class="label">${t.savedMargin}</span><span>${data.screen.saved.marginPercent}% • ${money(data.screen.saved.profitAmount)}</span></div>`
+      : '',
+  ].join('');
 
   const simulatedBadgeHtml = data.screen?.saved
     ? `<span class="sim-badge">${t.simulated}</span>`
@@ -437,7 +441,7 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
       <div class="info-row"><span class="label">${t.mainContractor}</span><span>${escapeHtml(data.contractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.contractorCompanyNumber)}</span></div>
       <div class="info-row"><span class="label">${t.subcontractor}</span><span>${escapeHtml(data.subcontractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.subcontractorCompanyNumber)}</span></div>
       <div class="info-row"><span class="label">${t.approvedFor}</span><span>${approvedForValue}${simulatedBadgeHtml}</span></div>
-      ${screenInfoRowsHtml}
+      ${infoRowsHtml}
       ${initiatorInfoRowHtml}
     </div>
 

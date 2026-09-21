@@ -293,6 +293,7 @@ export function ProfitSimulatorPanel({
             disabled={exporting}
             className="text-xs py-1 px-3 w-full"
           >
+            <Icon name="download" size={13} />
             {t("exportWithSimulator")}
           </ButtonGhost>
           {isDirty && (
