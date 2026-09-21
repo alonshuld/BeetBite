@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🫀 BeetBite
+<img src="docs/media/logo.png" alt="BeetBite logo — a beet with a bite taken out of it" width="120">
+
+# BeetBite
 
 **Back-office platform for construction contractors.**
 
@@ -12,8 +14,6 @@ Track client projects, monthly income, subcontractor payouts and supplier invoic
 
 NestJS 11 · React 18 · PostgreSQL 17 · Prisma 7 · Playwright · Docker
 
-<img src="docs/media/project-reports.gif" alt="Monthly project reports with derived profit, supplier payments and subcontractor payout" width="880">
-
 </div>
 
 ---
@@ -21,7 +21,7 @@ NestJS 11 · React 18 · PostgreSQL 17 · Prisma 7 · Playwright · Docker
 ## Table of contents
 
 - [What it does](#what-it-does)
-- [Demo](#demo)
+- [Screens](#screens)
 - [How the money works](#how-the-money-works)
 - [Architecture](#architecture)
 - [Quick start](#quick-start)
@@ -56,41 +56,21 @@ The operator enters clients, projects, suppliers and subcontractors once, then f
 
 ---
 
-## Demo
+## Screens
 
-> All recordings use the seeded demo dataset (`SEED_MOCK_DATA=true`): 30 clients, 35 projects, and reports going back two years.
+| Screen | What it does |
+| --- | --- |
+| **Project reports** | Pick a client for the month; every project card shows its income entries (pending or received), the derived profit, each supplier's cut, and what is left for the subcontractor |
+| **Profit simulator** | A drawer on the client drill-down re-runs the whole month against a different margin — per project or all at once — without touching stored data |
+| **Subcontractor payments** | Amount owed is derived from the month's reports; partial payments are recorded against a specific project and rejected server-side if they would exceed what is owed |
+| **Monthly income** | Income and profit per client and per project, with a grand total for the month |
+| **Project portfolio** | Active / future / closed filters with payment progress against the estimated amount |
+| **Month-scoped navigation** | The month picker in the header scopes every overview screen at once — reports, income, supplier payments and subcontractor payments all follow it |
+| **Sign in** | JWT issued by the backend, stored in `localStorage`, sent as a bearer token on every request |
 
-### Monthly project reports
+Themes (light / dark) and languages (English / Hebrew, full RTL) toggle from the header.
 
-Pick a client for the month and every project card shows its income entries (pending or received), the derived profit, each supplier's cut, and what is left for the subcontractor. The profit simulator at the bottom re-runs the whole month against a different margin without touching stored data.
-
-<img src="docs/media/project-reports.gif" alt="Selecting a client, reviewing per-project financials, and simulating a different profit margin" width="880">
-
-### Subcontractor payments
-
-Amount owed is derived from the month's reports. Partial payments are recorded against a specific project and rejected server-side if they would exceed what is owed — the check and the write happen inside one transaction.
-
-<img src="docs/media/subcontractor-payments.gif" alt="Recording a partial payment and watching the owed balance update" width="880">
-
-### Monthly income and month-scoped navigation
-
-The month picker in the header scopes every overview screen at once — reports, income, supplier payments and subcontractor payments all follow it.
-
-<img src="docs/media/monthly-income.gif" alt="Switching months from the header and moving between overview screens" width="880">
-
-### Project portfolio
-
-<img src="docs/media/projects.gif" alt="Project list with active, future and closed filters and payment progress bars" width="880">
-
-### Hebrew (RTL) and dark mode
-
-<img src="docs/media/theme-rtl.gif" alt="Toggling dark mode and switching the interface to Hebrew right-to-left" width="880">
-
-### Sign in
-
-JWT issued by the backend, stored in `localStorage`, sent as a bearer token on every request.
-
-<img src="docs/media/login.gif" alt="Signing in and landing on the project reports screen" width="880">
+Run `SEED_MOCK_DATA=true` (see [Demo data](#demo-data)) for a populated dataset: 30 clients, 35 projects, and reports going back two years.
 
 ---
 
@@ -364,7 +344,7 @@ BeetBite/
 │   │       ├── contexts/   # language (en/he), theme, toasts
 │   │       └── pages/      # one lazy-loaded file per route
 │   └── e2e/                # Playwright specs + testcontainers bootstrap
-├── docs/media/             # demo recordings used by this README
+├── docs/media/             # logo used by this README
 ├── docker-compose.yml
 └── .github/workflows/      # ci · e2e · cd
 ```
