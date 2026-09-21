@@ -285,6 +285,17 @@ export default function SupplierPaymentsPage() {
         }
       />
 
+      {!isLoading && groups.length > 0 && (
+        <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-border bg-surface p-4">
+          <span className="text-lead font-semibold text-text">
+            {t("grandTotal")}
+          </span>
+          <span className="tnum text-title font-bold leading-none text-text">
+            {formatILS(grandTotal)}
+          </span>
+        </div>
+      )}
+
       {isLoading ? (
         <LoadingState label={t("loading")} />
       ) : groups.length === 0 ? (
@@ -311,13 +322,6 @@ export default function SupplierPaymentsPage() {
                 <SupplierGroup group={group} month={month} />
               </div>
             ))}
-          </div>
-
-          <div className="tnum flex items-baseline justify-end gap-3 border-t border-text-muted pt-3">
-            <span className="text-sm text-text-muted">{t("grandTotal")}</span>
-            <span className="text-title font-bold text-text">
-              {formatILS(grandTotal)}
-            </span>
           </div>
         </>
       )}
