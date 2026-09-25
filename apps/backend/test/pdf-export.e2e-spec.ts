@@ -567,6 +567,20 @@ describe('PDF Export Integration Tests', () => {
       expect(html).toContain(`src="${signature}"`);
     });
 
+    it('should paint the configured PDF colors', async () => {
+      await prisma.companySettings.update({
+        where: { id: SETTINGS_ID },
+        data: { pdfPrimaryColor: '#0b6e4f', pdfSecondaryColor: '#e07a5f' },
+      });
+
+      const html = await renderHtml();
+
+      expect(html).toContain('background: #0b6e4f;');
+      expect(html).toContain('border-bottom: 4px solid #e07a5f;');
+      expect(html).not.toContain('#1f2a44');
+      expect(html).not.toContain('#c9a24b');
+    });
+
     it('should render no image tags when logo and signature are unset', async () => {
       const html = await renderHtml();
 

@@ -1618,10 +1618,10 @@ export interface components {
        */
       profitMargin?: number;
       /**
-       * @description Income the project's initiator (יזם) reports for this month. Only meaningful when the project has an initiator, and must be greater than the report's own income; only relevant for PDF export.
+       * @description Income the project's initiator (יזם) reports for this month. Omit to leave it unchanged, send null to clear it; a number must be greater than the report's own income and needs an initiator on the project.
        * @example 120000
        */
-      initiatorIncome?: number;
+      initiatorIncome?: number | null;
       /** @description Income entries for this report. Omit to leave existing income rows untouched; when provided, replaces all of them (at least one required). */
       incomeEntries?: components["schemas"]["CreateIncomeEntryDto"][];
       /** @description Supplier payments for this report. Omit to leave existing payments untouched; when provided, replaces all of them. */
@@ -1930,6 +1930,16 @@ export interface components {
        */
       signature: Record<string, never> | null;
       /**
+       * @description Primary brand color of exported PDFs (header band, table headers), as #rrggbb
+       * @example #1f2a44
+       */
+      pdfPrimaryColor: string;
+      /**
+       * @description Secondary brand color of exported PDFs (accent rules, badges, totals), as #rrggbb
+       * @example #c9a24b
+       */
+      pdfSecondaryColor: string;
+      /**
        * @description Timestamp of the last update to the company settings
        * @example 2026-07-31T10:39:08.000Z
        */
@@ -1981,6 +1991,16 @@ export interface components {
        * @example data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...
        */
       signature?: Record<string, never> | null;
+      /**
+       * @description Primary brand color of exported PDFs (header band, table headers), as #rrggbb
+       * @example #1f2a44
+       */
+      pdfPrimaryColor?: string;
+      /**
+       * @description Secondary brand color of exported PDFs (accent rules, badges, totals), as #rrggbb
+       * @example #c9a24b
+       */
+      pdfSecondaryColor?: string;
     };
     ExportProjectReportsPdfDto: {
       /**

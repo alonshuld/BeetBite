@@ -73,6 +73,20 @@ export class CompanySettingsResponseDto {
   signature!: string | null;
 
   @ApiProperty({
+    example: '#1f2a44',
+    description:
+      'Primary brand color of exported PDFs (header band, table headers), as #rrggbb',
+  })
+  pdfPrimaryColor!: string;
+
+  @ApiProperty({
+    example: '#c9a24b',
+    description:
+      'Secondary brand color of exported PDFs (accent rules, badges, totals), as #rrggbb',
+  })
+  pdfSecondaryColor!: string;
+
+  @ApiProperty({
     example: '2026-07-31T10:39:08.000Z',
     description: 'Timestamp of the last update to the company settings',
   })

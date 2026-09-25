@@ -3,6 +3,14 @@ import { Input } from "@/components/atoms/Input";
 import { Textarea } from "@/components/atoms/Textarea";
 import { FormGroup, FormRow } from "@/components/molecules/FormGroup";
 import { ImageUploadField } from "@/components/molecules/ImageUploadField";
+import { ColorField } from "@/components/molecules/ColorField";
+import { fieldLabel } from "@/components/atoms/field";
+
+/** The navy/gold theme the PDF shipped with — also the backend column default. */
+export const DEFAULT_PDF_COLORS = {
+  pdfPrimaryColor: "#1f2a44",
+  pdfSecondaryColor: "#c9a24b",
+} as const;
 
 export interface CompanySettingsFormValue {
   name: string;
@@ -14,6 +22,8 @@ export interface CompanySettingsFormValue {
   addressCity: string;
   logo: string | null;
   signature: string | null;
+  pdfPrimaryColor: string;
+  pdfSecondaryColor: string;
 }
 
 interface CompanySettingsFormProps {
@@ -123,6 +133,32 @@ export function CompanySettingsForm({
             label={t("signature")}
             value={value.signature}
             onChange={(signature) => onChange({ ...value, signature })}
+          />
+        </FormGroup>
+      </FormRow>
+      <div className="mt-2 mb-3">
+        <div className={fieldLabel}>{t("pdfColors")}</div>
+        <p className="text-sm text-text-dim mt-0.5">{t("pdfColorsHint")}</p>
+      </div>
+      <FormRow>
+        <FormGroup>
+          <ColorField
+            id="company-pdf-primary-color"
+            label={t("pdfPrimaryColor")}
+            value={value.pdfPrimaryColor}
+            onChange={(pdfPrimaryColor) =>
+              onChange({ ...value, pdfPrimaryColor })
+            }
+          />
+        </FormGroup>
+        <FormGroup>
+          <ColorField
+            id="company-pdf-secondary-color"
+            label={t("pdfSecondaryColor")}
+            value={value.pdfSecondaryColor}
+            onChange={(pdfSecondaryColor) =>
+              onChange({ ...value, pdfSecondaryColor })
+            }
           />
         </FormGroup>
       </FormRow>
