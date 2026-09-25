@@ -12,10 +12,7 @@ import {
   type CreateProjectReportDto,
   type IncomeEntry,
 } from "@/api/endpoints/project-reports";
-import {
-  useExportProjectReportsPdfMutation,
-  useExportClientSimulatedPdfMutation,
-} from "@/api/endpoints/project-report-exports";
+import { useExportClientSimulatedPdfMutation } from "@/api/endpoints/project-report-exports";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
@@ -31,8 +28,6 @@ import {
   Icon,
   Input,
   Select,
-  Textarea,
-  Divider,
 } from "@/components/atoms";
 import {
   Statement,
@@ -41,6 +36,8 @@ import {
   StatementTotalRule,
 } from "@/components/molecules/Statement";
 import { FormModal } from "@/components/organisms/Modal";
+import { ExportReportPdfModal } from "@/components/organisms/ExportReportPdfModal";
+import { isMissingInitiatorIncome } from "@/utils/reportExport";
 import { ProfitSimulatorPanel } from "@/components/organisms/ProfitSimulatorPanel";
 import { useProfitSimulation } from "@/features/simulator/useProfitSimulation";
 import { FormRow } from "@/components/molecules/FormGroup";
@@ -97,8 +94,6 @@ export default function ReportsPage() {
   const { data: suppliers = [] } = useGetSuppliersQuery();
   const [createReport, { isLoading: saving }] =
     useCreateProjectReportMutation();
-  const [exportPdf, { isLoading: exporting }] =
-    useExportProjectReportsPdfMutation();
   const [exportClientSimulatedPdf, { isLoading: exportingSimulated }] =
     useExportClientSimulatedPdfMutation();
 
@@ -114,42 +109,7 @@ export default function ReportsPage() {
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
   const [initiatorIncome, setInitiatorIncome] = useState("");
 
-  // Export is per report: a report is already one project for one month, so
-  // the dialog asks for the free-text approval line, plus the description to
-  // print on this one document. That description is seeded from the project's
-  // own but belongs to the export alone — editing it here never writes back,
-  // the projects screen is where the project's description is changed.
   const [exportReport, setExportReport] = useState<ProjectReport | null>(null);
-  const [approvedFor, setApprovedFor] = useState("");
-  const [exportDescription, setExportDescription] = useState("");
-
-  async function handleExport() {
-    if (!exportReport) return;
-
-    try {
-      const blob = await exportPdf({
-        projectReportId: exportReport.id,
-        // Optional: left blank, the document prints the project name alone.
-        approvedFor: approvedFor.trim() || undefined,
-        description: exportDescription.trim() || undefined,
-        lang,
-      }).unwrap();
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `account-approval-${month}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      setExportReport(null);
-      toast(t("exportPdf"), "success");
-    } catch {
-      // The global RTK Query error listener already surfaces a toast with
-      // the server's message (missing company settings, VAT, no report).
-    }
-  }
 
   // Client-wide simulated export. Overrides are transient UI state:
   // never written back to a report, only sent along with this one request.
@@ -465,18 +425,10 @@ export default function ReportsPage() {
                       report.project.id,
                     )}
                     onExport={() => {
-                      if (
-                        report.project.initiatorName &&
-                        report.initiatorIncome == null
-                      ) {
+                      if (isMissingInitiatorIncome(report)) {
                         toast(t("initiatorIncomeRequiredForExport"), "error");
                         return;
                       }
-                      const exportProject = projects.find(
-                        (p) => p.id === report.project.id,
-                      );
-                      setApprovedFor(exportProject?.lastApprovedFor ?? "");
-                      setExportDescription(exportProject?.description ?? "");
                       setExportReport(report);
                     }}
                     onNavigate={() =>
@@ -716,39 +668,10 @@ export default function ReportsPage() {
         </div>
       </FormModal>
 
-      <FormModal
-        open={exportReport !== null}
+      <ExportReportPdfModal
+        report={exportReport}
         onClose={() => setExportReport(null)}
-        onSubmit={() => void handleExport()}
-        title={t("exportPdf")}
-        loading={exporting}
-      >
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-text-muted">
-            {exportReport?.project.name}
-          </p>
-          <Input
-            id="export-approved-for"
-            label={t("approvedForLabel")}
-            placeholder={t("approvedForPlaceholder")}
-            value={approvedFor}
-            onChange={(e) => setApprovedFor(e.target.value)}
-          />
-          <Divider />
-          <div className="flex flex-col gap-1">
-            <p className="text-xs text-text-dim">
-              {t("exportDescriptionHint")}
-            </p>
-            <Textarea
-              id="export-project-description"
-              label={t("description")}
-              value={exportDescription}
-              onChange={(e) => setExportDescription(e.target.value)}
-              rows={2}
-            />
-          </div>
-        </div>
-      </FormModal>
+      />
     </div>
   );
 }

@@ -16,7 +16,7 @@ import { ClientNotFoundError } from '../clients/errors/client-not-found.exceptio
 import { Prisma } from 'src/generated/client';
 import { ProjectsQueryDto } from './dto/projects-query.dto';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
-import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
+import { ProjectHasRelatedRecordsError } from './errors/project-has-related-records.error';
 import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
 import { OPENING_BALANCE_TAG } from 'src/common/constants';
@@ -300,10 +300,7 @@ export class ProjectsService {
           case PRISMA_ERROR_CODES.NOT_FOUND:
             throw new ProjectNotFoundError(id);
           case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
-            throw new EntityHasRelatedRecordsError(
-              'project',
-              'reports or payments',
-            );
+            throw new ProjectHasRelatedRecordsError();
         }
       }
       throw error;

@@ -1,11 +1,12 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input, ButtonPrimary, Logo, Icon } from "@/components/atoms";
-import { LangToggle } from "@/components/molecules";
+import { LangToggle, ThemeToggle } from "@/components/molecules";
 import { useLang } from "@/contexts/useLang";
 import { useLoginMutation } from "@/api/endpoints/auth";
 import { useAppDispatch } from "@/app/hooks";
 import { setCredentials } from "@/features/auth/authSlice";
+import { describeApiError, toApiError } from "@/api/apiErrors";
 
 export default function LoginPage() {
   const { t, lang, setLang } = useLang();
@@ -29,16 +30,12 @@ export default function LoginPage() {
       dispatch(setCredentials({ token: data.accessToken }));
       await navigate("/");
     } catch (err: unknown) {
-      const msg =
-        err &&
-        typeof err === "object" &&
-        "data" in err &&
-        err.data &&
-        typeof err.data === "object" &&
-        "message" in err.data
-          ? String(err.data.message)
-          : "Login failed";
-      setError(msg);
+      const apiError = toApiError(err);
+      setError(
+        apiError.code || apiError.message
+          ? describeApiError(apiError, lang, t)
+          : t("loginFailed"),
+      );
     }
   }
 
@@ -54,7 +51,8 @@ export default function LoginPage() {
         }}
       />
 
-      <div className="absolute top-4 ltr:right-4 rtl:left-4">
+      <div className="absolute top-4 flex items-center gap-2 ltr:right-4 rtl:left-4">
+        <ThemeToggle />
         <LangToggle lang={lang} onChange={setLang} />
       </div>
 

@@ -1,4 +1,4 @@
-import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
+import { ClientHasProjectsError } from './errors/client-has-projects.error';
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -133,7 +133,7 @@ export class ClientsService {
    * @param id ID of the client to remove
    * @returns void
    * @throws ClientNotFoundError when no client has that id
-   * @throws EntityHasRelatedRecordsError when the client has ever owned a project
+   * @throws ClientHasProjectsError when the client has ever owned a project
    */
   async remove(id: string): Promise<void> {
     const client = await this.prismaService.client.findUnique({
@@ -157,10 +157,7 @@ export class ClientsService {
       const names = Array.from(
         new Set(assignments.map((a) => a.project.name)),
       ).sort();
-      throw new EntityHasRelatedRecordsError(
-        `client "${client.name}"`,
-        `projects (${names.join(', ')})`,
-      );
+      throw new ClientHasProjectsError(client.name, names);
     }
 
     await this.prismaService.client.delete({ where: { id } });

@@ -2,7 +2,11 @@ import { ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsArray,
+  IsNumber,
   IsOptional,
+  Max,
+  Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -23,11 +27,29 @@ import { CreateSupplierPaymentDto } from './create-supplier-payment.dto';
  * same reason: the service replaces the whole list whenever the key is
  * present, so a caller that only edits other fields must be able to leave it
  * out rather than send `[]` and delete every existing payment.
+ * `initiatorIncome` is redeclared to also accept `null`, which clears it.
  */
 export class UpdateProjectReportDto extends OmitType(CreateProjectReportDto, [
   'incomeEntries',
   'supplierPayments',
+  'initiatorIncome',
 ] as const) {
+  // null passes validation (it clears the value); a number gets the same
+  // checks as on create.
+  @ValidateIf((_, value) => value !== null)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(9_999_999_999.99)
+  @ApiPropertyOptional({
+    example: 120000,
+    nullable: true,
+    type: Number,
+    description:
+      "Income the project's initiator (יזם) reports for this month. Omit to leave it unchanged, send null to clear it; a number must be greater than the report's own income and needs an initiator on the project.",
+  })
+  initiatorIncome?: number | null;
+
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)

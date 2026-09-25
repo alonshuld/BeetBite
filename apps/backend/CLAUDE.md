@@ -120,6 +120,8 @@ Domain errors extend the base hierarchy in `src/common/errors/`:
 
 Each module defines its own typed errors (e.g. `ProjectNotFoundError`, `ClientNotFoundError`) that extend these bases. `EntityExceptionFilter` (registered globally in `main.ts`) intercepts all exceptions and converts them to structured JSON responses.
 
+**Error codes.** Every domain error carries a stable `code` (and optional `params`) — see `common/errors/coded-error.ts`. `EntityError` subclasses pass them to `super(message, code, params)`; `HttpException` subclasses declare `readonly code = '…'` and implement `CodedError`. The filter adds `code`/`params` to the response body; `message` stays English. The frontend translates by code (`apps/frontend/src/api/apiErrors.ts`), so a new error needs its code there too — `common/errors/error-codes-translated.spec.ts` fails if any code under an `errors/` directory lacks a Hebrew entry. Keep new errors in `errors/` directories so that spec sees them.
+
 Services catch `PrismaClientKnownRequestError` and re-throw the appropriate domain error using the codes in `src/common/constants.ts` (`P2002` unique, `P2003` FK, `P2025` not found).
 
 `SubcontractorPaymentOverpaymentError` (extends `BadRequestException`) accepts an optional `paymentId` fourth argument — pass it on `update` so the error message identifies which payment triggered the violation.

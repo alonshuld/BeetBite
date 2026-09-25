@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import puppeteer from 'puppeteer';
 import { CompanySettingsService } from 'src/company-settings/company-settings.service';
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
@@ -11,6 +11,7 @@ import { CompanySettingsIncompleteError } from './errors/company-settings-incomp
 import { VatRateNotConfiguredError } from './errors/vat-rate-not-configured.error';
 import { NoReportsForExportError } from './errors/no-reports-for-export.error';
 import { InitiatorIncomeRequiredError } from './errors/initiator-income-required.error';
+import { ProjectNotInClientExportError } from './errors/project-not-in-client-export.error';
 import { InitiatorIncomeTooLowError } from '../project-reports/errors/initiator-income-too-low.error';
 import {
   renderReportApprovalHtml,
@@ -151,9 +152,7 @@ export class PdfExportService {
     const overridesByProject = new Map<string, number>();
     for (const override of dto.overrides) {
       if (!clientProjectIds.has(override.projectId)) {
-        throw new BadRequestException(
-          `Project ${override.projectId} is not one of this client's projects for the given month`,
-        );
+        throw new ProjectNotInClientExportError(override.projectId);
       }
       overridesByProject.set(override.projectId, override.margin);
     }

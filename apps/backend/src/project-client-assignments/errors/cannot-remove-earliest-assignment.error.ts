@@ -11,6 +11,7 @@ export class CannotRemoveEarliestAssignmentError extends EntityError {
   constructor() {
     super(
       'Cannot remove a project’s first client assignment. Every project must always have one. Change its client instead.',
+      'CANNOT_REMOVE_EARLIEST_ASSIGNMENT',
     );
     this.name = 'CannotRemoveEarliestAssignmentError';
   }

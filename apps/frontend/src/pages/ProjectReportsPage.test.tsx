@@ -38,6 +38,9 @@ vi.mock("@/api/endpoints/subcontractors", () => ({
 vi.mock("@/api/endpoints/suppliers", () => ({
   useGetSuppliersQuery: vi.fn(),
 }));
+vi.mock("@/api/endpoints/project-report-exports", () => ({
+  useExportProjectReportsPdfMutation: vi.fn(),
+}));
 vi.mock("@/api/endpoints/subcontractor-payments", () => ({
   useGetSubcontractorPaymentsQuery: vi.fn(),
 }));
@@ -61,6 +64,7 @@ import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { useGetSubcontractorPaymentsQuery } from "@/api/endpoints/subcontractor-payments";
+import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
 
 const mockProject = {
   id: "p1",
@@ -76,6 +80,8 @@ const mockListReport = { id: "r1", project: { id: "p1" } };
 const mockDetail = {
   id: "r1",
   date: "2025-03-01",
+  project: { id: "p1", name: "Tower Block", initiatorName: null },
+  initiatorIncome: null,
   totalIncome: 10000,
   profitMargin: 20,
   profit: 2000,
@@ -98,6 +104,9 @@ const deleteEntrySpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
 const updateEntrySpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
 const addEntrySpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
 const updateReportSpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
+const exportPdfSpy = vi.fn().mockReturnValue({
+  unwrap: vi.fn().mockResolvedValue(new Blob(["%PDF"])),
+});
 
 function mut(spy = vi.fn().mockReturnValue({ unwrap: vi.fn() })) {
   return [spy, { isLoading: false }] as unknown as never;
@@ -158,6 +167,9 @@ describe("ProjectReportsPage", () => {
     vi.mocked(useUpdateSupplierPaymentMutation).mockReturnValue(mut());
     vi.mocked(useDeleteSupplierPaymentMutation).mockReturnValue(mut());
     vi.mocked(useDeleteProjectReportMutation).mockReturnValue(mut());
+    vi.mocked(useExportProjectReportsPdfMutation).mockReturnValue(
+      mut(exportPdfSpy),
+    );
     setMonthlyPayments([]);
   });
 
@@ -410,6 +422,112 @@ describe("ProjectReportsPage", () => {
           initiatorIncome: 30000,
         }),
       );
+    });
+
+    it("has no remove button while initiator income is not set", () => {
+      withInitiator();
+      setDetail({ ...mockDetail, initiatorIncome: null });
+
+      renderPage();
+
+      // The only Remove buttons are the income entry's and the supplier's.
+      expect(screen.getAllByRole("button", { name: "Remove" })).toHaveLength(2);
+    });
+
+    it("removes the stored initiator income through the report update", async () => {
+      withInitiator();
+      setDetail({ ...mockDetail, initiatorIncome: 30000 });
+
+      renderPage();
+      const removeButtons = screen.getAllByRole("button", { name: "Remove" });
+      await userEvent.click(removeButtons[removeButtons.length - 1]);
+
+      expect(updateReportSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "r1",
+          projectId: "p1",
+          subcontractorId: "s1",
+          profitMargin: 20,
+          initiatorIncome: null,
+        }),
+      );
+    });
+
+    it("clears a stored initiator income emptied in the edit modal", async () => {
+      withInitiator();
+      setDetail({ ...mockDetail, initiatorIncome: 30000 });
+
+      renderPage();
+      await userEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+      await userEvent.clear(screen.getByLabelText("Initiator Income"));
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateReportSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "r1", initiatorIncome: null }),
+      );
+    });
+  });
+
+  describe("PDF export", () => {
+    beforeEach(() => {
+      URL.createObjectURL = vi.fn(() => "blob:pdf");
+      URL.revokeObjectURL = vi.fn();
+    });
+
+    it("has no export button when there is no report for the month", () => {
+      setListReports([]);
+      setDetail(undefined);
+      renderPage();
+      expect(
+        screen.queryByRole("button", { name: /export pdf/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("exports this month's report, seeded from the project", async () => {
+      vi.mocked(useGetProjectsQuery).mockReturnValue({
+        data: [
+          {
+            ...mockProject,
+            description: "North wing",
+            lastApprovedFor: "Phase 2",
+          },
+        ],
+      } as unknown as ReturnType<typeof useGetProjectsQuery>);
+
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: /export pdf/i }),
+      );
+
+      expect(screen.getByLabelText("Description")).toHaveValue("North wing");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(exportPdfSpy).toHaveBeenCalledWith({
+        projectReportId: "r1",
+        approvedFor: "Phase 2",
+        description: "North wing",
+        lang: "en",
+      });
+    });
+
+    it("refuses to open when the initiator income is missing", async () => {
+      setDetail({
+        ...mockDetail,
+        project: { ...mockDetail.project, initiatorName: "Dana" },
+        initiatorIncome: null,
+      });
+
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: /export pdf/i }),
+      );
+
+      expect(
+        await screen.findByText(
+          "Set this report's initiator income before exporting its PDF.",
+        ),
+      ).toBeInTheDocument();
+      expect(exportPdfSpy).not.toHaveBeenCalled();
     });
   });
 });

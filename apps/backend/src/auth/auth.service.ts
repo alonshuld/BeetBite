@@ -1,10 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
 import { UsersService } from '../users/users.service';
 import { User } from '../generated/client';
 import { LoginResponseDto } from './dto/login-response.dto';
+import { InvalidCredentialsError } from './errors/invalid-credentials.error';
 
 /**
  * Service handling authentication logic.
@@ -25,7 +26,7 @@ export class AuthService {
    * @param password The submitted plaintext password
    * @returns The authenticated User record
    * @throws UserNotFoundError (from UsersService) if the username does not exist
-   * @throws UnauthorizedException if the password does not match
+   * @throws InvalidCredentialsError if the password does not match
    */
   async validateUser(username: string, password: string): Promise<User> {
     const user = await this.usersService.findByUsername(username);
@@ -33,7 +34,7 @@ export class AuthService {
     const valid = await bcrypt.compare(password, user.passwordHash);
 
     if (!valid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new InvalidCredentialsError();
     }
 
     return user;

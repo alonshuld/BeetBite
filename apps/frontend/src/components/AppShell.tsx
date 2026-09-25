@@ -4,6 +4,8 @@ import { Sidebar } from "@/components/organisms/Sidebar";
 import { TopHeader } from "@/components/organisms/TopHeader";
 import { setErrorListener } from "@/api/errorEmitter";
 import { useToast } from "@/contexts/useToast";
+import { useLang } from "@/contexts/useLang";
+import { describeApiError } from "@/api/apiErrors";
 
 const MONTH_KEY = "beetbite.month";
 
@@ -28,11 +30,14 @@ export default function AppShell() {
     isValidMonth(urlMonth) ? urlMonth : getInitialMonth(),
   );
   const { toast } = useToast();
+  const { lang, t } = useLang();
 
   useEffect(() => {
-    setErrorListener((msg) => toast(msg, "error"));
+    setErrorListener((error) =>
+      toast(describeApiError(error, lang, t), "error"),
+    );
     return () => setErrorListener(null);
-  }, [toast]);
+  }, [toast, lang, t]);
 
   // A `?month=YYYY-MM` query param (e.g. from a project-report deep link) takes
   // precedence over the persisted month so the linked month is shown.

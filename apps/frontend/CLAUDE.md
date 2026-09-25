@@ -79,6 +79,7 @@ Re-run `pnpm codegen` whenever backend DTOs change. The backend must be running 
 - `baseQueryWithReauth`: wraps base query; dispatches `logout()` on 401.
 - `authSlice`: persists JWT to `localStorage` under key `beetbite.token`.
 - Endpoint slices under `src/api/endpoints/` are injected into `baseApi`.
+- API errors: `baseQueryWithReauth` emits an `ApiError` (`status`, English `message`, `code`, `params`) through `errorEmitter`; `AppShell` toasts it via `describeApiError` (`src/api/apiErrors.ts`). Hebrew uses the `hebrewApiErrors` table by code (never the server's English — unknown codes fall back to a status-based line); English shows the server message. Add a Hebrew entry for every new backend error code.
 
 ## Routing
 

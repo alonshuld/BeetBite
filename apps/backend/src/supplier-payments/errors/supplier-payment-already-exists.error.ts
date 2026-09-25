@@ -12,6 +12,8 @@ export class SupplierPaymentAlreadyExistsError extends EntityAlreadyExistsError 
   constructor(supplierId: string, date: string) {
     super(
       `A supplier payment for supplier ${supplierId} in the month ${date} already exists`,
+      'SUPPLIER_PAYMENT_ALREADY_EXISTS',
+      { month: String(date).slice(0, 7) },
     );
     this.name = 'SupplierPaymentAlreadyExistsError';
   }

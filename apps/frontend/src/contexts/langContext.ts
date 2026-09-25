@@ -25,6 +25,7 @@ export const translations = {
     signIn: "Sign in",
     signingIn: "Signing in…",
     fillFields: "Please fill in all fields",
+    requiredFieldsMissing: "Fill in the required fields:",
     constructionPlatform: "Construction management platform",
     copyright: "BeetBite © 2026",
     // General
@@ -199,6 +200,13 @@ export const translations = {
     errorTitle: "Something went wrong",
     errorDescription: "An unexpected error occurred. Please reload the page.",
     reload: "Reload",
+    // API error fallbacks — shown when the server gives no translatable code
+    errorNetwork: "Network error. Check your connection.",
+    errorUnexpected: "An unexpected error occurred.",
+    errorInvalidRequest: "Some of the details entered are invalid.",
+    errorNotFound: "The requested item was not found.",
+    errorConflict: "This conflicts with an existing record.",
+    loginFailed: "Login failed",
     signOut: "Sign out",
     // Company settings
     companySettings: "Company Settings",
@@ -320,6 +328,7 @@ export const translations = {
     signIn: "כניסה",
     signingIn: "מתחבר…",
     fillFields: "נא למלא את כל השדות",
+    requiredFieldsMissing: "יש למלא את שדות החובה:",
     constructionPlatform: "פלטפורמת ניהול בנייה",
     copyright: "BeetBite © 2026",
     // General
@@ -486,6 +495,12 @@ export const translations = {
     errorTitle: "משהו השתבש",
     errorDescription: "אירעה שגיאה בלתי צפויה. אנא טען מחדש את הדף.",
     reload: "טען מחדש",
+    errorNetwork: "שגיאת רשת. בדוק את החיבור לאינטרנט.",
+    errorUnexpected: "אירעה שגיאה בלתי צפויה.",
+    errorInvalidRequest: "חלק מהפרטים שהוזנו אינם תקינים.",
+    errorNotFound: "הפריט המבוקש לא נמצא.",
+    errorConflict: "הפעולה מתנגשת ברשומה קיימת.",
+    loginFailed: "ההתחברות נכשלה",
     signOut: "התנתק",
     // Company settings
     companySettings: "פרטי החברה",

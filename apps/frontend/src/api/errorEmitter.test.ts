@@ -10,19 +10,19 @@ describe("errorEmitter", () => {
   it("forwards emitted messages to the registered listener", () => {
     const listener = vi.fn();
     setErrorListener(listener);
-    emitApiError("boom");
-    expect(listener).toHaveBeenCalledWith("boom");
+    emitApiError({ status: 400, message: "boom" });
+    expect(listener).toHaveBeenCalledWith({ status: 400, message: "boom" });
   });
 
   it("does nothing (and does not throw) when no listener is registered", () => {
-    expect(() => emitApiError("no one is listening")).not.toThrow();
+    expect(() => emitApiError({ status: 500 })).not.toThrow();
   });
 
   it("stops delivering after the listener is cleared with null", () => {
     const listener = vi.fn();
     setErrorListener(listener);
     setErrorListener(null);
-    emitApiError("after clear");
+    emitApiError({ status: 500 });
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -31,8 +31,8 @@ describe("errorEmitter", () => {
     const second = vi.fn();
     setErrorListener(first);
     setErrorListener(second);
-    emitApiError("latest only");
+    emitApiError({ status: 409, code: "X" });
     expect(first).not.toHaveBeenCalled();
-    expect(second).toHaveBeenCalledWith("latest only");
+    expect(second).toHaveBeenCalledWith({ status: 409, code: "X" });
   });
 });

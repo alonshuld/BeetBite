@@ -9,7 +9,10 @@ export class SupplierPaymentNotFoundError extends EntityNotFoundError {
    * @param supplierPaymentId The ID of the supplier payment that was not found.
    */
   constructor(supplierPaymentId: string) {
-    super(`Supplier payment with ID ${supplierPaymentId} not found`);
+    super(
+      `Supplier payment with ID ${supplierPaymentId} not found`,
+      'SUPPLIER_PAYMENT_NOT_FOUND',
+    );
     this.name = 'SupplierPaymentNotFoundError';
   }
 }

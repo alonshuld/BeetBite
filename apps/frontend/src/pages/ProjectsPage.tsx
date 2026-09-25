@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLang } from "@/contexts/useLang";
+import { useToast } from "@/contexts/useToast";
 import {
   useGetProjectsQuery,
   useCreateProjectMutation,
@@ -113,6 +114,7 @@ const EMPTY_FORM: FormState = {
 
 export default function ProjectsPage() {
   const { t } = useLang();
+  const { toast } = useToast();
   const { data: projects = [], isLoading } = useGetProjectsQuery();
   const { data: clients = [] } = useGetClientsQuery();
   const { data: subcontractors = [] } = useGetSubcontractorsQuery();
@@ -138,6 +140,9 @@ export default function ProjectsPage() {
   // The opening balance is for importing pre-BeetBite data, so it stays
   // collapsed until asked for.
   const [openingOpen, setOpeningOpen] = useState(false);
+  // Set by a save blocked on missing required fields, so they show as invalid
+  // only after the user has tried to save — not while they are still typing.
+  const [showInvalid, setShowInvalid] = useState(false);
 
   function toggleFilter(key: keyof FilterState) {
     setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -177,6 +182,7 @@ export default function ProjectsPage() {
     setEditing(null);
     setForm({ ...EMPTY_FORM, openingMonth: currentYearMonth() });
     setOpeningOpen(false);
+    setShowInvalid(false);
     setFormOpen(true);
   }
 
@@ -192,6 +198,7 @@ export default function ProjectsPage() {
       location: project.location,
       initiatorId: project.initiatorId ?? "",
     });
+    setShowInvalid(false);
     setFormOpen(true);
   }
 
@@ -219,12 +226,43 @@ export default function ProjectsPage() {
     form.openingSubcontractorId !== "" &&
     form.openingProfitMargin.trim() !== "";
 
+  const amount = parseFloat(form.estimatedAmount);
+  // Required fields left blank. Projects created before requester and
+  // location existed have both stored empty, so editing one surfaces here.
+  const invalid = {
+    name: !form.name.trim(),
+    clientId: !form.clientId,
+    requesterName: !form.requesterName.trim(),
+    location: !form.location.trim(),
+    estimatedAmount: isNaN(amount) || amount < 0,
+  };
+  const invalidLabels: Record<keyof typeof invalid, string> = {
+    name: t("name"),
+    clientId: t("client"),
+    requesterName: t("requester"),
+    location: t("location"),
+    estimatedAmount: t("estimatedAmountLabel"),
+  };
+
+  function invalidProps(field: keyof typeof invalid) {
+    return showInvalid && invalid[field]
+      ? { "aria-invalid": true, className: "!border-danger" }
+      : {};
+  }
+
   async function handleSave() {
-    if (!form.name.trim() || !form.estimatedAmount) return;
-    if (!form.clientId) return;
-    if (!form.requesterName.trim() || !form.location.trim()) return;
-    const amount = parseFloat(form.estimatedAmount);
-    if (isNaN(amount) || amount < 0) return;
+    const missing = (Object.keys(invalid) as (keyof typeof invalid)[]).filter(
+      (field) => invalid[field],
+    );
+    if (missing.length > 0) {
+      // Never refuse silently: say which fields are holding the save up.
+      setShowInvalid(true);
+      toast(
+        `${t("requiredFieldsMissing")} ${missing.map((f) => invalidLabels[f]).join(", ")}`,
+        "error",
+      );
+      return;
+    }
     const payload = {
       name: form.name.trim(),
       description: form.description.trim(),
@@ -516,6 +554,7 @@ export default function ProjectsPage() {
           <FormGroup>
             <Input
               id="proj-name"
+              {...invalidProps("name")}
               label={t("name")}
               value={form.name}
               onChange={(e) => setField("name", e.target.value)}
@@ -527,6 +566,7 @@ export default function ProjectsPage() {
           <FormGroup>
             <Select
               id="proj-client"
+              {...invalidProps("clientId")}
               label={t("client")}
               value={form.clientId}
               onChange={(e) => setField("clientId", e.target.value)}
@@ -547,6 +587,7 @@ export default function ProjectsPage() {
           <FormGroup>
             <Input
               id="proj-requester"
+              {...invalidProps("requesterName")}
               label={t("requester")}
               value={form.requesterName}
               onChange={(e) => setField("requesterName", e.target.value)}
@@ -565,6 +606,7 @@ export default function ProjectsPage() {
           <FormGroup>
             <Input
               id="proj-location"
+              {...invalidProps("location")}
               label={t("location")}
               value={form.location}
               onChange={(e) => setField("location", e.target.value)}
@@ -602,6 +644,7 @@ export default function ProjectsPage() {
           <FormGroup>
             <Input
               id="proj-amount"
+              {...invalidProps("estimatedAmount")}
               label={t("estimatedAmountLabel")}
               type="number"
               min="0"

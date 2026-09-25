@@ -5,7 +5,11 @@ import { EntityAlreadyExistsError } from '../../common/errors/entity-already-exi
  */
 export class SupplierAlreadyExistsError extends EntityAlreadyExistsError {
   constructor(supplierName: string) {
-    super(`Supplier with name ${supplierName} already exists`);
+    super(
+      `Supplier with name ${supplierName} already exists`,
+      'SUPPLIER_ALREADY_EXISTS',
+      { name: supplierName },
+    );
     this.name = 'SupplierAlreadyExistsError';
   }
 }
