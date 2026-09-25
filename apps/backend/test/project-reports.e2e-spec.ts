@@ -16,6 +16,8 @@ import { execSync } from 'child_process';
 import * as path from 'path';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { SupplierNotFoundError } from 'src/suppliers/errors/supplier-not-found.error';
+import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
+import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 
 describe('ProjectReportsService Integration Tests', () => {
   let container: StartedPostgreSqlContainer;
@@ -58,7 +60,11 @@ describe('ProjectReportsService Integration Tests', () => {
         }),
         PrismaModule,
       ],
-      providers: [ProjectReportsService],
+      providers: [
+        ProjectReportsService,
+        ProjectClientAssignmentsService,
+        VatRatesService,
+      ],
     }).compile();
 
     service = module.get<ProjectReportsService>(ProjectReportsService);
@@ -511,7 +517,10 @@ describe('ProjectReportsService Integration Tests', () => {
       ).rejects.toThrow(ProjectReportNotFoundError);
     });
 
-    it('should throw ProjectNotFoundError when updating with invalid projectId', async () => {
+    // A report never moves between projects: update() always keeps the stored
+    // projectId, so a different one in the body is ignored rather than
+    // validated.
+    it('should keep the report on its own project when a different projectId is sent', async () => {
       const updateDto: UpdateProjectReportDto = {
         projectId: 'non-existent-project',
         subcontractorId,
@@ -521,9 +530,9 @@ describe('ProjectReportsService Integration Tests', () => {
         supplierPayments: [],
       };
 
-      await expect(service.update(reportId, updateDto)).rejects.toThrow(
-        ProjectNotFoundError,
-      );
+      const result = await service.update(reportId, updateDto);
+
+      expect(result.project.id).toBe(projectId);
     });
 
     it('should throw SubcontractorNotFoundError when updating with invalid subcontractorId', async () => {

@@ -722,9 +722,17 @@ describe('PDF Export Integration Tests', () => {
         .expect(404);
     });
 
+    // Optional since the export prints the project name alone when blank.
+    it('should accept a missing approvedFor', async () => {
+      await request(app.getHttpServer())
+        .post(url)
+        .set('Authorization', `Bearer ${token}`)
+        .send(body({ approvedFor: undefined }))
+        .expect(200);
+    });
+
     it.each([
       ['a missing projectReportId', { projectReportId: undefined }],
-      ['a missing approvedFor', { approvedFor: undefined }],
       ['an over-long approvedFor', { approvedFor: 'x'.repeat(501) }],
       ['an unsupported language', { lang: 'fr' }],
       ['an unknown property', { nope: true }],
