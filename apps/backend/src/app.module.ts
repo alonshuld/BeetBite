@@ -20,7 +20,6 @@ import { VatRatesModule } from './vat-rates/vat-rates.module';
 import { ProjectClientAssignmentsModule } from './project-client-assignments/project-client-assignments.module';
 import { PdfExportModule } from './pdf-export/pdf-export.module';
 import { InitiatorsModule } from './initiators/initiators.module';
-import { InitiatorPaymentsModule } from './initiator-payments/initiator-payments.module';
 
 @Module({
   imports: [
@@ -46,7 +45,6 @@ import { InitiatorPaymentsModule } from './initiator-payments/initiator-payments
     VatRatesModule,
     PdfExportModule,
     InitiatorsModule,
-    InitiatorPaymentsModule,
   ],
   providers: [
     {

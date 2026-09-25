@@ -8,6 +8,8 @@ import { ProjectsService } from 'src/projects/projects.service';
 import { CompanySettingsIncompleteError } from './errors/company-settings-incomplete.error';
 import { VatRateNotConfiguredError } from './errors/vat-rate-not-configured.error';
 import { NoReportsForExportError } from './errors/no-reports-for-export.error';
+import { InitiatorIncomeRequiredError } from './errors/initiator-income-required.error';
+import { InitiatorIncomeTooLowError } from '../project-reports/errors/initiator-income-too-low.error';
 import { ExportProjectReportsPdfDto } from './dto/export-project-reports-pdf.dto';
 import { ExportClientSimulatedPdfDto } from './dto/export-client-simulated-pdf.dto';
 import { BadRequestException } from '@nestjs/common';
@@ -111,13 +113,7 @@ describe('PdfExportService', () => {
         supplier: { id: 'corp-3', name: 'Django Corp' },
       },
     ],
-    initiatorPayments: [] as {
-      id: string;
-      amount: number;
-      date: string | null;
-      description: string | null;
-      initiator: { id: string; name: string };
-    }[],
+    initiatorIncome: null as number | null,
   };
 
   beforeEach(async () => {
@@ -366,6 +362,19 @@ describe('PdfExportService', () => {
     );
   });
 
+  it('exports without approvedFor, printing the project name alone and remembering nothing', async () => {
+    const html = await renderHtml({ approvedFor: undefined });
+
+    expect(html).toContain(mockReport.project.name);
+    expect(mockProjectsService.updateLastApprovedFor).not.toHaveBeenCalled();
+  });
+
+  it('treats a whitespace-only approvedFor as empty', async () => {
+    await service.exportProjectReportsPdf({ ...dto, approvedFor: '   ' });
+
+    expect(mockProjectsService.updateLastApprovedFor).not.toHaveBeenCalled();
+  });
+
   it('should not persist approvedFor when company settings are incomplete', async () => {
     mockCompanySettingsService.findOne.mockResolvedValue(null);
 
@@ -474,41 +483,17 @@ describe('PdfExportService', () => {
       expect(html).not.toContain('Yaniv Goldman');
     });
 
-    it("prints the initiator's name but no payment rows when it has none this month", async () => {
+    it("prints the initiator's name when the project has one", async () => {
       mockProjectReportsService.findOneForExport.mockResolvedValue({
         ...mockReport,
         project: { ...mockReport.project, initiatorName: 'Yaniv Goldman' },
-        initiatorPayments: [],
+        initiatorIncome: 2000000,
       });
 
       const html = await renderHtml();
 
       expect(html).toContain('יזם:');
       expect(html).toContain('Yaniv Goldman');
-      expect(html).not.toContain('Consulting fee');
-    });
-
-    it('prints the initiator name and payment rows when payments exist', async () => {
-      mockProjectReportsService.findOneForExport.mockResolvedValue({
-        ...mockReport,
-        project: { ...mockReport.project, initiatorName: 'Yaniv Goldman' },
-        initiatorPayments: [
-          {
-            id: 'ip-1',
-            amount: 5000,
-            date: '2026-03-10T00:00:00.000Z',
-            description: 'Consulting fee',
-            initiator: { id: 'initiator-1', name: 'Yaniv Goldman' },
-          },
-        ],
-      });
-
-      const html = await renderHtml();
-
-      expect(html).toContain('יזם:');
-      expect(html).toContain('Yaniv Goldman');
-      expect(html).toContain('Consulting fee');
-      expect(html).toContain('5,000.00');
     });
 
     it('renders the initiator block in English when lang is en', async () => {
@@ -524,7 +509,7 @@ describe('PdfExportService', () => {
       mockProjectReportsService.findOneForExport.mockResolvedValue({
         ...mockReport,
         project: { ...mockReport.project, initiatorName: 'Yaniv Goldman' },
-        initiatorPayments: [],
+        initiatorIncome: 2000000,
       });
 
       await service.exportProjectReportsPdf({ ...dto, lang: 'en' });
@@ -532,6 +517,47 @@ describe('PdfExportService', () => {
 
       expect(html).toContain('Initiator:');
       expect(html).toContain('Yaniv Goldman');
+    });
+
+    it('renders the initiator income row when set', async () => {
+      mockProjectReportsService.findOneForExport.mockResolvedValue({
+        ...mockReport,
+        project: { ...mockReport.project, initiatorName: 'Yaniv Goldman' },
+        initiatorIncome: 2000000,
+      });
+
+      const html = await renderHtml();
+
+      expect(html).toContain('הכנסה מיזם:');
+      expect(html).toContain('2,000,000.00');
+    });
+
+    it('refuses to export when the project has an initiator but initiatorIncome is not set', async () => {
+      mockProjectReportsService.findOneForExport.mockResolvedValue({
+        ...mockReport,
+        project: { ...mockReport.project, initiatorName: 'Yaniv Goldman' },
+        initiatorIncome: null,
+      });
+
+      await expect(service.exportProjectReportsPdf(dto)).rejects.toThrow(
+        InitiatorIncomeRequiredError,
+      );
+    });
+
+    it('refuses to export when initiatorIncome no longer exceeds the report income', async () => {
+      mockProjectReportsService.findOneForExport.mockResolvedValue({
+        ...mockReport,
+        project: { ...mockReport.project, initiatorName: 'Yaniv Goldman' },
+        initiatorIncome: mockReport.totalIncome,
+      });
+
+      await expect(service.exportProjectReportsPdf(dto)).rejects.toThrow(
+        InitiatorIncomeTooLowError,
+      );
+    });
+
+    it('exports fine without initiatorIncome when the project has no initiator', async () => {
+      await expect(service.exportProjectReportsPdf(dto)).resolves.toBeDefined();
     });
   });
 
@@ -577,7 +603,6 @@ describe('PdfExportService', () => {
             supplier: { id: 's1', name: 'Flooring Ltd' },
           },
         ],
-        initiatorPayments: [],
       },
       {
         id: 'report-2',
@@ -595,7 +620,6 @@ describe('PdfExportService', () => {
           { id: 'e2', amount: 5000, incomeDate: null, tag: null },
         ],
         supplierPayments: [],
-        initiatorPayments: [],
       },
       {
         id: 'report-3',
@@ -613,7 +637,6 @@ describe('PdfExportService', () => {
           { id: 'e3', amount: 2000, incomeDate: null, tag: null },
         ],
         supplierPayments: [],
-        initiatorPayments: [],
       },
     ];
 

@@ -237,7 +237,7 @@ export const translations = {
     // Export PDF
     exportPdf: "Export PDF",
     approvedForLabel: "Approved For",
-    approvedForPlaceholder: "Who is this project report for?",
+    approvedForPlaceholder: "Optional — who is this project report for?",
     transferProject: "Transfer to another client",
     transferProjectHint:
       "Months before the chosen month keep their current client. Only that month onward moves.",
@@ -290,8 +290,11 @@ export const translations = {
     initiatorNamePlaceholder: "Initiator name",
     initiator: "Initiator",
     noInitiatorOption: "— No initiator —",
-    initiatorPayments: "Initiator Payments",
-    initiatorPaymentDescriptionPlaceholder: "e.g. Consulting fee",
+    initiatorIncome: "Initiator Income",
+    initiatorIncomeHint:
+      "Only relevant for PDF export — must be greater than this report's income.",
+    initiatorIncomeRequiredForExport:
+      "Set this report's initiator income before exporting its PDF.",
     // Client-wide simulated export
     exportWithSimulator: "Export Simulation PDF",
   },
@@ -521,7 +524,7 @@ export const translations = {
     // Export PDF
     exportPdf: "ייצוא PDF",
     approvedForLabel: "חשבון מאושר עבור",
-    approvedForPlaceholder: "עבור מי דוח הפרויקט הזה?",
+    approvedForPlaceholder: "רשות — עבור מי דוח הפרויקט הזה?",
     transferProject: "העבר ללקוח אחר",
     transferProjectHint:
       "חודשים לפני החודש שנבחר נשארים אצל הלקוח הנוכחי. רק מאותו חודש ואילך עובר.",
@@ -574,8 +577,11 @@ export const translations = {
     initiatorNamePlaceholder: "שם היזם",
     initiator: "יזם",
     noInitiatorOption: "— ללא יזם —",
-    initiatorPayments: "תשלומי יזם",
-    initiatorPaymentDescriptionPlaceholder: "לדוגמה: שכר ייעוץ",
+    initiatorIncome: "הכנסה מיזם",
+    initiatorIncomeHint:
+      "רלוונטי לייצוא PDF בלבד — חייב להיות גדול מהכנסת הדוח הזה.",
+    initiatorIncomeRequiredForExport:
+      "יש להגדיר הכנסה מיזם לדוח זה לפני ייצוא ה-PDF שלו.",
     // Client-wide simulated export
     exportWithSimulator: "ייצוא PDF של הסימולציה",
   },

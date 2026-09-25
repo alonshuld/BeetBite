@@ -8,6 +8,7 @@ import {
 import { Type } from 'class-transformer';
 import { CreateProjectReportDto } from './create-project-report.dto';
 import { CreateIncomeEntryDto } from './create-income-entry.dto';
+import { CreateSupplierPaymentDto } from './create-supplier-payment.dto';
 
 /**
  * Represents the parameters required to update an existing project report.
@@ -18,10 +19,14 @@ import { CreateIncomeEntryDto } from './create-income-entry.dto';
  * only replaces that relation (deleteMany + createMany) when the caller
  * actually sends it, so callers that reconcile income rows through the
  * dedicated per-entry endpoints can omit it here and leave existing rows —
- * ids and tags included — untouched.
+ * ids and tags included — untouched. `supplierPayments` is optional for the
+ * same reason: the service replaces the whole list whenever the key is
+ * present, so a caller that only edits other fields must be able to leave it
+ * out rather than send `[]` and delete every existing payment.
  */
 export class UpdateProjectReportDto extends OmitType(CreateProjectReportDto, [
   'incomeEntries',
+  'supplierPayments',
 ] as const) {
   @IsOptional()
   @IsArray()
@@ -34,4 +39,15 @@ export class UpdateProjectReportDto extends OmitType(CreateProjectReportDto, [
     type: [CreateIncomeEntryDto],
   })
   incomeEntries?: CreateIncomeEntryDto[];
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => CreateSupplierPaymentDto)
+  @ValidateNested({ each: true })
+  @ApiPropertyOptional({
+    description:
+      'Supplier payments for this report. Omit to leave existing payments untouched; when provided, replaces all of them.',
+    type: [CreateSupplierPaymentDto],
+  })
+  supplierPayments?: CreateSupplierPaymentDto[];
 }

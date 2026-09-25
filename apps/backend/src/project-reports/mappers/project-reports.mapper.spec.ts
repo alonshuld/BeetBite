@@ -20,6 +20,7 @@ describe('project-reports mapper', () => {
     subcontractorId: 'sub-1',
     date: new Date('2024-05-01T00:00:00.000Z'),
     profitMargin: new Prisma.Decimal('10'),
+    initiatorIncome: null as Prisma.Decimal | null,
     project: {
       id: 'project-1',
       name: 'Project 1',
@@ -36,13 +37,6 @@ describe('project-reports mapper', () => {
       amount: Prisma.Decimal;
       includesVat: boolean;
       supplier: { id: string; name: string };
-    }[],
-    initiatorPayments: [] as {
-      id: string;
-      amount: Prisma.Decimal;
-      date: Date | null;
-      description: string | null;
-      initiator: { id: string; name: string };
     }[],
   });
 
@@ -66,13 +60,6 @@ describe('project-reports mapper', () => {
       amount: Prisma.Decimal;
       includesVat: boolean;
       supplier: { id: string; name: string };
-    }[],
-    initiatorPayments: [] as {
-      id: string;
-      amount: Prisma.Decimal;
-      date: Date | null;
-      description: string | null;
-      initiator: { id: string; name: string };
     }[],
     incomeEntries,
   });
@@ -109,8 +96,19 @@ describe('project-reports mapper', () => {
           { id: 'entry-1', amount: 10000, incomeDate: null, tag: 'שלד' },
         ],
         supplierPayments: [],
-        initiatorPayments: [],
+        initiatorIncome: null,
       });
+    });
+
+    it('converts a set initiatorIncome to a number', () => {
+      const result = toProjectReportListItem(
+        {
+          ...makeListItemInput(),
+          initiatorIncome: new Prisma.Decimal('120000'),
+        },
+        [],
+      );
+      expect(result.initiatorIncome).toBe(120000);
     });
   });
 
@@ -209,7 +207,7 @@ describe('project-reports mapper', () => {
           payment: 8000,
         },
         supplierPayments: [],
-        initiatorPayments: [],
+        initiatorIncome: null,
       });
     });
   });

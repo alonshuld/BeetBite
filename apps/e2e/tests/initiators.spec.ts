@@ -9,12 +9,13 @@ const MONTH = '2026-05';
 const MONTH_DATE = new Date(`${MONTH}-01`);
 
 /**
- * Initiator (יזם) — a documentation-only entity. Payments
- * recorded against one are printed on the PDF but never enter any financial
- * calculation (see the invariant in project-reports.spec.ts and the backend's
- * own dedicated tests). This spec covers the CRUD page, linking an initiator
- * to a project, recording a payment on a report, and that the export pipeline
- * still succeeds with initiator data present.
+ * Initiator (יזם) — a documentation-only entity. A report on a project with
+ * an initiator records the initiator's income for the month; it is printed on
+ * the PDF but never enters any financial calculation (see the invariant in
+ * project-reports.spec.ts and the backend's own dedicated tests). This spec
+ * covers the CRUD page, linking an initiator to a project, setting initiator
+ * income on a report, and that the export pipeline still succeeds with
+ * initiator data present.
  *
  * PDF content is deliberately not asserted by extracting text — see
  * `fixtures/pdf.ts` for why; the gating (no initiator → block absent, etc.) is
@@ -111,7 +112,7 @@ dbTest.describe('Initiators CRUD', () => {
   });
 });
 
-dbTest.describe('Initiator link and payments — documentation only', () => {
+dbTest.describe('Initiator link and income — documentation only', () => {
   let clientId: string;
   let subcontractorId: string;
   let projectId: string;
@@ -179,10 +180,10 @@ dbTest.describe('Initiator link and payments — documentation only', () => {
   );
 
   dbTest(
-    'recording an initiator payment on a report does not move the subcontractor remainder',
+    'setting initiator income on the report detail page does not move the subcontractor remainder',
     async ({ page, db }) => {
       const initiator = await db.initiator.create({
-        data: { name: 'Payment Initiator' },
+        data: { name: 'Income Initiator' },
       });
       await db.project.update({
         where: { id: projectId },
@@ -198,33 +199,81 @@ dbTest.describe('Initiator link and payments — documentation only', () => {
         .locator('span.text-success.font-bold.text-lg')
         .textContent();
 
-      await page.getByRole('button', { name: '+ Initiator Payments' }).click();
+      await page
+        .getByRole('button', { name: 'Edit', exact: true })
+        .last()
+        .click();
+      const input = page.locator('#detail-initiator-income');
 
-      const selects = page.getByRole('combobox');
-      await selects.last().selectOption(initiator.id);
-      const amountInputs = page.getByLabel('Amount (₪)');
-      await amountInputs.last().fill('5000');
-      // Exact match — a non-exact "Add" also substring-matches the page's
-      // unrelated "+ Add Income" button.
-      await page.getByRole('button', { name: 'Add', exact: true }).click();
+      // Not above the report's 40,000 income → rejected, nothing stored.
+      await input.fill('1200');
+      await page.getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(page.getByText(/greater than/i)).toBeVisible({
+        timeout: 5000,
+      });
+      const rejected = await db.projectReport.findUnique({
+        where: { id: reportId },
+      });
+      expect(rejected.initiatorIncome).toBeNull();
 
-      await expect(page.getByText('₪5,000')).toBeVisible({ timeout: 5000 });
+      await input.fill('60000');
+      await page.getByRole('button', { name: 'Save', exact: true }).click();
+      await expect(page.getByText('₪60,000')).toBeVisible({ timeout: 5000 });
 
       const remainderAfter = await page
         .locator('span.text-success.font-bold.text-lg')
         .textContent();
       expect(remainderAfter).toBe(remainderBefore);
 
-      const payments = await db.initiatorPayment.findMany({
-        where: { projectReportId: reportId },
+      const saved = await db.projectReport.findUnique({
+        where: { id: reportId },
       });
-      expect(payments).toHaveLength(1);
-      expect(Number(payments[0].amount)).toBe(5000);
+      expect(Number(saved.initiatorIncome)).toBe(60000);
     },
   );
 
   dbTest(
-    'exporting a report with an initiator payment still produces a valid PDF',
+    "PDF export is blocked until the report's initiator income is set",
+    async ({ page, db }) => {
+      const initiator = await db.initiator.create({
+        data: { name: 'Gating Initiator' },
+      });
+      await db.project.update({
+        where: { id: projectId },
+        data: { initiatorId: initiator.id },
+      });
+
+      await page.goto(`${BASE}/reports`);
+      await page.waitForLoadState('networkidle');
+      await page.getByRole('button', { name: /Initiator Test Client/ }).click();
+      await page.getByRole('button', { name: 'Export PDF' }).first().click();
+
+      await expect(
+        page.getByText(/set this report's initiator income/i),
+      ).toBeVisible({
+        timeout: 5000,
+      });
+      await expect(
+        page.getByRole('dialog', { name: 'Export PDF' }),
+      ).toBeHidden();
+
+      await db.projectReport.update({
+        where: { id: reportId },
+        data: { initiatorIncome: 60000 },
+      });
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+      await page.getByRole('button', { name: /Initiator Test Client/ }).click();
+      await page.getByRole('button', { name: 'Export PDF' }).first().click();
+
+      await expect(
+        page.getByRole('dialog', { name: 'Export PDF' }),
+      ).toBeVisible();
+    },
+  );
+
+  dbTest(
+    'exporting a report with initiator income still produces a valid PDF',
     async ({ page, db }) => {
       const initiator = await db.initiator.create({
         data: { name: 'Export Initiator' },
@@ -233,13 +282,11 @@ dbTest.describe('Initiator link and payments — documentation only', () => {
         where: { id: projectId },
         data: { initiatorId: initiator.id },
       });
-      await db.initiatorPayment.create({
-        data: {
-          projectReportId: reportId,
-          initiatorId: initiator.id,
-          amount: 5000,
-          description: 'Land acquisition',
-        },
+      // Export refuses to run once the project has an initiator unless the
+      // report's own initiatorIncome is set (and greater than its income).
+      await db.projectReport.update({
+        where: { id: reportId },
+        data: { initiatorIncome: 60000 },
       });
 
       await page.goto(`${BASE}/reports`);

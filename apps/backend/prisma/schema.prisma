@@ -46,14 +46,14 @@ model Project {
   @@map("projects")
 }
 
-/// A project's initiator (יזם) — documentation only. Payments to an initiator
-/// never enter any financial calculation; see InitiatorPayment.
+/// A project's initiator (יזם) — documentation only. Never enters any
+/// financial calculation; a report on its project records the initiator's
+/// figure for the month as ProjectReport.initiatorIncome.
 model Initiator {
   id   String @id @default(cuid())
   name String @unique
 
   projects Project[]
-  payments InitiatorPayment[]
 
   @@map("initiators")
 }
@@ -101,33 +101,20 @@ model ProjectReport {
   subcontractorId String
   date            DateTime @db.Date
   profitMargin    Decimal  @db.Decimal(5, 2)
+  /// Optional — only relevant for, and only ever shown/settable on, a report
+  /// whose project has an initiator (יזם). Never enters any financial
+  /// calculation on its own; PDF export refuses to run without it once the
+  /// project has an initiator, and it must always exceed the report's own
+  /// income.
+  initiatorIncome Decimal? @db.Decimal(12, 2)
 
-  project           Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  subcontractor     Subcontractor         @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
-  supplierPayments  SupplierPayment[]
-  incomeEntries     ProjectReportIncome[]
-  initiatorPayments InitiatorPayment[]
+  project          Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subcontractor    Subcontractor         @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+  supplierPayments SupplierPayment[]
+  incomeEntries    ProjectReportIncome[]
 
   @@unique([projectId, date])
   @@map("project_reports")
-}
-
-/// A documentation-only payment to a project's initiator (יזם). Never enters
-/// any financial calculation — recorded and displayed, nothing else.
-/// Deliberately missing isFuture/vatPercentage: those exist on SupplierPayment
-/// to drive VAT resolution, machinery a documentation-only row does not need.
-model InitiatorPayment {
-  id              String    @id @default(cuid())
-  projectReportId String
-  initiatorId     String
-  amount          Decimal   @db.Decimal(12, 2)
-  date            DateTime? @db.Date
-  description     String?
-
-  projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
-  initiator     Initiator     @relation(fields: [initiatorId], references: [id], onDelete: Cascade)
-
-  @@map("initiator_payments")
 }
 
 model ProjectReportIncome {

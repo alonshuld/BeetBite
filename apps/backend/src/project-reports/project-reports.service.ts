@@ -22,7 +22,8 @@ import { ProjectReportNotFoundError } from './errors/project-report-not-found.ex
 import { UpdateProjectReportDto } from './dto/update-project-report.dto';
 import { MonthQueryDto } from 'src/common/month-query.dto';
 import { SupplierNotFoundError } from 'src/suppliers/errors/supplier-not-found.error';
-import { InitiatorNotFoundError } from 'src/initiators/errors/initiator-not-found.error';
+import { InitiatorIncomeNotAllowedError } from './errors/initiator-income-not-allowed.error';
+import { InitiatorIncomeTooLowError } from './errors/initiator-income-too-low.error';
 import { IncomeEntryResponseDto } from './dto/income-entry-response.dto';
 import { CreateIncomeEntryDto } from './dto/create-income-entry.dto';
 import { UpdateIncomeEntryDto } from './dto/update-income-entry.dto';
@@ -51,15 +52,6 @@ const REPORT_INCLUDE = {
       amount: true,
       includesVat: true,
       supplier: { select: { id: true, name: true } },
-    },
-  },
-  initiatorPayments: {
-    select: {
-      id: true,
-      amount: true,
-      date: true,
-      description: true,
-      initiator: { select: { id: true, name: true } },
     },
   },
 } as const;
@@ -152,6 +144,51 @@ export class ProjectReportsService {
     };
   }
 
+  /**
+   * `initiatorIncome` is only ever meaningful alongside a project that has an
+   * initiator, and always has to exceed the report's own income — enforced
+   * here rather than via class-validator since both rules need data (the
+   * project, the income total) that a DTO alone can't see.
+   */
+  private async validateInitiatorIncome(
+    projectId: string,
+    initiatorIncome: number,
+    totalIncome: number,
+  ): Promise<void> {
+    const project = await this.prismaService.project.findUnique({
+      where: { id: projectId },
+      select: { initiatorId: true },
+    });
+    if (project && !project.initiatorId) {
+      throw new InitiatorIncomeNotAllowedError();
+    }
+    if (initiatorIncome <= totalIncome) {
+      throw new InitiatorIncomeTooLowError();
+    }
+  }
+
+  /**
+   * The per-entry income endpoints change a report's total without going
+   * through `update`, so they must hold the same line: whatever initiator
+   * income is already stored has to stay above the resulting income total.
+   */
+  private assertIncomeBelowStoredInitiatorIncome(
+    initiatorIncome: Prisma.Decimal | null | undefined,
+    newTotalIncome: number,
+  ): void {
+    if (initiatorIncome && initiatorIncome.toNumber() <= newTotalIncome) {
+      throw new InitiatorIncomeTooLowError();
+    }
+  }
+
+  private async sumIncome(reportId: string): Promise<number> {
+    const { _sum } = await this.prismaService.projectReportIncome.aggregate({
+      where: { projectReportId: reportId },
+      _sum: { amount: true },
+    });
+    return _sum.amount?.toNumber() ?? 0;
+  }
+
   async create(
     createProjectReportDto: CreateProjectReportDto,
   ): Promise<ProjectReportListItemDto> {
@@ -159,12 +196,24 @@ export class ProjectReportsService {
       createProjectReportDto,
     );
 
+    if (enriched.initiatorIncome !== undefined) {
+      await this.validateInitiatorIncome(
+        enriched.projectId,
+        enriched.initiatorIncome,
+        enriched.incomeEntries.reduce((sum, e) => sum + e.amount, 0),
+      );
+    }
+
     try {
       const created = await this.prismaService.$transaction(async (tx) => {
         const report = await tx.projectReport.create({
           data: {
             date: new Date(enriched.date),
             profitMargin: new Prisma.Decimal(enriched.profitMargin),
+            initiatorIncome:
+              enriched.initiatorIncome !== undefined
+                ? new Prisma.Decimal(enriched.initiatorIncome)
+                : undefined,
             project: { connect: { id: enriched.projectId } },
             subcontractor: { connect: { id: enriched.subcontractorId } },
             incomeEntries: {
@@ -185,16 +234,6 @@ export class ProjectReportsService {
                 })),
               },
             },
-            initiatorPayments: {
-              createMany: {
-                data: (enriched.initiatorPayments ?? []).map((ip) => ({
-                  initiatorId: ip.initiatorId,
-                  amount: ip.amount,
-                  date: ip.date ? new Date(ip.date) : null,
-                  description: ip.description?.trim() || null,
-                })),
-              },
-            },
           },
           include: REPORT_INCLUDE,
         });
@@ -210,12 +249,8 @@ export class ProjectReportsService {
       if (!(error instanceof PrismaClientKnownRequestError)) throw error;
 
       switch (error.code) {
-        case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED: {
-          const fieldName = (error.meta?.field_name as string) ?? '';
-          if (fieldName.toLowerCase().includes('initiatorid'))
-            throw new InitiatorNotFoundError();
+        case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
           throw new SupplierNotFoundError();
-        }
         case PRISMA_ERROR_CODES.NOT_FOUND: {
           const model = (error.meta?.model as string) ?? '';
           if (model.toLowerCase().includes('project'))
@@ -423,15 +458,6 @@ export class ProjectReportsService {
               supplier: { select: { id: true, name: true } },
             },
           },
-          initiatorPayments: {
-            select: {
-              id: true,
-              amount: true,
-              date: true,
-              description: true,
-              initiator: { select: { id: true, name: true } },
-            },
-          },
           subcontractor: {
             select: {
               id: true,
@@ -475,10 +501,45 @@ export class ProjectReportsService {
   ): Promise<ProjectReportListItemDto> {
     const existing = await this.prismaService.projectReport.findUnique({
       where: { id },
-      select: { projectId: true, date: true },
+      select: { projectId: true, date: true, initiatorIncome: true },
     });
 
     if (!existing) throw new ProjectReportNotFoundError(id);
+
+    const storedInitiatorIncome = existing.initiatorIncome?.toNumber() ?? null;
+    const initiatorIncomeChanging =
+      updateProjectReportDto.initiatorIncome !== undefined;
+    // Changing the income entries alone can also break the invariant against
+    // an initiatorIncome saved earlier, so that case is re-checked too.
+    if (
+      initiatorIncomeChanging ||
+      (storedInitiatorIncome !== null && updateProjectReportDto.incomeEntries)
+    ) {
+      // incomeEntries may be omitted on an update that only touches other
+      // fields — the current total then has to come from what's already
+      // stored, not from an empty replacement list.
+      const totalIncome = updateProjectReportDto.incomeEntries
+        ? updateProjectReportDto.incomeEntries.reduce(
+            (sum, e) => sum + e.amount,
+            0,
+          )
+        : ((
+            await this.prismaService.projectReportIncome.aggregate({
+              where: { projectReportId: id },
+              _sum: { amount: true },
+            })
+          )._sum.amount?.toNumber() ?? 0);
+
+      if (initiatorIncomeChanging) {
+        await this.validateInitiatorIncome(
+          existing.projectId,
+          updateProjectReportDto.initiatorIncome as number,
+          totalIncome,
+        );
+      } else if ((storedInitiatorIncome as number) <= totalIncome) {
+        throw new InitiatorIncomeTooLowError();
+      }
+    }
 
     const enriched = await this.enrichCreateProjectReportDto({
       ...updateProjectReportDto,
@@ -487,7 +548,6 @@ export class ProjectReportsService {
         updateProjectReportDto.date ?? existing.date.toISOString().slice(0, 10),
       incomeEntries: updateProjectReportDto.incomeEntries ?? [],
       supplierPayments: updateProjectReportDto.supplierPayments ?? [],
-      initiatorPayments: updateProjectReportDto.initiatorPayments ?? [],
     });
 
     try {
@@ -496,6 +556,10 @@ export class ProjectReportsService {
         data: {
           date: new Date(enriched.date),
           profitMargin: new Prisma.Decimal(enriched.profitMargin),
+          initiatorIncome:
+            updateProjectReportDto.initiatorIncome !== undefined
+              ? new Prisma.Decimal(updateProjectReportDto.initiatorIncome)
+              : undefined,
           subcontractor: { connect: { id: enriched.subcontractorId } },
           incomeEntries: updateProjectReportDto.incomeEntries
             ? {
@@ -522,22 +586,6 @@ export class ProjectReportsService {
                   },
                 }
               : undefined,
-          initiatorPayments:
-            updateProjectReportDto.initiatorPayments !== undefined
-              ? {
-                  deleteMany: {},
-                  createMany: {
-                    data: updateProjectReportDto.initiatorPayments.map(
-                      (ip) => ({
-                        initiatorId: ip.initiatorId,
-                        amount: ip.amount,
-                        date: ip.date ? new Date(ip.date) : null,
-                        description: ip.description?.trim() || null,
-                      }),
-                    ),
-                  },
-                }
-              : undefined,
         },
         include: REPORT_INCLUDE,
       });
@@ -550,12 +598,8 @@ export class ProjectReportsService {
       if (!(error instanceof PrismaClientKnownRequestError)) throw error;
 
       switch (error.code) {
-        case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED: {
-          const fieldName = (error.meta?.field_name as string) ?? '';
-          if (fieldName.toLowerCase().includes('initiatorid'))
-            throw new InitiatorNotFoundError();
+        case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
           throw new SupplierNotFoundError();
-        }
         case PRISMA_ERROR_CODES.NOT_FOUND: {
           const model = (error.meta?.model as string) ?? '';
           if (model.toLowerCase().includes('projectreport'))
@@ -603,9 +647,16 @@ export class ProjectReportsService {
     // Verify report exists
     const report = await this.prismaService.projectReport.findUnique({
       where: { id: reportId },
-      select: { id: true },
+      select: { id: true, initiatorIncome: true },
     });
     if (!report) throw new ProjectReportNotFoundError(reportId);
+
+    if (report.initiatorIncome) {
+      this.assertIncomeBelowStoredInitiatorIncome(
+        report.initiatorIncome,
+        (await this.sumIncome(reportId)) + dto.amount,
+      );
+    }
 
     const entry = await this.prismaService.projectReportIncome.create({
       data: {
@@ -629,6 +680,26 @@ export class ProjectReportsService {
     entryId: string,
     dto: UpdateIncomeEntryDto,
   ): Promise<IncomeEntryResponseDto> {
+    if (dto.amount !== undefined) {
+      const current = await this.prismaService.projectReportIncome.findUnique({
+        where: { id: entryId },
+        select: {
+          amount: true,
+          projectReportId: true,
+          projectReport: { select: { initiatorIncome: true } },
+        },
+      });
+      // A missing entry falls through to the update, which raises the 404.
+      if (current?.projectReport.initiatorIncome) {
+        this.assertIncomeBelowStoredInitiatorIncome(
+          current.projectReport.initiatorIncome,
+          (await this.sumIncome(current.projectReportId)) -
+            current.amount.toNumber() +
+            dto.amount,
+        );
+      }
+    }
+
     try {
       const entry = await this.prismaService.projectReportIncome.update({
         where: { id: entryId },

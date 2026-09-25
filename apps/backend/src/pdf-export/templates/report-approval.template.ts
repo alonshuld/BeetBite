@@ -19,11 +19,6 @@ export interface ReportApprovalSupplierRow {
   amount: number;
 }
 
-export interface ReportApprovalInitiatorRow {
-  description: string;
-  amount: number;
-}
-
 /**
  * What the Reports screen shows for a project on top of the approval figures.
  * Only the client-simulated export supplies it, so the single-report
@@ -64,10 +59,10 @@ export interface ReportApprovalData {
   /**
    * Absent (not empty) when the project has no initiator — the whole
    * initiator block is then omitted entirely, not rendered with a zero row.
-   * Present with an empty `rows` array when there is an initiator but no
-   * payments this month: the name still prints.
+   * `income` is the report's own `initiatorIncome` — the caller guarantees it
+   * is set whenever `initiator` is non-null (export refuses to run otherwise).
    */
-  initiator: { name: string; rows: ReportApprovalInitiatorRow[] } | null;
+  initiator: { name: string; income: number | null } | null;
   totalIncome: number;
   totalAfterProfit: number;
   paymentExclVat: number;
@@ -98,8 +93,7 @@ const LABELS = {
     supplierInvoice: 'חשבונית ספקים (ללא מע"מ)',
     supplierTotal: 'סה"כ קיזוזי ספקים',
     initiator: 'יזם:',
-    initiatorPaymentDescription: 'תיאור',
-    initiatorPaymentAmount: 'סכום',
+    initiatorIncome: 'הכנסה מיזם:',
     monthlySummary: 'סיכום חודשי',
     totalIncome: 'סה"כ הכנסות',
     totalAfterProfit: 'סה"כ הכנסות לאחר קיזוז רווח קבלני',
@@ -134,8 +128,7 @@ const LABELS = {
     supplierInvoice: 'Supplier Invoice (excl. VAT)',
     supplierTotal: 'Total Supplier Deductions',
     initiator: 'Initiator:',
-    initiatorPaymentDescription: 'Description',
-    initiatorPaymentAmount: 'Amount',
+    initiatorIncome: 'Initiator Income:',
     monthlySummary: 'Monthly Summary',
     totalIncome: 'Total Income',
     totalAfterProfit: 'Total Income After Profit Cut',
@@ -362,31 +355,14 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
     .join('');
 
   // No initiator on the project → the whole block is absent, not an empty
-  // heading or a zero row. Initiator with no payments this month → the name
-  // still prints, only the payment rows are conditional.
+  // heading or a zero row.
   const initiatorInfoRowHtml = data.initiator
     ? `<div class="info-row"><span class="label">${t.initiator}</span><span>${escapeHtml(data.initiator.name)}</span></div>`
     : '';
 
-  const initiatorTableHtml =
-    data.initiator && data.initiator.rows.length > 0
-      ? `<table>
-      <thead>
-        <tr>
-          <th>${t.initiatorPaymentDescription}</th>
-          <th>${t.initiatorPaymentAmount}</th>
-        </tr>
-      </thead>
-      <tbody>${data.initiator.rows
-        .map(
-          (row) => `
-        <tr>
-          <td>${escapeHtml(row.description)}</td>
-          <td class="amount">${money(row.amount)}</td>
-        </tr>`,
-        )
-        .join('')}</tbody>
-    </table>`
+  const initiatorIncomeRowHtml =
+    data.initiator && data.initiator.income != null
+      ? `<div class="info-row"><span class="label">${t.initiatorIncome}</span><span>${money(data.initiator.income)}</span></div>`
       : '';
 
   // Empty when the caller has no approval text (the simulated export), so the
@@ -443,6 +419,7 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
       <div class="info-row"><span class="label">${t.approvedFor}</span><span>${approvedForValue}${simulatedBadgeHtml}</span></div>
       ${infoRowsHtml}
       ${initiatorInfoRowHtml}
+      ${initiatorIncomeRowHtml}
     </div>
 
     <table>
@@ -475,8 +452,6 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
         </tr>
       </tfoot>
     </table>
-
-    ${initiatorTableHtml}
 
     <div class="lower">
       <div class="summary-box">

@@ -17,10 +17,12 @@ export interface ProjectReport {
   incomeEntries: IncomeEntry[];
   supplierPayments: SupplierPaymentRow[];
   /**
-   * Documentation-only payments to the project's initiator this month, if it
-   * has one. Never enters any financial calculation.
+   * Income the project's initiator (יזם) reports for this month. Null unless
+   * set. Only meaningful when the project has an initiator, and only
+   * relevant for PDF export — required (and always greater than
+   * `totalIncome`) once the project has one, or export is refused.
    */
-  initiatorPayments: InitiatorPaymentRow[];
+  initiatorIncome: number | null;
   project: {
     id: string;
     name: string;
@@ -44,14 +46,6 @@ export interface SupplierPaymentRow {
   effectiveTotal?: number;
 }
 
-export interface InitiatorPaymentRow {
-  id: string;
-  initiator: { id: string; name: string };
-  amount: number;
-  date?: string | null;
-  description?: string | null;
-}
-
 export interface ProjectReportDetail {
   id: string;
   date: string;
@@ -62,7 +56,7 @@ export interface ProjectReportDetail {
   project: { id: string; name: string; initiatorName: string | null };
   subcontractor: { id: string; name: string; payment: number };
   supplierPayments: SupplierPaymentRow[];
-  initiatorPayments: InitiatorPaymentRow[];
+  initiatorIncome: number | null;
 }
 
 // Matches backend CreateProjectReportDto
@@ -77,12 +71,7 @@ export interface CreateProjectReportDto {
     amount: number;
     date: string;
   }[];
-  initiatorPayments?: {
-    initiatorId: string;
-    amount: number;
-    date?: string;
-    description?: string;
-  }[];
+  initiatorIncome?: number;
 }
 
 export type UpdateProjectReportDto = Partial<CreateProjectReportDto>;

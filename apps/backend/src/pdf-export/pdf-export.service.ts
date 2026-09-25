@@ -10,12 +10,13 @@ import { ExportClientSimulatedPdfDto } from './dto/export-client-simulated-pdf.d
 import { CompanySettingsIncompleteError } from './errors/company-settings-incomplete.error';
 import { VatRateNotConfiguredError } from './errors/vat-rate-not-configured.error';
 import { NoReportsForExportError } from './errors/no-reports-for-export.error';
+import { InitiatorIncomeRequiredError } from './errors/initiator-income-required.error';
+import { InitiatorIncomeTooLowError } from '../project-reports/errors/initiator-income-too-low.error';
 import {
   renderReportApprovalHtml,
   ReportApprovalData,
   ReportApprovalRow,
   ReportApprovalSupplierRow,
-  ReportApprovalInitiatorRow,
 } from './templates/report-approval.template';
 import {
   ClientSimulatedProjectRow,
@@ -66,6 +67,8 @@ export class PdfExportService {
       throw new NoReportsForExportError(dto.projectReportId);
     }
 
+    this.assertInitiatorIncomeSet(report);
+
     // A report is unique per project and month, so its own date is the month
     // the document covers — the caller does not supply one.
     const month = report.date;
@@ -78,13 +81,15 @@ export class PdfExportService {
       report.subcontractor.id,
     );
 
+    const approvedFor = dto.approvedFor?.trim() ?? '';
+
     const data = this.buildReportApprovalData({
       report,
       effectiveMargin: report.profitMargin,
       vatPercentage,
       subcontractor,
       companySettings,
-      approvedFor: dto.approvedFor,
+      approvedFor,
       // Typed in the export dialog for this document only. The project's own
       // description is edited from the projects screen and is not touched
       // here; an empty field simply prints no description row.
@@ -99,11 +104,14 @@ export class PdfExportService {
 
     // Only a *successful* render counts as an export — persisting before this
     // point would remember text from a request that never actually produced
-    // a document.
-    await this.projectsService.updateLastApprovedFor(
-      report.project.id,
-      dto.approvedFor,
-    );
+    // a document. An empty field is not remembered: it would wipe the text
+    // the dialog prefills next time.
+    if (approvedFor) {
+      await this.projectsService.updateLastApprovedFor(
+        report.project.id,
+        approvedFor,
+      );
+    }
 
     return { pdf, month };
   }
@@ -160,6 +168,8 @@ export class PdfExportService {
     const detailPages: ReportApprovalData[] = [];
     const summaryRows: ClientSimulatedProjectRow[] = [];
     for (const report of clientReports) {
+      this.assertInitiatorIncomeSet(report);
+
       const subcontractor = await this.subcontractorsService.findOne(
         report.subcontractor.id,
       );
@@ -228,6 +238,23 @@ export class PdfExportService {
     // Simulated margins are never persisted — nothing to write back here,
     // unlike the single-report export's approvedFor memory.
     return { pdf, month };
+  }
+
+  /**
+   * `initiatorIncome` only matters once a project has an initiator — a report
+   * on a project with no initiator is exportable with it left unset. Once
+   * there is an initiator, the export refuses to run without it: the value
+   * only ever exists for this document.
+   */
+  private assertInitiatorIncomeSet(report: ProjectReportListItemDto): void {
+    if (!report.project.initiatorName) return;
+    if (report.initiatorIncome == null) {
+      throw new InitiatorIncomeRequiredError();
+    }
+    // Backstop: income can grow after the initiator income was saved.
+    if (report.initiatorIncome <= report.totalIncome) {
+      throw new InitiatorIncomeTooLowError();
+    }
   }
 
   private async getCompleteCompanySettings(): Promise<CompanySettingsForPdf> {
@@ -303,15 +330,9 @@ export class PdfExportService {
       }));
 
     // No initiator on the project → absent entirely, not an empty heading or
-    // a zero row. Initiator with no payments this month → name still prints,
-    // only the rows are conditional on there being payments.
-    const initiatorRows: ReportApprovalInitiatorRow[] =
-      report.initiatorPayments.map((payment) => ({
-        description: payment.description ?? '',
-        amount: payment.amount,
-      }));
+    // a zero row.
     const initiator = report.project.initiatorName
-      ? { name: report.project.initiatorName, rows: initiatorRows }
+      ? { name: report.project.initiatorName, income: report.initiatorIncome }
       : null;
 
     const supplierTotal = supplierRows.reduce(
