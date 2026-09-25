@@ -29,6 +29,7 @@ pnpm test:e2e           # Integration tests (testcontainers, requires Docker)
 pnpm test -- --testPathPattern=projects.service
 
 # Database
+pnpm db:sync                   # migrate deploy + generate + fail on any DB≠schema drift (runs before dev/start:dev/start:debug; CI runs it on an empty Postgres)
 pnpx prisma migrate dev        # Apply migrations and regenerate client
 pnpx prisma migrate deploy     # Apply migrations (CI/production)
 pnpx prisma generate           # Regenerate client without migrating
