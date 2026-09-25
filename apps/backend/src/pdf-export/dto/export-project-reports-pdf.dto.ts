@@ -23,15 +23,15 @@ export class ExportProjectReportsPdfDto {
   })
   projectReportId!: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(500)
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'ישראל ישראלי',
     description:
-      'Name of the person or company this project report is for; the project name is appended to it on the document',
+      'Name of the person or company this project report is for; the project name is appended to it on the document. Omit or leave empty to print the project name alone.',
   })
-  approvedFor!: string;
+  approvedFor?: string;
 
   @IsOptional()
   @IsString()

@@ -637,41 +637,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/initiators/payments": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Create a new initiator payment */
-    post: operations["InitiatorPaymentsController_create"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/initiators/payments/{id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /** Update an initiator payment */
-    put: operations["InitiatorPaymentsController_update"];
-    post?: never;
-    /** Delete an initiator payment by ID */
-    delete: operations["InitiatorPaymentsController_remove"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1249,6 +1214,11 @@ export interface components {
        * @example true
        */
       isPaid?: boolean;
+      /**
+       * @description The day the money actually moved. Distinct from serviceDate, which is the month being settled.
+       * @example 2026-01-17
+       */
+      paymentDate?: string;
     };
     ProjectClientAssignmentResponseDto: {
       /** @example 123e4567-e89b-12d3-a456-426614174000 */
@@ -1348,33 +1318,6 @@ export interface components {
        */
       tag?: Record<string, never> | null;
     };
-    CreateInitiatorPaymentDto: {
-      /**
-       * @description Unique identifier for the project report associated with this payment
-       * @example 123e4567-e89b-12d3-a456-426614174000
-       */
-      projectReportId: string;
-      /**
-       * @description Unique identifier for the initiator receiving the payment
-       * @example 123e4567-e89b-12d3-a456-426614174000
-       */
-      initiatorId: string;
-      /**
-       * @description The amount paid to the initiator for this project
-       * @example 5000
-       */
-      amount: number;
-      /**
-       * @description The exact date the payment was made to the initiator
-       * @example 2026-01-10
-       */
-      date?: string;
-      /**
-       * @description Optional description for this payment
-       * @example Consulting fee
-       */
-      description?: string;
-    };
     CreateProjectReportDto: {
       /**
        * @description ID of the project this report belongs to
@@ -1401,8 +1344,11 @@ export interface components {
       incomeEntries: components["schemas"]["CreateIncomeEntryDto"][];
       /** @description A list of the payments made to suppliers for their work on this project this month */
       supplierPayments: components["schemas"]["CreateSupplierPaymentDto"][];
-      /** @description Documentation-only payments to the project's initiator this month, if it has one. Never enters any financial calculation. Omit entirely for a project with no initiator. */
-      initiatorPayments?: components["schemas"]["CreateInitiatorPaymentDto"][];
+      /**
+       * @description Income the project's initiator (יזם) reports for this month. Only meaningful when the project has an initiator, and must be greater than the report's own income; only relevant for PDF export.
+       * @example 120000
+       */
+      initiatorIncome?: number;
     };
     NestedClientDto: {
       /**
@@ -1506,42 +1452,6 @@ export interface components {
        */
       effectiveTotal?: number;
     };
-    NestedInitiatorDto: {
-      /**
-       * @description Unique identifier for the initiator
-       * @example 123e4567-e89b-12d3-a456-426614174000
-       */
-      id: string;
-      /**
-       * @description Name of the initiator
-       * @example Yaniv Goldman
-       */
-      name: string;
-    };
-    NestedInitiatorPaymentDto: {
-      /**
-       * @description Unique identifier for the initiator payment
-       * @example 123e4567-e89b-12d3-a456-426614174000
-       */
-      id: string;
-      /** @description Information on the initiator */
-      initiator: components["schemas"]["NestedInitiatorDto"];
-      /**
-       * @description The amount of money paid to the initiator
-       * @example 3000
-       */
-      amount: number;
-      /**
-       * @description The date the payment was made
-       * @example 2026-01-10T00:00:00.000Z
-       */
-      date?: Record<string, never> | null;
-      /**
-       * @description Optional description for this payment
-       * @example Consulting fee
-       */
-      description?: Record<string, never> | null;
-    };
     ProjectReportListItemDto: {
       /**
        * @description Unique identifier for the project report
@@ -1572,8 +1482,11 @@ export interface components {
       incomeEntries: components["schemas"]["IncomeEntryResponseDto"][];
       /** @description Supplier payments for this report */
       supplierPayments: components["schemas"]["NestedSupplierPaymentDto"][];
-      /** @description Documentation-only payments to the project's initiator this month, if it has one */
-      initiatorPayments: components["schemas"]["NestedInitiatorPaymentDto"][];
+      /**
+       * @description Income the project's initiator (יזם) reports for this month. Null unless set; only relevant for PDF export, and only meaningful when the project has an initiator.
+       * @example 120000
+       */
+      initiatorIncome: Record<string, never> | null;
     };
     UpdateIncomeEntryDto: {
       /**
@@ -1674,8 +1587,11 @@ export interface components {
       incomeEntries: components["schemas"]["IncomeEntryResponseDto"][];
       /** @description The payments made to suppliers for their work on the project that month */
       supplierPayments: components["schemas"]["NestedSupplierPaymentDto"][];
-      /** @description Documentation-only payments to the project's initiator this month, if it has one */
-      initiatorPayments: components["schemas"]["NestedInitiatorPaymentDto"][];
+      /**
+       * @description Income the project's initiator (יזם) reports for this month. Null unless set; only relevant for PDF export, and only meaningful when the project has an initiator.
+       * @example 120000
+       */
+      initiatorIncome: Record<string, never> | null;
       /** @description Subcontractor information for the given month's project report */
       subcontractor: components["schemas"]["NestedSubcontractorWithPaymentDto"];
     };
@@ -1701,12 +1617,15 @@ export interface components {
        * @example 15.5
        */
       profitMargin?: number;
-      /** @description A list of the payments made to suppliers for their work on this project this month */
-      supplierPayments: components["schemas"]["CreateSupplierPaymentDto"][];
-      /** @description Documentation-only payments to the project's initiator this month, if it has one. Never enters any financial calculation. Omit entirely for a project with no initiator. */
-      initiatorPayments?: components["schemas"]["CreateInitiatorPaymentDto"][];
+      /**
+       * @description Income the project's initiator (יזם) reports for this month. Only meaningful when the project has an initiator, and must be greater than the report's own income; only relevant for PDF export.
+       * @example 120000
+       */
+      initiatorIncome?: number;
       /** @description Income entries for this report. Omit to leave existing income rows untouched; when provided, replaces all of them (at least one required). */
       incomeEntries?: components["schemas"]["CreateIncomeEntryDto"][];
+      /** @description Supplier payments for this report. Omit to leave existing payments untouched; when provided, replaces all of them. */
+      supplierPayments?: components["schemas"]["CreateSupplierPaymentDto"][];
     };
     OpeningBalanceDto: {
       /**
@@ -2070,10 +1989,10 @@ export interface components {
        */
       projectReportId: string;
       /**
-       * @description Name of the person or company this project report is for; the project name is appended to it on the document
+       * @description Name of the person or company this project report is for; the project name is appended to it on the document. Omit or leave empty to print the project name alone.
        * @example ישראל ישראלי
        */
-      approvedFor: string;
+      approvedFor?: string;
       /**
        * @description Description printed on this document only. It is never written back to the project — the project's own description is edited from the projects screen.
        * @example עבודות שלד + גמר
@@ -2143,62 +2062,6 @@ export interface components {
        * @example Yaniv Goldman
        */
       name: string;
-    };
-    InitiatorPaymentResponseDto: {
-      /**
-       * @description Unique identifier for the initiator payment
-       * @example 123e4567-e89b-12d3-a456-426614174000
-       */
-      id: string;
-      /**
-       * @description ID of the project report this payment is recorded against
-       * @example 123e4567-e89b-12d3-a456-426614174000
-       */
-      projectReportId: string;
-      /** @description Information about the initiator receiving the payment */
-      initiator: components["schemas"]["NestedInitiatorDto"];
-      /**
-       * @description The amount paid to the initiator for this payment
-       * @example 5000
-       */
-      amount: number;
-      /**
-       * @description The date the payment was made
-       * @example 2026-01-10T00:00:00.000Z
-       */
-      date: Record<string, never> | null;
-      /**
-       * @description Optional description for this payment
-       * @example Consulting fee
-       */
-      description: Record<string, never> | null;
-    };
-    UpdateInitiatorPaymentDto: {
-      /**
-       * @description Unique identifier for the project report associated with this payment
-       * @example 123e4567-e89b-12d3-a456-426614174000
-       */
-      projectReportId: string;
-      /**
-       * @description Unique identifier for the initiator receiving the payment
-       * @example 123e4567-e89b-12d3-a456-426614174000
-       */
-      initiatorId: string;
-      /**
-       * @description The amount paid to the initiator for this project
-       * @example 5000
-       */
-      amount: number;
-      /**
-       * @description The exact date the payment was made to the initiator
-       * @example 2026-01-10
-       */
-      date?: string;
-      /**
-       * @description Optional description for this payment
-       * @example Consulting fee
-       */
-      description?: string;
     };
   };
   responses: never;
@@ -4241,113 +4104,6 @@ export interface operations {
         content?: never;
       };
       /** @description Initiator not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  InitiatorPaymentsController_create: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CreateInitiatorPaymentDto"];
-      };
-    };
-    responses: {
-      /** @description The initiator payment has been successfully created. */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["InitiatorPaymentResponseDto"];
-        };
-      };
-      /** @description Invalid input data for creating initiator payment. */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Conflict occurred while creating initiator payment. */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  InitiatorPaymentsController_update: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description Initiator payment ID */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["UpdateInitiatorPaymentDto"];
-      };
-    };
-    responses: {
-      /** @description The updated initiator payment. */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["InitiatorPaymentResponseDto"];
-        };
-      };
-      /** @description Invalid input data for updating initiator payment. */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Initiator payment not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  InitiatorPaymentsController_remove: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description Initiator payment ID */
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description The initiator payment has been successfully deleted. */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Initiator payment not found */
       404: {
         headers: {
           [name: string]: unknown;

@@ -78,16 +78,6 @@ dbTest.describe('PDF export', () => {
     ).toBeVisible();
   }
 
-  /** Counts export requests, so "nothing was sent" is assertable. */
-  async function countExportRequests(page: Page): Promise<() => number> {
-    let count = 0;
-    await page.route(EXPORT_ROUTE, async (route) => {
-      count += 1;
-      await route.fallback();
-    });
-    return () => count;
-  }
-
   // ==========================================================================
   // Modal mechanics
   // ==========================================================================
@@ -103,20 +93,29 @@ dbTest.describe('PDF export', () => {
     ).toContainText('Export Project');
   });
 
-  dbTest('a blank "Approved For" sends no request', async ({ page, db }) => {
-    void db;
-    await openExportModal(page);
-    const exportCount = await countExportRequests(page);
+  dbTest(
+    'a blank "Approved For" is optional — the export still downloads',
+    async ({ page, db }) => {
+      await openExportModal(page);
 
-    // Whitespace only — handleExport trims before its emptiness check.
-    await page.getByLabel('Approved For').fill('   ');
-    await page.getByRole('button', { name: 'Save' }).click();
+      // Whitespace only — trimmed to nothing, so the field is left out.
+      await page.getByLabel('Approved For').fill('   ');
+      const [request, download] = await Promise.all([
+        page.waitForRequest(EXPORT_ROUTE),
+        page.waitForEvent('download'),
+        page.getByRole('button', { name: 'Save' }).click(),
+      ]);
 
-    await expect(
-      page.getByRole('dialog', { name: 'Export PDF' }),
-    ).toBeVisible();
-    expect(exportCount()).toBe(0);
-  });
+      expect(request.postDataJSON()).not.toHaveProperty('approvedFor');
+      expectValidPdf(await readFile(await download.path()));
+
+      // Nothing typed, nothing remembered for the next export's prefill.
+      const project = await db.project.findUnique({
+        where: { id: projectId },
+      });
+      expect(project.lastApprovedFor).toBeNull();
+    },
+  );
 
   // ==========================================================================
   // Happy path

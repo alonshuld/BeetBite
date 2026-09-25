@@ -12,6 +12,8 @@ import { ProjectNotFoundError } from 'src/projects/errors/project-not-found.exce
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
 import { SupplierNotFoundError } from 'src/suppliers/errors/supplier-not-found.error';
 import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
+import { InitiatorIncomeNotAllowedError } from './errors/initiator-income-not-allowed.error';
+import { InitiatorIncomeTooLowError } from './errors/initiator-income-too-low.error';
 
 describe('ProjectReportsService', () => {
   let service: ProjectReportsService;
@@ -35,9 +37,14 @@ describe('ProjectReportsService', () => {
       delete: jest.fn(),
     },
     projectReportIncome: {
+      findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      aggregate: jest.fn(),
+    },
+    project: {
+      findUnique: jest.fn(),
     },
   };
 
@@ -135,55 +142,44 @@ describe('ProjectReportsService', () => {
       expect(mockTx.projectReport.create).toHaveBeenCalledTimes(1);
     });
 
-    it('creates initiator payments via createMany when provided', async () => {
-      const mockReport = makeProjectReport();
-      mockTx.projectReport.create.mockResolvedValue(mockReport);
+    describe('initiatorIncome validation', () => {
+      it('rejects initiatorIncome when the project has no initiator', async () => {
+        mockPrismaService.project.findUnique.mockResolvedValue({
+          initiatorId: null,
+        });
 
-      await service.create({
-        ...baseCreateDto,
-        initiatorPayments: [
-          {
-            initiatorId: 'initiator-1',
-            amount: 5000,
-            date: '2024-05-10',
-            description: 'Consulting fee',
-          },
-        ],
+        await expect(
+          service.create({ ...baseCreateDto, initiatorIncome: 20000 }),
+        ).rejects.toThrow(InitiatorIncomeNotAllowedError);
       });
 
-      expect(mockTx.projectReport.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            initiatorPayments: {
-              createMany: {
-                data: [
-                  {
-                    initiatorId: 'initiator-1',
-                    amount: 5000,
-                    date: new Date('2024-05-10'),
-                    description: 'Consulting fee',
-                  },
-                ],
-              },
-            },
-          }) as Record<string, unknown>,
-        }),
-      );
-    });
+      it('rejects initiatorIncome that does not exceed the report income', async () => {
+        mockPrismaService.project.findUnique.mockResolvedValue({
+          initiatorId: 'initiator-1',
+        });
 
-    it('creates no initiator payments when the field is omitted', async () => {
-      const mockReport = makeProjectReport();
-      mockTx.projectReport.create.mockResolvedValue(mockReport);
+        await expect(
+          service.create({ ...baseCreateDto, initiatorIncome: 10000 }),
+        ).rejects.toThrow(InitiatorIncomeTooLowError);
+      });
 
-      await service.create(baseCreateDto);
+      it('stores initiatorIncome when the project has an initiator and the value exceeds income', async () => {
+        mockPrismaService.project.findUnique.mockResolvedValue({
+          initiatorId: 'initiator-1',
+        });
+        const mockReport = makeProjectReport();
+        mockTx.projectReport.create.mockResolvedValue(mockReport);
 
-      expect(mockTx.projectReport.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            initiatorPayments: { createMany: { data: [] } },
-          }) as Record<string, unknown>,
-        }),
-      );
+        await service.create({ ...baseCreateDto, initiatorIncome: 20000 });
+
+        expect(mockTx.projectReport.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              initiatorIncome: new Prisma.Decimal(20000),
+            }) as Record<string, unknown>,
+          }),
+        );
+      });
     });
 
     it('should inherit subcontractorId from previous month when not provided', async () => {
@@ -496,61 +492,37 @@ describe('ProjectReportsService', () => {
       expect(result.subcontractor.payment).toBe(7000); // 10000 - 0 - 3000
     });
 
-    // 🔴 An initiator payment is documentation only. If it ever leaked into
+    // 🔴 initiatorIncome is documentation only. If it ever leaked into
     // subPayment/profit, this is what would catch it.
-    it('does not change profit or subcontractorPayment when initiator payments are present', async () => {
-      const withoutInitiator = makeFullReport({
-        supplierPayments: [
-          {
-            id: 'cp-1',
-            amount: new Prisma.Decimal('2000'),
-            supplier: { id: 'corp-1', name: 'Corp 1' },
-          },
-        ],
-        initiatorPayments: [],
-      });
-      const withInitiator = makeFullReport({
-        supplierPayments: [
-          {
-            id: 'cp-1',
-            amount: new Prisma.Decimal('2000'),
-            supplier: { id: 'corp-1', name: 'Corp 1' },
-          },
-        ],
-        initiatorPayments: [
-          {
-            id: 'ip-1',
-            amount: new Prisma.Decimal('5000'),
-            date: null,
-            description: 'Consulting fee',
-            initiator: { id: 'initiator-1', name: 'Yaniv Goldman' },
-          },
-        ],
+    it('does not change profit or subcontractorPayment when initiatorIncome is set', async () => {
+      const supplierPayments = [
+        {
+          id: 'cp-1',
+          amount: new Prisma.Decimal('2000'),
+          supplier: { id: 'corp-1', name: 'Corp 1' },
+        },
+      ];
+      const withoutInitiatorIncome = makeFullReport({ supplierPayments });
+      const withInitiatorIncome = makeFullReport({
+        supplierPayments,
+        initiatorIncome: new Prisma.Decimal('50000'),
       });
 
       mockPrismaService.projectReport.findUnique
         .mockResolvedValueOnce({ date: new Date('2024-05-01T00:00:00.000Z') })
-        .mockResolvedValueOnce(withoutInitiator);
+        .mockResolvedValueOnce(withoutInitiatorIncome);
       const before = await service.findOne('report-1');
 
       mockPrismaService.projectReport.findUnique
         .mockResolvedValueOnce({ date: new Date('2024-05-01T00:00:00.000Z') })
-        .mockResolvedValueOnce(withInitiator);
+        .mockResolvedValueOnce(withInitiatorIncome);
       const after = await service.findOne('report-1');
 
       expect(after.profit).toBe(before.profit);
       expect(after.subcontractor.payment).toBe(before.subcontractor.payment);
       expect(after.totalIncome).toBe(before.totalIncome);
-      // The payment is recorded and displayed, just never arithmetic.
-      expect(after.initiatorPayments).toEqual([
-        {
-          id: 'ip-1',
-          amount: 5000,
-          date: null,
-          description: 'Consulting fee',
-          initiator: { id: 'initiator-1', name: 'Yaniv Goldman' },
-        },
-      ]);
+      // The figure is recorded and displayed, just never arithmetic.
+      expect(after.initiatorIncome).toBe(50000);
     });
   });
 
@@ -615,6 +587,91 @@ describe('ProjectReportsService', () => {
       ],
     };
 
+    describe('initiatorIncome validation', () => {
+      it('rejects initiatorIncome when the project has no initiator', async () => {
+        mockPrismaService.project.findUnique.mockResolvedValue({
+          initiatorId: null,
+        });
+
+        await expect(
+          service.update('report-1', { ...updateDto, initiatorIncome: 20000 }),
+        ).rejects.toThrow(InitiatorIncomeNotAllowedError);
+      });
+
+      it("rejects initiatorIncome that does not exceed the update's own incomeEntries total", async () => {
+        mockPrismaService.project.findUnique.mockResolvedValue({
+          initiatorId: 'initiator-1',
+        });
+
+        await expect(
+          service.update('report-1', { ...updateDto, initiatorIncome: 10000 }),
+        ).rejects.toThrow(InitiatorIncomeTooLowError);
+      });
+
+      it('falls back to the stored income total when incomeEntries is omitted from the update', async () => {
+        mockPrismaService.project.findUnique.mockResolvedValue({
+          initiatorId: 'initiator-1',
+        });
+        mockPrismaService.projectReportIncome.aggregate.mockResolvedValue({
+          _sum: { amount: new Prisma.Decimal(15000) },
+        });
+
+        await expect(
+          service.update('report-1', {
+            projectId: updateDto.projectId,
+            subcontractorId: updateDto.subcontractorId,
+            date: updateDto.date,
+            profitMargin: updateDto.profitMargin,
+            supplierPayments: updateDto.supplierPayments,
+            initiatorIncome: 15000,
+          }),
+        ).rejects.toThrow(InitiatorIncomeTooLowError);
+        expect(
+          mockPrismaService.projectReportIncome.aggregate,
+        ).toHaveBeenCalledWith({
+          where: { projectReportId: 'report-1' },
+          _sum: { amount: true },
+        });
+      });
+
+      it('rejects raising income entries above a previously stored initiatorIncome', async () => {
+        mockPrismaService.projectReport.findUnique.mockResolvedValue({
+          projectId: updateDto.projectId,
+          date: new Date(updateDto.date),
+          initiatorIncome: new Prisma.Decimal(60000),
+        });
+
+        await expect(
+          service.update('report-1', {
+            ...updateDto,
+            incomeEntries: [{ amount: 70000, incomeDate: undefined }],
+          }),
+        ).rejects.toThrow(InitiatorIncomeTooLowError);
+        expect(mockPrismaService.projectReport.update).not.toHaveBeenCalled();
+      });
+
+      it('stores initiatorIncome when valid', async () => {
+        mockPrismaService.project.findUnique.mockResolvedValue({
+          initiatorId: 'initiator-1',
+        });
+        const mockReport = makeProjectReport();
+        mockPrismaService.projectReport.update.mockResolvedValue(mockReport);
+
+        await service.update('report-1', {
+          ...updateDto,
+          initiatorIncome: 20000,
+        });
+
+        expect(mockPrismaService.projectReport.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              initiatorIncome: new Prisma.Decimal(20000),
+            }) as Record<string, unknown>,
+          }),
+        );
+      });
+    });
+
     it('should update report and use deleteMany+createMany for supplier payments', async () => {
       const mockReport = makeProjectReport();
       mockPrismaService.projectReport.update.mockResolvedValue(mockReport);
@@ -630,6 +687,24 @@ describe('ProjectReportsService', () => {
                 data: expect.any(Array) as unknown,
               }) as Record<string, unknown>,
             },
+          }) as Record<string, unknown>,
+        }),
+      );
+    });
+
+    it('leaves existing supplier payments untouched when supplierPayments is omitted', async () => {
+      mockPrismaService.projectReport.update.mockResolvedValue(
+        makeProjectReport(),
+      );
+      const { supplierPayments: _omitted, ...withoutSuppliers } = updateDto;
+      void _omitted;
+
+      await service.update('report-1', withoutSuppliers);
+
+      expect(mockPrismaService.projectReport.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.not.objectContaining({
+            supplierPayments: expect.anything() as unknown,
           }) as Record<string, unknown>,
         }),
       );
@@ -779,6 +854,70 @@ describe('ProjectReportsService', () => {
           },
         },
       );
+    });
+  });
+
+  describe('income entries vs a stored initiatorIncome', () => {
+    beforeEach(() => {
+      mockPrismaService.projectReportIncome.findUnique.mockReset();
+      mockPrismaService.projectReportIncome.aggregate.mockReset();
+    });
+
+    it('rejects adding an entry that lifts income to the initiator income', async () => {
+      mockPrismaService.projectReport.findUnique.mockResolvedValue({
+        id: 'report-1',
+        initiatorIncome: new Prisma.Decimal(60000),
+      });
+      mockPrismaService.projectReportIncome.aggregate.mockResolvedValue({
+        _sum: { amount: new Prisma.Decimal(40000) },
+      });
+
+      await expect(
+        service.addIncomeEntry('report-1', { amount: 20000 }),
+      ).rejects.toThrow(InitiatorIncomeTooLowError);
+      expect(
+        mockPrismaService.projectReportIncome.create,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('rejects raising an entry so income reaches the initiator income', async () => {
+      mockPrismaService.projectReportIncome.findUnique.mockResolvedValue({
+        amount: new Prisma.Decimal(40000),
+        projectReportId: 'report-1',
+        projectReport: { initiatorIncome: new Prisma.Decimal(60000) },
+      });
+      mockPrismaService.projectReportIncome.aggregate.mockResolvedValue({
+        _sum: { amount: new Prisma.Decimal(40000) },
+      });
+      mockPrismaService.projectReportIncome.update.mockClear();
+
+      await expect(
+        service.updateIncomeEntry('entry-1', { amount: 60000 }),
+      ).rejects.toThrow(InitiatorIncomeTooLowError);
+      expect(
+        mockPrismaService.projectReportIncome.update,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('allows raising an entry while income stays below the initiator income', async () => {
+      mockPrismaService.projectReportIncome.findUnique.mockResolvedValue({
+        amount: new Prisma.Decimal(40000),
+        projectReportId: 'report-1',
+        projectReport: { initiatorIncome: new Prisma.Decimal(60000) },
+      });
+      mockPrismaService.projectReportIncome.aggregate.mockResolvedValue({
+        _sum: { amount: new Prisma.Decimal(40000) },
+      });
+      mockPrismaService.projectReportIncome.update.mockResolvedValue({
+        id: 'entry-1',
+        amount: new Prisma.Decimal(59999),
+        incomeDate: null,
+        tag: null,
+      });
+
+      await expect(
+        service.updateIncomeEntry('entry-1', { amount: 59999 }),
+      ).resolves.toMatchObject({ amount: 59999 });
     });
   });
 

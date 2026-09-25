@@ -19,15 +19,9 @@ import {
   useUpdateSupplierPaymentMutation,
   useDeleteSupplierPaymentMutation,
 } from "@/api/endpoints/supplier-payments";
-import {
-  useCreateInitiatorPaymentMutation,
-  useUpdateInitiatorPaymentMutation,
-  useDeleteInitiatorPaymentMutation,
-} from "@/api/endpoints/initiator-payments";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
-import { useGetInitiatorsQuery } from "@/api/endpoints/initiators";
 import { StatCard } from "@/components/molecules/StatCard";
 import {
   ButtonGhost,
@@ -75,7 +69,6 @@ export default function ProjectReportsPage() {
   const { data: projects = [] } = useGetProjectsQuery();
   const { data: subcontractors = [] } = useGetSubcontractorsQuery();
   const { data: suppliers = [] } = useGetSuppliersQuery();
-  const { data: initiators = [] } = useGetInitiatorsQuery();
   const [createReport, { isLoading: creating }] =
     useCreateProjectReportMutation();
   const [updateReport, { isLoading: updating }] =
@@ -90,11 +83,6 @@ export default function ProjectReportsPage() {
   const [updateCorp, { isLoading: updatingCorp }] =
     useUpdateSupplierPaymentMutation();
   const [deleteCorp] = useDeleteSupplierPaymentMutation();
-  const [createInit, { isLoading: addingInit }] =
-    useCreateInitiatorPaymentMutation();
-  const [updateInit, { isLoading: updatingInit }] =
-    useUpdateInitiatorPaymentMutation();
-  const [deleteInit] = useDeleteInitiatorPaymentMutation();
   const [deleteReport, { isLoading: deletingReport }] =
     useDeleteProjectReportMutation();
 
@@ -134,6 +122,7 @@ export default function ProjectReportsPage() {
   ]);
   const [profitMarginPercent, setProfitMarginPercent] = useState("");
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
+  const [initiatorIncome, setInitiatorIncome] = useState("");
 
   // Inline income entry editing state
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
@@ -155,18 +144,10 @@ export default function ProjectReportsPage() {
   const [newCorpAmount, setNewCorpAmount] = useState("");
   const [newCorpDate, setNewCorpDate] = useState(todayISO);
 
-  // Inline initiator payment editing state — documentation only, gated
-  // on the project actually having an initiator linked.
-  const [editingInitId, setEditingInitId] = useState<string | null>(null);
-  const [editInitInitiatorId, setEditInitInitiatorId] = useState("");
-  const [editInitAmount, setEditInitAmount] = useState("");
-  const [editInitDate, setEditInitDate] = useState("");
-  const [editInitDescription, setEditInitDescription] = useState("");
-  const [addingNewInit, setAddingNewInit] = useState(false);
-  const [newInitInitiatorId, setNewInitInitiatorId] = useState("");
-  const [newInitAmount, setNewInitAmount] = useState("");
-  const [newInitDate, setNewInitDate] = useState(todayISO);
-  const [newInitDescription, setNewInitDescription] = useState("");
+  // Inline initiator income editing state — gated on the project actually
+  // having an initiator linked.
+  const [editingInitiatorIncome, setEditingInitiatorIncome] = useState(false);
+  const [editInitiatorIncome, setEditInitiatorIncome] = useState("");
 
   function openAdd() {
     setEditingId(null);
@@ -175,6 +156,7 @@ export default function ProjectReportsPage() {
     setIncomeEntries([{ amount: "", incomeDate: "", tag: "" }]);
     setProfitMarginPercent("");
     setCorpPayments([]);
+    setInitiatorIncome("");
     setModalOpen(true);
   }
 
@@ -192,6 +174,9 @@ export default function ProjectReportsPage() {
     );
     setProfitMarginPercent(String(report.profitMargin));
     setCorpPayments([]);
+    setInitiatorIncome(
+      report.initiatorIncome != null ? String(report.initiatorIncome) : "",
+    );
     setModalOpen(true);
   }
 
@@ -217,7 +202,7 @@ export default function ProjectReportsPage() {
       );
       const removedEntries = originalEntries.filter((e) => !keptIds.has(e.id));
 
-      await Promise.all([
+      const entryResults = await Promise.all([
         ...validEntries.map((e) =>
           e.id
             ? updateIncomeEntry({
@@ -235,15 +220,22 @@ export default function ProjectReportsPage() {
         ),
         ...removedEntries.map((e) => deleteIncomeEntry(e.id)),
       ]);
+      // A rejected write has already toasted its reason — keep the modal open
+      // so the edit isn't lost and doesn't look saved.
+      if (entryResults.some((r) => "error" in r)) return;
 
       const dto: UpdateProjectReportDto = {
         projectId,
         subcontractorId: subcontractorId || undefined,
         date: reportMonth + "-01",
         profitMargin: Number(profitMarginPercent) || undefined,
-        supplierPayments: corpPaymentsDto,
+        // Supplier rows are only editable when creating; the backend replaces
+        // the whole list whenever the key is present, so an edit must leave
+        // it out or every existing payment is deleted.
+        initiatorIncome: initiatorIncome ? Number(initiatorIncome) : undefined,
       };
-      await updateReport({ id: editingId, ...dto });
+      const result = await updateReport({ id: editingId, ...dto });
+      if ("error" in result) return;
     } else {
       const dto: CreateProjectReportDto = {
         projectId,
@@ -256,8 +248,10 @@ export default function ProjectReportsPage() {
         })),
         profitMargin: Number(profitMarginPercent) || undefined,
         supplierPayments: corpPaymentsDto,
+        initiatorIncome: initiatorIncome ? Number(initiatorIncome) : undefined,
       };
-      await createReport(dto);
+      const result = await createReport(dto);
+      if ("error" in result) return;
     }
     setModalOpen(false);
   }
@@ -369,47 +363,28 @@ export default function ProjectReportsPage() {
     setNewCorpDate(todayISO());
   }
 
-  function startEditInit(ip: {
-    id: string;
-    initiator: { id: string };
-    amount: number;
-    date?: string | null;
-    description?: string | null;
-  }) {
-    setEditingInitId(ip.id);
-    setEditInitInitiatorId(ip.initiator.id);
-    setEditInitAmount(String(ip.amount));
-    setEditInitDate(ip.date ? ip.date.slice(0, 10) : todayISO());
-    setEditInitDescription(ip.description ?? "");
+  function startEditInitiatorIncome() {
+    setEditInitiatorIncome(
+      currentReport?.initiatorIncome != null
+        ? String(currentReport.initiatorIncome)
+        : "",
+    );
+    setEditingInitiatorIncome(true);
   }
 
-  async function saveInitEdit(ipId: string) {
-    if (!currentReport) return;
-    await updateInit({
-      id: ipId,
-      projectReportId: currentReport.id,
-      initiatorId: editInitInitiatorId,
-      amount: Number(editInitAmount),
-      date: editInitDate,
-      description: editInitDescription.trim() || undefined,
+  async function saveInitiatorIncomeEdit() {
+    if (!currentReport || !editInitiatorIncome) return;
+    const result = await updateReport({
+      id: currentReport.id,
+      projectId,
+      subcontractorId: currentReport.subcontractor.id,
+      date: currentReport.date.slice(0, 10),
+      profitMargin: currentReport.profitMargin,
+      initiatorIncome: Number(editInitiatorIncome),
     });
-    setEditingInitId(null);
-  }
-
-  async function saveNewInit() {
-    if (!currentReport || !newInitInitiatorId || !newInitAmount) return;
-    await createInit({
-      projectReportId: currentReport.id,
-      initiatorId: newInitInitiatorId,
-      amount: Number(newInitAmount),
-      date: newInitDate,
-      description: newInitDescription.trim() || undefined,
-    });
-    setAddingNewInit(false);
-    setNewInitInitiatorId("");
-    setNewInitAmount("");
-    setNewInitDate(todayISO());
-    setNewInitDescription("");
+    // A rejected write has already toasted its reason — stay in edit mode.
+    if ("error" in result) return;
+    setEditingInitiatorIncome(false);
   }
 
   const saving = creating || updating;
@@ -825,160 +800,33 @@ export default function ProjectReportsPage() {
               </ButtonGhost>
             )}
 
-            {/* Documentation-only initiator payments, gated on the
-                project actually having an initiator linked. Styled distinctly
+            {/* Initiator income — documentation only, gated on the project
+                actually having an initiator linked. Styled distinctly
                 (muted/italic) so it reads as not part of the calc above. */}
             {project?.initiatorId && (
               <>
                 <div className="border-t border-dashed border-border" />
-                <span className="text-label font-semibold text-text-dim">
-                  {t("initiatorPayments")}
-                </span>
-
-                {currentReport.initiatorPayments.map((ip) => {
-                  if (editingInitId === ip.id) {
-                    return (
-                      <div key={ip.id} className="flex gap-2 items-end">
-                        <Select
-                          value={editInitInitiatorId}
-                          onChange={(e) =>
-                            setEditInitInitiatorId(e.target.value)
-                          }
-                          className="flex-1"
-                        >
-                          <option value="">— {t("initiator")} —</option>
-                          {initiators.map((init) => (
-                            <option key={init.id} value={init.id}>
-                              {init.name}
-                            </option>
-                          ))}
-                        </Select>
-                        <Input
-                          label={t("amountILS")}
-                          type="number"
-                          min={0}
-                          value={editInitAmount}
-                          onChange={(e) => setEditInitAmount(e.target.value)}
-                          className="w-28"
-                        />
-                        <Input
-                          label={t("date")}
-                          type="date"
-                          value={editInitDate}
-                          onChange={(e) => setEditInitDate(e.target.value)}
-                          className="w-36"
-                        />
-                        <Input
-                          placeholder={t(
-                            "initiatorPaymentDescriptionPlaceholder",
-                          )}
-                          value={editInitDescription}
-                          onChange={(e) =>
-                            setEditInitDescription(e.target.value)
-                          }
-                          className="flex-1"
-                        />
-                        <div className="flex gap-1 mb-[1px]">
-                          <ButtonPrimary
-                            onClick={() => void saveInitEdit(ip.id)}
-                            className="text-xs py-1 px-3"
-                            disabled={updatingInit}
-                          >
-                            {t("save")}
-                          </ButtonPrimary>
-                          <ButtonGhost
-                            onClick={() => setEditingInitId(null)}
-                            className="text-xs py-1 px-3"
-                          >
-                            {t("cancel")}
-                          </ButtonGhost>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div
-                      key={ip.id}
-                      className="flex justify-between items-center text-text-dim italic"
-                    >
-                      <span className="text-xs">
-                        {ip.description || t("initiator")}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium">
-                          ₪{ip.amount.toLocaleString("he-IL")}
-                        </span>
-                        <ButtonGhost
-                          onClick={() => startEditInit(ip)}
-                          className="text-xs py-0.5 px-2"
-                        >
-                          {t("edit")}
-                        </ButtonGhost>
-                        <ButtonDanger
-                          onClick={() => void deleteInit(ip.id)}
-                          className="text-xs py-0.5 px-2"
-                        >
-                          {t("remove")}
-                        </ButtonDanger>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {addingNewInit ? (
+                {editingInitiatorIncome ? (
                   <div className="flex gap-2 items-end">
-                    <Select
-                      value={newInitInitiatorId}
-                      onChange={(e) => setNewInitInitiatorId(e.target.value)}
-                      className="flex-1"
-                    >
-                      <option value="">— {t("initiator")} —</option>
-                      {initiators.map((init) => (
-                        <option key={init.id} value={init.id}>
-                          {init.name}
-                        </option>
-                      ))}
-                    </Select>
                     <Input
-                      label={t("amountILS")}
+                      id="detail-initiator-income"
+                      label={t("initiatorIncome")}
                       type="number"
                       min={0}
-                      value={newInitAmount}
-                      onChange={(e) => setNewInitAmount(e.target.value)}
-                      className="w-28"
-                    />
-                    <Input
-                      label={t("date")}
-                      type="date"
-                      value={newInitDate}
-                      onChange={(e) => setNewInitDate(e.target.value)}
-                      className="w-36"
-                    />
-                    <Input
-                      placeholder={t("initiatorPaymentDescriptionPlaceholder")}
-                      value={newInitDescription}
-                      onChange={(e) => setNewInitDescription(e.target.value)}
+                      value={editInitiatorIncome}
+                      onChange={(e) => setEditInitiatorIncome(e.target.value)}
                       className="flex-1"
                     />
                     <div className="flex gap-1 mb-[1px]">
                       <ButtonPrimary
-                        onClick={() => void saveNewInit()}
+                        onClick={() => void saveInitiatorIncomeEdit()}
                         className="text-xs py-1 px-3"
-                        disabled={
-                          addingInit || !newInitInitiatorId || !newInitAmount
-                        }
+                        disabled={updating || !editInitiatorIncome}
                       >
-                        {t("add")}
+                        {t("save")}
                       </ButtonPrimary>
                       <ButtonGhost
-                        onClick={() => {
-                          setAddingNewInit(false);
-                          setNewInitInitiatorId("");
-                          setNewInitAmount("");
-                          setNewInitDate(todayISO());
-                          setNewInitDescription("");
-                        }}
+                        onClick={() => setEditingInitiatorIncome(false)}
                         className="text-xs py-1 px-3"
                       >
                         {t("cancel")}
@@ -986,13 +834,26 @@ export default function ProjectReportsPage() {
                     </div>
                   </div>
                 ) : (
-                  <ButtonGhost
-                    onClick={() => setAddingNewInit(true)}
-                    className="text-xs py-1 px-3 self-start"
-                  >
-                    + {t("initiatorPayments")}
-                  </ButtonGhost>
+                  <div className="flex justify-between items-center text-text-dim italic">
+                    <span className="text-xs">{t("initiatorIncome")}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium">
+                        {currentReport.initiatorIncome != null
+                          ? `₪${currentReport.initiatorIncome.toLocaleString("he-IL")}`
+                          : t("notConfigured")}
+                      </span>
+                      <ButtonGhost
+                        onClick={startEditInitiatorIncome}
+                        className="text-xs py-0.5 px-2"
+                      >
+                        {t("edit")}
+                      </ButtonGhost>
+                    </div>
+                  </div>
                 )}
+                <p className="text-xs text-text-muted">
+                  {t("initiatorIncomeHint")}
+                </p>
               </>
             )}
 
@@ -1058,6 +919,22 @@ export default function ProjectReportsPage() {
               onChange={(e) => setProfitMarginPercent(e.target.value)}
             />
           </FormRow>
+
+          {project?.initiatorId && (
+            <div className="flex flex-col gap-1">
+              <Input
+                id="report-initiator-income"
+                label={t("initiatorIncome")}
+                type="number"
+                min={0}
+                value={initiatorIncome}
+                onChange={(e) => setInitiatorIncome(e.target.value)}
+              />
+              <p className="text-xs text-text-muted">
+                {t("initiatorIncomeHint")}
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">

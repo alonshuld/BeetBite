@@ -20,7 +20,6 @@ import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
-import { useGetInitiatorsQuery } from "@/api/endpoints/initiators";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import {
   ButtonPrimary,
@@ -54,13 +53,6 @@ interface CorpPaymentDraft {
   supplierId: string;
   amount: string;
   date: string;
-}
-
-interface InitiatorPaymentDraft {
-  initiatorId: string;
-  amount: string;
-  date: string;
-  description: string;
 }
 
 interface IncomeEntryDraft {
@@ -103,7 +95,6 @@ export default function ReportsPage() {
   const { data: projects = [] } = useGetProjectsQuery();
   const { data: subcontractors = [] } = useGetSubcontractorsQuery();
   const { data: suppliers = [] } = useGetSuppliersQuery();
-  const { data: initiators = [] } = useGetInitiatorsQuery();
   const [createReport, { isLoading: saving }] =
     useCreateProjectReportMutation();
   const [exportPdf, { isLoading: exporting }] =
@@ -121,9 +112,7 @@ export default function ReportsPage() {
   ]);
   const [profitMarginPercent, setProfitMarginPercent] = useState("");
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
-  const [initiatorPayments, setInitiatorPayments] = useState<
-    InitiatorPaymentDraft[]
-  >([]);
+  const [initiatorIncome, setInitiatorIncome] = useState("");
 
   // Export is per report: a report is already one project for one month, so
   // the dialog asks for the free-text approval line, plus the description to
@@ -135,12 +124,13 @@ export default function ReportsPage() {
   const [exportDescription, setExportDescription] = useState("");
 
   async function handleExport() {
-    if (!exportReport || !approvedFor.trim()) return;
+    if (!exportReport) return;
 
     try {
       const blob = await exportPdf({
         projectReportId: exportReport.id,
-        approvedFor: approvedFor.trim(),
+        // Optional: left blank, the document prints the project name alone.
+        approvedFor: approvedFor.trim() || undefined,
         description: exportDescription.trim() || undefined,
         lang,
       }).unwrap();
@@ -283,7 +273,7 @@ export default function ReportsPage() {
     setIncomeEntries([{ amount: "", incomeDate: "", tag: "" }]);
     setProfitMarginPercent("");
     setCorpPayments([]);
-    setInitiatorPayments([]);
+    setInitiatorIncome("");
     setModalOpen(true);
   }
 
@@ -308,14 +298,7 @@ export default function ReportsPage() {
           amount: Number(cp.amount),
           date: cp.date,
         })),
-      initiatorPayments: initiatorPayments
-        .filter((ip) => ip.initiatorId !== "")
-        .map((ip) => ({
-          initiatorId: ip.initiatorId,
-          amount: Number(ip.amount),
-          date: ip.date || undefined,
-          description: ip.description.trim() || undefined,
-        })),
+      initiatorIncome: initiatorIncome ? Number(initiatorIncome) : undefined,
     };
     await createReport(dto);
     setModalOpen(false);
@@ -352,26 +335,6 @@ export default function ReportsPage() {
   function updateCorpPayment(idx: number, patch: Partial<CorpPaymentDraft>) {
     setCorpPayments((prev) =>
       prev.map((cp, i) => (i === idx ? { ...cp, ...patch } : cp)),
-    );
-  }
-
-  function addInitiatorPayment() {
-    setInitiatorPayments((prev) => [
-      ...prev,
-      { initiatorId: "", amount: "", date: todayISO(), description: "" },
-    ]);
-  }
-
-  function removeInitiatorPayment(idx: number) {
-    setInitiatorPayments((prev) => prev.filter((_, i) => i !== idx));
-  }
-
-  function updateInitiatorPayment(
-    idx: number,
-    patch: Partial<InitiatorPaymentDraft>,
-  ) {
-    setInitiatorPayments((prev) =>
-      prev.map((ip, i) => (i === idx ? { ...ip, ...patch } : ip)),
     );
   }
 
@@ -502,6 +465,13 @@ export default function ReportsPage() {
                       report.project.id,
                     )}
                     onExport={() => {
+                      if (
+                        report.project.initiatorName &&
+                        report.initiatorIncome == null
+                      ) {
+                        toast(t("initiatorIncomeRequiredForExport"), "error");
+                        return;
+                      }
                       const exportProject = projects.find(
                         (p) => p.id === report.project.id,
                       );
@@ -729,77 +699,18 @@ export default function ReportsPage() {
           </div>
 
           {selectedProjectForModal?.initiatorId && (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-label font-semibold text-text-muted">
-                  {t("initiatorPayments")}
-                </span>
-                <ButtonGhost
-                  onClick={addInitiatorPayment}
-                  className="text-xs py-1 px-3"
-                >
-                  + {t("add")}
-                </ButtonGhost>
-              </div>
-
-              {initiatorPayments.map((ip, i) => (
-                <div
-                  key={i}
-                  className="flex flex-col gap-2 p-3 rounded bg-surface-2 border border-border"
-                >
-                  <div className="grid grid-cols-4 gap-2 items-end">
-                    <Select
-                      value={ip.initiatorId}
-                      onChange={(e) =>
-                        updateInitiatorPayment(i, {
-                          initiatorId: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="">— {t("initiator")} —</option>
-                      {initiators.map((init) => (
-                        <option key={init.id} value={init.id}>
-                          {init.name}
-                        </option>
-                      ))}
-                    </Select>
-                    <Input
-                      placeholder={t("amountILS")}
-                      type="number"
-                      min={0}
-                      value={ip.amount}
-                      onChange={(e) =>
-                        updateInitiatorPayment(i, { amount: e.target.value })
-                      }
-                    />
-                    <Input
-                      label={t("date")}
-                      type="date"
-                      value={ip.date}
-                      onChange={(e) =>
-                        updateInitiatorPayment(i, { date: e.target.value })
-                      }
-                    />
-                    <Input
-                      placeholder={t("initiatorPaymentDescriptionPlaceholder")}
-                      value={ip.description}
-                      onChange={(e) =>
-                        updateInitiatorPayment(i, {
-                          description: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <ButtonDanger
-                      onClick={() => removeInitiatorPayment(i)}
-                      className="text-xs py-1 px-3"
-                    >
-                      {t("remove")}
-                    </ButtonDanger>
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-col gap-1">
+              <Input
+                id="report-initiator-income"
+                label={t("initiatorIncome")}
+                type="number"
+                min={0}
+                value={initiatorIncome}
+                onChange={(e) => setInitiatorIncome(e.target.value)}
+              />
+              <p className="text-xs text-text-muted">
+                {t("initiatorIncomeHint")}
+              </p>
             </div>
           )}
         </div>
@@ -1029,27 +940,22 @@ function ProjectSheet({
         />
       </Statement>
 
-      {/* Informational only: an initiator payment never participates in
-          the subtotal above, so it sits outside the account entirely. No
+      {/* Informational only: initiator income never participates in the
+          subtotal above, so it sits outside the account entirely. No
           initiator on the project → this section is absent. */}
       {report.project.initiatorName && (
         <div className="tnum flex flex-col gap-1 border-t border-dashed border-border px-4 py-2.5">
           <span className="text-micro font-semibold text-text-dim">
             {t("initiator")}: {report.project.initiatorName}
           </span>
-          {report.initiatorPayments.map((ip) => (
-            <div
-              key={ip.id}
-              className="flex items-center justify-between gap-3 text-label text-text-dim"
-            >
-              <span className="truncate">
-                {ip.description || t("initiator")}
-              </span>
-              <span className="shrink-0">
-                ₪{ip.amount.toLocaleString("he-IL")}
-              </span>
-            </div>
-          ))}
+          <div className="flex items-center justify-between gap-3 text-label text-text-dim">
+            <span className="truncate">{t("initiatorIncome")}</span>
+            <span className="shrink-0">
+              {report.initiatorIncome != null
+                ? `₪${report.initiatorIncome.toLocaleString("he-IL")}`
+                : t("notConfigured")}
+            </span>
+          </div>
         </div>
       )}
     </div>

@@ -13,7 +13,6 @@ import {
 } from 'class-validator';
 import { CreateSupplierPaymentDto } from './create-supplier-payment.dto';
 import { CreateIncomeEntryDto } from './create-income-entry.dto';
-import { CreateInitiatorPaymentDto } from './create-initiator-payment.dto';
 import { Transform, Type } from 'class-transformer';
 import { normalizeToMonthStartForTransform } from 'src/common/utils/date.utils';
 
@@ -78,14 +77,16 @@ export class CreateProjectReportDto {
   })
   supplierPayments!: CreateSupplierPaymentDto[];
 
+  @IsNumber()
   @IsOptional()
-  @IsArray()
-  @Type(() => CreateInitiatorPaymentDto)
-  @ValidateNested({ each: true })
+  @Min(0)
+  // The column is DECIMAL(12,2); anything larger is a database error, not a
+  // validation error, and surfaces as an opaque 500.
+  @Max(9_999_999_999.99)
   @ApiPropertyOptional({
+    example: 120000,
     description:
-      "Documentation-only payments to the project's initiator this month, if it has one. Never enters any financial calculation. Omit entirely for a project with no initiator.",
-    type: [CreateInitiatorPaymentDto],
+      "Income the project's initiator (יזם) reports for this month. Only meaningful when the project has an initiator, and must be greater than the report's own income; only relevant for PDF export.",
   })
-  initiatorPayments?: CreateInitiatorPaymentDto[];
+  initiatorIncome?: number;
 }
