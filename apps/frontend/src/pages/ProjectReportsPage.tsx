@@ -32,8 +32,11 @@ import {
   Select,
 } from "@/components/atoms";
 import { FormModal, ConfirmModal } from "@/components/organisms/Modal";
+import { ExportReportPdfModal } from "@/components/organisms/ExportReportPdfModal";
+import { isMissingInitiatorIncome } from "@/utils/reportExport";
 import { FormRow } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
+import { useToast } from "@/contexts/useToast";
 import { formatYM, formatISODate } from "@/utils/formatMonth";
 import { Icon } from "@/components/atoms/Icon";
 import { completionBarClass } from "@/utils/completion";
@@ -60,6 +63,7 @@ export default function ProjectReportsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, lang } = useLang();
+  const { toast } = useToast();
   const projectId = id!;
 
   const { month } = useOutletContext<{ month: string }>();
@@ -105,6 +109,16 @@ export default function ProjectReportsPage() {
   );
 
   const [deleteReportOpen, setDeleteReportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+
+  function openExport() {
+    if (!currentReport) return;
+    if (isMissingInitiatorIncome(currentReport)) {
+      toast(t("initiatorIncomeRequiredForExport"), "error");
+      return;
+    }
+    setExportOpen(true);
+  }
 
   async function handleDeleteReport() {
     if (!currentReport) return;
@@ -232,7 +246,13 @@ export default function ProjectReportsPage() {
         // Supplier rows are only editable when creating; the backend replaces
         // the whole list whenever the key is present, so an edit must leave
         // it out or every existing payment is deleted.
-        initiatorIncome: initiatorIncome ? Number(initiatorIncome) : undefined,
+        // Emptying a stored initiator income clears it; left empty on a
+        // report that never had one, the field is simply not sent.
+        initiatorIncome: initiatorIncome
+          ? Number(initiatorIncome)
+          : currentReport?.initiatorIncome != null
+            ? null
+            : undefined,
       };
       const result = await updateReport({ id: editingId, ...dto });
       if ("error" in result) return;
@@ -387,6 +407,21 @@ export default function ProjectReportsPage() {
     setEditingInitiatorIncome(false);
   }
 
+  async function clearInitiatorIncome() {
+    if (!currentReport) return;
+    const result = await updateReport({
+      id: currentReport.id,
+      projectId,
+      subcontractorId: currentReport.subcontractor.id,
+      date: currentReport.date.slice(0, 10),
+      profitMargin: currentReport.profitMargin,
+      initiatorIncome: null,
+    });
+    // A rejected write has already toasted its reason.
+    if ("error" in result) return;
+    setEditingInitiatorIncome(false);
+  }
+
   const saving = creating || updating;
 
   if (isLoading) {
@@ -457,6 +492,13 @@ export default function ProjectReportsPage() {
           </h2>
           {currentReport ? (
             <div className="flex items-center gap-2">
+              <ButtonGhost
+                onClick={openExport}
+                className="h-8 gap-1.5 px-3 text-label"
+              >
+                <Icon name="download" size={13} />
+                {t("exportPdf")}
+              </ButtonGhost>
               <ButtonGhost
                 onClick={() => openEdit(currentReport)}
                 className="h-8 px-3 text-label"
@@ -848,6 +890,15 @@ export default function ProjectReportsPage() {
                       >
                         {t("edit")}
                       </ButtonGhost>
+                      {currentReport.initiatorIncome != null && (
+                        <ButtonDanger
+                          onClick={() => void clearInitiatorIncome()}
+                          className="text-xs py-0.5 px-2"
+                          disabled={updating}
+                        >
+                          {t("remove")}
+                        </ButtonDanger>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1062,6 +1113,11 @@ export default function ProjectReportsPage() {
           )}
         </div>
       </FormModal>
+
+      <ExportReportPdfModal
+        report={exportOpen && currentReport ? currentReport : null}
+        onClose={() => setExportOpen(false)}
+      />
 
       <ConfirmModal
         open={deleteReportOpen}

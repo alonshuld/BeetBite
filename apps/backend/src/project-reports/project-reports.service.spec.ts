@@ -670,6 +670,47 @@ describe('ProjectReportsService', () => {
           }),
         );
       });
+
+      it('clears initiatorIncome on null without validating it', async () => {
+        mockPrismaService.projectReport.findUnique.mockResolvedValue({
+          projectId: updateDto.projectId,
+          date: new Date(updateDto.date),
+          initiatorIncome: new Prisma.Decimal(60000),
+        });
+        mockPrismaService.projectReport.update.mockResolvedValue(
+          makeProjectReport(),
+        );
+
+        // Income above the stored initiator income would be rejected if it
+        // were kept — clearing it removes the constraint.
+        await service.update('report-1', {
+          ...updateDto,
+          incomeEntries: [{ amount: 70000 }],
+          initiatorIncome: null,
+        });
+
+        expect(mockPrismaService.project.findUnique).not.toHaveBeenCalled();
+        expect(mockPrismaService.projectReport.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              initiatorIncome: null,
+            }) as Record<string, unknown>,
+          }),
+        );
+      });
+
+      it('leaves initiatorIncome untouched when omitted', async () => {
+        mockPrismaService.projectReport.update.mockResolvedValue(
+          makeProjectReport(),
+        );
+
+        await service.update('report-1', updateDto);
+
+        const [[args]] = mockPrismaService.projectReport.update.mock.calls as [
+          [{ data: Record<string, unknown> }],
+        ];
+        expect(args.data.initiatorIncome).toBeUndefined();
+      });
     });
 
     it('should update report and use deleteMany+createMany for supplier payments', async () => {

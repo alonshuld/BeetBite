@@ -540,5 +540,79 @@ describe("ProjectsPage", () => {
 
       expect(screen.getByLabelText("Initiator")).toHaveValue("init1");
     });
+
+    it("saves an initiator set on an existing project", async () => {
+      noopMutation.mockClear();
+      renderProjectsPage();
+      await userEvent.click(screen.getAllByTitle("Edit")[0]);
+      await userEvent.selectOptions(
+        screen.getByLabelText("Initiator"),
+        "init1",
+      );
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(noopMutation).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "p1", initiatorId: "init1" }),
+      );
+    });
+  });
+
+  // Projects created before requester and location existed have both stored
+  // as empty strings, so a save used to be refused without any feedback.
+  describe("blocked save", () => {
+    beforeEach(() => {
+      vi.mocked(useGetProjectsQuery).mockReturnValue({
+        data: [{ ...mockProjects[0], requesterName: "", location: "" }],
+        isLoading: false,
+      } as unknown as ReturnType<typeof useGetProjectsQuery>);
+      noopMutation.mockClear();
+    });
+
+    it("says which required fields are missing instead of doing nothing", async () => {
+      renderProjectsPage();
+      await userEvent.click(screen.getAllByTitle("Edit")[0]);
+      await userEvent.selectOptions(
+        screen.getByLabelText("Initiator"),
+        "init1",
+      );
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(noopMutation).not.toHaveBeenCalled();
+      expect(
+        await screen.findByText(
+          "Fill in the required fields: Requester, Location",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Requester")).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      );
+      expect(screen.getByLabelText("Location")).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      );
+      expect(screen.getByLabelText("Name")).not.toHaveAttribute("aria-invalid");
+    });
+
+    it("saves once the missing fields are filled in", async () => {
+      renderProjectsPage();
+      await userEvent.click(screen.getAllByTitle("Edit")[0]);
+      await userEvent.selectOptions(
+        screen.getByLabelText("Initiator"),
+        "init1",
+      );
+      await userEvent.type(screen.getByLabelText("Requester"), "Jane Doe");
+      await userEvent.type(screen.getByLabelText("Location"), "Tel Aviv");
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(noopMutation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "p1",
+          initiatorId: "init1",
+          requesterName: "Jane Doe",
+          location: "Tel Aviv",
+        }),
+      );
+    });
   });
 });

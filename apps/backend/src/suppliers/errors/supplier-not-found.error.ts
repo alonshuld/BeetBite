@@ -14,6 +14,7 @@ export class SupplierNotFoundError extends EntityNotFoundError {
       supplierId
         ? `Supplier with ID ${supplierId} not found`
         : 'Supplier not found',
+      'SUPPLIER_NOT_FOUND',
     );
     this.name = 'SupplierNotFoundError';
   }

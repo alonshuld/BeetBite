@@ -74,7 +74,12 @@ export interface CreateProjectReportDto {
   initiatorIncome?: number;
 }
 
-export type UpdateProjectReportDto = Partial<CreateProjectReportDto>;
+export type UpdateProjectReportDto = Partial<
+  Omit<CreateProjectReportDto, "initiatorIncome">
+> & {
+  /** Omit to leave unchanged; null clears it. */
+  initiatorIncome?: number | null;
+};
 
 export interface AddIncomeEntryDto {
   amount: number;

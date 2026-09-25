@@ -14,6 +14,7 @@ export class InitiatorNotFoundError extends EntityNotFoundError {
       initiatorId
         ? `Initiator with ID ${initiatorId} not found`
         : 'Initiator not found',
+      'INITIATOR_NOT_FOUND',
     );
     this.name = 'InitiatorNotFoundError';
   }

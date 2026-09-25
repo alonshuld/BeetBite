@@ -10,6 +10,7 @@ import { Request, Response } from 'express';
 import { EntityAlreadyExistsError } from '../errors/entity-already-exists.error';
 import { EntityNotFoundError } from '../errors/entity-not-found.error';
 import { EntityError } from '../errors/entity.error';
+import { isCodedError } from '../errors/coded-error';
 
 @Catch()
 export class EntityExceptionFilter implements ExceptionFilter {
@@ -45,6 +46,12 @@ export class EntityExceptionFilter implements ExceptionFilter {
         typeof message === 'string'
           ? message
           : ((message as { message?: string | string[] })?.message ?? message),
+      // A stable code (plus the values its message needs) lets the client
+      // show the error in the user's language; `message` stays English.
+      ...(isCodedError(exception) && {
+        code: exception.code,
+        ...(exception.params && { params: exception.params }),
+      }),
     };
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {

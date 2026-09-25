@@ -11,6 +11,8 @@ export class AssignmentMonthTakenError extends EntityAlreadyExistsError {
   constructor(effectiveFrom: string) {
     super(
       `This project already has a client change effective from ${effectiveFrom}. Edit that one instead of adding a second.`,
+      'ASSIGNMENT_MONTH_TAKEN',
+      { month: effectiveFrom.slice(0, 7) },
     );
     this.name = 'AssignmentMonthTakenError';
   }

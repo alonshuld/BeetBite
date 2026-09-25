@@ -5,7 +5,10 @@ import { EntityNotFoundError } from '../../common/errors/entity-not-found.error'
  */
 export class SubcontractorPaymentNotFoundError extends EntityNotFoundError {
   constructor(subcontractorPaymentId: string) {
-    super(`Subcontractor payment with ID ${subcontractorPaymentId} not found`);
+    super(
+      `Subcontractor payment with ID ${subcontractorPaymentId} not found`,
+      'SUBCONTRACTOR_PAYMENT_NOT_FOUND',
+    );
     this.name = 'SubcontractorPaymentNotFoundError';
   }
 }

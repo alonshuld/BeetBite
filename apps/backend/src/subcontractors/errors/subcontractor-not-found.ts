@@ -9,7 +9,10 @@ export class SubcontractorNotFoundError extends EntityNotFoundError {
    * @param subcontractorId The ID of the subcontractor that was not found
    */
   constructor(subcontractorId: string) {
-    super(`Subcontractor with ID ${subcontractorId} not found`);
+    super(
+      `Subcontractor with ID ${subcontractorId} not found`,
+      'SUBCONTRACTOR_NOT_FOUND',
+    );
     this.name = 'SubcontractorNotFoundError';
   }
 }

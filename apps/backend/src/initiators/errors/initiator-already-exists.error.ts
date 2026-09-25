@@ -5,7 +5,11 @@ import { EntityAlreadyExistsError } from '../../common/errors/entity-already-exi
  */
 export class InitiatorAlreadyExistsError extends EntityAlreadyExistsError {
   constructor(initiatorName: string) {
-    super(`Initiator with name ${initiatorName} already exists`);
+    super(
+      `Initiator with name ${initiatorName} already exists`,
+      'INITIATOR_ALREADY_EXISTS',
+      { name: initiatorName },
+    );
     this.name = 'InitiatorAlreadyExistsError';
   }
 }

@@ -507,13 +507,19 @@ export class ProjectReportsService {
     if (!existing) throw new ProjectReportNotFoundError(id);
 
     const storedInitiatorIncome = existing.initiatorIncome?.toNumber() ?? null;
+    // null clears the value: nothing left to validate against the income.
+    const initiatorIncomeClearing =
+      updateProjectReportDto.initiatorIncome === null;
     const initiatorIncomeChanging =
-      updateProjectReportDto.initiatorIncome !== undefined;
+      updateProjectReportDto.initiatorIncome !== undefined &&
+      !initiatorIncomeClearing;
     // Changing the income entries alone can also break the invariant against
     // an initiatorIncome saved earlier, so that case is re-checked too.
     if (
       initiatorIncomeChanging ||
-      (storedInitiatorIncome !== null && updateProjectReportDto.incomeEntries)
+      (storedInitiatorIncome !== null &&
+        !initiatorIncomeClearing &&
+        updateProjectReportDto.incomeEntries)
     ) {
       // incomeEntries may be omitted on an update that only touches other
       // fields — the current total then has to come from what's already
@@ -541,8 +547,10 @@ export class ProjectReportsService {
       }
     }
 
+    const { initiatorIncome, ...updateWithoutInitiatorIncome } =
+      updateProjectReportDto;
     const enriched = await this.enrichCreateProjectReportDto({
-      ...updateProjectReportDto,
+      ...updateWithoutInitiatorIncome,
       projectId: existing.projectId,
       date:
         updateProjectReportDto.date ?? existing.date.toISOString().slice(0, 10),
@@ -557,9 +565,9 @@ export class ProjectReportsService {
           date: new Date(enriched.date),
           profitMargin: new Prisma.Decimal(enriched.profitMargin),
           initiatorIncome:
-            updateProjectReportDto.initiatorIncome !== undefined
-              ? new Prisma.Decimal(updateProjectReportDto.initiatorIncome)
-              : undefined,
+            initiatorIncome === undefined || initiatorIncome === null
+              ? initiatorIncome
+              : new Prisma.Decimal(initiatorIncome),
           subcontractor: { connect: { id: enriched.subcontractorId } },
           incomeEntries: updateProjectReportDto.incomeEntries
             ? {

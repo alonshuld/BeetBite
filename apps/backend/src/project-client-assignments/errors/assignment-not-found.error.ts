@@ -14,6 +14,7 @@ export class AssignmentNotFoundError extends EntityNotFoundError {
       assignmentId
         ? `Project-client assignment with ID ${assignmentId} not found`
         : 'Project-client assignment not found',
+      'ASSIGNMENT_NOT_FOUND',
     );
     this.name = 'AssignmentNotFoundError';
   }
