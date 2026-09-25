@@ -11,6 +11,8 @@ import { SubcontractorNotFoundError } from '../src/subcontractors/errors/subcont
 import { execSync } from 'child_process';
 import * as path from 'path';
 import { PrismaModule } from 'src/prisma/prisma.module';
+import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
+import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 
 /**
  * Integration tests for SubcontractorPaymentsService.
@@ -57,7 +59,12 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
         }),
         PrismaModule,
       ],
-      providers: [SubcontractorPaymentsService, ProjectReportsService],
+      providers: [
+        SubcontractorPaymentsService,
+        ProjectReportsService,
+        ProjectClientAssignmentsService,
+        VatRatesService,
+      ],
     }).compile();
 
     service = module.get<SubcontractorPaymentsService>(
