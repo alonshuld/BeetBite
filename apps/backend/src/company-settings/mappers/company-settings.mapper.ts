@@ -19,5 +19,7 @@ export const toCompanySettingsResponse = (
   addressCity: settings.addressCity,
   logo: settings.logo,
   signature: settings.signature,
+  pdfPrimaryColor: settings.pdfPrimaryColor,
+  pdfSecondaryColor: settings.pdfSecondaryColor,
   updatedAt: settings.updatedAt.toISOString(),
 });

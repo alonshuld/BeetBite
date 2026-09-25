@@ -55,6 +55,8 @@ describe('CompanySettingsController', () => {
         addressCity: null,
         logo: null,
         signature: null,
+        pdfPrimaryColor: '#1f2a44',
+        pdfSecondaryColor: '#c9a24b',
         updatedAt: '2026-07-31T10:39:08.000Z',
       };
       mockCompanySettingsService.findOne.mockResolvedValue(expectedResult);
@@ -90,6 +92,8 @@ describe('CompanySettingsController', () => {
         addressCity: null,
         logo: null,
         signature: null,
+        pdfPrimaryColor: '#1f2a44',
+        pdfSecondaryColor: '#c9a24b',
         updatedAt: '2026-07-31T10:39:08.000Z',
       };
       mockCompanySettingsService.upsert.mockResolvedValue(expectedResult);

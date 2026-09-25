@@ -191,17 +191,21 @@ model VatRate {
 }
 
 model CompanySettings {
-  id            String   @id @default("company-settings")
-  name          String?
-  description   String?
-  companyNumber String?
-  phone         String?
-  email         String?
-  addressStreet String?
-  addressCity   String?
-  logo          String?
-  signature     String?
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default("company-settings")
+  name              String?
+  description       String?
+  companyNumber     String?
+  phone             String?
+  email             String?
+  addressStreet     String?
+  addressCity       String?
+  logo              String?
+  signature         String?
+  /// Brand colors of the exported PDFs, as `#rrggbb`. Defaults are the
+  /// original navy/gold theme, so a contractor that never picks keeps it.
+  pdfPrimaryColor   String   @default("#1f2a44")
+  pdfSecondaryColor String   @default("#c9a24b")
+  updatedAt         DateTime @updatedAt
 
   @@map("company_settings")
 }

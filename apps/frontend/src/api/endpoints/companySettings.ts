@@ -11,6 +11,8 @@ export interface CompanySettings {
   addressCity: string | null;
   logo: string | null;
   signature: string | null;
+  pdfPrimaryColor: string;
+  pdfSecondaryColor: string;
   updatedAt: string;
 }
 
@@ -24,6 +26,8 @@ export interface UpsertCompanySettingsDto {
   addressCity?: string | null;
   logo?: string | null;
   signature?: string | null;
+  pdfPrimaryColor?: string;
+  pdfSecondaryColor?: string;
 }
 
 export const companySettingsApi = baseApi.injectEndpoints({

@@ -264,6 +264,8 @@ async function seedMockData(): Promise<void> {
       addressCity: 'Tel Aviv',
       logo: dataUrl('logo-en.png'),
       signature: dataUrl('signature-en.png'),
+      pdfPrimaryColor: '#1f2a44',
+      pdfSecondaryColor: '#c9a24b',
     },
   });
 

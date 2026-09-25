@@ -8,6 +8,7 @@ import {
 } from "@/api/endpoints/companySettings";
 import {
   CompanySettingsForm,
+  DEFAULT_PDF_COLORS,
   type CompanySettingsFormValue,
 } from "@/components/organisms/CompanySettingsForm";
 import { LoadingState } from "@/components/molecules/LoadingState";
@@ -22,6 +23,7 @@ const BLANK_VALUE: CompanySettingsFormValue = {
   addressCity: "",
   logo: null,
   signature: null,
+  ...DEFAULT_PDF_COLORS,
 };
 
 export default function SettingsCompanyPage() {
@@ -45,6 +47,8 @@ export default function SettingsCompanyPage() {
       addressCity: data.addressCity ?? "",
       logo: data.logo,
       signature: data.signature,
+      pdfPrimaryColor: data.pdfPrimaryColor,
+      pdfSecondaryColor: data.pdfSecondaryColor,
     });
   }
 
@@ -59,6 +63,8 @@ export default function SettingsCompanyPage() {
       addressCity: value.addressCity.trim() || null,
       logo: value.logo,
       signature: value.signature,
+      pdfPrimaryColor: value.pdfPrimaryColor,
+      pdfSecondaryColor: value.pdfSecondaryColor,
     });
   }
 

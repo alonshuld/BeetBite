@@ -23,6 +23,7 @@ import {
   ClientSimulatedProjectRow,
   renderClientSimulatedExportHtml,
 } from './templates/client-simulated-export.template';
+import { PdfColors } from './templates/shared';
 import { ProjectReportListItemDto } from 'src/project-reports/dto/project-report-list-item.dto';
 import { normalizeToMonthStart } from 'src/common/utils/date.utils';
 
@@ -36,6 +37,8 @@ interface CompanySettingsForPdf {
   addressCity: string | null;
   logo: string | null;
   signature: string | null;
+  pdfPrimaryColor: string;
+  pdfSecondaryColor: string;
 }
 
 /**
@@ -227,6 +230,7 @@ export class PdfExportService {
       companyAddress: this.formatCompanyAddress(companySettings),
       logo: companySettings.logo,
       signature: companySettings.signature,
+      colors: this.pdfColors(companySettings),
     });
 
     this.logger.log(
@@ -262,6 +266,13 @@ export class PdfExportService {
       throw new CompanySettingsIncompleteError();
     }
     return companySettings as CompanySettingsForPdf;
+  }
+
+  private pdfColors(companySettings: CompanySettingsForPdf): PdfColors {
+    return {
+      primary: companySettings.pdfPrimaryColor,
+      secondary: companySettings.pdfSecondaryColor,
+    };
   }
 
   private formatCompanyAddress(
@@ -372,6 +383,7 @@ export class PdfExportService {
       companyAddress: this.formatCompanyAddress(companySettings),
       logo: companySettings.logo,
       signature: companySettings.signature,
+      colors: this.pdfColors(companySettings),
       screen: includeScreenDetails
         ? {
             projectLocation: report.project.location,

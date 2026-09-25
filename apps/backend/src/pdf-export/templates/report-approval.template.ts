@@ -73,6 +73,7 @@ export interface ReportApprovalData {
   companyAddress: string | null;
   logo: string | null;
   signature: string | null;
+  colors: PdfColors;
   screen?: ReportApprovalScreenDetails;
 }
 
@@ -156,6 +157,8 @@ import {
   formatMonthLabel,
   localeFor,
   dirFor,
+  PdfColors,
+  resolvePdfTheme,
 } from './shared';
 
 /**
@@ -163,7 +166,12 @@ import {
  * client-wide simulated export can wrap several of these pages plus its
  * own summary page in one document without duplicating the stylesheet.
  */
-export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
+export const reportApprovalStyles = (
+  dir: 'rtl' | 'ltr',
+  colors: PdfColors,
+): string => {
+  const theme = resolvePdfTheme(colors);
+  return `
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   body {
@@ -177,18 +185,18 @@ export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
 
   /* Full-bleed header band */
   .header {
-    background: #1f2a44;
-    color: #fff;
+    background: ${theme.primary};
+    color: ${theme.onPrimary};
     padding: 20px 34px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 4px solid #c9a24b;
+    border-bottom: 4px solid ${theme.secondary};
   }
   .header .identity { text-align: ${dir === 'rtl' ? 'right' : 'left'}; }
   .header .contractor-name { font-size: 26px; font-weight: 700; line-height: 1.15; }
-  .header .contractor-desc { font-size: 12px; color: #c9c9d4; margin-top: 3px; }
-  .header .company-number { font-size: 11px; color: #9aa2b8; margin-top: 4px; }
+  .header .contractor-desc { font-size: 12px; opacity: 0.8; margin-top: 3px; }
+  .header .company-number { font-size: 11px; opacity: 0.65; margin-top: 4px; }
   .header .logo { max-height: 62px; max-width: 150px; }
 
   .title {
@@ -197,12 +205,12 @@ export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
     font-weight: 700;
     margin: 26px 0 22px;
   }
-  .title span { border-bottom: 3px solid #c9a24b; padding-bottom: 6px; }
+  .title span { border-bottom: 3px solid ${theme.secondary}; padding-bottom: 6px; }
 
-  /* Info box — gold rule on the leading edge */
+  /* Info box — secondary-color rule on the leading edge */
   .info-box {
     background: #f7f8fa;
-    border-${dir === 'rtl' ? 'right' : 'left'}: 4px solid #c9a24b;
+    border-${dir === 'rtl' ? 'right' : 'left'}: 4px solid ${theme.secondary};
     border-radius: 6px;
     padding: 14px 18px;
     margin-bottom: 22px;
@@ -211,8 +219,8 @@ export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
   .info-row .label { color: #667; font-weight: 700; min-width: 118px; }
   .sim-badge {
     display: inline-block;
-    background: #c9a24b;
-    color: #1f2a44;
+    background: ${theme.secondary};
+    color: ${theme.onSecondary};
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.4px;
@@ -230,8 +238,8 @@ export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
     border-bottom: 1px solid #e8eaef;
   }
   thead th {
-    background: #1f2a44;
-    color: #fff;
+    background: ${theme.primary};
+    color: ${theme.onPrimary};
     font-weight: 600;
     font-size: 10px;
     line-height: 1.35;
@@ -246,7 +254,7 @@ export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
      on each page as if it were the grand total. Render it as a plain row
      group so it prints once, after the last supplier. */
   tfoot { display: table-row-group; }
-  tfoot td { font-weight: 700; background: #f0e6cc; border-bottom: none; }
+  tfoot td { font-weight: 700; background: ${theme.secondaryTint}; border-bottom: none; }
 
   .lower { display: flex; align-items: flex-start; gap: 28px; }
 
@@ -262,7 +270,7 @@ export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
     font-weight: 700;
     padding-bottom: 8px;
     margin-bottom: 6px;
-    border-bottom: 2px solid #c9a24b;
+    border-bottom: 2px solid ${theme.secondary};
     display: inline-block;
   }
   .summary-row {
@@ -272,12 +280,12 @@ export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
     padding: 5px 0;
     font-size: 11.5px;
   }
-  /* Both payable figures share one navy block — the subcontractor cares about
+  /* Both payable figures share one primary-color block — the subcontractor cares about
      the excl-VAT and incl-VAT amounts equally, so neither is a sub-row of the
      other. One block rather than two pills keeps them reading as a pair. */
   .summary-payable {
-    background: #1f2a44;
-    color: #fff;
+    background: ${theme.primary};
+    color: ${theme.onPrimary};
     border-radius: 5px;
     padding: 7px 12px;
     margin-top: 8px;
@@ -302,6 +310,7 @@ export const reportApprovalStyles = (dir: 'rtl' | 'ltr'): string => `
     color: #667;
   }
 `;
+};
 
 /**
  * Renders one account-approval report as a single `.page` block — everything
@@ -489,7 +498,7 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
 <html dir="${dir}" lang="${data.lang}">
 <head>
 <meta charset="UTF-8" />
-<style>${reportApprovalStyles(dir)}</style>
+<style>${reportApprovalStyles(dir, data.colors)}</style>
 </head>
 <body>
 ${renderReportApprovalPage(data)}

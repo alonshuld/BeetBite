@@ -5,6 +5,7 @@ import { useLang } from "@/contexts/useLang";
 import { useUpsertCompanySettingsMutation } from "@/api/endpoints/companySettings";
 import {
   CompanySettingsForm,
+  DEFAULT_PDF_COLORS,
   type CompanySettingsFormValue,
 } from "@/components/organisms/CompanySettingsForm";
 
@@ -18,6 +19,7 @@ const BLANK_VALUE: CompanySettingsFormValue = {
   addressCity: "",
   logo: null,
   signature: null,
+  ...DEFAULT_PDF_COLORS,
 };
 
 export default function OnboardingPage() {
@@ -46,6 +48,8 @@ export default function OnboardingPage() {
       addressCity: value.addressCity.trim() || null,
       logo: value.logo,
       signature: value.signature,
+      pdfPrimaryColor: value.pdfPrimaryColor,
+      pdfSecondaryColor: value.pdfSecondaryColor,
     });
     if (!("error" in result)) {
       await navigate("/reports", { replace: true });
