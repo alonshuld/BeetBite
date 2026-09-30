@@ -9,6 +9,7 @@ describe('subcontractor-payment mapper', () => {
     amount: new Prisma.Decimal('1000'),
     isPaid: false,
     paymentDate: null,
+    description: null as string | null,
     subcontractor: { id: 'sub-1', name: 'Sub 1' },
   });
 
@@ -42,6 +43,19 @@ describe('subcontractor-payment mapper', () => {
     it('should map a missing paymentDate to null, not undefined', () => {
       const result = toSubcontractorPaymentResponse(makeInput());
       expect(result.paymentDate).toBeNull();
+    });
+
+    it('should pass the description through', () => {
+      const result = toSubcontractorPaymentResponse({
+        ...makeInput(),
+        description: 'Cheque #1042',
+      });
+      expect(result.description).toBe('Cheque #1042');
+    });
+
+    it('should keep a missing description as null', () => {
+      const result = toSubcontractorPaymentResponse(makeInput());
+      expect(result.description).toBeNull();
     });
   });
 });

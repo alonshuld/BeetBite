@@ -19,6 +19,10 @@ import { MonthlySubcontractorPaymentsDto } from './dto/monthly-subcontractor-pay
 import { SubcontractorPaymentsByClientResponseDto } from './dto/subcontractor-payments-by-client-response.dto';
 import { toSubcontractorPaymentsByClientResponseList } from './mappers/subcontractor-payments-by-client.mapper';
 
+/** Blank or whitespace-only descriptions are stored as null, not "". */
+const toStoredDescription = (description: string | undefined) =>
+  description?.trim() || null;
+
 @Injectable()
 export class SubcontractorPaymentsService {
   private readonly logger = new Logger(SubcontractorPaymentsService.name);
@@ -194,6 +198,9 @@ export class SubcontractorPaymentsService {
               paymentDate: createSubcontractorPaymentDto.paymentDate
                 ? new Date(createSubcontractorPaymentDto.paymentDate)
                 : null,
+              description: toStoredDescription(
+                createSubcontractorPaymentDto.description,
+              ),
             },
             select: {
               id: true,
@@ -202,6 +209,7 @@ export class SubcontractorPaymentsService {
               amount: true,
               isPaid: true,
               paymentDate: true,
+              description: true,
               subcontractor: {
                 select: {
                   id: true,
@@ -252,6 +260,7 @@ export class SubcontractorPaymentsService {
               amount: true,
               isPaid: true,
               paymentDate: true,
+              description: true,
             },
           },
         },
@@ -303,6 +312,7 @@ export class SubcontractorPaymentsService {
                 amount: true,
                 isPaid: true,
                 paymentDate: true,
+                description: true,
               },
             },
           },
@@ -427,7 +437,7 @@ export class SubcontractorPaymentsService {
             }
           }
 
-          const { serviceDate, paymentDate, ...rest } =
+          const { serviceDate, paymentDate, description, ...rest } =
             updateSubcontractorPaymentDto;
 
           return tx.subcontractorPayment.update({
@@ -443,6 +453,9 @@ export class SubcontractorPaymentsService {
               ...(paymentDate !== undefined && {
                 paymentDate: new Date(paymentDate),
               }),
+              ...(description !== undefined && {
+                description: toStoredDescription(description),
+              }),
             },
             select: {
               id: true,
@@ -451,6 +464,7 @@ export class SubcontractorPaymentsService {
               amount: true,
               isPaid: true,
               paymentDate: true,
+              description: true,
               subcontractor: {
                 select: {
                   id: true,

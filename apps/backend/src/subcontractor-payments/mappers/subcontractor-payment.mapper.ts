@@ -21,4 +21,5 @@ export const toSubcontractorPaymentResponse = (
   amount: subcontractorPayment.amount.toNumber(),
   isPaid: subcontractorPayment.isPaid,
   paymentDate: subcontractorPayment.paymentDate?.toISOString() ?? null,
+  description: subcontractorPayment.description,
 });

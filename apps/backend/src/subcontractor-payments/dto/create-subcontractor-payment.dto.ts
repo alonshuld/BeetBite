@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import {
   normalizeToDayStartForTransform,
@@ -58,4 +59,14 @@ export class CreateSubcontractorPaymentDto {
     normalizeToDayStartForTransform(value),
   )
   paymentDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  @ApiPropertyOptional({
+    example: 'Cheque #1042',
+    description:
+      'Optional free-text note about the payment. Blank is stored as null.',
+  })
+  description?: string;
 }

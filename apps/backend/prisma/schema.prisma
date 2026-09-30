@@ -164,6 +164,8 @@ model SubcontractorPayment {
   /// The day the money actually moved, chosen by the user. Nullable because
   /// rows recorded before this column existed have no honest answer.
   paymentDate     DateTime? @db.Date
+  /// Optional free-text note on this instalment (e.g. "cash", "cheque #123").
+  description     String?
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
   project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)

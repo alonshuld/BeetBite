@@ -46,4 +46,12 @@ export class SubcontractorPaymentResponseDto {
     nullable: true,
   })
   paymentDate!: string | null;
+
+  @ApiPropertyOptional({
+    example: 'Cheque #1042',
+    description: 'Optional free-text note about the payment',
+    type: String,
+    nullable: true,
+  })
+  description!: string | null;
 }
