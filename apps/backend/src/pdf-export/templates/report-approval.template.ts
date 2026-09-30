@@ -94,7 +94,7 @@ const LABELS = {
     supplierInvoice: 'חשבונית ספקים (ללא מע"מ)',
     supplierTotal: 'סה"כ קיזוזי ספקים',
     initiator: 'יזם:',
-    initiatorIncome: 'הכנסה מיזם:',
+    initiatorIncome: 'הכנסה מיזם',
     monthlySummary: 'סיכום חודשי',
     totalIncome: 'סה"כ הכנסות',
     totalAfterProfit: 'סה"כ הכנסות לאחר קיזוז רווח קבלני',
@@ -129,7 +129,7 @@ const LABELS = {
     supplierInvoice: 'Supplier Invoice (excl. VAT)',
     supplierTotal: 'Total Supplier Deductions',
     initiator: 'Initiator:',
-    initiatorIncome: 'Initiator Income:',
+    initiatorIncome: 'Initiator Income',
     monthlySummary: 'Monthly Summary',
     totalIncome: 'Total Income',
     totalAfterProfit: 'Total Income After Profit Cut',
@@ -338,12 +338,26 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
         }</td>`
       : '';
 
+  // The initiator income is one figure for the whole report, so it is a single
+  // cell spanning every income row rather than repeated per row. It sits just
+  // before the approved amount in source order — visually to its right in RTL.
+  const initiatorIncome =
+    data.initiator && data.initiator.income != null
+      ? data.initiator.income
+      : null;
+
+  const initiatorIncomeCellHtml = (index: number): string =>
+    initiatorIncome != null && index === 0
+      ? `<td class="amount" rowspan="${data.rows.length}">${money(initiatorIncome)}</td>`
+      : '';
+
   const rowsHtml = data.rows
     .map(
-      (row) => `
+      (row, index) => `
         <tr>
           <td>${escapeHtml(tagLabel(row.tag))}</td>
           ${statusCellHtml(row)}
+          ${initiatorIncomeCellHtml(index)}
           <td class="amount strong">${money(row.approvedAmount)}</td>
           <td class="amount">${money(row.invoiceInclVat)}</td>
           <td class="amount muted">${row.profitMarginPercent}%</td>
@@ -364,15 +378,13 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
     .join('');
 
   // No initiator on the project → the whole block is absent, not an empty
-  // heading or a zero row.
+  // heading or a zero row. When present it leads the info box.
   const initiatorInfoRowHtml = data.initiator
     ? `<div class="info-row"><span class="label">${t.initiator}</span><span>${escapeHtml(data.initiator.name)}</span></div>`
     : '';
 
-  const initiatorIncomeRowHtml =
-    data.initiator && data.initiator.income != null
-      ? `<div class="info-row"><span class="label">${t.initiatorIncome}</span><span>${money(data.initiator.income)}</span></div>`
-      : '';
+  const initiatorIncomeHeaderHtml =
+    initiatorIncome != null ? `<th>${t.initiatorIncome}</th>` : '';
 
   // Empty when the caller has no approval text (the simulated export), so the
   // row does not open with a stray bullet.
@@ -422,13 +434,12 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
     <div class="title"><span>${t.subtitlePrefix} ${monthLabel}</span></div>
 
     <div class="info-box">
+      ${initiatorInfoRowHtml}
       <div class="info-row"><span class="label">${t.client}</span><span>${escapeHtml(data.requesterName)}</span></div>
       <div class="info-row"><span class="label">${t.mainContractor}</span><span>${escapeHtml(data.contractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.contractorCompanyNumber)}</span></div>
       <div class="info-row"><span class="label">${t.subcontractor}</span><span>${escapeHtml(data.subcontractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.subcontractorCompanyNumber)}</span></div>
       <div class="info-row"><span class="label">${t.approvedFor}</span><span>${approvedForValue}${simulatedBadgeHtml}</span></div>
       ${infoRowsHtml}
-      ${initiatorInfoRowHtml}
-      ${initiatorIncomeRowHtml}
     </div>
 
     <table>
@@ -436,6 +447,7 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
         <tr>
           <th>${t.tag}</th>
           ${statusHeaderHtml}
+          ${initiatorIncomeHeaderHtml}
           <th>${t.approvedAmount}</th>
           <th>${t.invoiceInclVat}</th>
           <th>${t.profitMarginPercent}</th>
