@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import {
@@ -73,4 +74,14 @@ export class UpdateSubcontractorPaymentDto {
       'The day the money actually moved. Distinct from serviceDate, which is the month being settled.',
   })
   paymentDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  @ApiPropertyOptional({
+    example: 'Cheque #1042',
+    description:
+      'Optional free-text note about the payment. Send an empty string to clear it.',
+  })
+  description?: string;
 }

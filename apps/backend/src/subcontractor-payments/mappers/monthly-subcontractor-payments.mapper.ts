@@ -13,6 +13,7 @@ type SubcontractorWithPayments = Prisma.SubcontractorGetPayload<{
         amount: true;
         isPaid: true;
         paymentDate: true;
+        description: true;
       };
     };
   };
@@ -40,6 +41,7 @@ export const toMonthlySubcontractorPaymentsResponse = (
       amount: payment.amount.toNumber(),
       isPaid: payment.isPaid,
       paymentDate: payment.paymentDate?.toISOString() ?? null,
+      description: payment.description,
     })),
   };
 };

@@ -14,6 +14,7 @@ describe('monthly-subcontractor-payments mapper', () => {
     amount: new Prisma.Decimal(String(amount)),
     isPaid: false,
     paymentDate,
+    description: null as string | null,
   });
 
   const makeInput = (
@@ -62,6 +63,13 @@ describe('monthly-subcontractor-payments mapper', () => {
         makeInput([makePayment(500, new Date('2024-05-17T00:00:00.000Z'))]),
       );
       expect(result.payments[0].paymentDate).toBe('2024-05-17T00:00:00.000Z');
+    });
+
+    it('should include description on nested payments', () => {
+      const result = toMonthlySubcontractorPaymentsResponse(
+        makeInput([{ ...makePayment(500), description: 'Cheque #1042' }]),
+      );
+      expect(result.payments[0].description).toBe('Cheque #1042');
     });
   });
 

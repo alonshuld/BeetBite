@@ -1073,6 +1073,11 @@ export interface components {
        * @example 2026-01-17
        */
       paymentDate?: string;
+      /**
+       * @description Optional free-text note about the payment. Blank is stored as null.
+       * @example Cheque #1042
+       */
+      description?: string;
     };
     NestedSubcontractorDto: {
       /**
@@ -1121,6 +1126,11 @@ export interface components {
        * @example 2026-01-17T00:00:00.000Z
        */
       paymentDate?: Record<string, never> | null;
+      /**
+       * @description Optional free-text note about the payment
+       * @example Cheque #1042
+       */
+      description?: string | null;
     };
     NestedSubcontractorPaymentDto: {
       /**
@@ -1149,6 +1159,11 @@ export interface components {
        * @example 2026-01-17T00:00:00.000Z
        */
       paymentDate?: Record<string, never> | null;
+      /**
+       * @description Optional free-text note about the payment
+       * @example Cheque #1042
+       */
+      description?: string | null;
     };
     MonthlySubcontractorPaymentsDto: {
       /** @description The subcontractor associated with the payments */
@@ -1219,6 +1234,11 @@ export interface components {
        * @example 2026-01-17
        */
       paymentDate?: string;
+      /**
+       * @description Optional free-text note about the payment. Send an empty string to clear it.
+       * @example Cheque #1042
+       */
+      description?: string;
     };
     ProjectClientAssignmentResponseDto: {
       /** @example 123e4567-e89b-12d3-a456-426614174000 */

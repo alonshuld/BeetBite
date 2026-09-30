@@ -552,6 +552,39 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
       expect(records[0].subcontractorId).toBe(subcontractorId);
     });
 
+    it('should store, return and clear an optional description', async () => {
+      await createReport({
+        projectId,
+        subcontractorId,
+        date: jan,
+        incomeAmount: 50000,
+        profitMargin: 20,
+      });
+
+      const payment = await service.create({
+        subcontractorId,
+        projectId,
+        serviceDate: jan,
+        amount: 20000,
+        description: 'Cheque #1042',
+      });
+      expect(payment.description).toBe('Cheque #1042');
+
+      const monthly = await service.findSubcontractorMonthlyPayments(
+        subcontractorId,
+        { month: jan },
+      );
+      expect(monthly.payments[0].description).toBe('Cheque #1042');
+
+      const cleared = await service.update(payment.id, { description: '' });
+      expect(cleared.description).toBeNull();
+      const record = await prismaService.subcontractorPayment.findUniqueOrThrow(
+        { where: { id: payment.id } },
+      );
+      expect(record.description).toBeNull();
+      expect(record.amount.toNumber()).toBe(20000);
+    });
+
     it('should allow multiple partial payments per subcontractor+project+month', async () => {
       await createReport({
         projectId,

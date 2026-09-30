@@ -54,6 +54,7 @@ interface MockPayment {
   isPaid: boolean;
   /** Null for rows recorded before the column existed. */
   paymentDate: string | null;
+  description: string | null;
 }
 
 function makePayments(payments: MockPayment[], amountPaid: number) {
@@ -73,6 +74,7 @@ function makePayment(overrides: Partial<MockPayment> = {}): MockPayment {
     amount: 8000,
     isPaid: true,
     paymentDate: null,
+    description: null,
     ...overrides,
   };
 }
@@ -445,6 +447,174 @@ describe("SubcontractorPaymentsPage", () => {
         id: "i1",
         paymentDate: "2025-03-11",
       });
+    });
+  });
+
+  // An optional free-text note per instalment: typed when recording it, shown
+  // on its line, and editable in place like the date.
+  describe("descriptions", () => {
+    it("sends the description typed with a new instalment, trimmed", async () => {
+      renderPage();
+      await openPanel();
+      await userEvent.click(screen.getByTitle("Partial"));
+
+      await userEvent.type(screen.getByPlaceholderText("0 – 8000"), "2000");
+      await userEvent.type(
+        screen.getByPlaceholderText("Description (optional)"),
+        "  Cheque #1042 ",
+      );
+      await userEvent.click(screen.getByTitle("Save"));
+
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 2000, description: "Cheque #1042" }),
+      );
+    });
+
+    it("sends no description when the field is left blank", async () => {
+      renderPage();
+      await openPanel();
+      await userEvent.click(screen.getByTitle("Partial"));
+
+      await userEvent.type(screen.getByPlaceholderText("0 – 8000"), "2000");
+      await userEvent.click(screen.getByTitle("Save"));
+
+      const [body] = createSpy.mock.calls[0] as [Record<string, unknown>];
+      expect(body.description).toBeUndefined();
+    });
+
+    it("shows the description on the instalment's line", async () => {
+      setPayments(
+        makePayments(
+          [makePayment({ amount: 2000, description: "Cheque #1042" })],
+          2000,
+        ),
+      );
+      renderPage();
+      await openPanel();
+
+      const item = screen.getByRole("listitem");
+      expect(within(item).getByText("Cheque #1042")).toBeInTheDocument();
+    });
+
+    it("adds a description to an instalment already recorded", async () => {
+      setPayments(makePayments([makePayment({ amount: 2000 })], 2000));
+      renderPage();
+      await openPanel();
+
+      // Nothing to edit or delete yet — only the add button.
+      expect(screen.queryByTitle("Edit description")).not.toBeInTheDocument();
+      expect(screen.queryByTitle("Delete description")).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByTitle("Add description"));
+      await userEvent.type(
+        screen.getByLabelText("Description"),
+        "Bank transfer",
+      );
+      await userEvent.click(screen.getByRole("button", { name: /Save/ }));
+
+      expect(updateSpy).toHaveBeenCalledWith({
+        id: "i1",
+        description: "Bank transfer",
+      });
+    });
+
+    it("edits a description through its edit button, saved by Save", async () => {
+      setPayments(
+        makePayments(
+          [makePayment({ amount: 2000, description: "Cheque #1042" })],
+          2000,
+        ),
+      );
+      renderPage();
+      await openPanel();
+
+      await userEvent.click(screen.getByTitle("Edit description"));
+      const input = screen.getByLabelText("Description");
+      expect(input).toHaveValue("Cheque #1042");
+
+      await userEvent.clear(input);
+      await userEvent.type(input, "Cheque #1043");
+      // Leaving the field is not saving it — only the Save button commits.
+      await userEvent.tab();
+      expect(updateSpy).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByRole("button", { name: /Save/ }));
+      expect(updateSpy).toHaveBeenCalledWith({
+        id: "i1",
+        description: "Cheque #1043",
+      });
+    });
+
+    it("saves with Enter too", async () => {
+      setPayments(
+        makePayments(
+          [makePayment({ amount: 2000, description: "Cheque #1042" })],
+          2000,
+        ),
+      );
+      renderPage();
+      await openPanel();
+
+      await userEvent.click(screen.getByTitle("Edit description"));
+      await userEvent.type(screen.getByLabelText("Description"), "!{Enter}");
+
+      expect(updateSpy).toHaveBeenCalledWith({
+        id: "i1",
+        description: "Cheque #1042!",
+      });
+    });
+
+    it("discards the edit on Cancel", async () => {
+      setPayments(
+        makePayments(
+          [makePayment({ amount: 2000, description: "Cheque #1042" })],
+          2000,
+        ),
+      );
+      renderPage();
+      await openPanel();
+
+      await userEvent.click(screen.getByTitle("Edit description"));
+      await userEvent.type(screen.getByLabelText("Description"), " edited");
+      await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(updateSpy).not.toHaveBeenCalled();
+      expect(screen.getByText("Cheque #1042")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Description")).not.toBeInTheDocument();
+    });
+
+    it("discards the edit on Escape", async () => {
+      setPayments(
+        makePayments(
+          [makePayment({ amount: 2000, description: "Cheque #1042" })],
+          2000,
+        ),
+      );
+      renderPage();
+      await openPanel();
+
+      await userEvent.click(screen.getByTitle("Edit description"));
+      await userEvent.type(screen.getByLabelText("Description"), " edited");
+      await userEvent.keyboard("{Escape}");
+
+      expect(updateSpy).not.toHaveBeenCalled();
+      expect(screen.getByText("Cheque #1042")).toBeInTheDocument();
+    });
+
+    it("deletes the description, not the payment, with its own button", async () => {
+      setPayments(
+        makePayments(
+          [makePayment({ amount: 2000, description: "Cheque #1042" })],
+          2000,
+        ),
+      );
+      renderPage();
+      await openPanel();
+
+      await userEvent.click(screen.getByTitle("Delete description"));
+
+      expect(updateSpy).toHaveBeenCalledWith({ id: "i1", description: "" });
+      expect(deleteSpy).not.toHaveBeenCalled();
     });
   });
 });

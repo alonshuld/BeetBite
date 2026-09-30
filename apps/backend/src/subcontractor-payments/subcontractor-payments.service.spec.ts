@@ -117,6 +117,7 @@ describe('SubcontractorPaymentsService', () => {
           serviceDate: new Date(createDto.serviceDate),
           amount: createDto.amount,
           paymentDate: null,
+          description: null,
         },
         select: {
           id: true,
@@ -125,6 +126,7 @@ describe('SubcontractorPaymentsService', () => {
           amount: true,
           isPaid: true,
           paymentDate: true,
+          description: true,
           subcontractor: {
             select: {
               id: true,
@@ -207,6 +209,49 @@ describe('SubcontractorPaymentsService', () => {
         mockPrismaService.subcontractorPayment.create.mock.calls as unknown[][]
       )[0][0] as { data: { paymentDate: Date | null } };
       expect(call.data.paymentDate).toBeNull();
+    });
+
+    it('stores a trimmed description', async () => {
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
+        profitMargin: { toNumber: () => 10 },
+        supplierPayments: [],
+      });
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+      mockPrismaService.subcontractorPayment.create.mockResolvedValue({
+        ...mockPayment,
+        description: 'Cheque #1042',
+      });
+
+      const result = await service.create({
+        ...createDto,
+        description: '  Cheque #1042  ',
+      });
+
+      expect(result.description).toBe('Cheque #1042');
+      const call = (
+        mockPrismaService.subcontractorPayment.create.mock.calls as unknown[][]
+      )[0][0] as { data: { description: string | null } };
+      expect(call.data.description).toBe('Cheque #1042');
+    });
+
+    it('stores a blank description as null', async () => {
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
+        profitMargin: { toNumber: () => 10 },
+        supplierPayments: [],
+      });
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+      mockPrismaService.subcontractorPayment.create.mockResolvedValue(
+        mockPayment,
+      );
+
+      await service.create({ ...createDto, description: '   ' });
+
+      const call = (
+        mockPrismaService.subcontractorPayment.create.mock.calls as unknown[][]
+      )[0][0] as { data: { description: string | null } };
+      expect(call.data.description).toBeNull();
     });
 
     it('should throw SubcontractorNotFoundError when subcontractor does not exist', async () => {
@@ -518,6 +563,37 @@ describe('SubcontractorPaymentsService', () => {
       expect(result.paymentDate).toBe('2023-01-17T00:00:00.000Z');
     });
 
+    // A note is not money: editing it must skip the overpayment guard, and an
+    // empty string clears it rather than storing "".
+    it('should update only the description, clearing it when blank', async () => {
+      mockPrismaService.subcontractorPayment.update.mockResolvedValue({
+        id: 'clh0000000000000000000001',
+        projectId: 'project-1',
+        serviceDate: new Date('2023-01-01'),
+        amount: { toNumber: () => 900 },
+        isPaid: false,
+        paymentDate: null,
+        description: null,
+        subcontractor: {
+          id: 'clh0000000000000000000001',
+          name: 'Test Subcontractor',
+        },
+      });
+
+      const result = await service.update('clh0000000000000000000001', {
+        description: '',
+      });
+
+      expect(mockPrismaService.projectReport.findFirst).not.toHaveBeenCalled();
+      const call = (
+        mockPrismaService.subcontractorPayment.update.mock.calls as [
+          { data: Record<string, unknown> },
+        ][]
+      )[0][0];
+      expect(call.data).toEqual({ description: null });
+      expect(result.description).toBeNull();
+    });
+
     it('should throw SubcontractorPaymentOverpaymentError when updated amount exceeds amount owed', async () => {
       // amountOwed = 900. Other payments = 600. New amount = 400 → total 1000 > 900
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
@@ -621,6 +697,7 @@ describe('SubcontractorPaymentsService', () => {
           amount: true,
           isPaid: true,
           paymentDate: true,
+          description: true,
           subcontractor: {
             select: {
               id: true,

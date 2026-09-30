@@ -49,9 +49,12 @@ export default function SubcontractorPaymentsPage() {
 
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   // The inline row that records one instalment: which project it is open for,
-  // the amount typed into it and the day that money moved.
+  // the amount typed into it, the day that money moved and an optional note.
   const [entryOpen, setEntryOpen] = useState<Record<string, boolean>>({});
   const [entryAmounts, setEntryAmounts] = useState<Record<string, string>>({});
+  const [entryDescriptions, setEntryDescriptions] = useState<
+    Record<string, string>
+  >({});
   const [pendingProject, setPendingProject] = useState<Record<string, boolean>>(
     {},
   );
@@ -60,6 +63,11 @@ export default function SubcontractorPaymentsPage() {
   const [paymentDates, setPaymentDates] = useState<Record<string, string>>({});
   // Which already-recorded instalment has its date open for correction.
   const [editingDate, setEditingDate] = useState<Record<string, boolean>>({});
+  // The draft description of each already-recorded instalment open for
+  // editing, keyed by payment id. No key means the editor is closed.
+  const [descriptionDrafts, setDescriptionDrafts] = useState<
+    Record<string, string>
+  >({});
 
   function paymentDateFor(projectId: string): string {
     return paymentDates[projectId] ?? todayISO();
@@ -164,6 +172,7 @@ export default function SubcontractorPaymentsPage() {
   function closeEntry(projectId: string) {
     setEntryOpen((prev) => ({ ...prev, [projectId]: false }));
     setEntryAmounts((prev) => ({ ...prev, [projectId]: "" }));
+    setEntryDescriptions((prev) => ({ ...prev, [projectId]: "" }));
   }
 
   /**
@@ -183,6 +192,7 @@ export default function SubcontractorPaymentsPage() {
       serviceDate: month + "-01",
       amount,
       paymentDate: paymentDateFor(projectId),
+      description: entryDescriptions[projectId]?.trim() || undefined,
     });
     setPendingProject((prev) => ({ ...prev, [projectId]: false }));
     closeEntry(projectId);
@@ -202,6 +212,38 @@ export default function SubcontractorPaymentsPage() {
   async function handleChangePaymentDate(paymentId: string, date: string) {
     if (!date) return;
     await updatePayment({ id: paymentId, paymentDate: date });
+  }
+
+  function openDescriptionEditor(paymentId: string, current: string | null) {
+    setDescriptionDrafts((prev) => ({ ...prev, [paymentId]: current ?? "" }));
+  }
+
+  function closeDescriptionEditor(paymentId: string) {
+    setDescriptionDrafts((prev) => {
+      const next = { ...prev };
+      delete next[paymentId];
+      return next;
+    });
+  }
+
+  /**
+   * Save the draft description. Only the Save button (or Enter) commits it —
+   * leaving the field does not, so a stray click never saves a half-typed
+   * note. An emptied draft clears the description; an unchanged one sends
+   * nothing.
+   */
+  async function handleSaveDescription(
+    paymentId: string,
+    previous: string | null,
+  ) {
+    const trimmed = (descriptionDrafts[paymentId] ?? "").trim();
+    closeDescriptionEditor(paymentId);
+    if (trimmed === (previous ?? "")) return;
+    await updatePayment({ id: paymentId, description: trimmed });
+  }
+
+  async function handleDeleteDescription(paymentId: string) {
+    await updatePayment({ id: paymentId, description: "" });
   }
 
   const aggregateStatus: PaymentStatus = selectedCard
@@ -537,6 +579,114 @@ export default function SubcontractorPaymentsPage() {
                                           : t("noDateRecorded")}
                                       </button>
                                     )}
+                                    {descriptionDrafts[payment.id] !==
+                                    undefined ? (
+                                      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                                        <input
+                                          type="text"
+                                          autoFocus
+                                          maxLength={500}
+                                          aria-label={t("description")}
+                                          placeholder={t("description")}
+                                          className="min-w-0 flex-1 px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-none focus:border-beet"
+                                          value={descriptionDrafts[payment.id]}
+                                          onChange={(e) =>
+                                            setDescriptionDrafts((prev) => ({
+                                              ...prev,
+                                              [payment.id]: e.target.value,
+                                            }))
+                                          }
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter")
+                                              void handleSaveDescription(
+                                                payment.id,
+                                                payment.description,
+                                              );
+                                            if (e.key === "Escape")
+                                              closeDescriptionEditor(
+                                                payment.id,
+                                              );
+                                          }}
+                                        />
+                                        <button
+                                          onClick={() =>
+                                            void handleSaveDescription(
+                                              payment.id,
+                                              payment.description,
+                                            )
+                                          }
+                                          className="inline-flex h-6 items-center gap-1 rounded-sm border border-beet bg-beet px-2 font-semibold text-white transition-opacity hover:opacity-90"
+                                        >
+                                          <Icon name="check" size={12} />
+                                          {t("save")}
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            closeDescriptionEditor(payment.id)
+                                          }
+                                          className="inline-flex h-6 items-center rounded-sm border border-border px-2 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
+                                        >
+                                          {t("cancel")}
+                                        </button>
+                                      </span>
+                                    ) : (
+                                      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                                        {payment.description && (
+                                          <span
+                                            className="min-w-0 truncate text-text"
+                                            title={payment.description}
+                                          >
+                                            {payment.description}
+                                          </span>
+                                        )}
+                                        <button
+                                          disabled={isPending}
+                                          onClick={() =>
+                                            openDescriptionEditor(
+                                              payment.id,
+                                              payment.description,
+                                            )
+                                          }
+                                          title={
+                                            payment.description
+                                              ? t("editDescription")
+                                              : t("addDescription")
+                                          }
+                                          aria-label={
+                                            payment.description
+                                              ? t("editDescription")
+                                              : t("addDescription")
+                                          }
+                                          className="inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-sm border border-border px-1.5 text-text-dim transition-colors hover:border-beet hover:text-beet disabled:opacity-40"
+                                        >
+                                          <Icon
+                                            name={
+                                              payment.description
+                                                ? "edit"
+                                                : "plus"
+                                            }
+                                            size={12}
+                                          />
+                                          {!payment.description &&
+                                            t("addDescription")}
+                                        </button>
+                                        {payment.description && (
+                                          <button
+                                            disabled={isPending}
+                                            onClick={() =>
+                                              void handleDeleteDescription(
+                                                payment.id,
+                                              )
+                                            }
+                                            title={t("deleteDescription")}
+                                            aria-label={t("deleteDescription")}
+                                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-border text-text-dim transition-colors hover:border-danger hover:text-danger disabled:opacity-40"
+                                          >
+                                            <Icon name="trash" size={12} />
+                                          </button>
+                                        )}
+                                      </span>
+                                    )}
                                     <span className="flex items-center gap-2">
                                       <span className="text-text font-medium">
                                         {formatILS(payment.amount)}
@@ -562,7 +712,8 @@ export default function SubcontractorPaymentsPage() {
                           </tr>
                         )}
 
-                        {/* Instalment entry row — amount and the day it moved */}
+                        {/* Instalment entry row — amount, the day it moved and
+                            an optional description */}
                         {isEntryOpen && (
                           <tr
                             key={`${pb.projectId}-partial`}
@@ -597,6 +748,25 @@ export default function SubcontractorPaymentsPage() {
                                     value={paymentDateFor(pb.projectId)}
                                     onChange={(e) =>
                                       setPaymentDates((prev) => ({
+                                        ...prev,
+                                        [pb.projectId]: e.target.value,
+                                      }))
+                                    }
+                                  />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <Input
+                                    id={`payment-description-${pb.projectId}`}
+                                    label=""
+                                    type="text"
+                                    maxLength={500}
+                                    aria-label={t("description")}
+                                    placeholder={t("descriptionOptional")}
+                                    value={
+                                      entryDescriptions[pb.projectId] ?? ""
+                                    }
+                                    onChange={(e) =>
+                                      setEntryDescriptions((prev) => ({
                                         ...prev,
                                         [pb.projectId]: e.target.value,
                                       }))

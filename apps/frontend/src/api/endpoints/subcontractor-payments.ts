@@ -12,6 +12,8 @@ export interface SubcontractorMonthlyData {
     isPaid: boolean;
     /** The day the money actually moved. Null for rows recorded before this existed. */
     paymentDate: string | null;
+    /** Optional free-text note on the instalment. */
+    description: string | null;
   }[];
 }
 
@@ -23,6 +25,8 @@ export interface CreateSubcontractorPaymentDto {
   amount: number;
   /** The day the money actually moved. */
   paymentDate?: string;
+  /** Optional free-text note. Blank is stored as null. */
+  description?: string;
 }
 
 export interface UpdateSubcontractorPaymentDto {
@@ -33,6 +37,8 @@ export interface UpdateSubcontractorPaymentDto {
   isPaid?: boolean;
   /** The day the money actually moved. */
   paymentDate?: string;
+  /** Optional free-text note. Blank is stored as null. */
+  description?: string;
 }
 
 export interface SubcontractorPaymentResponse {
@@ -43,6 +49,7 @@ export interface SubcontractorPaymentResponse {
   amount: number;
   isPaid: boolean;
   paymentDate: string | null;
+  description: string | null;
 }
 
 export const subcontractorPaymentsApi = baseApi.injectEndpoints({

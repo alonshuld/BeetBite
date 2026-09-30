@@ -69,6 +69,52 @@ dbTest.describe('Subcontractor Payments', () => {
   );
 
   dbTest(
+    'records a description with an instalment, then edits and deletes it',
+    async ({ page, db }) => {
+      await openWorkerPanel(page);
+
+      await page.getByTitle('Partial', { exact: true }).first().click();
+      await page.fill(`#partial-${projectId}`, '10000');
+      await page.fill(`#payment-description-${projectId}`, 'Cheque #1042');
+      await page.getByTitle('Save', { exact: true }).first().click();
+
+      // Shown on the instalment's own line once saved.
+      const line = page.getByRole('listitem').filter({ hasText: '₪10,000' });
+      await expect(line.getByText('Cheque #1042')).toBeVisible();
+      await expect(async () => {
+        const payments = await db.subcontractorPayment.findMany();
+        expect(payments).toHaveLength(1);
+        expect(payments[0].description).toBe('Cheque #1042');
+      }).toPass({ timeout: 5000 });
+
+      // Corrected through the edit button, committed by the Save button.
+      await line.getByTitle('Edit description', { exact: true }).click();
+      const input = line.getByLabel('Description', { exact: true });
+      await expect(input).toHaveValue('Cheque #1042');
+      await input.fill('Bank transfer');
+      await line.getByRole('button', { name: 'Save', exact: true }).click();
+
+      await expect(line.getByText('Bank transfer')).toBeVisible();
+      await expect(async () => {
+        const [payment] = await db.subcontractorPayment.findMany();
+        expect(payment.description).toBe('Bank transfer');
+      }).toPass({ timeout: 5000 });
+
+      // Deleted through its own button — the payment itself stays.
+      await line.getByTitle('Delete description', { exact: true }).click();
+      await expect(line.getByText('Bank transfer')).not.toBeVisible();
+      await expect(
+        line.getByTitle('Add description', { exact: true }),
+      ).toBeVisible();
+      await expect(async () => {
+        const payments = await db.subcontractorPayment.findMany();
+        expect(payments).toHaveLength(1);
+        expect(payments[0].description).toBeNull();
+      }).toPass({ timeout: 5000 });
+    },
+  );
+
+  dbTest(
     'overpay guard: payment exceeding amount owed is rejected',
     async ({ page, db }) => {
       void db;
