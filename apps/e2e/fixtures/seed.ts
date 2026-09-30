@@ -40,6 +40,7 @@ export const BASELINE_COMPANY_SETTINGS = {
   signature: null,
   pdfPrimaryColor: '#1f2a44',
   pdfSecondaryColor: '#c9a24b',
+  pdfFont: 'noto-sans-hebrew',
 } as const;
 
 // The Prisma client is require()'d from the backend's generated output, so it

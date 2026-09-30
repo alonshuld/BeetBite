@@ -72,6 +72,26 @@ dbTest.describe('Settings — company profile', () => {
     }).toPass({ timeout: 5000 });
   });
 
+  dbTest('saving persists the PDF font', async ({ page, db }) => {
+    await expect(page.locator('#company-pdf-font')).toHaveValue(
+      'noto-sans-hebrew',
+    );
+    await page.selectOption('#company-pdf-font', 'frank-ruhl-libre');
+    await expect(page.getByTestId('pdf-font-preview')).toHaveCSS(
+      'font-family',
+      /Frank Ruhl Libre/,
+    );
+
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    await expect(async () => {
+      const settings = await db.companySettings.findUnique({
+        where: { id: COMPANY_SETTINGS_ID },
+      });
+      expect(settings.pdfFont).toBe('frank-ruhl-libre');
+    }).toPass({ timeout: 5000 });
+  });
+
   dbTest('ignores a half-typed hex color', async ({ page, db }) => {
     await page.fill('#company-pdf-primary-color', '#0b6');
 

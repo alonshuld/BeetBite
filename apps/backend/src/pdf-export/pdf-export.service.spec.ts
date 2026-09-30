@@ -50,6 +50,7 @@ describe('PdfExportService', () => {
     signature: null,
     pdfPrimaryColor: '#1f2a44',
     pdfSecondaryColor: '#c9a24b',
+    pdfFont: 'noto-sans-hebrew',
     updatedAt: '2026-04-01T00:00:00.000Z',
   };
 

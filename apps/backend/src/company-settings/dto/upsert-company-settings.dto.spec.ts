@@ -40,3 +40,21 @@ describe('UpsertCompanySettingsDto — PDF colors', () => {
     },
   );
 });
+
+describe('UpsertCompanySettingsDto — PDF font', () => {
+  it('accepts a listed font', async () => {
+    expect(await errorsFor({ pdfFont: 'heebo' })).toEqual([]);
+  });
+
+  it('accepts a body that omits the font', async () => {
+    expect(await errorsFor({})).toEqual([]);
+  });
+
+  // The value picks a bundled font file to embed, so only listed ids pass.
+  it.each([null, 'Comic Sans', 'heebo; } body { display: none', ''])(
+    'rejects %p',
+    async (font) => {
+      expect(await errorsFor({ pdfFont: font })).toEqual(['pdfFont']);
+    },
+  );
+});

@@ -266,6 +266,7 @@ async function seedMockData(): Promise<void> {
       signature: dataUrl('signature-en.png'),
       pdfPrimaryColor: '#1f2a44',
       pdfSecondaryColor: '#c9a24b',
+      pdfFont: 'noto-sans-hebrew',
     },
   });
 

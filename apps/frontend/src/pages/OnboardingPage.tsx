@@ -6,6 +6,7 @@ import { useUpsertCompanySettingsMutation } from "@/api/endpoints/companySetting
 import {
   CompanySettingsForm,
   DEFAULT_PDF_COLORS,
+  DEFAULT_PDF_FONT,
   type CompanySettingsFormValue,
 } from "@/components/organisms/CompanySettingsForm";
 
@@ -20,6 +21,7 @@ const BLANK_VALUE: CompanySettingsFormValue = {
   logo: null,
   signature: null,
   ...DEFAULT_PDF_COLORS,
+  pdfFont: DEFAULT_PDF_FONT,
 };
 
 export default function OnboardingPage() {
@@ -50,6 +52,7 @@ export default function OnboardingPage() {
       signature: value.signature,
       pdfPrimaryColor: value.pdfPrimaryColor,
       pdfSecondaryColor: value.pdfSecondaryColor,
+      pdfFont: value.pdfFont,
     });
     if (!("error" in result)) {
       await navigate("/reports", { replace: true });

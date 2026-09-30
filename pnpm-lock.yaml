@@ -14,6 +14,21 @@ importers:
 
   apps/backend:
     dependencies:
+      '@fontsource/assistant':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/david-libre':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/frank-ruhl-libre':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/heebo':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/rubik':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@nestjs/common':
         specifier: ^11.1.14
         version: 11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -630,6 +645,21 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@fontsource/assistant@5.3.0':
+    resolution: {integrity: sha512-FJ0gSxkCdNeZgd2yIGmIkjU5SZOpDYs0j5IEWMQPBT5bRuvDqLA4T03KwmvMgWvov966coRVp0dcdd+oAo/MrA==}
+
+  '@fontsource/david-libre@5.3.0':
+    resolution: {integrity: sha512-esxHLO+pEmhnCb4HG4gRUfICz1xQyF+8EMH1rY76kaDl+IbqJmOTl3QuD9ddMnjElv48cCa5msmQymDA5vqr5Q==}
+
+  '@fontsource/frank-ruhl-libre@5.3.0':
+    resolution: {integrity: sha512-t9cbVzyuEJZGYafP01s7FQ1KAkh/Fs2nakfPzZpPY8BtfvGlZxQRxXAqJ/qluyfZXilpqw0Hk+GlYiWfmSSRTg==}
+
+  '@fontsource/heebo@5.3.0':
+    resolution: {integrity: sha512-Z01U2fWWrfJnSE6SmDYtZJ1uCnKs8V3WSdip/lVDfKnsC1ASumb7IZmOrXjaYK+PVm7qGD3+4cwTAFOxG5uMaw==}
+
+  '@fontsource/rubik@5.3.0':
+    resolution: {integrity: sha512-Nks2mn7vlE1jZVHuVgoKU2Ejqjvd+GJzLRdraCjo1xc79oo7O6vJ8pcvSfmKPGX3/Ln7nt09XWFzPeu2jWf0xQ==}
 
   '@grpc/grpc-js@1.14.3':
     resolution: {integrity: sha512-Iq8QQQ/7X3Sac15oB6p0FmUg/klxQvXLeileoqrTRGJYLV+/9tubbr9ipz0GKHjmXVsgFPo/+W+2cA8eNcR+XA==}
@@ -5855,6 +5885,16 @@ snapshots:
   '@exodus/bytes@1.15.0(@noble/hashes@1.8.0)':
     optionalDependencies:
       '@noble/hashes': 1.8.0
+
+  '@fontsource/assistant@5.3.0': {}
+
+  '@fontsource/david-libre@5.3.0': {}
+
+  '@fontsource/frank-ruhl-libre@5.3.0': {}
+
+  '@fontsource/heebo@5.3.0': {}
+
+  '@fontsource/rubik@5.3.0': {}
 
   '@grpc/grpc-js@1.14.3':
     dependencies:

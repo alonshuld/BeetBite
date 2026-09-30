@@ -1,9 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { PDF_FONTS } from 'src/common/pdf-fonts';
 import {
   IsOptional,
   IsString,
   IsNumberString,
   IsEmail,
+  IsIn,
   IsPhoneNumber,
   Length,
   MaxLength,
@@ -152,4 +154,18 @@ export class UpsertCompanySettingsDto {
     required: false,
   })
   pdfSecondaryColor?: string;
+
+  // Like the colors: omitting it keeps the stored font, null is rejected. Only
+  // listed ids pass, since the value picks a bundled font file to embed.
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(PDF_FONTS, {
+    message: `pdfFont must be one of: ${PDF_FONTS.join(', ')}`,
+  })
+  @ApiProperty({
+    example: 'noto-sans-hebrew',
+    description: 'Font of exported PDFs',
+    enum: PDF_FONTS,
+    required: false,
+  })
+  pdfFont?: string;
 }

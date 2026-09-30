@@ -74,6 +74,7 @@ export interface ReportApprovalData {
   logo: string | null;
   signature: string | null;
   colors: PdfColors;
+  font: PdfFont;
   screen?: ReportApprovalScreenDetails;
 }
 
@@ -160,6 +161,8 @@ import {
   PdfColors,
   resolvePdfTheme,
 } from './shared';
+import { pdfFontCss } from './fonts';
+import { PdfFont } from 'src/common/pdf-fonts';
 
 /**
  * The CSS shared by every account-approval-style page. Exported so the
@@ -169,13 +172,16 @@ import {
 export const reportApprovalStyles = (
   dir: 'rtl' | 'ltr',
   colors: PdfColors,
+  font: PdfFont,
 ): string => {
   const theme = resolvePdfTheme(colors);
+  const { fontFaces, fontFamily } = pdfFontCss(font);
   return `
+  ${fontFaces}
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   body {
-    font-family: "Noto Sans Hebrew", "Noto Sans", Arial, sans-serif;
+    font-family: ${fontFamily};
     color: #1f2430;
     margin: 0;
     font-size: 12px;
@@ -510,7 +516,7 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
 <html dir="${dir}" lang="${data.lang}">
 <head>
 <meta charset="UTF-8" />
-<style>${reportApprovalStyles(dir, data.colors)}</style>
+<style>${reportApprovalStyles(dir, data.colors, data.font)}</style>
 </head>
 <body>
 ${renderReportApprovalPage(data)}

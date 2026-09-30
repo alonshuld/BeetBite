@@ -1,5 +1,14 @@
 import { baseApi } from "@/api/baseApi";
 
+/** Ids of the fonts the backend can embed in exported PDFs. */
+export type PdfFont =
+  | "noto-sans-hebrew"
+  | "heebo"
+  | "rubik"
+  | "assistant"
+  | "frank-ruhl-libre"
+  | "david-libre";
+
 export interface CompanySettings {
   id: string;
   name: string | null;
@@ -13,6 +22,7 @@ export interface CompanySettings {
   signature: string | null;
   pdfPrimaryColor: string;
   pdfSecondaryColor: string;
+  pdfFont: PdfFont;
   updatedAt: string;
 }
 
@@ -28,6 +38,7 @@ export interface UpsertCompanySettingsDto {
   signature?: string | null;
   pdfPrimaryColor?: string;
   pdfSecondaryColor?: string;
+  pdfFont?: PdfFont;
 }
 
 export const companySettingsApi = baseApi.injectEndpoints({

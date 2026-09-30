@@ -24,6 +24,7 @@ import {
   renderClientSimulatedExportHtml,
 } from './templates/client-simulated-export.template';
 import { PdfColors } from './templates/shared';
+import { DEFAULT_PDF_FONT, isPdfFont, PdfFont } from 'src/common/pdf-fonts';
 import { ProjectReportListItemDto } from 'src/project-reports/dto/project-report-list-item.dto';
 import { normalizeToMonthStart } from 'src/common/utils/date.utils';
 
@@ -39,6 +40,7 @@ interface CompanySettingsForPdf {
   signature: string | null;
   pdfPrimaryColor: string;
   pdfSecondaryColor: string;
+  pdfFont: string;
 }
 
 /**
@@ -231,6 +233,7 @@ export class PdfExportService {
       logo: companySettings.logo,
       signature: companySettings.signature,
       colors: this.pdfColors(companySettings),
+      font: this.pdfFont(companySettings),
     });
 
     this.logger.log(
@@ -273,6 +276,14 @@ export class PdfExportService {
       primary: companySettings.pdfPrimaryColor,
       secondary: companySettings.pdfSecondaryColor,
     };
+  }
+
+  // The column is a plain string validated on write; a value that is no longer
+  // on the list (a font since removed) falls back rather than failing export.
+  private pdfFont(companySettings: CompanySettingsForPdf): PdfFont {
+    return isPdfFont(companySettings.pdfFont)
+      ? companySettings.pdfFont
+      : DEFAULT_PDF_FONT;
   }
 
   private formatCompanyAddress(
@@ -384,6 +395,7 @@ export class PdfExportService {
       logo: companySettings.logo,
       signature: companySettings.signature,
       colors: this.pdfColors(companySettings),
+      font: this.pdfFont(companySettings),
       screen: includeScreenDetails
         ? {
             projectLocation: report.project.location,
