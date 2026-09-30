@@ -10,7 +10,7 @@ import {
 } from "@/api/endpoints/project-reports";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { Badge, EmptyState } from "@/components/atoms";
-import { fieldBase } from "@/components/atoms/field";
+import { fieldChrome } from "@/components/atoms/field";
 import { useLang } from "@/contexts/useLang";
 import { formatYM } from "@/utils/formatMonth";
 
@@ -71,7 +71,7 @@ function IncomeDateCell({
         onKeyDown={(e) => {
           if (e.key === "Enter") void commit();
         }}
-        className={`${fieldBase} w-auto py-1`}
+        className={`${fieldChrome} tnum px-1.5 py-0.5 text-label`}
       />
     </div>
   );
