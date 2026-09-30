@@ -26,6 +26,7 @@ describe('CompanySettingsService', () => {
     signature: 'data:image/png;base64,def',
     pdfPrimaryColor: '#1f2a44',
     pdfSecondaryColor: '#c9a24b',
+    pdfFont: 'noto-sans-hebrew',
     updatedAt: new Date('2026-07-31T10:39:08.000Z'),
   };
 
@@ -81,6 +82,7 @@ describe('CompanySettingsService', () => {
         signature: 'data:image/png;base64,def',
         pdfPrimaryColor: '#1f2a44',
         pdfSecondaryColor: '#c9a24b',
+        pdfFont: 'noto-sans-hebrew',
         updatedAt: '2026-07-31T10:39:08.000Z',
       });
     });
@@ -123,6 +125,7 @@ describe('CompanySettingsService', () => {
         signature: null,
         pdfPrimaryColor: '#1f2a44',
         pdfSecondaryColor: '#c9a24b',
+        pdfFont: 'noto-sans-hebrew',
         updatedAt: mockSettings.updatedAt,
       });
 

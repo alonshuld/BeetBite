@@ -205,6 +205,9 @@ model CompanySettings {
   /// original navy/gold theme, so a contractor that never picks keeps it.
   pdfPrimaryColor   String   @default("#1f2a44")
   pdfSecondaryColor String   @default("#c9a24b")
+  /// Font of the exported PDFs — one of the ids in `src/common/pdf-fonts.ts`.
+  /// The default is the Noto stack the PDFs always rendered in.
+  pdfFont           String   @default("noto-sans-hebrew")
   updatedAt         DateTime @updatedAt
 
   @@map("company_settings")

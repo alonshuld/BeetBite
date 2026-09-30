@@ -12,6 +12,7 @@ import {
   dirFor,
   PdfColors,
 } from './shared';
+import { PdfFont } from 'src/common/pdf-fonts';
 
 export interface ClientSimulatedProjectRow {
   projectId: string;
@@ -50,6 +51,7 @@ export interface ClientSimulatedExportData {
   logo: string | null;
   signature: string | null;
   colors: PdfColors;
+  font: PdfFont;
 }
 
 const LABELS = {
@@ -235,7 +237,7 @@ export const renderClientSimulatedExportHtml = (
 <head>
 <meta charset="UTF-8" />
 <style>
-${reportApprovalStyles(dir, data.colors)}
+${reportApprovalStyles(dir, data.colors, data.font)}
 /* Each project's page (summary included) must start on its own printed page
    — without this, puppeteer would run them together as one continuous flow. */
 .page { break-after: page; }

@@ -581,6 +581,18 @@ describe('PDF Export Integration Tests', () => {
       expect(html).not.toContain('#c9a24b');
     });
 
+    it('should embed the configured PDF font', async () => {
+      await prisma.companySettings.update({
+        where: { id: SETTINGS_ID },
+        data: { pdfFont: 'frank-ruhl-libre' },
+      });
+
+      const html = await renderHtml();
+
+      expect(html).toContain('font-family: "Frank Ruhl Libre",');
+      expect(html).toContain('url(data:font/woff2;base64,');
+    });
+
     it('should render no image tags when logo and signature are unset', async () => {
       const html = await renderHtml();
 

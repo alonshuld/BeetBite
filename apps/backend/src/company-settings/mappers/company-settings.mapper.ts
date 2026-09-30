@@ -21,5 +21,6 @@ export const toCompanySettingsResponse = (
   signature: settings.signature,
   pdfPrimaryColor: settings.pdfPrimaryColor,
   pdfSecondaryColor: settings.pdfSecondaryColor,
+  pdfFont: settings.pdfFont,
   updatedAt: settings.updatedAt.toISOString(),
 });

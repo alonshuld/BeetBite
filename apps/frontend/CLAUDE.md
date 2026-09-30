@@ -43,7 +43,7 @@ src/
       authSlice.ts          # JWT token in localStorage (key: beetbite.token)
   components/
     atoms/                  # Primitive UI: Button variants, Badge, Input, Select, Textarea, Toggle, Divider, EmptyState, SearchInput, StatCard, MonthPicker, FormGroup, LangToggle, PageHeader, ThemeToggle
-    molecules/              # Composed but stateless: (currently flat — files in atoms/ re-exported via index), + ImageUploadField (file input → base64 data URL, preview, remove)
+    molecules/              # Composed but stateless: (currently flat — files in atoms/ re-exported via index), + ImageUploadField (file input → base64 data URL, preview, remove), ColorField, FontField (PDF font picker with a live preview, loading the picked font from Google Fonts on demand)
     organisms/              # Modal (+ ConfirmModal + FormModal), Sidebar, TopHeader, CompanySettingsForm (shared by onboarding + settings pages)
     AppShell.tsx            # Sidebar + TopHeader + <Outlet />
     RequireAuth.tsx         # Redirects to /login when unauthenticated

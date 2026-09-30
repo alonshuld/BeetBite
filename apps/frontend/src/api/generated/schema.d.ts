@@ -1942,6 +1942,18 @@ export interface components {
        */
       pdfSecondaryColor: string;
       /**
+       * @description Font of exported PDFs
+       * @example noto-sans-hebrew
+       * @enum {string}
+       */
+      pdfFont:
+        | "noto-sans-hebrew"
+        | "heebo"
+        | "rubik"
+        | "assistant"
+        | "frank-ruhl-libre"
+        | "david-libre";
+      /**
        * @description Timestamp of the last update to the company settings
        * @example 2026-07-31T10:39:08.000Z
        */
@@ -2003,6 +2015,18 @@ export interface components {
        * @example #c9a24b
        */
       pdfSecondaryColor?: string;
+      /**
+       * @description Font of exported PDFs
+       * @example noto-sans-hebrew
+       * @enum {string}
+       */
+      pdfFont?:
+        | "noto-sans-hebrew"
+        | "heebo"
+        | "rubik"
+        | "assistant"
+        | "frank-ruhl-libre"
+        | "david-libre";
     };
     ExportProjectReportsPdfDto: {
       /**
