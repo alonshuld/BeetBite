@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import MonthlyIncomePage from "./MonthlyIncomePage";
 
@@ -10,6 +10,11 @@ vi.mock("react-router-dom", async (importOriginal) => {
 
 vi.mock("@/api/endpoints/income", () => ({
   useGetMonthlyIncomeQuery: vi.fn(),
+}));
+
+const updateIncomeEntry = vi.fn();
+vi.mock("@/api/endpoints/project-reports", () => ({
+  useUpdateIncomeEntryMutation: () => [updateIncomeEntry, { isLoading: false }],
 }));
 
 import { useGetMonthlyIncomeQuery } from "@/api/endpoints/income";
@@ -28,6 +33,14 @@ const mockItems = [
         receivedIncome: 5000,
         pendingIncome: 0,
         profit: 1000,
+        incomeEntries: [
+          {
+            id: "e1",
+            amount: 5000,
+            incomeDate: "2025-03-12T00:00:00.000Z",
+            tag: null,
+          },
+        ],
       },
     ],
   },
@@ -44,6 +57,15 @@ const mockItems = [
         receivedIncome: 0,
         pendingIncome: 3000,
         profit: 600,
+        incomeEntries: [
+          { id: "e2", amount: 1000, incomeDate: null, tag: "Frame" },
+          {
+            id: "e3",
+            amount: 2000,
+            incomeDate: "2025-03-20T00:00:00.000Z",
+            tag: null,
+          },
+        ],
       },
     ],
   },
@@ -65,6 +87,8 @@ function renderPage() {
 describe("MonthlyIncomePage", () => {
   beforeEach(() => {
     setQuery({ data: mockItems, isLoading: false });
+    updateIncomeEntry.mockReset();
+    updateIncomeEntry.mockReturnValue({ unwrap: () => Promise.resolve({}) });
   });
 
   it("renders the page title", () => {
@@ -121,5 +145,62 @@ describe("MonthlyIncomePage", () => {
       screen.getByText("No income recorded this month"),
     ).toBeInTheDocument();
     expect(screen.queryByText("Grand Total")).not.toBeInTheDocument();
+  });
+
+  it("shows a single-entry project's status and date on the project row", () => {
+    renderPage();
+    const row = screen.getByText("Tower Block").closest("tr") as HTMLElement;
+    expect(within(row).getByText("Received")).toBeInTheDocument();
+    expect(within(row).getByLabelText("Income Date – Tower Block")).toHaveValue(
+      "2025-03-12",
+    );
+  });
+
+  it("lists each entry of a multi-entry project with its own status", () => {
+    renderPage();
+    const projectRow = screen.getByText("Bridge").closest("tr") as HTMLElement;
+    // The project row sums what is still outstanding.
+    expect(within(projectRow).getByText(/Pending/)).toHaveTextContent("₪3,000");
+
+    const tagged = screen.getByText("Frame").closest("tr") as HTMLElement;
+    expect(within(tagged).getByText("Pending")).toBeInTheDocument();
+    expect(
+      within(tagged).getByLabelText("Income Date – Bridge – Frame"),
+    ).toHaveValue("");
+
+    const untagged = screen
+      .getByText("Client Income")
+      .closest("tr") as HTMLElement;
+    expect(within(untagged).getByText("Received")).toBeInTheDocument();
+    expect(within(untagged).getByText("₪2,000")).toBeInTheDocument();
+  });
+
+  it("saves a new payment date on blur", () => {
+    renderPage();
+    const input = screen.getByLabelText("Income Date – Bridge – Frame");
+    fireEvent.change(input, { target: { value: "2025-03-25" } });
+    expect(updateIncomeEntry).not.toHaveBeenCalled();
+    fireEvent.blur(input);
+    expect(updateIncomeEntry).toHaveBeenCalledWith({
+      id: "e2",
+      incomeDate: "2025-03-25",
+    });
+  });
+
+  it("marks income pending again when its date is cleared", () => {
+    renderPage();
+    const input = screen.getByLabelText("Income Date – Tower Block");
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(updateIncomeEntry).toHaveBeenCalledWith({
+      id: "e1",
+      incomeDate: null,
+    });
+  });
+
+  it("does not save when the date is left unchanged", () => {
+    renderPage();
+    fireEvent.blur(screen.getByLabelText("Income Date – Tower Block"));
+    expect(updateIncomeEntry).not.toHaveBeenCalled();
   });
 });

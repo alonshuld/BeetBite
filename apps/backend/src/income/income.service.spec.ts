@@ -74,8 +74,18 @@ describe('IncomeService', () => {
           },
           profitMargin: decimal(10),
           incomeEntries: [
-            { amount: decimal(6000), incomeDate: new Date('2024-05-10') },
-            { amount: decimal(4000), incomeDate: null },
+            {
+              id: 'entry-1',
+              amount: decimal(6000),
+              incomeDate: new Date('2024-05-10'),
+              tag: 'שלד',
+            },
+            {
+              id: 'entry-2',
+              amount: decimal(4000),
+              incomeDate: null,
+              tag: null,
+            },
           ],
         },
       ]);
@@ -97,6 +107,16 @@ describe('IncomeService', () => {
           receivedIncome: 6000, // only the entry with a non-null incomeDate
           pendingIncome: 4000, // total - received
           profit: 1000,
+          // Each entry is returned too, so the page can show and edit its date.
+          incomeEntries: [
+            {
+              id: 'entry-1',
+              amount: 6000,
+              incomeDate: '2024-05-10T00:00:00.000Z',
+              tag: 'שלד',
+            },
+            { id: 'entry-2', amount: 4000, incomeDate: null, tag: null },
+          ],
         },
       ]);
     });

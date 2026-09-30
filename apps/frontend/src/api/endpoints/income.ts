@@ -1,4 +1,5 @@
 import { baseApi } from "@/api/baseApi";
+import type { IncomeEntry } from "@/api/endpoints/project-reports";
 
 export interface MonthlyIncomeProject {
   projectId: string;
@@ -7,6 +8,8 @@ export interface MonthlyIncomeProject {
   receivedIncome: number;
   pendingIncome: number;
   profit: number;
+  /** The entries behind totalIncome — received once incomeDate is set. */
+  incomeEntries: IncomeEntry[];
 }
 
 export interface MonthlyIncomeItem {
