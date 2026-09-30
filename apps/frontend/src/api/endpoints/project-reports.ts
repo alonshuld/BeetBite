@@ -105,7 +105,7 @@ export const projectReportsApi = baseApi.injectEndpoints({
     }),
     createProjectReport: build.mutation<ProjectReport, CreateProjectReportDto>({
       query: (body) => ({ url: "/projects/reports", method: "POST", body }),
-      invalidatesTags: ["ProjectReports", "Projects"],
+      invalidatesTags: ["ProjectReports", "Projects", "Incomes"],
     }),
     updateProjectReport: build.mutation<
       ProjectReport,
@@ -116,11 +116,11 @@ export const projectReportsApi = baseApi.injectEndpoints({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["ProjectReports"],
+      invalidatesTags: ["ProjectReports", "Incomes"],
     }),
     deleteProjectReport: build.mutation<void, string>({
       query: (id) => ({ url: `/projects/reports/${id}`, method: "DELETE" }),
-      invalidatesTags: ["ProjectReports", "Projects"],
+      invalidatesTags: ["ProjectReports", "Projects", "Incomes"],
     }),
     addIncomeEntry: build.mutation<
       IncomeEntry,
@@ -131,7 +131,7 @@ export const projectReportsApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["ProjectReports", "Projects"],
+      invalidatesTags: ["ProjectReports", "Projects", "Incomes"],
     }),
     updateIncomeEntry: build.mutation<
       IncomeEntry,
@@ -142,14 +142,14 @@ export const projectReportsApi = baseApi.injectEndpoints({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["ProjectReports", "Projects"],
+      invalidatesTags: ["ProjectReports", "Projects", "Incomes"],
     }),
     deleteIncomeEntry: build.mutation<void, string>({
       query: (id) => ({
         url: `/projects/reports/income-entries/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["ProjectReports", "Projects"],
+      invalidatesTags: ["ProjectReports", "Projects", "Incomes"],
     }),
   }),
 });

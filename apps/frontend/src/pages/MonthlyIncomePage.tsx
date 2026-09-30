@@ -1,12 +1,145 @@
+import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { useGetMonthlyIncomeQuery } from "@/api/endpoints/income";
+import {
+  useGetMonthlyIncomeQuery,
+  type MonthlyIncomeProject,
+} from "@/api/endpoints/income";
+import {
+  useUpdateIncomeEntryMutation,
+  type IncomeEntry,
+} from "@/api/endpoints/project-reports";
 import { PageHeader } from "@/components/molecules/PageHeader";
-import { EmptyState } from "@/components/atoms";
+import { Badge, EmptyState } from "@/components/atoms";
+import { fieldBase } from "@/components/atoms/field";
 import { useLang } from "@/contexts/useLang";
 import { formatYM } from "@/utils/formatMonth";
 
 function formatILS(n: number): string {
   return `₪${n.toLocaleString("he-IL")}`;
+}
+
+function toDateInput(iso: string | null): string {
+  return iso ? iso.slice(0, 10) : "";
+}
+
+/*
+ * Received/pending badge plus the entry's payment date, editable in place.
+ * Saves on blur or Enter rather than on every change: a native date input
+ * reports a valid date after each typed year digit (0002, 0020, 0202…), so
+ * saving on change would write those intermediate years. Clearing the date
+ * marks the income pending again.
+ */
+function IncomeDateCell({
+  entry,
+  label,
+}: {
+  entry: IncomeEntry;
+  label: string;
+}) {
+  const { t } = useLang();
+  const [updateIncomeEntry, { isLoading }] = useUpdateIncomeEntryMutation();
+  const saved = toDateInput(entry.incomeDate);
+  const [draft, setDraft] = useState(saved);
+
+  async function commit() {
+    if (draft === saved) return;
+    try {
+      await updateIncomeEntry({
+        id: entry.id,
+        incomeDate: draft || null,
+      }).unwrap();
+    } catch {
+      // AppShell already toasts the API error; put the saved date back.
+      setDraft(saved);
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-end gap-2">
+      {entry.incomeDate ? (
+        <Badge variant="green">{t("received")}</Badge>
+      ) : (
+        <Badge variant="yellow">{t("pending")}</Badge>
+      )}
+      <input
+        type="date"
+        aria-label={`${t("incomeDate")} – ${label}`}
+        value={draft}
+        disabled={isLoading}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void commit();
+        }}
+        className={`${fieldBase} w-auto py-1`}
+      />
+    </div>
+  );
+}
+
+/*
+ * A project with several income entries summarises them on its own row and
+ * lists each entry beneath; with a single entry the project row carries it.
+ */
+function ProjectIncomeRows({ proj }: { proj: MonthlyIncomeProject }) {
+  const { t } = useLang();
+  const entries = proj.incomeEntries;
+  const single = entries.length === 1 ? entries[0] : null;
+
+  return (
+    <>
+      <tr className="border-b border-border last:border-0">
+        <td className="py-2 px-3 text-text">{proj.projectName}</td>
+        <td className="py-2 px-3 text-end text-success font-medium">
+          {formatILS(proj.totalIncome)}
+        </td>
+        <td className="py-2 px-3">
+          {single ? (
+            <IncomeDateCell
+              key={`${single.id}:${single.incomeDate}`}
+              entry={single}
+              label={proj.projectName}
+            />
+          ) : entries.length > 1 ? (
+            <div className="flex justify-end">
+              {proj.pendingIncome === 0 ? (
+                <Badge variant="green">{t("received")}</Badge>
+              ) : (
+                <Badge variant="yellow">
+                  {t("pending")} {formatILS(proj.pendingIncome)}
+                </Badge>
+              )}
+            </div>
+          ) : null}
+        </td>
+        <td className="py-2 px-3 text-end text-beet-bright font-medium">
+          {formatILS(proj.profit)}
+        </td>
+      </tr>
+      {entries.length > 1 &&
+        entries.map((entry) => {
+          const label = entry.tag || t("clientIncome");
+          return (
+            <tr key={entry.id} className="border-b border-border last:border-0">
+              <td className="py-1.5 pe-3 ps-6 text-xs text-text-muted">
+                {label}
+              </td>
+              <td className="py-1.5 px-3 text-end text-text">
+                {formatILS(entry.amount)}
+              </td>
+              <td className="py-1.5 px-3">
+                <IncomeDateCell
+                  key={`${entry.id}:${entry.incomeDate}`}
+                  entry={entry}
+                  label={`${proj.projectName} – ${label}`}
+                />
+              </td>
+              <td />
+            </tr>
+          );
+        })}
+    </>
+  );
 }
 
 export default function MonthlyIncomePage() {
@@ -87,39 +220,31 @@ export default function MonthlyIncomePage() {
                 </div>
               </div>
 
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-surface-2">
-                    <th className="text-left py-2 px-3 text-label font-semibold text-text-muted rtl:text-right">
-                      {t("project")}
-                    </th>
-                    <th className="text-right py-2 px-3 text-label font-semibold text-text-muted rtl:text-left">
-                      {t("income")}
-                    </th>
-                    <th className="text-right py-2 px-3 text-label font-semibold text-text-muted rtl:text-left">
-                      {t("profit")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {item.projects.map((proj) => (
-                    <tr
-                      key={proj.projectId}
-                      className="border-b border-border last:border-0"
-                    >
-                      <td className="py-2 px-3 text-text">
-                        {proj.projectName}
-                      </td>
-                      <td className="py-2 px-3 text-right text-success font-medium rtl:text-left">
-                        {formatILS(proj.totalIncome)}
-                      </td>
-                      <td className="py-2 px-3 text-right text-beet-bright font-medium rtl:text-left">
-                        {formatILS(proj.profit)}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-surface-2">
+                      <th className="text-left py-2 px-3 text-label font-semibold text-text-muted rtl:text-right">
+                        {t("project")}
+                      </th>
+                      <th className="text-end py-2 px-3 text-label font-semibold text-text-muted">
+                        {t("income")}
+                      </th>
+                      <th className="text-end py-2 px-3 text-label font-semibold text-text-muted">
+                        {t("incomeDate")}
+                      </th>
+                      <th className="text-end py-2 px-3 text-label font-semibold text-text-muted">
+                        {t("profit")}
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {item.projects.map((proj) => (
+                      <ProjectIncomeRows key={proj.projectId} proj={proj} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ))}
         </div>

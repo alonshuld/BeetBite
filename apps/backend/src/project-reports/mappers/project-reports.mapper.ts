@@ -21,7 +21,9 @@ type SupplierPaymentRaw = {
   supplier: { id: string; name: string };
 };
 
-function mapIncomeEntries(entries: IncomeEntryRaw[]): IncomeEntryResponseDto[] {
+export function mapIncomeEntries(
+  entries: IncomeEntryRaw[],
+): IncomeEntryResponseDto[] {
   return entries.map((e) => ({
     id: e.id,
     amount: e.amount.toNumber(),

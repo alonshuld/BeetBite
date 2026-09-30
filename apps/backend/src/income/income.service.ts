@@ -5,6 +5,7 @@ import {
   MonthlyIncomeItemDto,
   MonthlyIncomeProjectDto,
 } from './dto/monthly-income-item.dto';
+import { mapIncomeEntries } from 'src/project-reports/mappers/project-reports.mapper';
 
 @Injectable()
 export class IncomeService {
@@ -47,9 +48,13 @@ export class IncomeService {
         profitMargin: true,
         incomeEntries: {
           select: {
+            id: true,
             amount: true,
             incomeDate: true,
+            tag: true,
           },
+          // Stable order, so a row doesn't jump when its date is edited in place.
+          orderBy: { id: 'asc' },
         },
       },
     });
@@ -115,6 +120,7 @@ export class IncomeService {
         receivedIncome,
         pendingIncome,
         profit,
+        incomeEntries: mapIncomeEntries(report.incomeEntries),
       });
     }
 

@@ -1870,6 +1870,8 @@ export interface components {
       receivedIncome: number;
       pendingIncome: number;
       profit: number;
+      /** @description The individual income entries behind totalIncome, each received or pending by its incomeDate */
+      incomeEntries: components["schemas"]["IncomeEntryResponseDto"][];
     };
     MonthlyIncomeItemDto: {
       clientId: string;
