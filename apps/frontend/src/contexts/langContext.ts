@@ -132,7 +132,7 @@ export const translations = {
     done: "Done",
     // Column headers
     estimated: "Estimated",
-    remaining: "Remaining",
+    remaining: "Balance Due",
     totalRemaining: "Total Remaining",
     subcontractor: "Subcontractor",
     // Page subtitles
@@ -435,7 +435,7 @@ export const translations = {
     done: "בוצע",
     // Column headers
     estimated: "משוער",
-    remaining: "יתרה לקבלה",
+    remaining: "יתרה לתשלום",
     totalRemaining: "סה״כ יתרה",
     subcontractor: "קבלן משנה",
     // Page subtitles
