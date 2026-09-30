@@ -496,6 +496,11 @@ describe('PdfExportService', () => {
 
       expect(html).toContain('יזם:');
       expect(html).toContain('Yaniv Goldman');
+      // The initiator is the first line of the info box, above the client.
+      const infoBox = html.slice(html.indexOf('class="info-box"'));
+      expect(infoBox.indexOf('יזם:')).toBeLessThan(
+        infoBox.indexOf('שם המזמין:'),
+      );
     });
 
     it('renders the initiator block in English when lang is en', async () => {
@@ -521,7 +526,7 @@ describe('PdfExportService', () => {
       expect(html).toContain('Yaniv Goldman');
     });
 
-    it('renders the initiator income row when set', async () => {
+    it('renders the initiator income as a table column spanning every income row', async () => {
       mockProjectReportsService.findOneForExport.mockResolvedValue({
         ...mockReport,
         project: { ...mockReport.project, initiatorName: 'Yaniv Goldman' },
@@ -530,8 +535,20 @@ describe('PdfExportService', () => {
 
       const html = await renderHtml();
 
-      expect(html).toContain('הכנסה מיזם:');
-      expect(html).toContain('2,000,000.00');
+      // Header sits just before the approved amount (to its right in RTL),
+      // and the figure is one cell spanning all rows, not an info-box line.
+      expect(html).toMatch(/<th>הכנסה מיזם<\/th>\s*<th>חשבון שאושר<\/th>/);
+      expect(html).toContain(
+        `rowspan="${mockReport.incomeEntries.length}">2,000,000.00 ₪`,
+      );
+      expect(html.match(/2,000,000\.00/g)).toHaveLength(1);
+      expect(html).not.toContain('הכנסה מיזם:');
+    });
+
+    it('renders no initiator income column when the project has no initiator', async () => {
+      const html = await renderHtml();
+
+      expect(html).not.toContain('הכנסה מיזם');
     });
 
     it('refuses to export when the project has an initiator but initiatorIncome is not set', async () => {
