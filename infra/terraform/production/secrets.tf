@@ -26,8 +26,9 @@ resource "tls_private_key" "deploy_key" {
 
 locals {
   env_params = {
-    APP_DOMAIN     = local.app_fqdn
-    ACME_EMAIL     = var.acme_email
+    APP_DOMAIN     = local.site_address
+    APP_URL        = local.app_url
+    ACME_EMAIL     = var.acme_email != "" ? var.acme_email : var.alert_emails[0]
     ADMIN_USERNAME = var.admin_username
     BACKUP_BUCKET  = aws_s3_bucket.backups.id
     BACKUP_REGION  = var.backup_region

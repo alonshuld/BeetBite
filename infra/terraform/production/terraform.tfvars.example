@@ -1,9 +1,13 @@
 # Copy to terraform.tfvars (gitignored) and fill in.
 
-domain_name   = "yourcompany.co.il"
-app_subdomain = "app"
-acme_email    = "ops@yourcompany.co.il"
-alert_emails  = ["ops@yourcompany.co.il"]
+alert_emails = ["ops@yourcompany.co.il"]
+
+# Leave domain_name unset for a trial run: the app is then served over plain
+# HTTP at http://<elastic_ip> (test data only). Setting it later switches to
+# HTTPS: terraform apply, then re-run the first-boot script on the host.
+# domain_name   = "yourcompany.co.il"
+# app_subdomain = "app"
+# acme_email    = "ops@yourcompany.co.il"   # defaults to the first alert email
 
 # Route 53 hosts DNS and Terraform creates the zone. Set create_hosted_zone =
 # false if the zone already exists, or manage_dns = false to keep DNS at

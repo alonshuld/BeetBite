@@ -154,11 +154,18 @@ resource "aws_instance" "app" {
   ]
 }
 
+# Allocated separately from its association so the address is known before
+# the instance boots: without a domain, APP_URL (read on first boot) is
+# built from it.
 resource "aws_eip" "app" {
-  domain   = "vpc"
-  instance = aws_instance.app.id
+  domain = "vpc"
 
   tags = {
     Name = local.name
   }
+}
+
+resource "aws_eip_association" "app" {
+  allocation_id = aws_eip.app.id
+  instance_id   = aws_instance.app.id
 }

@@ -4,7 +4,8 @@
 
 # Terminates HTTPS (certificate issued and renewed automatically by Let's
 # Encrypt) and hands everything to the frontend nginx, which serves the SPA
-# and proxies /api to the backend.
+# and proxies /api to the backend. APP_DOMAIN set to ":80" instead of a
+# hostname serves plain HTTP (trial runs without a domain).
 {$APP_DOMAIN} {
 	encode zstd gzip
 	header {
