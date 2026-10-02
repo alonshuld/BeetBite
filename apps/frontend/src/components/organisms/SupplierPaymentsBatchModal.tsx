@@ -13,6 +13,7 @@ import { Toggle } from "@/components/atoms/Toggle";
 import { ButtonGhost, ButtonDanger } from "@/components/atoms";
 import { FormGroup } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
+import { useFieldCheck } from "@/hooks/useFieldCheck";
 import { useToast } from "@/contexts/useToast";
 
 interface DraftRow {
@@ -59,6 +60,7 @@ export function SupplierPaymentsBatchModal({
 }: SupplierPaymentsBatchModalProps) {
   const { t } = useLang();
   const { toast } = useToast();
+  const checkFields = useFieldCheck();
 
   const { data: suppliers = [] } = useGetSuppliersQuery();
   // A payment hangs off a project *report*, so only projects that already have
@@ -99,7 +101,18 @@ export function SupplierPaymentsBatchModal({
   const runningTotal = validRows.reduce((sum, row) => sum + row.amount, 0);
 
   async function handleSubmit() {
-    if (!supplierId || validRows.length === 0) return;
+    // With no complete row, point at whichever half every row is missing.
+    const noRow = validRows.length === 0;
+    const anyProject = rows.some((row) => row.projectReportId !== "");
+    const anyAmount = rows.some((row) => row.amount !== "");
+    if (
+      !checkFields([
+        [t("supplier"), !supplierId && "missing"],
+        [t("project"), noRow && (!anyProject || anyAmount) && "missing"],
+        [t("amountILS"), noRow && (!anyAmount || anyProject) && "missing"],
+      ])
+    )
+      return;
     const result = await batchCreate({ supplierId, payments: validRows });
     if (!("error" in result)) {
       toast(t("paymentsRecorded"), "success");

@@ -234,13 +234,15 @@ export default function ProjectsPage() {
     clientId: !form.clientId,
     requesterName: !form.requesterName.trim(),
     location: !form.location.trim(),
-    estimatedAmount: isNaN(amount) || amount < 0,
+    description: !form.description.trim(),
+    estimatedAmount: isNaN(amount) || amount <= 0,
   };
   const invalidLabels: Record<keyof typeof invalid, string> = {
     name: t("name"),
     clientId: t("client"),
     requesterName: t("requester"),
     location: t("location"),
+    description: t("description"),
     estimatedAmount: t("estimatedAmountLabel"),
   };
 
@@ -633,11 +635,13 @@ export default function ProjectsPage() {
         <FormGroup>
           <Textarea
             id="proj-desc"
+            {...invalidProps("description")}
             label={t("description")}
             value={form.description}
             onChange={(e) => setField("description", e.target.value)}
             placeholder={t("projectDescriptionPlaceholder")}
             rows={3}
+            required
           />
         </FormGroup>
         <FormRow>

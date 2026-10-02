@@ -5,6 +5,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { EntityExceptionFilter } from './common/filters/filter-entity-exception.filter';
+import { RequestValidationError } from './common/errors/request-validation.error';
 
 async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
@@ -42,6 +43,9 @@ async function bootstrap(): Promise<void> {
         enableImplicitConversion: true,
       },
       disableErrorMessages: environment === 'production',
+      // Name the failing fields so the client can point the user at them.
+      exceptionFactory: (errors) =>
+        new RequestValidationError(errors, environment !== 'production'),
     }),
   );
 

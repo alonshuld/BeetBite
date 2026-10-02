@@ -26,6 +26,7 @@ export const translations = {
     signingIn: "Signing in…",
     fillFields: "Please fill in all fields",
     requiredFieldsMissing: "Fill in the required fields:",
+    invalidFieldValues: "Check the values in:",
     constructionPlatform: "Construction management platform",
     copyright: "BeetBite © 2026",
     // General
@@ -343,6 +344,7 @@ export const translations = {
     signingIn: "מתחבר…",
     fillFields: "נא למלא את כל השדות",
     requiredFieldsMissing: "יש למלא את שדות החובה:",
+    invalidFieldValues: "יש לבדוק את הערכים בשדות:",
     constructionPlatform: "פלטפורמת ניהול בנייה",
     copyright: "BeetBite © 2026",
     // General

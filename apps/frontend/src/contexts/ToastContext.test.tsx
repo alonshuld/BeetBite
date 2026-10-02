@@ -76,6 +76,23 @@ describe("ToastContext / ToastProvider", () => {
     expect(screen.queryByText("Temporary")).not.toBeInTheDocument();
   });
 
+  it("keeps an error up long enough to read which fields to fix", () => {
+    render(
+      <ToastProvider>
+        <ToastTrigger message="Broken" variant="error" />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByText("Show toast"));
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("Broken");
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.queryByText("Broken")).not.toBeInTheDocument();
+  });
+
   it("dismisses toast when X button clicked", () => {
     render(
       <ToastProvider>

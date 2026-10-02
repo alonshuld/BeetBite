@@ -1,5 +1,6 @@
 import type { Lang, TranslationKey } from "@/contexts/langContext";
 import { formatYM } from "@/utils/formatMonth";
+import { describeFieldProblems, fieldLabels } from "@/api/fieldLabels";
 
 /**
  * An error as the backend's EntityExceptionFilter returns it, or a network
@@ -22,6 +23,9 @@ export interface ApiError {
  * from the error's `params`.
  */
 export const hebrewApiErrors: Record<string, string> = {
+  // Request body failed validation. With field params it is described by
+  // describeValidationError instead; this line is only the bare fallback.
+  VALIDATION_FAILED: "חלק מהפרטים שהוזנו חסרים או אינם תקינים.",
   // Generic bases — a domain error whose subclass sets no code of its own
   NOT_FOUND: "הפריט המבוקש לא נמצא.",
   ALREADY_EXISTS: "רשומה כזו כבר קיימת.",
@@ -115,6 +119,22 @@ function statusFallback(status: ApiError["status"]): TranslationKey {
 }
 
 /**
+ * "Fill in the required fields: Description, Location" — the fields named
+ * with their form labels, in either language. Null when the error carries no
+ * field names.
+ */
+function describeValidationError(
+  error: ApiError,
+  t: (key: TranslationKey) => string,
+): string | null {
+  return describeFieldProblems(
+    fieldLabels(error.params?.missing, t),
+    fieldLabels(error.params?.invalid, t),
+    t,
+  );
+}
+
+/**
  * The text to show the user for a failed request, in their language.
  *
  * Hebrew: the error's code, translated; failing that, a generic line for
@@ -126,6 +146,10 @@ export function describeApiError(
   lang: Lang,
   t: (key: TranslationKey) => string,
 ): string {
+  if (error.code === "VALIDATION_FAILED") {
+    const text = describeValidationError(error, t);
+    if (text) return text;
+  }
   if (lang === "he") {
     const template = error.code ? hebrewApiErrors[error.code] : undefined;
     if (template) return interpolate(template, error.params, lang);

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLang } from "@/contexts/useLang";
+import { useFieldCheck } from "@/hooks/useFieldCheck";
 import {
   useGetInitiatorsQuery,
   useCreateInitiatorMutation,
@@ -22,6 +23,7 @@ import { LoadingState } from "@/components/molecules/LoadingState";
 
 export default function InitiatorsPage() {
   const { t } = useLang();
+  const checkFields = useFieldCheck();
   const { data: initiators = [], isLoading } = useGetInitiatorsQuery();
   const [createInitiator, { isLoading: creating }] =
     useCreateInitiatorMutation();
@@ -61,7 +63,7 @@ export default function InitiatorsPage() {
   }
 
   async function handleSave() {
-    if (!name.trim()) return;
+    if (!checkFields([[t("name"), !name.trim() && "missing"]])) return;
     const result = editing
       ? await updateInitiator({ id: editing.id, name: name.trim() })
       : await createInitiator({ name: name.trim() });

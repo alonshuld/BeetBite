@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLang } from "@/contexts/useLang";
+import { useFieldCheck } from "@/hooks/useFieldCheck";
 import {
   useGetClientsQuery,
   useCreateClientMutation,
@@ -22,6 +23,7 @@ import { LoadingState } from "@/components/molecules/LoadingState";
 
 export default function ClientsPage() {
   const { t } = useLang();
+  const checkFields = useFieldCheck();
   const { data: clients = [], isLoading } = useGetClientsQuery();
   const [createClient, { isLoading: creating }] = useCreateClientMutation();
   const [updateClient, { isLoading: updating }] = useUpdateClientMutation();
@@ -58,7 +60,7 @@ export default function ClientsPage() {
   }
 
   async function handleSave() {
-    if (!name.trim()) return;
+    if (!checkFields([[t("name"), !name.trim() && "missing"]])) return;
     const result = editing
       ? await updateClient({ id: editing.id, name: name.trim() })
       : await createClient({ name: name.trim() });

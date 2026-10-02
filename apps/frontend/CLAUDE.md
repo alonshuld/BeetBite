@@ -57,6 +57,8 @@ src/
     useTheme.ts             # Hook: { theme, setTheme }
     useToast.ts             # Hook: { toast(message, variant?) }
     langContext.ts          # createContext + translations object (en/he)
+  hooks/
+    useFieldCheck.ts        # Save guard that toasts which fields are missing/invalid
   pages/                    # One file per route, lazy-loaded
   styles/
     globals.css             # :root CSS vars + Tailwind directives + base type, focus, scrollbar
@@ -80,6 +82,8 @@ Re-run `pnpm codegen` whenever backend DTOs change. The backend must be running 
 - `authSlice`: persists JWT to `localStorage` under key `beetbite.token`.
 - Endpoint slices under `src/api/endpoints/` are injected into `baseApi`.
 - API errors: `baseQueryWithReauth` emits an `ApiError` (`status`, English `message`, `code`, `params`) through `errorEmitter`; `AppShell` toasts it via `describeApiError` (`src/api/apiErrors.ts`). Hebrew uses the `hebrewApiErrors` table by code (never the server's English — unknown codes fall back to a status-based line); English shows the server message. Add a Hebrew entry for every new backend error code.
+- Validation errors: the backend answers a rejected body with code `VALIDATION_FAILED` and `params.missing` / `params.invalid` (comma-separated field paths). `describeApiError` turns those into "Fill in the required fields: Description, Location" in either language via the label map in `src/api/fieldLabels.ts` — add a field there when a DTO gains one the user types.
+- Form guards: a save handler must never `return` silently on bad input. Use `useFieldCheck()` (`src/hooks/useFieldCheck.ts`): `if (!checkFields([[t("name"), !name.trim() && "missing"]])) return;` — it toasts the field labels and returns false. Error toasts stay up 8s (others 3s).
 
 ## Routing
 

@@ -11,6 +11,7 @@ import { Input } from "@/components/atoms/Input";
 import { ButtonIcon } from "@/components/atoms";
 import { FormGroup } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
+import { useFieldCheck } from "@/hooks/useFieldCheck";
 import { useToast } from "@/contexts/useToast";
 import { formatYM } from "@/utils/formatMonth";
 import { Icon } from "@/components/atoms/Icon";
@@ -43,6 +44,7 @@ export function ProjectTransferModal({
 }: ProjectTransferModalProps) {
   const { t, lang } = useLang();
   const { toast } = useToast();
+  const checkFields = useFieldCheck();
 
   const { data: clients = [] } = useGetClientsQuery();
   const { data: timeline = [] } = useGetProjectClientAssignmentsQuery(
@@ -64,7 +66,14 @@ export function ProjectTransferModal({
   }, [project]);
 
   async function handleSubmit() {
-    if (!project || !clientId) return;
+    if (!project) return;
+    if (
+      !checkFields([
+        [t("newClient"), !clientId && "missing"],
+        [t("effectiveFromMonth"), !month && "missing"],
+      ])
+    )
+      return;
     const result = await transferProject({
       projectId: project.id,
       clientId,
