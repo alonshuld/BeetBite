@@ -23,9 +23,9 @@ compose pull --quiet
 compose up -d --remove-orphans
 docker image prune -af --filter "until=168h" > /dev/null
 
-domain=$(grep '^APP_DOMAIN=' "$root/.env" | cut -d= -f2-)
+app_url=$(grep '^APP_URL=' "$root/.env" | cut -d= -f2-)
 for _ in $(seq 1 36); do
-  if curl -fsS -o /dev/null "https://${domain}/api/v1/health"; then
+  if curl -fsS -o /dev/null "${app_url}/api/v1/health"; then
     echo "deploy ok: ${sha}"
     exit 0
   fi

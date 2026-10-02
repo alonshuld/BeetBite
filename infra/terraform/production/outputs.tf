@@ -1,5 +1,5 @@
 output "app_url" {
-  value = "https://${local.app_fqdn}"
+  value = local.app_url
 }
 
 output "elastic_ip" {
@@ -9,7 +9,7 @@ output "elastic_ip" {
 
 output "name_servers" {
   description = "Set these at the domain registrar when Terraform created the hosted zone."
-  value       = var.manage_dns && var.create_hosted_zone ? aws_route53_zone.main[0].name_servers : []
+  value       = local.manage_dns && var.create_hosted_zone ? aws_route53_zone.main[0].name_servers : []
 }
 
 output "instance_id" {
