@@ -637,6 +637,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/health": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Check that the API and its database are up */
+    get: operations["HealthController_check"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2128,6 +2145,13 @@ export interface components {
        * @example Yaniv Goldman
        */
       name: string;
+    };
+    HealthResponseDto: {
+      /**
+       * @example ok
+       * @enum {string}
+       */
+      status: "ok";
     };
   };
   responses: never;
@@ -4171,6 +4195,32 @@ export interface operations {
       };
       /** @description Initiator not found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  HealthController_check: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HealthResponseDto"];
+        };
+      };
+      /** @description Database unreachable */
+      503: {
         headers: {
           [name: string]: unknown;
         };

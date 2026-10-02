@@ -1956,6 +1956,18 @@ async function seedMockData(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  // Production compose never forwards SEED_MOCK_DATA, but a hand-edited
+  // environment could; refuse before anything touches the database.
+  if (
+    process.env.SEED_MOCK_DATA === 'true' &&
+    process.env.NODE_ENV === 'production'
+  ) {
+    console.error(
+      '❌ SEED_MOCK_DATA is refused when NODE_ENV=production: it truncates every business table.',
+    );
+    process.exit(1);
+  }
+
   try {
     await seedAdmin();
 

@@ -20,6 +20,7 @@ import { VatRatesModule } from './vat-rates/vat-rates.module';
 import { ProjectClientAssignmentsModule } from './project-client-assignments/project-client-assignments.module';
 import { PdfExportModule } from './pdf-export/pdf-export.module';
 import { InitiatorsModule } from './initiators/initiators.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { InitiatorsModule } from './initiators/initiators.module';
     VatRatesModule,
     PdfExportModule,
     InitiatorsModule,
+    HealthModule,
   ],
   providers: [
     {
