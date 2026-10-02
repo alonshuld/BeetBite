@@ -1,5 +1,27 @@
-# Cap the heap so a runaway tsc/eslint can't swap the machine out.
-export NODE_OPTIONS="--max-old-space-size=2048 ${NODE_OPTIONS:-}"
+# Lightweight on purpose: the dev box has ~3.8 GB RAM, and running eslint +
+# tsc over all three apps (`pnpm lint:check`) has crashed WSL. Instead, per
+# app that has staged files: prettier + eslint on just those files, then that
+# app's typecheck. Everything runs one at a time, at the lowest CPU priority,
+# with a capped heap. Full-repo checks: `pnpm format:check && pnpm lint:check`.
+set -e
 
-pnpm format:check
-pnpm lint:check
+export NODE_OPTIONS="--max-old-space-size=1024 ${NODE_OPTIONS:-}"
+root=$(git rev-parse --show-toplevel)
+
+for app in backend frontend e2e; do
+  # Staged (added/copied/modified/renamed) files of this app, relative to it.
+  files=$(git -C "$root" diff --cached --name-only --diff-filter=ACMR -- "apps/$app" |
+    sed "s#^apps/$app/##" | grep -E '\.(ts|tsx|js|mjs)$' || true)
+  [ -z "$files" ] && continue
+
+  echo "pre-commit: $app ($(echo "$files" | wc -l) files)"
+  cd "$root/apps/$app"
+  # Prettier's scope in each app's format:check is TypeScript only.
+  ts_files=$(echo "$files" | grep -E '\.(ts|tsx)$' || true)
+  if [ -n "$ts_files" ]; then
+    echo "$ts_files" | xargs nice -n 19 pnpm exec prettier --check
+  fi
+  echo "$files" | xargs nice -n 19 pnpm exec eslint --no-warn-ignored \
+    --cache --cache-location node_modules/.cache/eslint
+  nice -n 19 pnpm typecheck
+done
