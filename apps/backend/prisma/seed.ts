@@ -98,7 +98,14 @@ type ReportInput = {
   date: string;
   profitMargin: number;
   incomeEntries: IncomeEntryInput[];
+  initiatorIncome?: number;
 };
+
+// The initiator's figure must always exceed the report's own income, so it is
+// derived as a fixed markup over it.
+function initiatorIncomeFor(income: number): number {
+  return Math.round(income * 1.25);
+}
 
 /** Single income entry shorthand */
 function ie(amount: number, incomeDate: string | null): IncomeEntryInput[] {
@@ -112,6 +119,7 @@ async function report(r: ReportInput) {
       subcontractorId: r.subcontractorId,
       date: d(r.date),
       profitMargin: r.profitMargin,
+      initiatorIncome: r.initiatorIncome,
       incomeEntries: {
         create: r.incomeEntries.map((e) => ({
           amount: e.amount,
@@ -996,6 +1004,7 @@ async function seedMockData(): Promise<void> {
         date: dateStr,
         profitMargin: 10,
         incomeEntries: ie(income, incomeDate),
+        initiatorIncome: initiatorIncomeFor(income),
       });
     }),
   );
@@ -1047,6 +1056,7 @@ async function seedMockData(): Promise<void> {
       date: '2025-03-01',
       profitMargin: 11,
       incomeEntries: ie(18000, '2025-03-20'),
+      initiatorIncome: initiatorIncomeFor(18000),
     }),
     report({
       projectId: activeProjects[2].id,
@@ -1054,6 +1064,7 @@ async function seedMockData(): Promise<void> {
       date: '2025-04-01',
       profitMargin: 11,
       incomeEntries: ie(18000, '2025-04-22'),
+      initiatorIncome: initiatorIncomeFor(18000),
     }),
     report({
       projectId: activeProjects[2].id,
@@ -1061,6 +1072,7 @@ async function seedMockData(): Promise<void> {
       date: '2025-05-01',
       profitMargin: 11,
       incomeEntries: ie(20000, '2025-05-21'),
+      initiatorIncome: initiatorIncomeFor(20000),
     }),
     report({
       projectId: activeProjects[2].id,
@@ -1068,6 +1080,7 @@ async function seedMockData(): Promise<void> {
       date: '2025-06-01',
       profitMargin: 11,
       incomeEntries: ie(18000, '2025-06-19'),
+      initiatorIncome: initiatorIncomeFor(18000),
     }),
     report({
       projectId: activeProjects[2].id,
@@ -1075,6 +1088,7 @@ async function seedMockData(): Promise<void> {
       date: '2025-07-01',
       profitMargin: 11,
       incomeEntries: ie(18000, null),
+      initiatorIncome: initiatorIncomeFor(18000),
     }),
     report({
       projectId: activeProjects[2].id,
@@ -1082,6 +1096,7 @@ async function seedMockData(): Promise<void> {
       date: '2025-08-01',
       profitMargin: 11,
       incomeEntries: ie(16000, null),
+      initiatorIncome: initiatorIncomeFor(16000),
     }),
   ]);
 
@@ -1152,6 +1167,7 @@ async function seedMockData(): Promise<void> {
         date: dateStr,
         profitMargin: 12,
         incomeEntries: ie(income, incomeDate),
+        initiatorIncome: initiatorIncomeFor(income),
       });
     }),
   );
@@ -1309,6 +1325,7 @@ async function seedMockData(): Promise<void> {
         date: dateStr,
         profitMargin: 9,
         incomeEntries: ie(income, incomeDate),
+        initiatorIncome: initiatorIncomeFor(income),
       });
     }),
   );
@@ -1514,10 +1531,11 @@ async function seedMockData(): Promise<void> {
     subcontractorId: subcontractors[0].id,
     date: '2026-05-01',
     profitMargin: 10,
+    // Initiator project: a single income entry, so the PDF shows one row.
     incomeEntries: [
-      { amount: 30000, incomeDate: '2026-05-12', tag: 'Structure' }, // advance received
-      { amount: 22000, incomeDate: null, tag: 'Finishing' }, // balance pending
+      { amount: 52000, incomeDate: '2026-05-12', tag: 'Structure' },
     ],
+    initiatorIncome: initiatorIncomeFor(52000),
   });
 
   const showYarkon = await report({
@@ -1536,11 +1554,11 @@ async function seedMockData(): Promise<void> {
     subcontractorId: subcontractors[2].id,
     date: '2026-05-01',
     profitMargin: 11,
+    // Initiator project: a single income entry, so the PDF shows one row.
     incomeEntries: [
-      { amount: 10000, incomeDate: '2026-05-15', tag: 'Infrastructure' },
-      { amount: 6000, incomeDate: '2026-05-22', tag: 'Systems' },
-      { amount: 4000, incomeDate: null, tag: 'Finishing' },
+      { amount: 20000, incomeDate: '2026-05-15', tag: 'Infrastructure' },
     ],
+    initiatorIncome: initiatorIncomeFor(20000),
   });
 
   const showJerusalem = await report({
@@ -1548,11 +1566,11 @@ async function seedMockData(): Promise<void> {
     subcontractorId: subcontractors[4].id,
     date: '2026-05-01',
     profitMargin: 12,
+    // Initiator project: a single income entry, so the PDF shows one row.
     incomeEntries: [
-      { amount: 50000, incomeDate: '2026-05-05', tag: 'Structure' }, // advance
-      { amount: 30000, incomeDate: '2026-05-20', tag: 'Cladding' }, // mid-month
-      { amount: 25000, incomeDate: null, tag: 'Systems' }, // final pending
+      { amount: 105000, incomeDate: '2026-05-05', tag: 'Structure' },
     ],
+    initiatorIncome: initiatorIncomeFor(105000),
   });
 
   const showMamilla = await report({
