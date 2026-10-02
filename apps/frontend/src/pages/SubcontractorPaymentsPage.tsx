@@ -152,9 +152,15 @@ export default function SubcontractorPaymentsPage() {
     );
     if (toDelete.length === 0) return;
     setPendingProject((prev) => ({ ...prev, [projectId]: true }));
-    for (const p of toDelete) await deletePayment(p.id);
+    let failed = false;
+    for (const p of toDelete) {
+      if ("error" in (await deletePayment(p.id))) {
+        failed = true;
+        break;
+      }
+    }
     setPendingProject((prev) => ({ ...prev, [projectId]: false }));
-    closeEntry(projectId);
+    if (!failed) closeEntry(projectId);
   }
 
   /**
@@ -184,7 +190,7 @@ export default function SubcontractorPaymentsPage() {
     const amount = parseFloat(entryAmounts[projectId] ?? "");
     if (isNaN(amount) || amount <= 0) return;
     setPendingProject((prev) => ({ ...prev, [projectId]: true }));
-    await createPayment({
+    const result = await createPayment({
       subcontractorId: selectedSubId!,
       projectId,
       // serviceDate is the month being settled; paymentDate is the day the
@@ -195,6 +201,9 @@ export default function SubcontractorPaymentsPage() {
       description: entryDescriptions[projectId]?.trim() || undefined,
     });
     setPendingProject((prev) => ({ ...prev, [projectId]: false }));
+    // A rejected payment (e.g. over the amount owed) has already toasted its
+    // reason — keep the row open with what the user typed.
+    if ("error" in result) return;
     closeEntry(projectId);
   }
 
@@ -237,9 +246,14 @@ export default function SubcontractorPaymentsPage() {
     previous: string | null,
   ) {
     const trimmed = (descriptionDrafts[paymentId] ?? "").trim();
+    if (trimmed !== (previous ?? "")) {
+      const result = await updatePayment({
+        id: paymentId,
+        description: trimmed,
+      });
+      if ("error" in result) return;
+    }
     closeDescriptionEditor(paymentId);
-    if (trimmed === (previous ?? "")) return;
-    await updatePayment({ id: paymentId, description: trimmed });
   }
 
   async function handleDeleteDescription(paymentId: string) {

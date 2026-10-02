@@ -321,23 +321,25 @@ export default function ProjectReportsPage() {
   }
 
   async function saveEntryEdit(entryId: string) {
-    await updateIncomeEntry({
+    const result = await updateIncomeEntry({
       id: entryId,
       amount: Number(editEntryAmount) || undefined,
       incomeDate: editEntryDate || null,
       tag: editEntryTag.trim() || null,
     });
+    if ("error" in result) return;
     setEditingEntryId(null);
   }
 
   async function saveNewEntry() {
     if (!currentReport || !newEntryAmount) return;
-    await addIncomeEntry({
+    const result = await addIncomeEntry({
       reportId: currentReport.id,
       amount: Number(newEntryAmount),
       incomeDate: newEntryDate || undefined,
       tag: newEntryTag.trim() || undefined,
     });
+    if ("error" in result) return;
     setAddingNewEntry(false);
     setNewEntryAmount("");
     setNewEntryDate("");
@@ -357,7 +359,7 @@ export default function ProjectReportsPage() {
 
   async function saveCorpEdit(cpId: string) {
     if (!currentReport) return;
-    await updateCorp({
+    const result = await updateCorp({
       id: cpId,
       projectReportId: currentReport.id,
       supplierId: editCorpCorpId,
@@ -365,18 +367,20 @@ export default function ProjectReportsPage() {
       date: editCorpDate,
       isFuture: false,
     });
+    if ("error" in result) return;
     setEditingCorpId(null);
   }
 
   async function saveNewCorp() {
     if (!currentReport || !newCorpCorpId || !newCorpAmount) return;
-    await createCorp({
+    const result = await createCorp({
       projectReportId: currentReport.id,
       supplierId: newCorpCorpId,
       amount: Number(newCorpAmount),
       date: newCorpDate,
       isFuture: false,
     });
+    if ("error" in result) return;
     setAddingNewCorp(false);
     setNewCorpCorpId("");
     setNewCorpAmount("");
