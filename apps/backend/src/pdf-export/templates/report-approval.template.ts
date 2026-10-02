@@ -25,7 +25,6 @@ export interface ReportApprovalSupplierRow {
  * document keeps its fixed layout.
  */
 export interface ReportApprovalScreenDetails {
-  projectLocation: string;
   /** Margin in force on this page — simulated, or stored when not overridden. */
   marginPercent: number;
   /**
@@ -51,6 +50,8 @@ export interface ReportApprovalData {
    * stored description. Null prints no row at all.
    */
   projectDescription: string | null;
+  /** Printed after the description as "description • location". */
+  projectLocation: string | null;
   approvedFor: string;
   month: string;
   rows: ReportApprovalRow[];
@@ -86,16 +87,16 @@ const LABELS = {
     mainContractor: 'קבלן ראשי:',
     subcontractor: 'קבלן משנה:',
     approvedFor: 'חשבון מאושר עבור:',
-    approvedAmount: 'חשבון שאושר',
+    approvedAmount: 'חשבון שאושר ע"י מזמין',
     invoiceInclVat: 'חשבונית כולל מע"מ',
-    profitMarginPercent: '% רווח קבלני',
+    profitMarginPercent: 'רווח קבלני',
     profitAmount: 'סה"כ רווח (לפני מע"מ)',
     afterProfit: 'סה"כ בקיזוז רווח (לפני מע"מ)',
     supplierName: 'שם הספק',
     supplierInvoice: 'חשבונית ספקים (ללא מע"מ)',
     supplierTotal: 'סה"כ קיזוזי ספקים',
     initiator: 'יזם:',
-    initiatorIncome: 'הכנסה מיזם',
+    initiatorIncome: 'חשבון שאושר ע"י מזמין',
     monthlySummary: 'סיכום חודשי',
     totalIncome: 'סה"כ הכנסות',
     totalAfterProfit: 'סה"כ הכנסות לאחר קיזוז רווח קבלני',
@@ -109,7 +110,6 @@ const LABELS = {
     pending: 'ממתין',
     openingBalance: 'יתרת פתיחה',
     profit: 'רווח',
-    location: 'מיקום:',
     projectDescription: 'תיאור הפרויקט:',
     savedMargin: '% רווח שמור:',
     simulated: 'מדומה',
@@ -121,16 +121,16 @@ const LABELS = {
     mainContractor: 'Main Contractor:',
     subcontractor: 'Subcontractor:',
     approvedFor: 'Approved For:',
-    approvedAmount: 'Approved Amount',
+    approvedAmount: 'Amount Approved by Client',
     invoiceInclVat: 'Invoice incl. VAT',
-    profitMarginPercent: 'Profit Margin %',
+    profitMarginPercent: 'Profit Margin',
     profitAmount: 'Total Profit (excl. VAT)',
     afterProfit: 'Total After Profit (excl. VAT)',
     supplierName: 'Supplier',
     supplierInvoice: 'Supplier Invoice (excl. VAT)',
     supplierTotal: 'Total Supplier Deductions',
     initiator: 'Initiator:',
-    initiatorIncome: 'Initiator Income',
+    initiatorIncome: 'Amount Approved by Client',
     monthlySummary: 'Monthly Summary',
     totalIncome: 'Total Income',
     totalAfterProfit: 'Total Income After Profit Cut',
@@ -144,7 +144,6 @@ const LABELS = {
     pending: 'Pending',
     openingBalance: 'Opening balance',
     profit: 'Profit',
-    location: 'Location:',
     projectDescription: 'Description:',
     savedMargin: 'Saved Margin %:',
     simulated: 'Simulated',
@@ -399,15 +398,18 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
     .map(escapeHtml)
     .join(' • ');
 
-  // The description row is on every document; the location and the stored
-  // margin it replaced come only from `screen`, which the client-simulated
-  // export alone passes, exactly as the project sheet shows them.
+  // Description and location share one row; either may be missing, and the
+  // row is left out when both are.
+  const descriptionValue = [data.projectDescription, data.projectLocation]
+    .filter((part): part is string => Boolean(part))
+    .map(escapeHtml)
+    .join(' • ');
+
+  // The stored margin comes only from `screen`, which the client-simulated
+  // export alone passes, exactly as the project sheet shows it.
   const infoRowsHtml = [
-    data.screen?.projectLocation
-      ? `<div class="info-row"><span class="label">${t.location}</span><span>${escapeHtml(data.screen.projectLocation)}</span></div>`
-      : '',
-    data.projectDescription
-      ? `<div class="info-row"><span class="label">${t.projectDescription}</span><span>${escapeHtml(data.projectDescription)}</span></div>`
+    descriptionValue
+      ? `<div class="info-row"><span class="label">${t.projectDescription}</span><span>${descriptionValue}</span></div>`
       : '',
     data.screen?.saved
       ? `<div class="info-row"><span class="label">${t.savedMargin}</span><span>${data.screen.saved.marginPercent}% • ${money(data.screen.saved.profitAmount)}</span></div>`

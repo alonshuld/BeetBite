@@ -293,6 +293,30 @@ describe('PdfExportService', () => {
       expect(html).not.toContain('Stored description');
     });
 
+    it('prints the location after the description as "description • location"', async () => {
+      mockProjectReportsService.findOneForExport.mockResolvedValue({
+        ...mockReport,
+        project: { ...mockReport.project, location: 'Ashkelon, plot 309' },
+      });
+
+      const html = await renderHtml({ description: 'Shell works only' });
+
+      expect(html).toContain('Shell works only • Ashkelon, plot 309');
+    });
+
+    it('prints the location alone when no description was given', async () => {
+      mockProjectReportsService.findOneForExport.mockResolvedValue({
+        ...mockReport,
+        project: { ...mockReport.project, location: 'Ashkelon, plot 309' },
+      });
+
+      const html = await renderHtml();
+
+      expect(html).toMatch(
+        /<span class="label">תיאור הפרויקט:<\/span><span>Ashkelon, plot 309<\/span>/,
+      );
+    });
+
     it('leaves the row out entirely when no description was given', async () => {
       const html = await renderHtml();
 
@@ -538,18 +562,20 @@ describe('PdfExportService', () => {
 
       // Header sits just before the approved amount (to its right in RTL),
       // and the figure is one cell spanning all rows, not an info-box line.
-      expect(html).toMatch(/<th>הכנסה מיזם<\/th>\s*<th>חשבון שאושר<\/th>/);
+      expect(html).toMatch(
+        /<th>חשבון שאושר ע"י מזמין<\/th>\s*<th>חשבון שאושר ע"י מזמין<\/th>/,
+      );
       expect(html).toContain(
         `rowspan="${mockReport.incomeEntries.length}">2,000,000.00 ₪`,
       );
       expect(html.match(/2,000,000\.00/g)).toHaveLength(1);
-      expect(html).not.toContain('הכנסה מיזם:');
+      expect(html).not.toContain('חשבון שאושר ע"י מזמין:');
     });
 
     it('renders no initiator income column when the project has no initiator', async () => {
       const html = await renderHtml();
 
-      expect(html).not.toContain('הכנסה מיזם');
+      expect(html.match(/<th>חשבון שאושר ע"י מזמין<\/th>/g)).toHaveLength(1);
     });
 
     it('refuses to export when the project has an initiator but initiatorIncome is not set', async () => {
@@ -867,9 +893,10 @@ describe('PdfExportService', () => {
 
         const html = await renderSimHtml({ ...simDto, lang: 'en' });
 
-        // Location: once on the summary row, once on the detail page.
+        // Location: once on the summary row, once on the detail page,
+        // where it follows the description.
         expect(html.split('Ashkelon, plot 309').length - 1).toBe(2);
-        expect(html).toContain('Lobby renovation');
+        expect(html).toContain('Lobby renovation • Ashkelon, plot 309');
         expect(html).toContain('Subcontractor: Israelov Engineering');
       });
 
