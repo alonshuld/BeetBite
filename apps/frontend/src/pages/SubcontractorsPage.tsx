@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLang } from "@/contexts/useLang";
+import { useFieldCheck } from "@/hooks/useFieldCheck";
 import {
   useGetSubcontractorsQuery,
   useCreateSubcontractorMutation,
@@ -22,6 +23,7 @@ import { LoadingState } from "@/components/molecules/LoadingState";
 
 export default function SubcontractorsPage() {
   const { t } = useLang();
+  const checkFields = useFieldCheck();
   const { data: subcontractors = [], isLoading } = useGetSubcontractorsQuery();
   const [createSubcontractor, { isLoading: creating }] =
     useCreateSubcontractorMutation();
@@ -68,7 +70,18 @@ export default function SubcontractorsPage() {
   }
 
   async function handleSave() {
-    if (!name.trim() || !/^\d{9}$/.test(companyNumber)) return;
+    if (
+      !checkFields([
+        [t("name"), !name.trim() && "missing"],
+        [
+          t("companyNumberLabel"),
+          !companyNumber
+            ? "missing"
+            : !/^\d{9}$/.test(companyNumber) && "invalid",
+        ],
+      ])
+    )
+      return;
     const result = editing
       ? await updateSubcontractor({
           id: editing.id,

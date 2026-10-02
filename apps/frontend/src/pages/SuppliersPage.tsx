@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLang } from "@/contexts/useLang";
+import { useFieldCheck } from "@/hooks/useFieldCheck";
 import {
   useGetSuppliersQuery,
   useCreateSupplierMutation,
@@ -22,6 +23,7 @@ import { LoadingState } from "@/components/molecules/LoadingState";
 
 export default function SuppliersPage() {
   const { t } = useLang();
+  const checkFields = useFieldCheck();
   const { data: suppliers = [], isLoading } = useGetSuppliersQuery();
   const [createSupplier, { isLoading: creating }] = useCreateSupplierMutation();
   const [updateSupplier, { isLoading: updating }] = useUpdateSupplierMutation();
@@ -58,7 +60,7 @@ export default function SuppliersPage() {
   }
 
   async function handleSave() {
-    if (!name.trim()) return;
+    if (!checkFields([[t("name"), !name.trim() && "missing"]])) return;
     const result = editing
       ? await updateSupplier({ id: editing.id, name: name.trim() })
       : await createSupplier({ name: name.trim() });

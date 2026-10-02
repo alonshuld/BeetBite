@@ -109,7 +109,7 @@ The generated Prisma client lives in `src/generated/` (not `node_modules`). Impo
 
 ### Validation
 
-Global `ValidationPipe` is configured with `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`, and `enableImplicitConversion: true`. All DTO properties must be decorated with `class-validator` decorators; extra properties are rejected with 400. Error messages are suppressed in production.
+Global `ValidationPipe` is configured with `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`, and `enableImplicitConversion: true`. All DTO properties must be decorated with `class-validator` decorators; extra properties are rejected with 400. Its `exceptionFactory` throws `RequestValidationError` (`common/errors/request-validation.error.ts`, code `VALIDATION_FAILED`), whose `params.missing` (failed `isNotEmpty`/`isDefined`) and `params.invalid` (anything else) list the failing field paths comma-separated, nested ones dotted (`openingBalance.amount`, `payments.0.amount`) — the frontend names those fields to the user. English messages are suppressed in production; the field paths are always sent.
 
 ### Error handling
 

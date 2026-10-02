@@ -6,6 +6,50 @@ const tFor = (lang: "en" | "he") => (key: TranslationKey) =>
   translations[lang][key];
 
 describe("describeApiError", () => {
+  it("names missing fields by their Hebrew form labels", () => {
+    expect(
+      describeApiError(
+        {
+          status: 400,
+          code: "VALIDATION_FAILED",
+          message: ["description should not be empty"],
+          params: { missing: "description,clientId" },
+        },
+        "he",
+        tFor("he"),
+      ),
+    ).toBe("יש למלא את שדות החובה: תיאור, לקוח");
+  });
+
+  it("separates missing fields from bad values, naming nested ones once", () => {
+    expect(
+      describeApiError(
+        {
+          status: 400,
+          code: "VALIDATION_FAILED",
+          params: {
+            missing: "openingBalance.subcontractorId",
+            invalid: "payments.0.amount,payments.1.amount",
+          },
+        },
+        "en",
+        tFor("en"),
+      ),
+    ).toBe(
+      "Fill in the required fields: Subcontractor. Check the values in: Amount (₪)",
+    );
+  });
+
+  it("falls back to a generic line when no fields are named", () => {
+    expect(
+      describeApiError(
+        { status: 400, code: "VALIDATION_FAILED" },
+        "he",
+        tFor("he"),
+      ),
+    ).toBe(hebrewApiErrors.VALIDATION_FAILED);
+  });
+
   it("translates a coded error into Hebrew", () => {
     expect(
       describeApiError(

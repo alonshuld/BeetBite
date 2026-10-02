@@ -9,6 +9,7 @@ import { Select } from "@/components/atoms/Select";
 import { Input } from "@/components/atoms/Input";
 import { Toggle } from "@/components/atoms/Toggle";
 import { useLang } from "@/contexts/useLang";
+import { useFieldCheck } from "@/hooks/useFieldCheck";
 import { useToast } from "@/contexts/useToast";
 
 interface SupplierPaymentEditModalProps {
@@ -39,6 +40,7 @@ export function SupplierPaymentEditModal({
 }: SupplierPaymentEditModalProps) {
   const { t } = useLang();
   const { toast } = useToast();
+  const checkFields = useFieldCheck();
   const { data: reports = [] } = useGetProjectReportsQuery(month);
   const [updatePayment, { isLoading: saving }] =
     useUpdateSupplierPaymentMutation();
@@ -60,7 +62,14 @@ export function SupplierPaymentEditModal({
 
   async function handleSubmit() {
     if (!payment || !supplier) return;
-    if (!projectReportId || amount === "" || !date) return;
+    if (
+      !checkFields([
+        [t("project"), !projectReportId && "missing"],
+        [t("amountILS"), amount === "" && "missing"],
+        [t("date"), !date && "missing"],
+      ])
+    )
+      return;
     const result = await updatePayment({
       id: payment.id,
       supplierId: supplier.id,

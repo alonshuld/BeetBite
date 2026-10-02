@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/molecules/PageHeader";
 import { MonthPicker } from "@/components/molecules/MonthPicker";
 import { Input, ButtonPrimary } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
+import { useFieldCheck } from "@/hooks/useFieldCheck";
 import { useToast } from "@/contexts/useToast";
 import { formatYM } from "@/utils/formatMonth";
 import {
@@ -20,6 +21,7 @@ function currentYM(): string {
 export default function SettingsVatPage() {
   const { t, lang } = useLang();
   const { toast } = useToast();
+  const checkFields = useFieldCheck();
   const { data: history = [], isLoading } = useGetVatRateHistoryQuery();
   const { data: resolved } = useGetResolvedVatRateQuery(currentYM());
   const [upsertVatRate, { isLoading: saving }] = useUpsertVatRateMutation();
@@ -29,7 +31,17 @@ export default function SettingsVatPage() {
 
   async function handleSave() {
     const value = Number(percentage);
-    if (!percentage || Number.isNaN(value) || value < 0 || value > 100) return;
+    if (
+      !checkFields([
+        [
+          t("vatPercentLabel"),
+          !percentage
+            ? "missing"
+            : (Number.isNaN(value) || value < 0 || value > 100) && "invalid",
+        ],
+      ])
+    )
+      return;
 
     const result = await upsertVatRate({
       month: month + "-01",

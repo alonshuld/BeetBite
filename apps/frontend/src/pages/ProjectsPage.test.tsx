@@ -42,7 +42,7 @@ const mockProjects = [
     estimatedAmount: 100000,
     paymentProgress: { totalPaid: 50000 },
     client: { id: "c1", name: "Acme Corp" },
-    description: null,
+    description: "Full renovation",
     requesterName: "Jane Doe",
     location: "123 Main St, Tel Aviv",
   },
@@ -54,7 +54,7 @@ const mockProjects = [
     estimatedAmount: 20000,
     paymentProgress: null,
     client: { id: "c2", name: "Beta Inc" },
-    description: null,
+    description: "Deck repair",
     requesterName: "John Smith",
     location: "456 Side St, Haifa",
   },
@@ -268,6 +268,7 @@ describe("ProjectsPage", () => {
       await userEvent.selectOptions(screen.getByLabelText("Client"), "c1");
       await userEvent.type(screen.getByLabelText("Requester"), "New Requester");
       await userEvent.type(screen.getByLabelText("Location"), "New Location");
+      await userEvent.type(screen.getByLabelText("Description"), "Desc");
     }
 
     // Only used to import pre-BeetBite data, so it must not crowd the form
@@ -500,6 +501,7 @@ describe("ProjectsPage", () => {
       await userEvent.selectOptions(screen.getByLabelText("Client"), "c1");
       await userEvent.type(screen.getByLabelText("Requester"), "Someone");
       await userEvent.type(screen.getByLabelText("Location"), "Somewhere");
+      await userEvent.type(screen.getByLabelText("Description"), "Desc");
       await userEvent.selectOptions(
         screen.getByLabelText("Initiator"),
         "init1",
@@ -522,6 +524,7 @@ describe("ProjectsPage", () => {
       await userEvent.selectOptions(screen.getByLabelText("Client"), "c1");
       await userEvent.type(screen.getByLabelText("Requester"), "Someone");
       await userEvent.type(screen.getByLabelText("Location"), "Somewhere");
+      await userEvent.type(screen.getByLabelText("Description"), "Desc");
       await userEvent.click(screen.getByRole("button", { name: /save/i }));
 
       expect(noopMutation).toHaveBeenCalledWith(
@@ -555,6 +558,29 @@ describe("ProjectsPage", () => {
         expect.objectContaining({ id: "p1", initiatorId: "init1" }),
       );
     });
+  });
+
+  // The backend requires a description; leaving it blank used to send the
+  // request anyway and fail with nothing pointing at the field.
+  it("names a blank description before sending a new project", async () => {
+    noopMutation.mockClear();
+    renderProjectsPage();
+    await userEvent.click(screen.getByRole("button", { name: /add project/i }));
+    await userEvent.type(screen.getByLabelText("Name"), "New Project");
+    await userEvent.type(screen.getByLabelText(/Estimated Amount/i), "80000");
+    await userEvent.selectOptions(screen.getByLabelText("Client"), "c1");
+    await userEvent.type(screen.getByLabelText("Requester"), "Someone");
+    await userEvent.type(screen.getByLabelText("Location"), "Somewhere");
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    expect(noopMutation).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText("Fill in the required fields: Description"),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Description")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
   });
 
   // Projects created before requester and location existed have both stored

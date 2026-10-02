@@ -29,6 +29,16 @@ const VARIANT_ICON: Record<ToastVariant, IconName> = {
   info: "inbox",
 };
 
+/*
+ * An error names what to fix — often several fields — so it stays long enough
+ * to read it and then find them in the form. Confirmations only need a glance.
+ */
+const DURATION_MS: Record<ToastVariant, number> = {
+  success: 3000,
+  info: 3000,
+  error: 8000,
+};
+
 let nextId = 1;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -48,7 +58,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message, variant = "info") => {
       const id = nextId++;
       setToasts((prev) => [...prev, { id, message, variant }]);
-      const timer = setTimeout(() => dismiss(id), 3000);
+      const timer = setTimeout(() => dismiss(id), DURATION_MS[variant]);
       timers.current.set(id, timer);
     },
     [dismiss],
@@ -65,6 +75,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           {toasts.map((t) => (
             <div
               key={t.id}
+              role={t.variant === "error" ? "alert" : undefined}
               className={`flex min-w-[260px] max-w-[380px] animate-[fadeInUp_0.15s_ease] items-start gap-2.5 rounded border border-border bg-[var(--surface)] px-3.5 py-3 text-sm shadow-pop ${VARIANT_CLASSES[t.variant]}`}
             >
               <Icon

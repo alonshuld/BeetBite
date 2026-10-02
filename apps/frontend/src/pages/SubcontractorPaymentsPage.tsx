@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/molecules/PageHeader";
 import { Input } from "@/components/atoms/Input";
 import { Badge, EmptyState } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
+import { useFieldCheck } from "@/hooks/useFieldCheck";
 import { formatYM, formatISODate } from "@/utils/formatMonth";
 import { Icon } from "@/components/atoms/Icon";
 
@@ -46,6 +47,7 @@ export default function SubcontractorPaymentsPage() {
   const [updatePayment] = useUpdateSubcontractorPaymentMutation();
   const [deletePayment] = useDeleteSubcontractorPaymentMutation();
   const { t, lang } = useLang();
+  const checkFields = useFieldCheck();
 
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   // The inline row that records one instalment: which project it is open for,
@@ -187,8 +189,19 @@ export default function SubcontractorPaymentsPage() {
    * row rewritten three times.
    */
   async function handleAddPayment(projectId: string) {
-    const amount = parseFloat(entryAmounts[projectId] ?? "");
-    if (isNaN(amount) || amount <= 0) return;
+    const raw = entryAmounts[projectId] ?? "";
+    const amount = parseFloat(raw);
+    if (
+      !checkFields([
+        [
+          t("amountILS"),
+          raw.trim() === ""
+            ? "missing"
+            : (isNaN(amount) || amount <= 0) && "invalid",
+        ],
+      ])
+    )
+      return;
     setPendingProject((prev) => ({ ...prev, [projectId]: true }));
     const result = await createPayment({
       subcontractorId: selectedSubId!,

@@ -101,6 +101,18 @@ describe("ClientsPage", () => {
     expect(screen.getByText("Add Client")).toBeInTheDocument();
   });
 
+  it("says the name is missing instead of silently refusing to save", async () => {
+    noopMutation.mockClear();
+    renderClientsPage();
+    await userEvent.click(screen.getByRole("button", { name: /add client/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    expect(noopMutation).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Fill in the required fields: Name",
+    );
+  });
+
   it("opens edit modal with client name prefilled", async () => {
     renderClientsPage();
     await userEvent.click(screen.getAllByTitle("Edit")[0]);
