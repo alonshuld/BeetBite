@@ -53,7 +53,15 @@ provider "github" {
 locals {
   name       = "beetbite-prod"
   ssm_prefix = "/beetbite/prod"
+
+  # No domain = plain HTTP on the Elastic IP, for trying the stack out only:
+  # logins and data cross the internet unencrypted. Setting domain_name later
+  # switches to HTTPS (Caddy + Let's Encrypt) without rebuilding the host.
+  has_domain = var.domain_name != ""
   app_fqdn   = var.app_subdomain == "" ? var.domain_name : "${var.app_subdomain}.${var.domain_name}"
+  # Caddy site address: a hostname gets automatic HTTPS, ":80" serves HTTP.
+  site_address = local.has_domain ? local.app_fqdn : ":80"
+  app_url      = local.has_domain ? "https://${local.app_fqdn}" : "http://${aws_eip.app.public_ip}"
 
   tags = {
     Project     = "beetbite"

@@ -153,6 +153,7 @@ AWS, Tel Aviv (`il-central-1`): one EC2 `t3.small` runs `deploy/docker-compose.p
 
 - CD (`.github/workflows/cd.yml`) builds linux/amd64 images to GHCR on every push to `main`, then its `deploy` job runs `deploy.sh <sha>` on the host via SSM (GitHub OIDC → AWS role, no stored keys, no SSH). The job is skipped until Terraform sets `EC2_INSTANCE_ID` on the `production` environment.
 - `GET /api/v1/health` is public and runs `SELECT 1`; `deploy.sh` and the uptime monitor depend on it.
+- Without `domain_name` in Terraform the app is served over plain HTTP at `http://<elastic_ip>` (trial runs, test data only); `APP_DOMAIN` is then `:80` and `APP_URL` the IP. Setting a domain later and re-running the first-boot script switches to HTTPS.
 - The host's `.env` is generated, never hand-edited: change the SSM parameter (through Terraform), then run `/opt/beetbite/render-env.sh` and redeploy.
 - `seed.ts` refuses `SEED_MOCK_DATA=true` when `NODE_ENV=production`, and the prod compose file never forwards it.
 

@@ -24,6 +24,7 @@ services:
       - "443:443"
       - "443:443/udp"
     environment:
+      # Site address: a hostname gets automatic HTTPS, ":80" serves plain HTTP.
       APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN must be set}
       ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set}
     volumes:
@@ -56,7 +57,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set}
-      ALLOWED_ORIGINS: https://${APP_DOMAIN}
+      ALLOWED_ORIGINS: ${APP_URL:?APP_URL must be set}
       # pg treats sslmode=require as full verification, and Node does not
       # trust Amazon's RDS certificate authority by default.
       NODE_EXTRA_CA_CERTS: /certs/rds-global-bundle.pem
