@@ -79,10 +79,38 @@ describe("ClientsPage", () => {
     expect(screen.getByText("No results")).toBeInTheDocument();
   });
 
+  it("matches search case-insensitively and ignores surrounding spaces", async () => {
+    renderClientsPage();
+    await userEvent.type(screen.getByRole("searchbox"), "  aCmE  ");
+    expect(screen.getByText("Acme Corp")).toBeInTheDocument();
+    expect(screen.queryByText("Beta LLC")).not.toBeInTheDocument();
+  });
+
+  it("restores rows when the search box is cleared", async () => {
+    renderClientsPage();
+    const box = screen.getByRole("searchbox");
+    await userEvent.type(box, "zzz");
+    expect(screen.queryByText("Acme Corp")).not.toBeInTheDocument();
+    await userEvent.clear(box);
+    expect(screen.getByText("Acme Corp")).toBeInTheDocument();
+  });
+
   it("opens add modal when add button clicked", async () => {
     renderClientsPage();
     await userEvent.click(screen.getByRole("button", { name: /add client/i }));
     expect(screen.getByText("Add Client")).toBeInTheDocument();
+  });
+
+  it("says the name is missing instead of silently refusing to save", async () => {
+    noopMutation.mockClear();
+    renderClientsPage();
+    await userEvent.click(screen.getByRole("button", { name: /add client/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    expect(noopMutation).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Fill in the required fields: Name",
+    );
   });
 
   it("opens edit modal with client name prefilled", async () => {

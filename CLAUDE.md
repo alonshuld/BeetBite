@@ -11,15 +11,15 @@ BeetBite is a back-office tool for a single contractor company that manages cons
 The contractor does not do the physical work itself. Instead it hires:
 
 - **Subcontractors** — individual workers assigned to a project for a given month. Each project report has exactly one subcontractor.
-- **Corporations** — specialist firms (flooring, plumbing, etc.) paid fixed amounts per month per project, stored as **CorporationPayments** attached to the report.
+- **Suppliers** — specialist firms (flooring, plumbing, etc.) paid fixed amounts per month per project, stored as **SupplierPayments** attached to the report.
 
-Each month, the contractor keeps a **profit margin** percentage of the income, then pays the corporations their agreed amounts, and the subcontractor receives whatever is left. These values are derived at read time, not stored (see backend CLAUDE.md → *Financial calculations*).
+Each month, the contractor keeps a **profit margin** percentage of the income, then pays the suppliers their agreed amounts, and the subcontractor receives whatever is left. These values are derived at read time, not stored (see backend CLAUDE.md → *Financial calculations*).
 
 **SubcontractorPayments** track partial payments made to a subcontractor for a given service month. Multiple partial payments per month are allowed. The amount owed is computed from project reports at read time; the service rejects any payment that would cause the total paid to exceed that amount.
 
-**Company Settings** is a singleton record holding the contractor's own profile — name, description, company registration number, phone, email, address (street + city), logo, and signature (images stored as base64 data URLs, no file upload infra). On first login, if it doesn't exist yet, the user is nudged to an onboarding screen to fill it in; this is a soft, skippable nudge (not a blocking gate) and the data is editable anytime after from a Settings page. None of these fields are required to use the app — a future PDF-export feature will require name + company number before exporting, but that's enforced by export, not here.
+**Company Settings** is a singleton record holding the contractor's own profile — name, description, company registration number, phone, email, address (street + city), logo, and signature (images stored as base64 data URLs, no file upload infra), plus the two brand colors (primary + secondary) and the font the exported PDFs are painted in. On first login, if it doesn't exist yet, the user is nudged to an onboarding screen to fill it in; this is a soft, skippable nudge (not a blocking gate) and the data is editable anytime after from a Settings page. None of these fields are required to use the app — a future PDF-export feature will require name + company number before exporting, but that's enforced by export, not here.
 
-Users manually enter clients, projects, corporations, and subcontractors once, then create a project report each month per project. The system derives all financial insights (profits, payments, income totals, project payment progress) from these reports.
+Users manually enter clients, projects, suppliers, and subcontractors once, then create a project report each month per project. The system derives all financial insights (profits, payments, income totals, project payment progress) from these reports.
 
 ## Monorepo structure
 
@@ -54,6 +54,41 @@ pnpm infra:up       # docker compose up db backend -d
 pnpm infra:down     # docker compose stop db backend
 ```
 
+## Running locally (quick reference)
+
+Usual dev setup: Postgres in Docker, backend + frontend from `pnpm dev` (hot reload).
+
+```bash
+docker compose up db -d     # Postgres only, on localhost:5432
+pnpm dev                    # backend :3000 (runs db:sync first) + frontend :5173
+```
+
+- Open http://localhost:5173. Log in with `ADMIN_USERNAME` / `ADMIN_PASSWORD` from `.env`.
+- `pnpm dev` runs the backend's `db:sync` first (`apps/backend/scripts/db-sync.sh`): migrate deploy, then prisma generate, then fail if the DB has drifted from `schema.prisma`.
+- Don't run `pnpm dev` while the Docker `backend` container is up: both bind `:3000`. Stop it with `docker compose stop backend`. `pnpm infra:up` starts that container.
+- Full Docker stack: `docker compose up -d --build` → frontend on http://localhost:80, backend on :3000.
+
+### Seeding demo data
+
+`docker-compose.yml` does **not** forward `SEED_MOCK_DATA` to the backend container. The container's start command only seeds the admin user, so seed demo data from the host against the Docker DB (`apps/backend/.env` → `localhost:5432`):
+
+```bash
+cd apps/backend
+SEED_MOCK_DATA=true npx prisma db seed   # DESTRUCTIVE: wipes every business table, keeps admin + company settings
+```
+
+- There is no `pnpm seed` script. The seed command lives under `prisma.seed` in `apps/backend/package.json`.
+- If you get type errors about missing Prisma fields, the generated client is stale: run `npx prisma generate` in `apps/backend`.
+- The demo data's showcase month is **May 2026**: multiple income entries, supplier payments, and initiator projects with a single income entry and an initiator income set.
+
+### Inspecting the DB
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select count(*) from projects;"'
+```
+
+Table names are snake_case plural (`projects`, `project_reports`, `project_report_incomes`, `initiators`, …). Columns are camelCase, so quote them (`"initiatorId"`).
+
 ## How the apps connect
 
 ```
@@ -71,7 +106,7 @@ Browser → frontend (Vite :5173)
 
 ## E2E tests
 
-Playwright suite in `apps/e2e/tests/`. Covers all nine domain areas (auth, clients, projects, project reports, corporations, corporation payments, subcontractors, subcontractor payments, income).
+Playwright suite in `apps/e2e/tests/`. Covers all nine domain areas (auth, clients, projects, project reports, suppliers, supplier payments, subcontractors, subcontractor payments, income).
 
 `global-setup.ts` bootstraps the full stack automatically:
 1. Starts a PostgreSQL testcontainer
@@ -102,10 +137,25 @@ cp .env.example .env
 docker compose up
 ```
 
-`ADMIN_PASSWORD` bootstraps the admin account on first start only; the seed never overwrites an existing password, so restarts cannot reset a rotated credential. Demo data is opt-in via `SEED_MOCK_DATA=true` and is destructive — it truncates every business table before inserting fixtures.
+`ADMIN_PASSWORD` bootstraps the admin account on first start only; the seed never overwrites an existing password, so restarts cannot reset a rotated credential. Demo data is opt-in via `SEED_MOCK_DATA=true` and is destructive — it truncates every business table before inserting fixtures. Compose does not pass that variable to the container; see *Seeding demo data* above for how to seed.
 
 Backend and frontend each have a `Dockerfile` in their app directory.
 
+## Production
+
+AWS, Tel Aviv (`il-central-1`): one EC2 `t4g.small` (ARM) runs `deploy/docker-compose.prod.yml` (Caddy for HTTPS → frontend nginx → backend), with data in RDS PostgreSQL 17 and a nightly `pg_dump` to S3 in a second region.
+
+| Path | What |
+| --- | --- |
+| `infra/terraform/` | All AWS resources, plus the GitHub environment/variables/deploy key. `bootstrap/` runs once; `production/` is the real stack. See its `README.md` |
+| `infra/terraform/production/templates/cloud-init.sh.tftpl` | First-boot host setup (Docker, swap, `.env` from SSM Parameter Store, app DB role, backup cron, first deploy) |
+| `deploy/` | What runs on the host: prod compose file, `Caddyfile`, `deploy.sh`, `backup.sh`, `.env.example`, and `RUNBOOK.md` (rollback, restores, rebuilds) |
+
+- CD (`.github/workflows/cd.yml`) builds amd64 + arm64 images to GHCR on every push to `main`, then its `deploy` job runs `deploy.sh <sha>` on the host via SSM (GitHub OIDC → AWS role, no stored keys, no SSH). The job is skipped until Terraform sets `EC2_INSTANCE_ID` on the `production` environment.
+- `GET /api/v1/health` is public and runs `SELECT 1`; `deploy.sh` and the uptime monitor depend on it.
+- The host's `.env` is generated, never hand-edited: change the SSM parameter (through Terraform), then run `/opt/beetbite/render-env.sh` and redeploy.
+- `seed.ts` refuses `SEED_MOCK_DATA=true` when `NODE_ENV=production`, and the prod compose file never forwards it.
+
 ## Pre-commit hook
 
-Husky runs `pnpm format:check` then `pnpm lint:check` on every commit. Fix with `pnpm format && pnpm lint` before committing.
+Husky's pre-commit is deliberately light (the dev box has ~3.8 GB RAM and the full checks have crashed WSL): for each app with staged `.ts/.tsx/.js/.mjs` files it runs prettier `--check` and eslint on just those files, then that app's `typecheck` — one at a time, under `nice -n 19`, with a 1 GB Node heap. Apps with nothing staged are skipped. The full-repo checks (`pnpm format:check && pnpm lint:check`) are still available to run by hand. Fix with `pnpm format && pnpm lint`.

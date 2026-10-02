@@ -1,4 +1,5 @@
 import { InputHTMLAttributes, forwardRef, useId } from "react";
+import { fieldBase, fieldLabel } from "./field";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -9,19 +10,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const generatedId = useId();
     const inputId = id ?? generatedId;
     return (
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1.5">
         {label && (
-          <label
-            htmlFor={inputId}
-            className="text-[12px] font-medium uppercase tracking-wide text-text-muted"
-          >
+          <label htmlFor={inputId} className={fieldLabel}>
             {label}
           </label>
         )}
         <input
           ref={ref}
           id={inputId}
-          className={`w-full px-3 py-2 rounded-sm bg-surface-3 border border-border text-text text-sm outline-none transition-shadow placeholder:text-text-dim focus:border-beet focus:shadow-[0_0_0_3px_var(--beet-glow)] disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+          className={`${fieldBase} ${className}`}
           {...props}
         />
       </div>

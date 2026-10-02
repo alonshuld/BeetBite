@@ -39,7 +39,7 @@ describe("ToastContext / ToastProvider", () => {
       </ToastProvider>,
     );
     fireEvent.click(screen.getByText("Show toast"));
-    expect(screen.getByText("✓")).toBeInTheDocument();
+    expect(document.querySelector('[data-icon="check"]')).toBeInTheDocument();
   });
 
   it("shows error icon for error variant", () => {
@@ -49,8 +49,7 @@ describe("ToastContext / ToastProvider", () => {
       </ToastProvider>,
     );
     fireEvent.click(screen.getByText("Show toast"));
-    // ✕ appears as both the error icon and the dismiss button
-    expect(screen.getAllByText("✕").length).toBeGreaterThanOrEqual(1);
+    expect(document.querySelector('[data-icon="alert"]')).toBeInTheDocument();
   });
 
   it("shows info icon for default (info) variant", () => {
@@ -60,7 +59,7 @@ describe("ToastContext / ToastProvider", () => {
       </ToastProvider>,
     );
     fireEvent.click(screen.getByText("Show toast"));
-    expect(screen.getByText("ℹ")).toBeInTheDocument();
+    expect(document.querySelector('[data-icon="inbox"]')).toBeInTheDocument();
   });
 
   it("auto-dismisses after 3 seconds", () => {
@@ -75,6 +74,23 @@ describe("ToastContext / ToastProvider", () => {
       vi.advanceTimersByTime(3000);
     });
     expect(screen.queryByText("Temporary")).not.toBeInTheDocument();
+  });
+
+  it("keeps an error up long enough to read which fields to fix", () => {
+    render(
+      <ToastProvider>
+        <ToastTrigger message="Broken" variant="error" />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByText("Show toast"));
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("Broken");
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.queryByText("Broken")).not.toBeInTheDocument();
   });
 
   it("dismisses toast when X button clicked", () => {

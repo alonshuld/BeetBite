@@ -29,11 +29,11 @@ pnpm test:e2e           # Integration tests (testcontainers, requires Docker)
 pnpm test -- --testPathPattern=projects.service
 
 # Database
+pnpm db:sync                   # migrate deploy + generate + fail on any DB≠schema drift (runs before dev/start:dev/start:debug; CI runs it on an empty Postgres)
 pnpx prisma migrate dev        # Apply migrations and regenerate client
 pnpx prisma migrate deploy     # Apply migrations (CI/production)
 pnpx prisma generate           # Regenerate client without migrating
 pnpx prisma db seed            # Seed admin user (mock data only with SEED_MOCK_DATA=true)
-pnpm seed:demo:he              # Hebrew demo dataset — also seeds CompanySettings + VatRate (destructive)
 ```
 
 ### Required environment variables
@@ -51,7 +51,6 @@ Set in `.env` or `.env.local` (`.env.local` takes precedence):
 | `ADMIN_USERNAME` | Seed admin username (default: `admin`) |
 | `ADMIN_PASSWORD` | Seed admin password — **required** the first time the admin is created; ignored once the user exists (the seed never overwrites an existing password) |
 | `SEED_MOCK_DATA` | Set to `true` to load demo data. **Destructive** — truncates every business table first |
-| `FORCE_DEMO_SEED` | Only read by `seed:demo:he` — required to let that seed run when `NODE_ENV=production` |
 
 ## Architecture
 
@@ -67,12 +66,13 @@ Each domain follows a strict structure: `*.controller.ts` → `*.service.ts` →
 | `users` | User lookup by username/id; used internally by auth strategies |
 | `clients` | Manage clients (companies that own projects) |
 | `projects` | Manage projects; expose payment progress aggregates |
-| `project-reports` | Monthly financial reports per project, including corporation payments |
-| `corporations` | Corporations that receive payments from project reports |
+| `project-reports` | Monthly financial reports per project, including supplier payments |
+| `suppliers` | Suppliers that receive payments from project reports |
 | `subcontractors` | Workers assigned to project reports |
 | `subcontractor-payments` | Track partial payments made to subcontractors per service month; enforces overpayment guard against computed amount owed per project; exposes `GET /by-client?month=` aggregation endpoint |
 | `company-settings` | Contractor's own profile (singleton) — `GET`/`PUT /company-settings`, no create/delete, no domain errors (fixed-id upsert can't conflict) |
-| `pdf-export` | Renders the account-approval PDF for **one project report** via `POST /projects/reports/export-pdf`. The report's own income entries are the table rows and its date supplies the month, so the request carries only `projectReportId`, `approvedFor` and `lang`. Requires a populated `CompanySettings` (name + company number) and a `VatRate` covering the month |
+| `pdf-export` | Renders the account-approval PDF for **one project report** via `POST /projects/reports/export-pdf`. The report's own income entries are the table rows and its date supplies the month, so the request carries only `projectReportId`, `approvedFor`, an optional `description` and `lang`. That `description` is printed on that one document and never written back to the project — the project's own description is edited from the projects screen. Requires a populated `CompanySettings` (name + company number) and a `VatRate` covering the month. Also renders the client-wide simulated PDF via `POST /projects/reports/export-client-simulated-pdf` — a summary page (per-project simulated vs saved margin/profit, subcontractor remainder, simulated-vs-saved totals) plus one account-approval-style page per project, which additionally carries what the Reports screen shows for it (location, description, per-entry received/pending, profit line). Only that export passes the `screen` details (`includeScreenDetails` in the service), so the single-report layout stays fixed |
+| `health` | `GET /health` — `@Public()`, runs `SELECT 1`; 200 `{ status: 'ok' }`, 503 when the database does not answer. Used by `deploy/deploy.sh` and the uptime monitor |
 | `prisma` | Singleton `PrismaService` extending `PrismaClient` with `@prisma/adapter-pg` |
 
 ### Authentication
@@ -96,9 +96,9 @@ Key entity fields (see `prisma/schema.prisma` for the full schema):
 | `Project` | `estimatedAmount` (Decimal), `description` (required String), `isDone` (Boolean, default false — marks project as closed) |
 | `ProjectReport` | unique on `(projectId, date)` — one report per project per month, which is exactly the scope of one exported account-approval PDF |
 | `ProjectReportIncome` | `amount` (Decimal); `incomeDate?` (nullable — null means income not yet received); `tag` (optional String, max 100 — short label for the chunk of work the amount covers, trimmed to `null` when blank, rendered as a badge on the account-approval PDF) |
-| `CorporationPayment` | `date?` (nullable payment date); `description?` (optional String); `isFuture` (Boolean, default false — true means not yet invoiced); `vatPercentage?` (Decimal — only applicable when `isFuture` is false, defaults to 18%) |
-| `SubcontractorPayment` | `projectId` (String — required, payment must be assigned to a project); `serviceDate` (Date — the service month's start date, required); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, projectId, serviceDate)` allowed; no `paymentDate` — all payments are always considered paid |
-| `CompanySettings` | Singleton — `id` fixed via `@default("company-settings")`, always upserted by that literal id (no lookup needed to know if it exists). Every other field is optional (`name`, `description`, `companyNumber`, `phone`, `email`, `addressStreet`, `addressCity`, `logo`, `signature`) since onboarding is skippable. `phone` validated via `@IsPhoneNumber()` (no region arg — any region, requires `+` intl calling code prefix); `email` via `@IsEmail()`. `logo`/`signature` are base64 data-URL strings (`@Matches` regex restricts to png/jpg/webp, `@MaxLength(4_000_000)` caps size) — no multer, no disk/S3 storage. `GET` returns `null` when the row has never been created; the frontend's `OnboardingGate` treats that as "show onboarding" |
+| `SupplierPayment` | `date?` (nullable payment date); `description?` (optional String); `isFuture` (Boolean, default false — true means not yet invoiced); `includesVat` (Boolean — whether the payment carries VAT; DB default false, but `POST /suppliers/payments` and the batch endpoint default it to true (false for a future payment on create), while payments nested in a project report's create/update stay VAT-free. On `PUT`, omitting it leaves the current choice unchanged). **The VAT percentage is never stored or supplied by callers** — it is derived at read time, see *Financial calculations* |
+| `SubcontractorPayment` | `projectId` (String — required, payment must be assigned to a project); `serviceDate` (Date — the service month's start date, required); `amount` (Decimal, stored — caller-supplied partial payment amount); multiple records per `(subcontractorId, projectId, serviceDate)` allowed; `paymentDate?` (Date, nullable — the day the money actually moved, chosen by the user; **distinct from `serviceDate`, which is the month being settled**. Nullable because rows written before the column existed have no honest value) |
+| `CompanySettings` | Singleton — `id` fixed via `@default("company-settings")`, always upserted by that literal id (no lookup needed to know if it exists). Every other field is optional (`name`, `description`, `companyNumber`, `phone`, `email`, `addressStreet`, `addressCity`, `logo`, `signature`) since onboarding is skippable. `phone` validated via `@IsPhoneNumber()` (no region arg — any region, requires `+` intl calling code prefix); `email` via `@IsEmail()`. `logo`/`signature` are base64 data-URL strings (`@Matches` regex restricts to png/jpg/webp, `@MaxLength(4_000_000)` caps size) — no multer, no disk/S3 storage. The exceptions are `pdfPrimaryColor`/`pdfSecondaryColor`: non-nullable `#rrggbb` strings defaulting to the original navy `#1f2a44` / gold `#c9a24b`; the DTO accepts omission (keeps the stored color) but rejects null, and the strict hex regex is also what keeps arbitrary CSS out of the PDF stylesheet they are interpolated into. `resolvePdfTheme` (`pdf-export/templates/shared.ts`) derives the rest — readable text color on each, a pale tint of the secondary. `pdfFont` is likewise non-nullable, one of the ids in `src/common/pdf-fonts.ts` (`@IsIn`, omission keeps the stored font), defaulting to `noto-sans-hebrew` — the system Noto stack the backend image installs, with nothing embedded. Every other font is bundled via `@fontsource/*` and inlined into the document as base64 `@font-face` (Hebrew + Latin subsets, weights 400/600/700) by `pdf-export/templates/fonts.ts`, so exports look the same locally and on Alpine without installing system fonts. Adding a font = add the id there, the `@fontsource` dependency, the `EMBEDDED_FONTS` entry, and the frontend's `PdfFont` type + `FontField` option. `GET` returns `null` when the row has never been created; the frontend's `OnboardingGate` treats that as "show onboarding" |
 
 ### Prisma client
 
@@ -110,7 +110,7 @@ The generated Prisma client lives in `src/generated/` (not `node_modules`). Impo
 
 ### Validation
 
-Global `ValidationPipe` is configured with `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`, and `enableImplicitConversion: true`. All DTO properties must be decorated with `class-validator` decorators; extra properties are rejected with 400. Error messages are suppressed in production.
+Global `ValidationPipe` is configured with `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`, and `enableImplicitConversion: true`. All DTO properties must be decorated with `class-validator` decorators; extra properties are rejected with 400. Its `exceptionFactory` throws `RequestValidationError` (`common/errors/request-validation.error.ts`, code `VALIDATION_FAILED`), whose `params.missing` (failed `isNotEmpty`/`isDefined`) and `params.invalid` (anything else) list the failing field paths comma-separated, nested ones dotted (`openingBalance.amount`, `payments.0.amount`) — the frontend names those fields to the user. English messages are suppressed in production; the field paths are always sent.
 
 ### Error handling
 
@@ -121,6 +121,8 @@ Domain errors extend the base hierarchy in `src/common/errors/`:
 - `EntityAlreadyExistsError` → maps to HTTP 409
 
 Each module defines its own typed errors (e.g. `ProjectNotFoundError`, `ClientNotFoundError`) that extend these bases. `EntityExceptionFilter` (registered globally in `main.ts`) intercepts all exceptions and converts them to structured JSON responses.
+
+**Error codes.** Every domain error carries a stable `code` (and optional `params`) — see `common/errors/coded-error.ts`. `EntityError` subclasses pass them to `super(message, code, params)`; `HttpException` subclasses declare `readonly code = '…'` and implement `CodedError`. The filter adds `code`/`params` to the response body; `message` stays English. The frontend translates by code (`apps/frontend/src/api/apiErrors.ts`), so a new error needs its code there too — `common/errors/error-codes-translated.spec.ts` fails if any code under an `errors/` directory lacks a Hebrew entry. Keep new errors in `errors/` directories so that spec sees them.
 
 Services catch `PrismaClientKnownRequestError` and re-throw the appropriate domain error using the codes in `src/common/constants.ts` (`P2002` unique, `P2003` FK, `P2025` not found).
 
@@ -143,9 +145,37 @@ When creating or updating a `ProjectReport`, `subcontractorId` and `profitMargin
 **ProjectReport** (computed at read time in `project-reports.service.ts:findOne`, not stored):
 
 - `profit = income × profitMargin / 100`
-- `subcontractorPayment = income − profit − Σ(corporationPayments)`
+- `subcontractorPayment = income − profit − Σ(supplierPayments)`
+
+**SupplierPayment VAT** (derived at read time, only the `includesVat` choice is stored): `vatPercentage` = the `VatRate` effective for the **report's** month (`projectReport.date` — the same key the PDF export uses, not the payment's own `date`) when `includesVat`, else `null`; it is also `null` when VAT is on but no rate exists for that month or earlier, in which case no VAT is added until one is configured. `vatAmount = amount × vatPercentage / 100`, `effectiveTotal = amount + vatAmount`. Resolved in memory against the whole rate history (`vat-rates/utils/payment-vat.ts`, loaded once per request via `VatRatesService.findAllEntries()`), so a listing costs one extra query, not one per row. Editing a month's global rate therefore changes every VAT-including payment from that month onward, with nothing rewritten on the payments. The `profit` and `subcontractorPayment` calculations above use `amount` (excl. VAT).
 
 **SubcontractorPayment** — `amount` is stored (provided by the caller). Multiple partial payments per `(subcontractorId, projectId, serviceDate)` are allowed. On `create` and `update`, the service computes `amountOwed` for the specific project (not across all projects for the month) and rejects the payment if `Σ(existing payments for that project) + newAmount > amountOwed`. The overpayment check and the DB write are executed inside a single `$transaction` to prevent race conditions — do not split them into separate steps.
+
+### Project opening balance
+
+`POST /projects` accepts an optional nested `openingBalance` (`amount`, `month`,
+`subcontractorId`, `profitMargin`). Projects are often entered part-way through
+the work, so the contractor has already been paid for some of it; there is
+nowhere to put that amount except a real report, because every financial figure
+is derived from reports.
+
+- The project, its first client assignment and the back-dated `ProjectReport`
+  (one income entry for the amount) are written in a single `$transaction`.
+- `subcontractorId` and `profitMargin` are **required within the block** because
+  `ProjectReport` requires both. Making those columns nullable to accommodate a
+  synthetic report would push null handling through every calculation.
+- The income entry's `incomeDate` is set to the month, not left null: the
+  question asked is "how much have I *already received*", so the money is in
+  hand and must count towards payment progress.
+- The entry is tagged with `OPENING_BALANCE_TAG` (`src/common/constants.ts`) so
+  the synthetic origin stays visible. The frontend translates that exact value
+  for display — it is stored data, so the two must agree.
+- The subcontractor is looked up explicitly inside the transaction rather than
+  left to the foreign key: both it and the client can be wrong, and a raw P2003
+  does not reliably say which.
+
+The resulting report is a **real** report — it appears on the reports screen,
+in monthly income, in payment views and in totals. That is intended, not a leak.
 
 ### Project payment progress
 

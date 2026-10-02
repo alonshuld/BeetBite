@@ -9,7 +9,11 @@ export class ProjectAlreadyExistsError extends EntityAlreadyExistsError {
    * @param projectName The name of the project that already exists.
    */
   constructor(projectName: string) {
-    super(`A project with the name ${projectName} already exists`);
+    super(
+      `A project with the name ${projectName} already exists`,
+      'PROJECT_ALREADY_EXISTS',
+      { name: projectName },
+    );
     this.name = 'ProjectAlreadyExistsError';
   }
 }

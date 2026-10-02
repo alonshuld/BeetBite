@@ -53,33 +53,33 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/corporations/payments": {
+  "/api/v1/suppliers/payments": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get all corporation payments for a given month */
-    get: operations["CorporationPaymentsController_findAll"];
+    /** Get all supplier payments for a given month */
+    get: operations["SupplierPaymentsController_findAll"];
     put?: never;
-    /** Create a new corporation payment */
-    post: operations["CorporationPaymentsController_create"];
+    /** Create a new supplier payment */
+    post: operations["SupplierPaymentsController_create"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/corporations/{corporationId}/payments": {
+  "/api/v1/suppliers/{supplierId}/payments": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get a corporation's payments for a given month */
-    get: operations["CorporationPaymentsController_findOne"];
+    /** Get a supplier's payments for a given month */
+    get: operations["SupplierPaymentsController_findOne"];
     put?: never;
     post?: never;
     delete?: never;
@@ -88,7 +88,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/corporations/payments/{id}": {
+  "/api/v1/suppliers/payments/{id}": {
     parameters: {
       query?: never;
       header?: never;
@@ -96,14 +96,82 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /** Update a corporation's payment for a given month */
-    put: operations["CorporationPaymentsController_update"];
+    /** Update a supplier's payment for a given month */
+    put: operations["SupplierPaymentsController_update"];
     post?: never;
-    /** Delete a corporation payment by ID */
-    delete: operations["CorporationPaymentsController_remove"];
+    /** Delete a supplier payment by ID */
+    delete: operations["SupplierPaymentsController_remove"];
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  "/api/v1/suppliers/{supplierId}/payments/batch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Record a batch of one supplier's payments in a single submission */
+    post: operations["SupplierPaymentsController_createBatch"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/suppliers/payments/{id}/paid": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Mark a supplier payment paid or unpaid */
+    patch: operations["SupplierPaymentsController_setPaid"];
+    trace?: never;
+  };
+  "/api/v1/suppliers/payments/{id}/vat": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Turn VAT on or off for a supplier payment */
+    patch: operations["SupplierPaymentsController_setIncludesVat"];
+    trace?: never;
+  };
+  "/api/v1/suppliers/{supplierId}/payments/paid": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Mark all of a supplier's payments in a month paid or unpaid */
+    patch: operations["SupplierPaymentsController_setPaidForSupplier"];
     trace?: never;
   };
   "/api/v1/vat-rates": {
@@ -141,38 +209,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/corporations": {
+  "/api/v1/suppliers": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get all corporations with pagination */
-    get: operations["CorporationsController_findAll"];
+    /** Get all suppliers with pagination */
+    get: operations["SuppliersController_findAll"];
     put?: never;
-    /** Create a new corporation */
-    post: operations["CorporationsController_create"];
+    /** Create a new supplier */
+    post: operations["SuppliersController_create"];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  "/api/v1/corporations/{id}": {
+  "/api/v1/suppliers/{id}": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get a corporation by ID */
-    get: operations["CorporationsController_findOne"];
-    /** Update a corporation */
-    put: operations["CorporationsController_update"];
+    /** Get a supplier by ID */
+    get: operations["SuppliersController_findOne"];
+    /** Update a supplier */
+    put: operations["SuppliersController_update"];
     post?: never;
-    /** Delete a corporation */
-    delete: operations["CorporationsController_remove"];
+    /** Delete a supplier */
+    delete: operations["SuppliersController_remove"];
     options?: never;
     head?: never;
     patch?: never;
@@ -246,6 +314,58 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  "/api/v1/projects/{projectId}/client-assignments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get a project's client ownership timeline */
+    get: operations["ProjectClientAssignmentsController_findAllForProject"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/projects/{projectId}/transfer": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Transfer a project to another client from a given month */
+    post: operations["ProjectClientAssignmentsController_transfer"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/projects/client-assignments/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Remove a project-client assignment */
+    delete: operations["ProjectClientAssignmentsController_remove"];
+    options?: never;
+    head?: never;
+    /** Correct a project-client assignment */
+    patch: operations["ProjectClientAssignmentsController_update"];
     trace?: never;
   };
   "/api/v1/subcontractors": {
@@ -463,6 +583,77 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/projects/reports/export-client-simulated-pdf": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Export the client-wide simulated PDF — every report of a client for a month, at simulated margins */
+    post: operations["PdfExportController_exportClientSimulatedPdf"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/initiators": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get all initiators with pagination */
+    get: operations["InitiatorsController_findAll"];
+    put?: never;
+    /** Create a new initiator */
+    post: operations["InitiatorsController_create"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/initiators/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get an initiator by ID */
+    get: operations["InitiatorsController_findOne"];
+    /** Update an initiator */
+    put: operations["InitiatorsController_update"];
+    post?: never;
+    /** Delete an initiator */
+    delete: operations["InitiatorsController_remove"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/health": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Check that the API and its database are up */
+    get: operations["HealthController_check"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -503,19 +694,19 @@ export interface components {
        */
       name: string;
     };
-    CreateCorporationPaymentDto: {
+    CreateSupplierPaymentDto: {
       /**
        * @description Unique identifier for the project report associated with this payment
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
       projectReportId: string;
       /**
-       * @description Unique identifier for the corporation receiving the payment
+       * @description Unique identifier for the supplier receiving the payment
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
-      corporationId: string;
+      supplierId: string;
       /**
-       * @description The amount paid to the corporation for this project
+       * @description The amount paid to the supplier for this project
        * @example 5000
        */
       amount: number;
@@ -535,10 +726,10 @@ export interface components {
        */
       isFuture: boolean;
       /**
-       * @description VAT percentage — only applicable when isFuture is false
-       * @example 18
+       * @description Whether this payment carries VAT. The percentage is never supplied: it is the global VAT rate effective for the report's month. On create, omitting it means VAT is charged unless isFuture is true; on update, omitting it leaves the current choice unchanged.
+       * @example true
        */
-      vatPercentage?: number;
+      includesVat?: boolean;
     };
     NestedProjectReportDto: {
       /**
@@ -557,30 +748,30 @@ export interface components {
        */
       projectName: string;
     };
-    NestedCorporationDto: {
+    NestedSupplierDto: {
       /**
-       * @description Unique identifier for the corporation
+       * @description Unique identifier for the supplier
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
       id: string;
       /**
-       * @description Name of the corporation
+       * @description Name of the supplier
        * @example Tech Solutions Inc.
        */
       name: string;
     };
-    CorporationPaymentResponseDto: {
+    SupplierPaymentResponseDto: {
       /**
-       * @description Unique identifier for the corporation payment
+       * @description Unique identifier for the supplier payment
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
       id: string;
       /** @description Information about the project report associated with the payment */
       projectReport: components["schemas"]["NestedProjectReportDto"];
-      /** @description Information about the corporation receiving the payment */
-      corporation: components["schemas"]["NestedCorporationDto"];
+      /** @description Information about the supplier receiving the payment */
+      supplier: components["schemas"]["NestedSupplierDto"];
       /**
-       * @description The total amount paid to the corporation for this payment
+       * @description The total amount paid to the supplier for this payment
        * @example 5000
        */
       amount: number;
@@ -600,7 +791,12 @@ export interface components {
        */
       isFuture: boolean;
       /**
-       * @description VAT percentage — only applicable when isFuture is false
+       * @description Whether this payment carries VAT
+       * @example true
+       */
+      includesVat: boolean;
+      /**
+       * @description Derived, never stored: the global VAT rate effective for the payment's report month. Null when VAT is off, or when no rate is configured for that month yet
        * @example 18
        */
       vatPercentage: Record<string, never> | null;
@@ -624,18 +820,23 @@ export interface components {
       /** @description Information about the project report this payment is associated with */
       projectReport: components["schemas"]["NestedProjectReportDto"];
       /**
-       * @description The amount paid to the corporation for this project
+       * @description The amount paid to the supplier for this project
        * @example 5000
        */
       amount: number;
       /**
        * Format: ISO-8601
-       * @description The date the payment to the corporation was made
+       * @description The date the payment to the supplier was made
        * @example 2026-01-10T00:00:00.000Z
        */
       date: Record<string, never> | null;
       /**
-       * @description VAT percentage applied to this payment
+       * @description Whether this payment carries VAT
+       * @example true
+       */
+      includesVat: boolean;
+      /**
+       * @description Derived, never stored: the global VAT rate effective for the payment's report month. Null when VAT is off, or when no rate is configured for that month yet
        * @example 18
        */
       vatPercentage: Record<string, never> | null;
@@ -659,40 +860,50 @@ export interface components {
        * @example Invoice #123
        */
       description?: Record<string, never> | null;
+      /**
+       * @description Whether the money for this payment has actually left
+       * @example false
+       */
+      isPaid: boolean;
     };
-    MonthlyCorporationPaymentsResponseDto: {
-      /** @description Information about the corporation receiving the payment */
-      corporation: components["schemas"]["NestedCorporationDto"];
-      /** @description The project payments associated with this corporation payment */
+    MonthlySupplierPaymentsResponseDto: {
+      /** @description Information about the supplier receiving the payment */
+      supplier: components["schemas"]["NestedSupplierDto"];
+      /** @description The project payments associated with this supplier payment */
       projectPayments: components["schemas"]["NestedProjectPaymentDto"][];
       /**
-       * @description The total amount paid to the corporation for this payment
+       * @description The total amount paid to the supplier for this payment
        * @example 5000
        */
       total: number;
-    };
-    MultipleMonthlyCorporationPaymentsResponseDto: {
-      /** @description List of corporation payments for the specified month */
-      corporationsPayments: components["schemas"]["MonthlyCorporationPaymentsResponseDto"][];
       /**
-       * @description The total amount paid to all corporations for the specified month
+       * @description Of that total, how much has actually been paid. The difference is what is still outstanding with this supplier.
+       * @example 12000
+       */
+      totalPaid: number;
+    };
+    MultipleMonthlySupplierPaymentsResponseDto: {
+      /** @description List of supplier payments for the specified month */
+      suppliersPayments: components["schemas"]["MonthlySupplierPaymentsResponseDto"][];
+      /**
+       * @description The total amount paid to all suppliers for the specified month
        * @example 15000
        */
       total: number;
     };
-    UpdateCorporationPaymentDto: {
+    UpdateSupplierPaymentDto: {
       /**
        * @description Unique identifier for the project report associated with this payment
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
       projectReportId: string;
       /**
-       * @description Unique identifier for the corporation receiving the payment
+       * @description Unique identifier for the supplier receiving the payment
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
-      corporationId: string;
+      supplierId: string;
       /**
-       * @description The amount paid to the corporation for this project
+       * @description The amount paid to the supplier for this project
        * @example 5000
        */
       amount: number;
@@ -712,10 +923,68 @@ export interface components {
        */
       isFuture: boolean;
       /**
-       * @description VAT percentage — only applicable when isFuture is false
-       * @example 18
+       * @description Whether this payment carries VAT. The percentage is never supplied: it is the global VAT rate effective for the report's month. On create, omitting it means VAT is charged unless isFuture is true; on update, omitting it leaves the current choice unchanged.
+       * @example true
        */
-      vatPercentage?: number;
+      includesVat?: boolean;
+    };
+    BatchSupplierPaymentRowDto: {
+      /**
+       * @description Project report this payment belongs to. The project must already have a report for the month.
+       * @example 123e4567-e89b-12d3-a456-426614174000
+       */
+      projectReportId: string;
+      /**
+       * @description Amount owed on this line
+       * @example 5000
+       */
+      amount: number;
+      /**
+       * @description Date of this line of the paperwork
+       * @example 2026-01-10
+       */
+      date: string;
+      /**
+       * @description What this line covers
+       * @example Invoice #123
+       */
+      description?: string;
+      /**
+       * @description Whether this line carries VAT, at the global rate for the report's month. Defaults to true.
+       * @default true
+       * @example true
+       */
+      includesVat: boolean;
+    };
+    BatchCreateSupplierPaymentsDto: {
+      /** @description The supplier's payment lines for this month */
+      payments: components["schemas"]["BatchSupplierPaymentRowDto"][];
+    };
+    SetSupplierPaymentPaidDto: {
+      /**
+       * @description Paid or not
+       * @example true
+       */
+      isPaid: boolean;
+    };
+    SetSupplierPaymentVatDto: {
+      /**
+       * @description Whether the payment carries VAT, at the global rate for its report's month
+       * @example true
+       */
+      includesVat: boolean;
+    };
+    SetSupplierPaymentsPaidDto: {
+      /**
+       * @description Paid or not
+       * @example true
+       */
+      isPaid: boolean;
+      /**
+       * @description Month to settle. Omit to apply to every payment of this supplier.
+       * @example 2026-01-01
+       */
+      month?: string;
     };
     UpsertVatRateDto: {
       /**
@@ -769,28 +1038,28 @@ export interface components {
        */
       percentage: Record<string, never> | null;
     };
-    CreateCorporationDto: {
+    CreateSupplierDto: {
       /**
-       * @description Name of the corporation
+       * @description Name of the supplier
        * @example Tech Innovators Inc.
        */
       name: string;
     };
-    CorporationResponseDto: {
+    SupplierResponseDto: {
       /**
-       * @description Unique identifier for the corporation
+       * @description Unique identifier for the supplier
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
       id: string;
       /**
-       * @description Name of the corporation
+       * @description Name of the supplier
        * @example Tech Innovators Inc.
        */
       name: string;
     };
-    UpdateCorporationDto: {
+    UpdateSupplierDto: {
       /**
-       * @description Name of the corporation
+       * @description Name of the supplier
        * @example Tech Innovators Inc.
        */
       name: string;
@@ -816,6 +1085,16 @@ export interface components {
        * @example 1000
        */
       amount: number;
+      /**
+       * @description The day the money actually moved. Distinct from serviceDate, which is the month being settled.
+       * @example 2026-01-17
+       */
+      paymentDate?: string;
+      /**
+       * @description Optional free-text note about the payment. Blank is stored as null.
+       * @example Cheque #1042
+       */
+      description?: string;
     };
     NestedSubcontractorDto: {
       /**
@@ -858,6 +1137,17 @@ export interface components {
        * @example false
        */
       isPaid: boolean;
+      /**
+       * Format: ISO-8601
+       * @description The day the money actually moved
+       * @example 2026-01-17T00:00:00.000Z
+       */
+      paymentDate?: Record<string, never> | null;
+      /**
+       * @description Optional free-text note about the payment
+       * @example Cheque #1042
+       */
+      description?: string | null;
     };
     NestedSubcontractorPaymentDto: {
       /**
@@ -880,6 +1170,17 @@ export interface components {
        * @example false
        */
       isPaid: boolean;
+      /**
+       * Format: ISO-8601
+       * @description The day the money actually moved
+       * @example 2026-01-17T00:00:00.000Z
+       */
+      paymentDate?: Record<string, never> | null;
+      /**
+       * @description Optional free-text note about the payment
+       * @example Cheque #1042
+       */
+      description?: string | null;
     };
     MonthlySubcontractorPaymentsDto: {
       /** @description The subcontractor associated with the payments */
@@ -945,6 +1246,55 @@ export interface components {
        * @example true
        */
       isPaid?: boolean;
+      /**
+       * @description The day the money actually moved. Distinct from serviceDate, which is the month being settled.
+       * @example 2026-01-17
+       */
+      paymentDate?: string;
+      /**
+       * @description Optional free-text note about the payment. Send an empty string to clear it.
+       * @example Cheque #1042
+       */
+      description?: string;
+    };
+    ProjectClientAssignmentResponseDto: {
+      /** @example 123e4567-e89b-12d3-a456-426614174000 */
+      id: string;
+      /** @example 123e4567-e89b-12d3-a456-426614174000 */
+      projectId: string;
+      /** @example 123e4567-e89b-12d3-a456-426614174000 */
+      clientId: string;
+      /** @example Client A */
+      clientName: string;
+      /**
+       * @description First month this client owns the project
+       * @example 2026-03-01T00:00:00.000Z
+       */
+      effectiveFrom: string;
+    };
+    TransferProjectDto: {
+      /**
+       * @description Client the project moves to
+       * @example 123e4567-e89b-12d3-a456-426614174000
+       */
+      clientId: string;
+      /**
+       * @description First month the new client owns the project. Normalised to the first of that month.
+       * @example 2026-03-01
+       */
+      effectiveFrom: string;
+    };
+    UpdateAssignmentDto: {
+      /**
+       * @description Client this assignment points at
+       * @example 123e4567-e89b-12d3-a456-426614174000
+       */
+      clientId?: string;
+      /**
+       * @description First month this assignment applies to. Normalised to the first of that month.
+       * @example 2026-04-01
+       */
+      effectiveFrom?: string;
     };
     CreateSubcontractorDto: {
       /**
@@ -1029,8 +1379,13 @@ export interface components {
       profitMargin?: number;
       /** @description Income entries for this report (at least one required) */
       incomeEntries: components["schemas"]["CreateIncomeEntryDto"][];
-      /** @description A list of the payments made to corporations for their work on this project this month */
-      corporationPayments: components["schemas"]["CreateCorporationPaymentDto"][];
+      /** @description A list of the payments made to suppliers for their work on this project this month */
+      supplierPayments: components["schemas"]["CreateSupplierPaymentDto"][];
+      /**
+       * @description Income the project's initiator (יזם) reports for this month. Only meaningful when the project has an initiator, and must be greater than the report's own income; only relevant for PDF export.
+       * @example 120000
+       */
+      initiatorIncome?: number;
     };
     NestedClientDto: {
       /**
@@ -1055,6 +1410,26 @@ export interface components {
        * @example Office Building Renovation
        */
       name: string;
+      /**
+       * @description A description of the project
+       * @example Renovation of the office building located at 123 Main St.
+       */
+      description: string;
+      /**
+       * @description Location of the project
+       * @example 123 Main St, Tel Aviv
+       */
+      location: string;
+      /**
+       * @description Name of the person who commissioned this specific project (may differ from the client)
+       * @example Jane Doe
+       */
+      requesterName: string;
+      /**
+       * @description Name of the project's initiator (יזם), if one exists — null when the project has no initiator
+       * @example Yaniv Goldman
+       */
+      initiatorName: Record<string, never> | null;
       /** @description Basic information on the project's client */
       client: components["schemas"]["NestedClientDto"];
     };
@@ -1080,21 +1455,26 @@ export interface components {
        */
       tag: Record<string, never> | null;
     };
-    NestedCorporationPaymentDto: {
+    NestedSupplierPaymentDto: {
       /**
-       * @description Unique identifier for the corporation payment
+       * @description Unique identifier for the supplier payment
        * @example 123e4567-e89b-12d3-a456-426614174000
        */
       id: string;
-      /** @description Information on the corporation */
-      corporation: components["schemas"]["NestedCorporationDto"];
+      /** @description Information on the supplier */
+      supplier: components["schemas"]["NestedSupplierDto"];
       /**
-       * @description The amount of money paid to the corporation
+       * @description The amount of money paid to the supplier
        * @example 20000
        */
       amount: number;
       /**
-       * @description VAT percentage applicable to this payment
+       * @description Whether this payment carries VAT
+       * @example true
+       */
+      includesVat?: boolean;
+      /**
+       * @description Derived, never stored: the global VAT rate effective for the report's month. Null when VAT is off, or when no rate is configured for that month yet
        * @example 18
        */
       vatPercentage?: Record<string, never> | null;
@@ -1137,8 +1517,13 @@ export interface components {
       totalIncome: number;
       /** @description Individual income entries for this report */
       incomeEntries: components["schemas"]["IncomeEntryResponseDto"][];
-      /** @description Corporation payments for this report */
-      corporationPayments: components["schemas"]["NestedCorporationPaymentDto"][];
+      /** @description Supplier payments for this report */
+      supplierPayments: components["schemas"]["NestedSupplierPaymentDto"][];
+      /**
+       * @description Income the project's initiator (יזם) reports for this month. Null unless set; only relevant for PDF export, and only meaningful when the project has an initiator.
+       * @example 120000
+       */
+      initiatorIncome: Record<string, never> | null;
     };
     UpdateIncomeEntryDto: {
       /**
@@ -1168,6 +1553,26 @@ export interface components {
        * @example Office Building Renovation
        */
       name: string;
+      /**
+       * @description A description of the project
+       * @example Renovation of the office building located at 123 Main St.
+       */
+      description: string;
+      /**
+       * @description Location of the project
+       * @example 123 Main St, Tel Aviv
+       */
+      location: string;
+      /**
+       * @description Name of the person who commissioned this specific project (may differ from the client)
+       * @example Jane Doe
+       */
+      requesterName: string;
+      /**
+       * @description Name of the project's initiator (יזם), if one exists — null when the project has no initiator
+       * @example Yaniv Goldman
+       */
+      initiatorName: Record<string, never> | null;
     };
     NestedSubcontractorWithPaymentDto: {
       /**
@@ -1217,8 +1622,13 @@ export interface components {
       totalIncome: number;
       /** @description Individual income entries for this report */
       incomeEntries: components["schemas"]["IncomeEntryResponseDto"][];
-      /** @description The payments made to corporations for their work on the project that month */
-      corporationPayments: components["schemas"]["NestedCorporationPaymentDto"][];
+      /** @description The payments made to suppliers for their work on the project that month */
+      supplierPayments: components["schemas"]["NestedSupplierPaymentDto"][];
+      /**
+       * @description Income the project's initiator (יזם) reports for this month. Null unless set; only relevant for PDF export, and only meaningful when the project has an initiator.
+       * @example 120000
+       */
+      initiatorIncome: Record<string, never> | null;
       /** @description Subcontractor information for the given month's project report */
       subcontractor: components["schemas"]["NestedSubcontractorWithPaymentDto"];
     };
@@ -1244,10 +1654,37 @@ export interface components {
        * @example 15.5
        */
       profitMargin?: number;
-      /** @description Income entries for this report (at least one required) */
-      incomeEntries: components["schemas"]["CreateIncomeEntryDto"][];
-      /** @description A list of the payments made to corporations for their work on this project this month */
-      corporationPayments: components["schemas"]["CreateCorporationPaymentDto"][];
+      /**
+       * @description Income the project's initiator (יזם) reports for this month. Omit to leave it unchanged, send null to clear it; a number must be greater than the report's own income and needs an initiator on the project.
+       * @example 120000
+       */
+      initiatorIncome?: number | null;
+      /** @description Income entries for this report. Omit to leave existing income rows untouched; when provided, replaces all of them (at least one required). */
+      incomeEntries?: components["schemas"]["CreateIncomeEntryDto"][];
+      /** @description Supplier payments for this report. Omit to leave existing payments untouched; when provided, replaces all of them. */
+      supplierPayments?: components["schemas"]["CreateSupplierPaymentDto"][];
+    };
+    OpeningBalanceDto: {
+      /**
+       * @description The amount already received for this project
+       * @example 45000
+       */
+      amount: number;
+      /**
+       * @description The month the amount covers. Normalized to the first of that month, which becomes the back-dated report date.
+       * @example 2026-03-01
+       */
+      month: string;
+      /**
+       * @description ID of the subcontractor the back-dated report is attributed to
+       * @example 123e4567-e89b-12d3-a456-426614174000
+       */
+      subcontractorId: string;
+      /**
+       * @description Profit margin percentage for the back-dated report
+       * @example 15.5
+       */
+      profitMargin: number;
     };
     CreateProjectDto: {
       /**
@@ -1276,6 +1713,23 @@ export interface components {
        * @example false
        */
       isDone: boolean;
+      /**
+       * @description Name of the person who commissioned this specific project (may differ from the client); printed on the account-approval PDF in place of the client name
+       * @example Jane Doe
+       */
+      requesterName: string;
+      /**
+       * @description Location of the project
+       * @example 123 Main St, Tel Aviv
+       */
+      location: string;
+      /**
+       * @description Optional ID of the project's initiator (יזם), if one exists. Unlike clientId, this is nullable — most projects have no initiator at all.
+       * @example 123e4567-e89b-12d3-a456-426614174000
+       */
+      initiatorId?: Record<string, never> | null;
+      /** @description Money already received for this project before it was entered. Creates one back-dated report alongside the project, in the same transaction. Omit it and only the project is created. */
+      openingBalance?: components["schemas"]["OpeningBalanceDto"];
     };
     ProjectBasicResponseDto: {
       /**
@@ -1308,6 +1762,26 @@ export interface components {
        * @example false
        */
       isDone: boolean;
+      /**
+       * @description Name of the person who commissioned this specific project (may differ from the client); printed on the account-approval PDF in place of the client name
+       * @example Jane Doe
+       */
+      requesterName: string;
+      /**
+       * @description Location of the project
+       * @example 123 Main St, Tel Aviv
+       */
+      location: string;
+      /**
+       * @description The 'approved for' text used on this project's most recent PDF export, prefilled on the next export
+       * @example עבודות שלד + גמר
+       */
+      lastApprovedFor: string | null;
+      /**
+       * @description ID of the project's initiator (יזם), if one exists
+       * @example 123e4567-e89b-12d3-a456-426614174000
+       */
+      initiatorId: string | null;
     };
     ProjectClientDto: {
       /** @example 123e4567-e89b-12d3-a456-426614174000 */
@@ -1362,6 +1836,26 @@ export interface components {
        * @example true
        */
       hasReports: boolean;
+      /**
+       * @description Name of the person who commissioned this specific project (may differ from the client); printed on the account-approval PDF in place of the client name
+       * @example Jane Doe
+       */
+      requesterName: string;
+      /**
+       * @description Location of the project
+       * @example 123 Main St, Tel Aviv
+       */
+      location: string;
+      /**
+       * @description The 'approved for' text used on this project's most recent PDF export, prefilled on the next export
+       * @example עבודות שלד + גמר
+       */
+      lastApprovedFor: string | null;
+      /**
+       * @description ID of the project's initiator (יזם), if one exists
+       * @example 123e4567-e89b-12d3-a456-426614174000
+       */
+      initiatorId: string | null;
     };
     UpdateProjectDto: {
       /**
@@ -1390,6 +1884,21 @@ export interface components {
        * @example false
        */
       isDone: boolean;
+      /**
+       * @description Name of the person who commissioned this specific project (may differ from the client); printed on the account-approval PDF in place of the client name
+       * @example Jane Doe
+       */
+      requesterName: string;
+      /**
+       * @description Location of the project
+       * @example 123 Main St, Tel Aviv
+       */
+      location: string;
+      /**
+       * @description Optional ID of the project's initiator (יזם), if one exists. Unlike clientId, this is nullable — most projects have no initiator at all.
+       * @example 123e4567-e89b-12d3-a456-426614174000
+       */
+      initiatorId?: Record<string, never> | null;
     };
     MonthlyIncomeProjectDto: {
       projectId: string;
@@ -1398,6 +1907,8 @@ export interface components {
       receivedIncome: number;
       pendingIncome: number;
       profit: number;
+      /** @description The individual income entries behind totalIncome, each received or pending by its incomeDate */
+      incomeEntries: components["schemas"]["IncomeEntryResponseDto"][];
     };
     MonthlyIncomeItemDto: {
       clientId: string;
@@ -1458,6 +1969,28 @@ export interface components {
        */
       signature: Record<string, never> | null;
       /**
+       * @description Primary brand color of exported PDFs (header band, table headers), as #rrggbb
+       * @example #1f2a44
+       */
+      pdfPrimaryColor: string;
+      /**
+       * @description Secondary brand color of exported PDFs (accent rules, badges, totals), as #rrggbb
+       * @example #c9a24b
+       */
+      pdfSecondaryColor: string;
+      /**
+       * @description Font of exported PDFs
+       * @example noto-sans-hebrew
+       * @enum {string}
+       */
+      pdfFont:
+        | "noto-sans-hebrew"
+        | "heebo"
+        | "rubik"
+        | "assistant"
+        | "frank-ruhl-libre"
+        | "david-libre";
+      /**
        * @description Timestamp of the last update to the company settings
        * @example 2026-07-31T10:39:08.000Z
        */
@@ -1509,6 +2042,28 @@ export interface components {
        * @example data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...
        */
       signature?: Record<string, never> | null;
+      /**
+       * @description Primary brand color of exported PDFs (header band, table headers), as #rrggbb
+       * @example #1f2a44
+       */
+      pdfPrimaryColor?: string;
+      /**
+       * @description Secondary brand color of exported PDFs (accent rules, badges, totals), as #rrggbb
+       * @example #c9a24b
+       */
+      pdfSecondaryColor?: string;
+      /**
+       * @description Font of exported PDFs
+       * @example noto-sans-hebrew
+       * @enum {string}
+       */
+      pdfFont?:
+        | "noto-sans-hebrew"
+        | "heebo"
+        | "rubik"
+        | "assistant"
+        | "frank-ruhl-libre"
+        | "david-libre";
     };
     ExportProjectReportsPdfDto: {
       /**
@@ -1517,16 +2072,86 @@ export interface components {
        */
       projectReportId: string;
       /**
-       * @description Free text describing what the account approval covers; the project name is appended to it on the document
+       * @description Name of the person or company this project report is for; the project name is appended to it on the document. Omit or leave empty to print the project name alone.
+       * @example ישראל ישראלי
+       */
+      approvedFor?: string;
+      /**
+       * @description Description printed on this document only. It is never written back to the project — the project's own description is edited from the projects screen.
        * @example עבודות שלד + גמר
        */
-      approvedFor: string;
+      description?: string;
       /**
        * @description Language/direction of the rendered PDF
        * @default he
        * @example he
        */
       lang: string;
+    };
+    MarginOverrideDto: {
+      /**
+       * @description Project this override applies to
+       * @example 123e4567-e89b-12d3-a456-426614174000
+       */
+      projectId: string;
+      /**
+       * @description Simulated profit margin percentage for this project
+       * @example 12.5
+       */
+      margin: number;
+    };
+    ExportClientSimulatedPdfDto: {
+      /**
+       * @description Client whose reports for the month are exported
+       * @example 123e4567-e89b-12d3-a456-426614174000
+       */
+      clientId: string;
+      /**
+       * @description Month to export, any date within it
+       * @example 2026-01-01
+       */
+      month: string;
+      /** @description Simulated profit margin per project. A project not listed here renders at its report's stored margin. */
+      overrides: components["schemas"]["MarginOverrideDto"][];
+      /**
+       * @description Language/direction of the rendered PDF
+       * @default he
+       * @example he
+       */
+      lang: string;
+    };
+    CreateInitiatorDto: {
+      /**
+       * @description Name of the initiator
+       * @example Yaniv Goldman
+       */
+      name: string;
+    };
+    InitiatorResponseDto: {
+      /**
+       * @description Unique identifier for the initiator
+       * @example 123e4567-e89b-12d3-a456-426614174000
+       */
+      id: string;
+      /**
+       * @description Name of the initiator
+       * @example Yaniv Goldman
+       */
+      name: string;
+    };
+    UpdateInitiatorDto: {
+      /**
+       * @description Name of the initiator
+       * @example Yaniv Goldman
+       */
+      name: string;
+    };
+    HealthResponseDto: {
+      /**
+       * @example ok
+       * @enum {string}
+       */
+      status: "ok";
     };
   };
   responses: never;
@@ -1729,7 +2354,7 @@ export interface operations {
       };
     };
   };
-  CorporationPaymentsController_findAll: {
+  SupplierPaymentsController_findAll: {
     parameters: {
       query: {
         /** @description A date within the month to query, in ISO-8601 format */
@@ -1741,13 +2366,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description List of corporation payments for the specified month. */
+      /** @description List of supplier payments for the specified month. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["MultipleMonthlyCorporationPaymentsResponseDto"];
+          "application/json": components["schemas"]["MultipleMonthlySupplierPaymentsResponseDto"];
         };
       };
       /** @description Invalid input data for pagination or date filtering. */
@@ -1759,7 +2384,7 @@ export interface operations {
       };
     };
   };
-  CorporationPaymentsController_create: {
+  SupplierPaymentsController_create: {
     parameters: {
       query?: never;
       header?: never;
@@ -1768,27 +2393,27 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["CreateCorporationPaymentDto"];
+        "application/json": components["schemas"]["CreateSupplierPaymentDto"];
       };
     };
     responses: {
-      /** @description The corporation payment has been successfully created. */
+      /** @description The supplier payment has been successfully created. */
       201: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CorporationPaymentResponseDto"];
+          "application/json": components["schemas"]["SupplierPaymentResponseDto"];
         };
       };
-      /** @description Invalid input data for creating corporation payment. */
+      /** @description Invalid input data for creating supplier payment. */
       400: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Conflict occurred while creating corporation payment. */
+      /** @description Conflict occurred while creating supplier payment. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -1797,7 +2422,7 @@ export interface operations {
       };
     };
   };
-  CorporationPaymentsController_findOne: {
+  SupplierPaymentsController_findOne: {
     parameters: {
       query: {
         /** @description A date within the month to query, in ISO-8601 format */
@@ -1805,20 +2430,20 @@ export interface operations {
       };
       header?: never;
       path: {
-        /** @description Corporation ID */
-        corporationId: string;
+        /** @description Supplier ID */
+        supplierId: string;
       };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description Corporation's payments for the specified month. */
+      /** @description Supplier's payments for the specified month. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["MonthlyCorporationPaymentsResponseDto"];
+          "application/json": components["schemas"]["MonthlySupplierPaymentsResponseDto"];
         };
       };
       /** @description Invalid input data for date filtering. */
@@ -1828,7 +2453,7 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description Corporation not found or no payments for the specified month. */
+      /** @description Supplier not found or no payments for the specified month. */
       404: {
         headers: {
           [name: string]: unknown;
@@ -1837,46 +2462,46 @@ export interface operations {
       };
     };
   };
-  CorporationPaymentsController_update: {
+  SupplierPaymentsController_update: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        /** @description Corporation payment ID */
+        /** @description Supplier payment ID */
         id: string;
       };
       cookie?: never;
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["UpdateCorporationPaymentDto"];
+        "application/json": components["schemas"]["UpdateSupplierPaymentDto"];
       };
     };
     responses: {
-      /** @description The updated corporation payment for the specified month. */
+      /** @description The updated supplier payment for the specified month. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CorporationPaymentResponseDto"];
+          "application/json": components["schemas"]["SupplierPaymentResponseDto"];
         };
       };
-      /** @description Invalid input data for updating corporation payment. */
+      /** @description Invalid input data for updating supplier payment. */
       400: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Corporation payment not found for the specified month. */
+      /** @description Supplier payment not found for the specified month. */
       404: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Conflict occurred while updating corporation payment. */
+      /** @description Conflict occurred while updating supplier payment. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -1885,26 +2510,164 @@ export interface operations {
       };
     };
   };
-  CorporationPaymentsController_remove: {
+  SupplierPaymentsController_remove: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        /** @description Corporation payment ID */
+        /** @description Supplier payment ID */
         id: string;
       };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description The corporation payment has been successfully deleted. */
+      /** @description The supplier payment has been successfully deleted. */
       204: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Corporation payment not found */
+      /** @description Supplier payment not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SupplierPaymentsController_createBatch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Supplier receiving payment */
+        supplierId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BatchCreateSupplierPaymentsDto"];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierPaymentResponseDto"][];
+        };
+      };
+      /** @description Invalid rows */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Supplier or project report not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SupplierPaymentsController_setPaid: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Supplier payment to flag */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetSupplierPaymentPaidDto"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierPaymentResponseDto"];
+        };
+      };
+      /** @description Supplier payment not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SupplierPaymentsController_setIncludesVat: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Supplier payment to change */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetSupplierPaymentVatDto"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierPaymentResponseDto"];
+        };
+      };
+      /** @description Supplier payment not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SupplierPaymentsController_setPaidForSupplier: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Supplier to settle */
+        supplierId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetSupplierPaymentsPaidDto"];
+      };
+    };
+    responses: {
+      /** @description Number of payments changed */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Supplier not found */
       404: {
         headers: {
           [name: string]: unknown;
@@ -1991,7 +2754,7 @@ export interface operations {
       };
     };
   };
-  CorporationsController_findAll: {
+  SuppliersController_findAll: {
     parameters: {
       query?: {
         /** @description Page number (1-based) */
@@ -2005,13 +2768,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description List of corporations */
+      /** @description List of suppliers */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CorporationResponseDto"][];
+          "application/json": components["schemas"]["SupplierResponseDto"][];
         };
       };
       /** @description Invalid pagination parameters */
@@ -2023,7 +2786,7 @@ export interface operations {
       };
     };
   };
-  CorporationsController_create: {
+  SuppliersController_create: {
     parameters: {
       query?: never;
       header?: never;
@@ -2032,17 +2795,17 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["CreateCorporationDto"];
+        "application/json": components["schemas"]["CreateSupplierDto"];
       };
     };
     responses: {
-      /** @description The corporation has been successfully created. */
+      /** @description The supplier has been successfully created. */
       201: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CorporationResponseDto"];
+          "application/json": components["schemas"]["SupplierResponseDto"];
         };
       };
       /** @description Invalid input data */
@@ -2052,7 +2815,7 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description Corporation already exists */
+      /** @description Supplier already exists */
       409: {
         headers: {
           [name: string]: unknown;
@@ -2061,28 +2824,28 @@ export interface operations {
       };
     };
   };
-  CorporationsController_findOne: {
+  SuppliersController_findOne: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        /** @description Corporation ID */
+        /** @description Supplier ID */
         id: string;
       };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description The corporation has been found. */
+      /** @description The supplier has been found. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CorporationResponseDto"];
+          "application/json": components["schemas"]["SupplierResponseDto"];
         };
       };
-      /** @description Corporation not found */
+      /** @description Supplier not found */
       404: {
         headers: {
           [name: string]: unknown;
@@ -2091,39 +2854,39 @@ export interface operations {
       };
     };
   };
-  CorporationsController_update: {
+  SuppliersController_update: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        /** @description Corporation ID */
+        /** @description Supplier ID */
         id: string;
       };
       cookie?: never;
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["UpdateCorporationDto"];
+        "application/json": components["schemas"]["UpdateSupplierDto"];
       };
     };
     responses: {
-      /** @description The corporation has been successfully updated. */
+      /** @description The supplier has been successfully updated. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["CorporationResponseDto"];
+          "application/json": components["schemas"]["SupplierResponseDto"];
         };
       };
-      /** @description Corporation not found */
+      /** @description Supplier not found */
       404: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Corporation name already exists */
+      /** @description Supplier name already exists */
       409: {
         headers: {
           [name: string]: unknown;
@@ -2132,26 +2895,26 @@ export interface operations {
       };
     };
   };
-  CorporationsController_remove: {
+  SuppliersController_remove: {
     parameters: {
       query?: never;
       header?: never;
       path: {
-        /** @description Corporation ID */
+        /** @description Supplier ID */
         id: string;
       };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description The corporation has been successfully deleted. */
+      /** @description The supplier has been successfully deleted. */
       204: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Corporation not found */
+      /** @description Supplier not found */
       404: {
         headers: {
           [name: string]: unknown;
@@ -2353,6 +3116,140 @@ export interface operations {
       };
       /** @description Subcontractor payment not found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProjectClientAssignmentsController_findAllForProject: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        projectId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectClientAssignmentResponseDto"][];
+        };
+      };
+    };
+  };
+  ProjectClientAssignmentsController_transfer: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        projectId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TransferProjectDto"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectClientAssignmentResponseDto"][];
+        };
+      };
+      /** @description Project or client not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The project already changes client in that month */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProjectClientAssignmentsController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectClientAssignmentResponseDto"][];
+        };
+      };
+      /** @description Assignment not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Cannot remove a project's earliest assignment */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProjectClientAssignmentsController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateAssignmentDto"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectClientAssignmentResponseDto"][];
+        };
+      };
+      /** @description Assignment not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description The project already changes client in that month */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -3100,6 +3997,230 @@ export interface operations {
       };
       /** @description No project report found with the given id */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PdfExportController_exportClientSimulatedPdf: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExportClientSimulatedPdfDto"];
+      };
+    };
+    responses: {
+      /** @description Company settings incomplete, no VAT rate configured for the month, or an override references a project outside this client */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description No reports found for this client in the given month */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  InitiatorsController_findAll: {
+    parameters: {
+      query?: {
+        /** @description Page number (1-based) */
+        page?: number;
+        /** @description Items per page */
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description List of initiators */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InitiatorResponseDto"][];
+        };
+      };
+      /** @description Invalid pagination parameters */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  InitiatorsController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateInitiatorDto"];
+      };
+    };
+    responses: {
+      /** @description The initiator has been successfully created. */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InitiatorResponseDto"];
+        };
+      };
+      /** @description Invalid input data */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Initiator already exists */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  InitiatorsController_findOne: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Initiator ID */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The initiator has been found. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InitiatorResponseDto"];
+        };
+      };
+      /** @description Initiator not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  InitiatorsController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Initiator ID */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateInitiatorDto"];
+      };
+    };
+    responses: {
+      /** @description The initiator has been successfully updated. */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InitiatorResponseDto"];
+        };
+      };
+      /** @description Initiator not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Initiator name already exists */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  InitiatorsController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Initiator ID */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description The initiator has been successfully deleted. */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Initiator not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  HealthController_check: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HealthResponseDto"];
+        };
+      };
+      /** @description Database unreachable */
+      503: {
         headers: {
           [name: string]: unknown;
         };

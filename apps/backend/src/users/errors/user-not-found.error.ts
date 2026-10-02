@@ -9,7 +9,7 @@ export class UserNotFoundError extends EntityNotFoundError {
    * @param identifier The username or ID that was not found
    */
   constructor(identifier: string) {
-    super(`User '${identifier}' not found`);
+    super(`User '${identifier}' not found`, 'USER_NOT_FOUND');
     this.name = 'UserNotFoundError';
   }
 }

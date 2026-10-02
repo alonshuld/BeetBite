@@ -1,18 +1,18 @@
 <div align="center">
 
-# 🫀 BeetBite
+<img src="docs/media/logo.png" alt="BeetBite logo — a beet with a bite taken out of it" width="120">
+
+# BeetBite
 
 **Back-office platform for construction contractors.**
 
-Track client projects, monthly income, subcontractor payouts and corporation invoices — every financial figure derived from one monthly report per project, never entered twice.
+Track client projects, monthly income, subcontractor payouts and supplier invoices — every financial figure derived from one monthly report per project, never entered twice.
 
 [![CI](https://github.com/alonshuld/BeetBite/actions/workflows/ci.yml/badge.svg)](https://github.com/alonshuld/BeetBite/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/alonshuld/BeetBite/actions/workflows/e2e.yml/badge.svg)](https://github.com/alonshuld/BeetBite/actions/workflows/e2e.yml)
 [![CD](https://github.com/alonshuld/BeetBite/actions/workflows/cd.yml/badge.svg)](https://github.com/alonshuld/BeetBite/actions/workflows/cd.yml)
 
 NestJS 11 · React 18 · PostgreSQL 17 · Prisma 7 · Playwright · Docker
-
-<img src="docs/media/project-reports.gif" alt="Monthly project reports with derived profit, corporation payments and subcontractor payout" width="880">
 
 </div>
 
@@ -21,7 +21,7 @@ NestJS 11 · React 18 · PostgreSQL 17 · Prisma 7 · Playwright · Docker
 ## Table of contents
 
 - [What it does](#what-it-does)
-- [Demo](#demo)
+- [Screens](#screens)
 - [How the money works](#how-the-money-works)
 - [Architecture](#architecture)
 - [Quick start](#quick-start)
@@ -39,16 +39,16 @@ NestJS 11 · React 18 · PostgreSQL 17 · Prisma 7 · Playwright · Docker
 
 BeetBite is a single-tenant back office: one deployment serves one contractor company.
 
-Clients commission construction projects and agree on an estimated total up front. They pay the contractor monthly as work progresses. The contractor keeps a profit margin, pays specialist firms (corporations) their fixed monthly amounts, and passes the remainder to the subcontractor working that project.
+Clients commission construction projects and agree on an estimated total up front. They pay the contractor monthly as work progresses. The contractor keeps a profit margin, pays specialist firms (suppliers) their fixed monthly amounts, and passes the remainder to the subcontractor working that project.
 
-The operator enters clients, projects, corporations and subcontractors once, then files **one report per project per month**. Everything else — profits, payouts, income totals, payment progress, per-client aggregates — is computed from those reports at read time.
+The operator enters clients, projects, suppliers and subcontractors once, then files **one report per project per month**. Everything else — profits, payouts, income totals, payment progress, per-client aggregates — is computed from those reports at read time.
 
 | | |
 | --- | --- |
-| 📊 **Monthly project reports** | Multiple income entries per month, pending vs. received, per-report profit margin, attached corporation payments |
+| 📊 **Monthly project reports** | Multiple income entries per month, pending vs. received, per-report profit margin, attached supplier payments |
 | 💰 **Monthly income** | Income and profit rolled up per client and per project, with a grand total for the month |
 | 👷 **Subcontractor payouts** | Amount owed computed from reports; partial payments with a transactional overpayment guard |
-| 🏢 **Corporation payments** | Fixed amounts per project report, optional VAT %, and a "future" flag for work not yet invoiced |
+| 🏢 **Supplier payments** | Fixed amounts per project report, optional VAT %, and a "future" flag for work not yet invoiced |
 | 🏗️ **Project portfolio** | Active / future / closed filters, payment progress against the estimated amount, remaining balance |
 | 🧾 **VAT rates** | Month-effective VAT table, resolved per payment date |
 | 📄 **PDF export** | Per-report account-approval document — one project, one month — rendered server-side with Puppeteer |
@@ -56,41 +56,21 @@ The operator enters clients, projects, corporations and subcontractors once, the
 
 ---
 
-## Demo
+## Screens
 
-> All recordings use the seeded demo dataset (`SEED_MOCK_DATA=true`): 30 clients, 35 projects, and reports going back two years.
+| Screen | What it does |
+| --- | --- |
+| **Project reports** | Pick a client for the month; every project card shows its income entries (pending or received), the derived profit, each supplier's cut, and what is left for the subcontractor |
+| **Profit simulator** | A drawer on the client drill-down re-runs the whole month against a different margin — per project or all at once — without touching stored data |
+| **Subcontractor payments** | Amount owed is derived from the month's reports; partial payments are recorded against a specific project and rejected server-side if they would exceed what is owed |
+| **Monthly income** | Income and profit per client and per project, with a grand total for the month |
+| **Project portfolio** | Active / future / closed filters with payment progress against the estimated amount |
+| **Month-scoped navigation** | The month picker in the header scopes every overview screen at once — reports, income, supplier payments and subcontractor payments all follow it |
+| **Sign in** | JWT issued by the backend, stored in `localStorage`, sent as a bearer token on every request |
 
-### Monthly project reports
+Themes (light / dark) and languages (English / Hebrew, full RTL) toggle from the header.
 
-Pick a client for the month and every project card shows its income entries (pending or received), the derived profit, each corporation's cut, and what is left for the subcontractor. The profit simulator at the bottom re-runs the whole month against a different margin without touching stored data.
-
-<img src="docs/media/project-reports.gif" alt="Selecting a client, reviewing per-project financials, and simulating a different profit margin" width="880">
-
-### Subcontractor payments
-
-Amount owed is derived from the month's reports. Partial payments are recorded against a specific project and rejected server-side if they would exceed what is owed — the check and the write happen inside one transaction.
-
-<img src="docs/media/subcontractor-payments.gif" alt="Recording a partial payment and watching the owed balance update" width="880">
-
-### Monthly income and month-scoped navigation
-
-The month picker in the header scopes every overview screen at once — reports, income, corporation payments and subcontractor payments all follow it.
-
-<img src="docs/media/monthly-income.gif" alt="Switching months from the header and moving between overview screens" width="880">
-
-### Project portfolio
-
-<img src="docs/media/projects.gif" alt="Project list with active, future and closed filters and payment progress bars" width="880">
-
-### Hebrew (RTL) and dark mode
-
-<img src="docs/media/theme-rtl.gif" alt="Toggling dark mode and switching the interface to Hebrew right-to-left" width="880">
-
-### Sign in
-
-JWT issued by the backend, stored in `localStorage`, sent as a bearer token on every request.
-
-<img src="docs/media/login.gif" alt="Signing in and landing on the project reports screen" width="880">
+Run `SEED_MOCK_DATA=true` (see [Demo data](#demo-data)) for a populated dataset: 30 clients, 35 projects, and reports going back two years.
 
 ---
 
@@ -100,7 +80,7 @@ Financial figures are **never stored**. They are computed on read from the repor
 
 ```
 profit                = totalIncome × profitMargin / 100
-subcontractorPayment  = totalIncome − profit − Σ corporationPayments
+subcontractorPayment  = totalIncome − profit − Σ supplierPayments
 project.totalPaid     = Σ income entries where incomeDate IS NOT NULL
 completionPercent     = totalPaid / project.estimatedAmount × 100
 ```
@@ -119,8 +99,8 @@ erDiagram
     Subcontractor ||--o{ ProjectReport : "assigned to"
     Subcontractor ||--o{ SubcontractorPayment : receives
     ProjectReport ||--o{ ProjectReportIncome : "income entries"
-    ProjectReport ||--o{ CorporationPayment : "owes"
-    Corporation ||--o{ CorporationPayment : "invoices"
+    ProjectReport ||--o{ SupplierPayment : "owes"
+    Supplier ||--o{ SupplierPayment : "invoices"
 
     Project {
         decimal estimatedAmount
@@ -135,7 +115,7 @@ erDiagram
         date incomeDate "null = not received"
         string tag "labels the work on the approval PDF"
     }
-    CorporationPayment {
+    SupplierPayment {
         decimal amount
         decimal vatPercentage
         boolean isFuture
@@ -272,7 +252,6 @@ Per app:
 pnpm --filter backend start:dev            # Nest watch mode
 pnpm --filter backend test:cov             # Jest coverage
 pnpm --filter backend exec prisma migrate dev
-pnpm --filter backend seed:demo:he         # Hebrew demo dataset (destructive)
 pnpm --filter frontend codegen             # regenerate API types (backend must be running)
 pnpm --filter frontend vitest run src/pages/ReportsPage.test.tsx
 pnpm --filter e2e exec playwright test --ui
@@ -294,8 +273,8 @@ All routes are prefixed `/api/v1` and require `Authorization: Bearer <token>` ex
 | Project reports | `POST/GET /projects/reports` · `GET/PUT/DELETE /projects/reports/:id` · `GET /projects/:id/reports/previous` |
 | Income entries | `POST /projects/reports/:reportId/income-entries` · `PUT/DELETE /projects/reports/income-entries/:id` |
 | Income | `GET /income?month=` — the month's income grouped by client and project |
-| Corporations | `POST/GET /corporations` · `GET/PUT/DELETE /corporations/:id` |
-| Corporation payments | `POST/GET /corporations/payments` · `GET /corporations/:corporationId/payments` · `PUT/DELETE /corporations/payments/:id` |
+| Suppliers | `POST/GET /suppliers` · `GET/PUT/DELETE /suppliers/:id` |
+| Supplier payments | `POST/GET /suppliers/payments` · `GET /suppliers/:supplierId/payments` · `PUT/DELETE /suppliers/payments/:id` |
 | Subcontractors | `POST/GET /subcontractors` · `GET/PUT/DELETE /subcontractors/:id` |
 | Subcontractor payments | `POST/GET /subcontractors/payments` · `GET /subcontractors/:subcontractorId/payments` · `GET /subcontractor-payments/by-client?month=` · `PUT/DELETE /subcontractors/payments/:id` |
 | Company settings | `GET/PUT /company-settings` (singleton) |
@@ -313,7 +292,7 @@ Validation is global and strict: unknown properties are rejected with 400 (`whit
 | Backend unit (Jest) | 350 tests / 30 suites | Controllers and services with `PrismaService` fully mocked |
 | Backend integration (Jest) | `pnpm --filter backend test:e2e` | Services against a real PostgreSQL via testcontainers |
 | Frontend unit (Vitest) | 305 tests / 38 files | Components, pages and hooks in jsdom |
-| End-to-end (Playwright) | 60 tests / 9 suites | Auth, clients, projects, project reports, corporations, corporation payments, subcontractors, subcontractor payments, income |
+| End-to-end (Playwright) | 60 tests / 9 suites | Auth, clients, projects, project reports, suppliers, supplier payments, subcontractors, subcontractor payments, income |
 
 The Playwright suite bootstraps the entire stack itself — `global-setup.ts` starts a PostgreSQL testcontainer, applies migrations, seeds an admin, builds and starts the backend on `:3001`, starts the frontend on `:5174`, and saves an authenticated storage state. Each spec truncates the database in FK-safe order after every test.
 
@@ -352,8 +331,8 @@ BeetBite/
 │   │   ├── prisma/         # schema, migrations, seed
 │   │   └── src/
 │   │       ├── auth/ users/                     # JWT + Passport, global guard
-│   │       ├── clients/ projects/ corporations/ subcontractors/
-│   │       ├── project-reports/ corporation-payments/ subcontractor-payments/
+│   │       ├── clients/ projects/ suppliers/ subcontractors/
+│   │       ├── project-reports/ supplier-payments/ subcontractor-payments/
 │   │       ├── income/ incomes/ vat-rates/ company-settings/
 │   │       ├── pdf-export/                      # Puppeteer templates
 │   │       ├── common/                          # error hierarchy, filters, constants
@@ -365,7 +344,7 @@ BeetBite/
 │   │       ├── contexts/   # language (en/he), theme, toasts
 │   │       └── pages/      # one lazy-loaded file per route
 │   └── e2e/                # Playwright specs + testcontainers bootstrap
-├── docs/media/             # demo recordings used by this README
+├── docs/media/             # logo used by this README
 ├── docker-compose.yml
 └── .github/workflows/      # ci · e2e · cd
 ```

@@ -18,10 +18,15 @@ export class ProjectReportNotFoundError extends EntityNotFoundError {
   constructor(projectId: string, date: string);
   constructor(projectReportIdOrProjectId: string, date?: string) {
     if (!date) {
-      super(`Project report with ID ${projectReportIdOrProjectId} not found`);
+      super(
+        `Project report with ID ${projectReportIdOrProjectId} not found`,
+        'PROJECT_REPORT_NOT_FOUND',
+      );
     } else {
       super(
         `Project report for project ${projectReportIdOrProjectId} at date ${date} could not be found`,
+        'PROJECT_REPORT_NOT_FOUND',
+        { month: date.slice(0, 7) },
       );
     }
     this.name = 'ProjectReportNotFoundError';

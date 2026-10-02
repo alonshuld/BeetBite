@@ -1,0 +1,11 @@
+-- AlterTable
+--
+-- Re-introduces a payment date on subcontractor payments. A column of this name
+-- was dropped by 20260515190243 when the model moved to "a row means it was
+-- paid", so a separate date looked redundant. The contractor needs the actual
+-- day the money moved — several partial payments in one month each have their
+-- own — so it comes back, with serviceDate keeping its distinct meaning of
+-- "which month this settles".
+--
+-- Nullable: rows written before this existed have no honest value to backfill.
+ALTER TABLE "subcontractor_payments" ADD COLUMN "paymentDate" DATE;

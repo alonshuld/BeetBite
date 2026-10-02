@@ -19,6 +19,8 @@ dbTest.describe('Monthly Income', () => {
           name: 'Income Project',
           estimatedAmount: 300000,
           description: 'Monthly income test',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
         },
       });
       await db.projectReport.create({
@@ -65,6 +67,8 @@ dbTest.describe('Monthly Income', () => {
             name: `${name} Project`,
             estimatedAmount: 500000,
             description: 'gt',
+            requesterName: 'Test Requester',
+            location: 'Test Location',
           },
         });
         await db.projectReport.create({
@@ -89,6 +93,79 @@ dbTest.describe('Monthly Income', () => {
         .last();
       await expect(grandTotalRow).toBeVisible();
       await expect(page.getByText(/100,000/).first()).toBeVisible();
+    },
+  );
+
+  dbTest(
+    'shows each income as received or pending and edits its payment date in place',
+    async ({ page, db }) => {
+      const client = await db.client.create({ data: { name: 'Date Client' } });
+      const sub = await db.subcontractor.create({
+        data: { name: 'Date Worker', companyNumber: '515222007' },
+      });
+      const project = await db.project.create({
+        data: {
+          clientId: client.id,
+          name: 'Date Project',
+          estimatedAmount: 300000,
+          description: 'income date edit',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
+        },
+      });
+      const report = await db.projectReport.create({
+        data: {
+          projectId: project.id,
+          subcontractorId: sub.id,
+          date: new Date('2026-05-01'),
+          profitMargin: 10,
+          incomeEntries: {
+            create: [
+              { amount: 20000, incomeDate: null, tag: 'Frame' },
+              { amount: 30000, incomeDate: new Date('2026-05-10') },
+            ],
+          },
+        },
+        include: { incomeEntries: true },
+      });
+      const pending = report.incomeEntries.find(
+        (e: { tag: string | null }) => e.tag === 'Frame',
+      )!;
+
+      await page.goto(`${BASE}/income`);
+      await page.waitForLoadState('networkidle');
+
+      const frameRow = page.getByRole('row', { name: /Frame/ });
+      await expect(frameRow.getByText('Pending')).toBeVisible();
+      await expect(
+        page.getByRole('row', { name: /Client Income/ }).getByText('Received'),
+      ).toBeVisible();
+
+      // Set the pending entry's payment date right here.
+      const dateInput = page.getByLabel('Income Date – Date Project – Frame');
+      await dateInput.fill('2026-05-20');
+      await dateInput.press('Enter');
+      await expect(frameRow.getByText('Received')).toBeVisible();
+
+      const saved = await db.projectReportIncome.findUniqueOrThrow({
+        where: { id: pending.id },
+      });
+      expect(saved.incomeDate?.toISOString().slice(0, 10)).toBe('2026-05-20');
+
+      // Clearing the date marks it pending again.
+      await page.getByLabel('Income Date – Date Project – Frame').fill('');
+      await page.getByLabel('Income Date – Date Project – Frame').blur();
+      await expect(frameRow.getByText('Pending')).toBeVisible();
+      await expect
+        .poll(
+          async () =>
+            (
+              await db.projectReportIncome.findUniqueOrThrow({
+                where: { id: pending.id },
+              })
+            ).incomeDate,
+        )
+        .toBeNull();
     },
   );
 

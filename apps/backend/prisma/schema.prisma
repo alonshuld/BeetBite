@@ -12,24 +12,67 @@ model Client {
   id   String @id @default(cuid())
   name String @unique
 
-  projects Project[]
+  projects           Project[]
+  clientAssignments  ProjectClientAssignment[]
 
   @@map("clients")
 }
 
 model Project {
-  id              String   @id @default(cuid())
-  clientId        String
-  name            String   @unique
-  estimatedAmount Decimal  @db.Decimal(12, 2)
-  description     String
-  isDone          Boolean  @default(false)
+  id String @id @default(cuid())
 
-  client               Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  reports              ProjectReport[]
+  /// DERIVED CACHE of the *current* client — the clientAssignment with the
+  /// latest effectiveFrom. Written only by ProjectClientAssignmentsService.
+  /// NEVER read this to answer a historical question ("who owned this project
+  /// in month M?") — use resolveClientsForMonth() instead.
+  clientId        String
+  name            String  @unique
+  estimatedAmount Decimal @db.Decimal(12, 2)
+  description     String
+  isDone          Boolean @default(false)
+  requesterName   String
+  location        String
+  lastApprovedFor String?
+  /// Optional — who initiated (יזם) this project, if anyone. Nullable unlike
+  /// clientId: most projects have no initiator at all.
+  initiatorId     String?
+
+  client                Client                    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  reports               ProjectReport[]
   subcontractorPayments SubcontractorPayment[]
+  clientAssignments     ProjectClientAssignment[]
+  initiator             Initiator?                @relation(fields: [initiatorId], references: [id])
 
   @@map("projects")
+}
+
+/// A project's initiator (יזם) — documentation only. Never enters any
+/// financial calculation; a report on its project records the initiator's
+/// figure for the month as ProjectReport.initiatorIncome.
+model Initiator {
+  id   String @id @default(cuid())
+  name String @unique
+
+  projects Project[]
+
+  @@map("initiators")
+}
+
+/// Effective-dated ownership of a project by a client.
+/// The client for a report is the assignment with the greatest effectiveFrom
+/// that is <= the report's date. Every project has at least one assignment.
+model ProjectClientAssignment {
+  id            String   @id @default(cuid())
+  projectId     String
+  clientId      String
+  effectiveFrom DateTime @db.Date
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  client  Client  @relation(fields: [clientId], references: [id])
+
+  @@unique([projectId, effectiveFrom])
+  @@index([projectId, effectiveFrom])
+  @@map("project_client_assignments")
 }
 
 model Subcontractor {
@@ -43,36 +86,42 @@ model Subcontractor {
   @@map("subcontractors")
 }
 
-model Corporation {
+model Supplier {
   id   String @id @default(cuid())
   name String @unique
 
-  payments CorporationPayment[]
+  payments SupplierPayment[]
 
-  @@map("corporations")
+  @@map("suppliers")
 }
 
 model ProjectReport {
-  id              String    @id @default(cuid())
+  id              String   @id @default(cuid())
   projectId       String
   subcontractorId String
-  date            DateTime  @db.Date
-  profitMargin    Decimal   @db.Decimal(5, 2)
+  date            DateTime @db.Date
+  profitMargin    Decimal  @db.Decimal(5, 2)
+  /// Optional — only relevant for, and only ever shown/settable on, a report
+  /// whose project has an initiator (יזם). Never enters any financial
+  /// calculation on its own; PDF export refuses to run without it once the
+  /// project has an initiator, and it must always exceed the report's own
+  /// income.
+  initiatorIncome Decimal? @db.Decimal(12, 2)
 
-  project             Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  subcontractor       Subcontractor         @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
-  corporationPayments CorporationPayment[]
-  incomeEntries       ProjectReportIncome[]
+  project          Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subcontractor    Subcontractor         @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+  supplierPayments SupplierPayment[]
+  incomeEntries    ProjectReportIncome[]
 
   @@unique([projectId, date])
   @@map("project_reports")
 }
 
 model ProjectReportIncome {
-  id              String        @id @default(cuid())
+  id              String    @id @default(cuid())
   projectReportId String
-  amount          Decimal       @db.Decimal(12, 2)
-  incomeDate      DateTime?     @db.Date
+  amount          Decimal   @db.Decimal(12, 2)
+  incomeDate      DateTime? @db.Date
   tag             String?
 
   projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
@@ -80,29 +129,43 @@ model ProjectReportIncome {
   @@map("project_report_incomes")
 }
 
-model CorporationPayment {
+model SupplierPayment {
   id              String    @id @default(cuid())
   projectReportId String
-  corporationId   String
+  supplierId      String
   amount          Decimal   @db.Decimal(12, 2)
   date            DateTime? @db.Date
   description     String?
   isFuture        Boolean   @default(false)
-  vatPercentage   Decimal?  @db.Decimal(5, 2)
+  /// Whether this payment carries VAT. Only the choice is stored: the
+  /// percentage is looked up from the VatRate history for the report's month at
+  /// read time, so it can never drift from the global setting. The API defaults
+  /// this to true; rows written without it (nested in a report) stay VAT-free.
+  includesVat     Boolean   @default(false)
+  /// Whether the money has actually left. A stack of paperwork is usually
+  /// settled as one transfer, so this is also toggled per supplier per month.
+  isPaid          Boolean   @default(false)
 
   projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
-  corporation   Corporation   @relation(fields: [corporationId], references: [id], onDelete: Cascade)
+  supplier      Supplier      @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
-  @@map("corporation_payments")
+  @@map("supplier_payments")
 }
 
 model SubcontractorPayment {
   id              String    @id @default(cuid())
   subcontractorId String
   projectId       String
-  serviceDate     DateTime @db.Date
-  amount          Decimal  @db.Decimal(12, 2)
-  isPaid          Boolean  @default(false)
+  /// Which month this settles — always the first of that month. NOT the day the
+  /// money moved; that is paymentDate.
+  serviceDate     DateTime  @db.Date
+  amount          Decimal   @db.Decimal(12, 2)
+  isPaid          Boolean   @default(false)
+  /// The day the money actually moved, chosen by the user. Nullable because
+  /// rows recorded before this column existed have no honest answer.
+  paymentDate     DateTime? @db.Date
+  /// Optional free-text note on this instalment (e.g. "cash", "cheque #123").
+  description     String?
 
   subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
   project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -130,17 +193,24 @@ model VatRate {
 }
 
 model CompanySettings {
-  id            String   @id @default("company-settings")
-  name          String?
-  description   String?
-  companyNumber String?
-  phone         String?
-  email         String?
-  addressStreet String?
-  addressCity   String?
-  logo          String?
-  signature     String?
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default("company-settings")
+  name              String?
+  description       String?
+  companyNumber     String?
+  phone             String?
+  email             String?
+  addressStreet     String?
+  addressCity       String?
+  logo              String?
+  signature         String?
+  /// Brand colors of the exported PDFs, as `#rrggbb`. Defaults are the
+  /// original navy/gold theme, so a contractor that never picks keeps it.
+  pdfPrimaryColor   String   @default("#1f2a44")
+  pdfSecondaryColor String   @default("#c9a24b")
+  /// Font of the exported PDFs — one of the ids in `src/common/pdf-fonts.ts`.
+  /// The default is the Noto stack the PDFs always rendered in.
+  pdfFont           String   @default("noto-sans-hebrew")
+  updatedAt         DateTime @updatedAt
 
   @@map("company_settings")
 }

@@ -9,7 +9,7 @@ export class ClientNotFoundError extends EntityNotFoundError {
    * @param clientId The ID of the client that was not found.
    */
   constructor(clientId: string) {
-    super(`Client with ID ${clientId} not found`);
+    super(`Client with ID ${clientId} not found`, 'CLIENT_NOT_FOUND');
     this.name = 'ClientNotFoundError';
   }
 }

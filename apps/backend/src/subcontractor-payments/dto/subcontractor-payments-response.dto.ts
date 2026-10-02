@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { NestedSubcontractorDto } from './nested-subcontractor.dto';
 
 export class SubcontractorPaymentResponseDto {
@@ -38,4 +38,20 @@ export class SubcontractorPaymentResponseDto {
     description: 'Whether the payment has been marked as paid',
   })
   isPaid!: boolean;
+
+  @ApiPropertyOptional({
+    example: '2026-01-17T00:00:00.000Z',
+    description: 'The day the money actually moved',
+    format: 'ISO-8601',
+    nullable: true,
+  })
+  paymentDate!: string | null;
+
+  @ApiPropertyOptional({
+    example: 'Cheque #1042',
+    description: 'Optional free-text note about the payment',
+    type: String,
+    nullable: true,
+  })
+  description!: string | null;
 }

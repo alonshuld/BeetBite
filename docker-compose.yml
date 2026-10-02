@@ -23,6 +23,25 @@ services:
       timeout: 5s
       retries: 10
 
+  # Throwaway Postgres for demos (`pnpm dev:demo`). Lives in tmpfs, so every
+  # recreate starts empty and the real dev data in `db` is never touched.
+  db-demo:
+    image: postgres:17-alpine
+    profiles: [demo]
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: beetbite_demo
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d beetbite_demo"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
   backend:
     build:
       context: .

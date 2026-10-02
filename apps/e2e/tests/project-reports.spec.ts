@@ -12,18 +12,20 @@ async function seedBaseData(db: ReturnType<typeof Object>) {
       name: 'Reports Project',
       estimatedAmount: 200000,
       description: 'For e2e report tests',
+      requesterName: 'Test Requester',
+      location: 'Test Location',
     },
   });
   const subcontractor = await db.subcontractor.create({
     data: { name: 'Reports Sub', companyNumber: '515222004' },
   });
-  const corporation = await db.corporation.create({
+  const supplier = await db.supplier.create({
     data: { name: 'Reports Corp' },
   });
-  const corporation2 = await db.corporation.create({
+  const supplier2 = await db.supplier.create({
     data: { name: 'Reports Corp 2' },
   });
-  return { client, project, subcontractor, corporation, corporation2 };
+  return { client, project, subcontractor, supplier, supplier2 };
 }
 
 async function seedReport(
@@ -34,8 +36,8 @@ async function seedReport(
     date: string;
     profitMargin: number;
     incomeEntries: Array<{ amount: number; incomeDate?: string }>;
-    corporationPayments?: Array<{
-      corporationId: string;
+    supplierPayments?: Array<{
+      supplierId: string;
       amount: number;
       date?: string;
     }>;
@@ -56,11 +58,11 @@ async function seedReport(
     },
   });
 
-  for (const cp of opts.corporationPayments ?? []) {
-    await db.corporationPayment.create({
+  for (const cp of opts.supplierPayments ?? []) {
+    await db.supplierPayment.create({
       data: {
         projectReportId: report.id,
-        corporationId: cp.corporationId,
+        supplierId: cp.supplierId,
         amount: cp.amount,
         ...(cp.date ? { date: new Date(cp.date) } : {}),
       },
@@ -109,7 +111,9 @@ dbTest.describe('Project Reports — page header', () => {
     await page.goto(`${BASE}/reports/projects/${project.id}`);
     await page.waitForLoadState('networkidle');
 
-    await page.getByRole('button', { name: /← Project Reports/i }).click();
+    // The back control is an icon + label button: a `chevronLeft` SVG, so the
+    // accessible name is the label alone.
+    await page.getByRole('button', { name: /Project Reports/i }).click();
     // The back button returns to the reports list, scoped to the project's client
     // via an optional `?clientId=` query param.
     await expect(page).toHaveURL(new RegExp(`/reports(\\?clientId=.+)?$`));
@@ -263,7 +267,7 @@ dbTest.describe('Project Reports — create via modal', () => {
   );
 
   dbTest(
-    'create report with corporation payment → shows corp name and deduction',
+    'create report with supplier payment → shows corp name and deduction',
     async ({ page, db }) => {
       const { project } = await seedBaseData(db);
 
@@ -283,7 +287,7 @@ dbTest.describe('Project Reports — create via modal', () => {
       await modal.locator('input[type="number"]').nth(0).fill('10');
       await modal.locator('input[type="number"]').nth(1).fill('60000');
 
-      // Add corporation payment — the "+ Add" in the corp payments section
+      // Add supplier payment — the "+ Add" in the corp payments section
       await modal.getByRole('button', { name: /^\+ Add$/i }).click();
 
       // Corp section: select nth(1) is the corp select, number nth(2) is corp amount
@@ -303,7 +307,7 @@ dbTest.describe('Project Reports — create via modal', () => {
   );
 
   dbTest(
-    'create report with multiple corporation payments → all appear',
+    'create report with multiple supplier payments → all appear',
     async ({ page, db }) => {
       const { project } = await seedBaseData(db);
 
@@ -483,7 +487,7 @@ dbTest.describe('Project Reports — financial calculations', () => {
   });
 
   dbTest(
-    'subcontractor payment = income − profit − corporation payments',
+    'subcontractor payment = income − profit − supplier payments',
     async ({ page, db }) => {
       const { project } = await seedBaseData(db);
 
@@ -618,120 +622,113 @@ dbTest.describe('Project Reports — inline income entry operations', () => {
   );
 });
 
-dbTest.describe(
-  'Project Reports — inline corporation payment operations',
-  () => {
-    dbTest(
-      'add corporation payment inline → appears with corp name and amount',
-      async ({ page, db }) => {
-        const { project, subcontractor, corporation } = await seedBaseData(db);
+dbTest.describe('Project Reports — inline supplier payment operations', () => {
+  dbTest(
+    'add supplier payment inline → appears with corp name and amount',
+    async ({ page, db }) => {
+      const { project, subcontractor, supplier } = await seedBaseData(db);
 
-        await seedReport(db, {
-          projectId: project.id,
-          subcontractorId: subcontractor.id,
-          date: '2026-05-01',
-          profitMargin: 10,
-          incomeEntries: [{ amount: 50000 }],
-        });
+      await seedReport(db, {
+        projectId: project.id,
+        subcontractorId: subcontractor.id,
+        date: '2026-05-01',
+        profitMargin: 10,
+        incomeEntries: [{ amount: 50000 }],
+      });
 
-        await page.goto(`${BASE}/reports/projects/${project.id}`);
-        await page.waitForLoadState('networkidle');
+      await page.goto(`${BASE}/reports/projects/${project.id}`);
+      await page.waitForLoadState('networkidle');
 
-        // Click inline "+ Corporation Payments"
-        await page
-          .getByRole('button', { name: /\+ Corporation Payments/i })
-          .click();
+      // Click inline "+ Manpower / Supplier Payments"
+      await page
+        .getByRole('button', { name: /\+ Manpower \/ Supplier Payments/i })
+        .click();
 
-        // Fill inline form
-        await page
-          .locator('select')
-          .last()
-          .selectOption({ label: 'Reports Corp' });
-        await page.locator('input[type="number"]').last().fill('12000');
+      // Fill inline form
+      await page
+        .locator('select')
+        .last()
+        .selectOption({ label: 'Reports Corp' });
+      await page.locator('input[type="number"]').last().fill('12000');
 
-        // Submit inline form
-        await page.getByRole('button', { name: /^Add$/i }).last().click();
+      // Submit inline form
+      await page.getByRole('button', { name: /^Add$/i }).last().click();
 
-        await expect(
-          page.getByText('Reports Corp', { exact: true }),
-        ).toBeVisible({ timeout: 5000 });
-        await expect(page.getByText(/− ₪12,000/)).toBeVisible();
+      await expect(page.getByText('Reports Corp', { exact: true })).toBeVisible(
+        { timeout: 5000 },
+      );
+      await expect(page.getByText(/− ₪12,000/)).toBeVisible();
 
-        void corporation;
-      },
-    );
+      void supplier;
+    },
+  );
 
-    dbTest(
-      'edit corporation payment inline → updates amount',
-      async ({ page, db }) => {
-        const { project, subcontractor, corporation } = await seedBaseData(db);
+  dbTest(
+    'edit supplier payment inline → updates amount',
+    async ({ page, db }) => {
+      const { project, subcontractor, supplier } = await seedBaseData(db);
 
-        const report = await seedReport(db, {
-          projectId: project.id,
-          subcontractorId: subcontractor.id,
-          date: '2026-05-01',
-          profitMargin: 10,
-          incomeEntries: [{ amount: 50000 }],
-          corporationPayments: [
-            { corporationId: corporation.id, amount: 10000 },
-          ],
-        });
+      const report = await seedReport(db, {
+        projectId: project.id,
+        subcontractorId: subcontractor.id,
+        date: '2026-05-01',
+        profitMargin: 10,
+        incomeEntries: [{ amount: 50000 }],
+        supplierPayments: [{ supplierId: supplier.id, amount: 10000 }],
+      });
 
-        await page.goto(`${BASE}/reports/projects/${project.id}`);
-        await page.waitForLoadState('networkidle');
+      await page.goto(`${BASE}/reports/projects/${project.id}`);
+      await page.waitForLoadState('networkidle');
 
-        await expect(page.getByText(/− ₪10,000/)).toBeVisible();
+      await expect(page.getByText(/− ₪10,000/)).toBeVisible();
 
-        // "Edit" buttons: nth(0) = main Edit Report, nth(1) = income entry Edit, nth(2) = corp payment Edit
-        await page.getByRole('button', { name: 'Edit' }).nth(2).click();
+      // "Edit" buttons: nth(0) = main Edit Report, nth(1) = income entry Edit, nth(2) = corp payment Edit
+      await page.getByRole('button', { name: 'Edit' }).nth(2).click();
 
-        // Inline corp edit form: number input is the first/only input visible
-        await page.locator('input[type="number"]').first().fill('12500');
+      // Inline corp edit form: number input is the first/only input visible
+      await page.locator('input[type="number"]').first().fill('12500');
 
-        await page.getByRole('button', { name: 'Save' }).click();
+      await page.getByRole('button', { name: 'Save' }).click();
 
-        await expect(page.getByText(/− ₪12,500/)).toBeVisible({
-          timeout: 5000,
-        });
-        void report;
-      },
-    );
+      await expect(page.getByText(/− ₪12,500/)).toBeVisible({
+        timeout: 5000,
+      });
+      void report;
+    },
+  );
 
-    dbTest(
-      'delete corporation payment → removed from report',
-      async ({ page, db }) => {
-        const { project, subcontractor, corporation } = await seedBaseData(db);
+  dbTest(
+    'delete supplier payment → removed from report',
+    async ({ page, db }) => {
+      const { project, subcontractor, supplier } = await seedBaseData(db);
 
-        await seedReport(db, {
-          projectId: project.id,
-          subcontractorId: subcontractor.id,
-          date: '2026-05-01',
-          profitMargin: 10,
-          incomeEntries: [{ amount: 50000 }],
-          corporationPayments: [
-            { corporationId: corporation.id, amount: 10000 },
-          ],
-        });
+      await seedReport(db, {
+        projectId: project.id,
+        subcontractorId: subcontractor.id,
+        date: '2026-05-01',
+        profitMargin: 10,
+        incomeEntries: [{ amount: 50000 }],
+        supplierPayments: [{ supplierId: supplier.id, amount: 10000 }],
+      });
 
-        await page.goto(`${BASE}/reports/projects/${project.id}`);
-        await page.waitForLoadState('networkidle');
+      await page.goto(`${BASE}/reports/projects/${project.id}`);
+      await page.waitForLoadState('networkidle');
 
-        await expect(
-          page.getByText('Reports Corp', { exact: true }),
-        ).toBeVisible();
-        await expect(page.getByText(/− ₪10,000/)).toBeVisible();
+      await expect(
+        page.getByText('Reports Corp', { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByText(/− ₪10,000/)).toBeVisible();
 
-        // "Remove" buttons: nth(0) = income entry Remove, nth(1) = corp payment Remove
-        await page.getByRole('button', { name: 'Remove' }).nth(1).click();
+      // "Remove" buttons: nth(0) = income entry Remove, nth(1) = corp payment Remove
+      await page.getByRole('button', { name: 'Remove' }).nth(1).click();
 
-        await expect(
-          page.getByText('Reports Corp', { exact: true }),
-        ).not.toBeVisible({ timeout: 5000 });
-        await expect(page.getByText(/− ₪10,000/)).not.toBeVisible();
-      },
-    );
-  },
-);
+      await expect(
+        page.getByText('Reports Corp', { exact: true }),
+      ).not.toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(/− ₪10,000/)).not.toBeVisible();
+    },
+  );
+});
 
 dbTest.describe('Project Reports — month navigation', () => {
   dbTest(

@@ -16,7 +16,10 @@ import { ClientNotFoundError } from '../clients/errors/client-not-found.exceptio
 import { Prisma } from 'src/generated/client';
 import { ProjectsQueryDto } from './dto/projects-query.dto';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
-import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
+import { ProjectHasRelatedRecordsError } from './errors/project-has-related-records.error';
+import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
+import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
+import { OPENING_BALANCE_TAG } from 'src/common/constants';
 
 const PAID_REPORTS_INCLUDE = {
   reports: {
@@ -43,7 +46,10 @@ const PAID_REPORTS_INCLUDE = {
 export class ProjectsService {
   private readonly logger = new Logger(ProjectsService.name);
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly assignmentsService: ProjectClientAssignmentsService,
+  ) {}
 
   /**
    * Creates a new project.
@@ -54,19 +60,83 @@ export class ProjectsService {
     createProjectDto: CreateProjectDto,
   ): Promise<ProjectBasicResponseDto> {
     try {
-      const createdProject = await this.prismaService.project.create({
-        data: {
-          ...createProjectDto,
-          estimatedAmount: new Prisma.Decimal(createProjectDto.estimatedAmount),
+      // The project, its first client assignment and any opening-balance report
+      // are created together: a project with no assignment resolves to no
+      // client and would vanish from every month-scoped view, and a
+      // project left holding a half-made opening balance misstates its income.
+      const { openingBalance, ...projectFields } = createProjectDto;
+
+      const createdProject = await this.prismaService.$transaction(
+        async (tx) => {
+          const project = await tx.project.create({
+            data: {
+              ...projectFields,
+              estimatedAmount: new Prisma.Decimal(
+                createProjectDto.estimatedAmount,
+              ),
+            },
+          });
+          await this.assignmentsService.createInitialAssignment(
+            tx,
+            project.id,
+            createProjectDto.clientId,
+          );
+
+          if (openingBalance) {
+            // Checked explicitly rather than left to the foreign key: both the
+            // client and the subcontractor can be wrong here, and a raw P2003
+            // does not reliably say which. Guessing would send the user hunting
+            // in the wrong place.
+            const subcontractor = await tx.subcontractor.findUnique({
+              where: { id: openingBalance.subcontractorId },
+              select: { id: true },
+            });
+            if (!subcontractor) {
+              throw new SubcontractorNotFoundError(
+                openingBalance.subcontractorId,
+              );
+            }
+
+            const month = new Date(openingBalance.month);
+            await tx.projectReport.create({
+              data: {
+                projectId: project.id,
+                subcontractorId: openingBalance.subcontractorId,
+                date: month,
+                profitMargin: new Prisma.Decimal(openingBalance.profitMargin),
+                incomeEntries: {
+                  create: {
+                    amount: new Prisma.Decimal(openingBalance.amount),
+                    // The question asked is "how much have I already
+                    // received?", so this money is in hand. Leaving incomeDate
+                    // null would file it as still owed and keep it out of the
+                    // project's payment progress, which is the one figure the
+                    // opening balance exists to correct.
+                    incomeDate: month,
+                    tag: OPENING_BALANCE_TAG,
+                  },
+                },
+              },
+            });
+          }
+
+          return project;
         },
-      });
-      this.logger.log(`Project created: ${createdProject.id}`);
+      );
+      this.logger.log(
+        openingBalance
+          ? `Project created with opening balance: ${createdProject.id}`
+          : `Project created: ${createdProject.id}`,
+      );
 
       return toProjectBasicResponse(createdProject);
     } catch (error) {
+      if (error instanceof SubcontractorNotFoundError) throw error;
       if (error instanceof PrismaClientKnownRequestError) {
         switch (error.code) {
           case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
+            // The subcontractor is checked above, so the only foreign key left
+            // to fail here is the client's.
             throw new ClientNotFoundError(createProjectDto.clientId);
           case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
             throw new ProjectAlreadyExistsError(createProjectDto.name);
@@ -190,6 +260,29 @@ export class ProjectsService {
   }
 
   /**
+   * Persists the free-text "approved for" line from a successful PDF export
+   * onto the project, so the next export's dialog can prefill it.
+   * @param id ID of the project the export was for.
+   * @param approvedFor The text submitted with that export.
+   */
+  async updateLastApprovedFor(id: string, approvedFor: string): Promise<void> {
+    try {
+      await this.prismaService.project.update({
+        where: { id },
+        data: { lastApprovedFor: approvedFor },
+      });
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_ERROR_CODES.NOT_FOUND
+      ) {
+        throw new ProjectNotFoundError(id);
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Removes a project by its ID.
    * @param id ID of the project to remove
    * @returns void
@@ -207,10 +300,7 @@ export class ProjectsService {
           case PRISMA_ERROR_CODES.NOT_FOUND:
             throw new ProjectNotFoundError(id);
           case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
-            throw new EntityHasRelatedRecordsError(
-              'project',
-              'reports or payments',
-            );
+            throw new ProjectHasRelatedRecordsError();
         }
       }
       throw error;

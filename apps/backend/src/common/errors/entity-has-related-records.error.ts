@@ -1,3 +1,4 @@
+import type { ErrorParams } from './coded-error';
 import { EntityAlreadyExistsError } from './entity-already-exists.error';
 
 /**
@@ -5,9 +6,16 @@ import { EntityAlreadyExistsError } from './entity-already-exists.error';
  * Maps to HTTP 409 Conflict via EntityExceptionFilter.
  */
 export class EntityHasRelatedRecordsError extends EntityAlreadyExistsError {
-  constructor(entityName: string, relatedEntity: string) {
+  constructor(
+    entityName: string,
+    relatedEntity: string,
+    code = 'HAS_RELATED_RECORDS',
+    params?: ErrorParams,
+  ) {
     super(
       `Cannot delete ${entityName} because it has related ${relatedEntity}. Remove them first.`,
+      code,
+      params,
     );
     this.name = 'EntityHasRelatedRecordsError';
   }

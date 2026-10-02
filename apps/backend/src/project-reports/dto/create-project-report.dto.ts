@@ -11,7 +11,7 @@ import {
   IsArray,
   ArrayMinSize,
 } from 'class-validator';
-import { CreateCorporationPaymentDto } from './create-corporation-payment.dto';
+import { CreateSupplierPaymentDto } from './create-supplier-payment.dto';
 import { CreateIncomeEntryDto } from './create-income-entry.dto';
 import { Transform, Type } from 'class-transformer';
 import { normalizeToMonthStartForTransform } from 'src/common/utils/date.utils';
@@ -68,12 +68,25 @@ export class CreateProjectReportDto {
   incomeEntries!: CreateIncomeEntryDto[];
 
   @IsArray()
-  @Type(() => CreateCorporationPaymentDto)
+  @Type(() => CreateSupplierPaymentDto)
   @ValidateNested({ each: true })
   @ApiProperty({
     description:
-      'A list of the payments made to corporations for their work on this project this month',
-    type: [CreateCorporationPaymentDto],
+      'A list of the payments made to suppliers for their work on this project this month',
+    type: [CreateSupplierPaymentDto],
   })
-  corporationPayments!: CreateCorporationPaymentDto[];
+  supplierPayments!: CreateSupplierPaymentDto[];
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  // The column is DECIMAL(12,2); anything larger is a database error, not a
+  // validation error, and surfaces as an opaque 500.
+  @Max(9_999_999_999.99)
+  @ApiPropertyOptional({
+    example: 120000,
+    description:
+      "Income the project's initiator (יזם) reports for this month. Only meaningful when the project has an initiator, and must be greater than the report's own income; only relevant for PDF export.",
+  })
+  initiatorIncome?: number;
 }

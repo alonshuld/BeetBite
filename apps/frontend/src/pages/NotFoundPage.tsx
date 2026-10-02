@@ -7,13 +7,15 @@ export default function NotFoundPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-8 text-center bg-bg">
-      <span className="text-[80px] font-serif font-bold text-beet leading-none select-none">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--bg)] p-8 text-center">
+      {/* The number is the whole illustration — set large in the serif and
+          left to carry the screen on its own. */}
+      <span className="tnum select-none font-serif text-[104px] font-bold leading-none text-beet">
         404
       </span>
 
       <div className="flex flex-col gap-2 max-w-xs">
-        <h1 className="font-serif text-xl text-text">{t("pageNotFound")}</h1>
+        <h1 className="text-title text-text">{t("pageNotFound")}</h1>
         <p className="text-text-muted text-sm">
           {t("pageNotFoundDescription")}
         </p>

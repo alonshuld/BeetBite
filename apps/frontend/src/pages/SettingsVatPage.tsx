@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/molecules/PageHeader";
 import { MonthPicker } from "@/components/molecules/MonthPicker";
 import { Input, ButtonPrimary } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
+import { useFieldCheck } from "@/hooks/useFieldCheck";
 import { useToast } from "@/contexts/useToast";
 import { formatYM } from "@/utils/formatMonth";
 import {
@@ -10,6 +11,7 @@ import {
   useGetResolvedVatRateQuery,
   useUpsertVatRateMutation,
 } from "@/api/endpoints/vatRates";
+import { LoadingState } from "@/components/molecules/LoadingState";
 
 function currentYM(): string {
   const now = new Date();
@@ -19,6 +21,7 @@ function currentYM(): string {
 export default function SettingsVatPage() {
   const { t, lang } = useLang();
   const { toast } = useToast();
+  const checkFields = useFieldCheck();
   const { data: history = [], isLoading } = useGetVatRateHistoryQuery();
   const { data: resolved } = useGetResolvedVatRateQuery(currentYM());
   const [upsertVatRate, { isLoading: saving }] = useUpsertVatRateMutation();
@@ -28,7 +31,17 @@ export default function SettingsVatPage() {
 
   async function handleSave() {
     const value = Number(percentage);
-    if (!percentage || Number.isNaN(value) || value < 0 || value > 100) return;
+    if (
+      !checkFields([
+        [
+          t("vatPercentLabel"),
+          !percentage
+            ? "missing"
+            : (Number.isNaN(value) || value < 0 || value > 100) && "invalid",
+        ],
+      ])
+    )
+      return;
 
     const result = await upsertVatRate({
       month: month + "-01",
@@ -45,7 +58,7 @@ export default function SettingsVatPage() {
       <PageHeader title={t("vatRate")} subtitle={t("vatRateSubtitle")} />
 
       <div className="bg-surface rounded p-5 max-w-[480px] flex flex-col gap-1">
-        <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+        <span className="text-label font-semibold text-text-muted">
           {t("currentVatRate")}
         </span>
         <span className="text-2xl font-semibold text-text">
@@ -56,12 +69,12 @@ export default function SettingsVatPage() {
       </div>
 
       <div className="bg-surface rounded p-5 max-w-[480px] flex flex-col gap-3">
-        <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
+        <h3 className="text-label font-semibold text-text-muted">
           {t("setVatRate")}
         </h3>
         <div className="flex items-end gap-3 flex-wrap">
           <div className="flex flex-col gap-1">
-            <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+            <span className="text-label font-semibold text-text-muted">
               {t("effectiveFrom")}
             </span>
             <MonthPicker value={month} onChange={setMonth} />
@@ -86,11 +99,11 @@ export default function SettingsVatPage() {
       </div>
 
       <div className="bg-surface rounded p-5 max-w-[480px]">
-        <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">
+        <h3 className="text-label font-semibold text-text-muted mb-3">
           {t("vatRateHistory")}
         </h3>
         {isLoading ? (
-          <p className="text-text-muted text-sm">{t("loading")}</p>
+          <LoadingState label={t("loading")} />
         ) : history.length === 0 ? (
           <p className="text-text-muted text-sm">{t("noData")}</p>
         ) : (

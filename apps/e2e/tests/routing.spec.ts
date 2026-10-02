@@ -23,12 +23,15 @@ dbTest.describe('Routing and error surfaces', () => {
   });
 
   dbTest(
-    'the retired simulator route redirects to /reports',
+    'the retired simulator route no longer exists',
     async ({ page, db }) => {
       void db;
+      // ProfitSimulatorPage and its router entry were deleted outright — there
+      // is no redirect stub left, so this now falls through to the 404 route
+      // like any other unknown path.
       await page.goto(`${BASE}/simulator`);
 
-      await expect(page).toHaveURL(/\/reports$/);
+      await expect(page.getByText('404')).toBeVisible();
     },
   );
 

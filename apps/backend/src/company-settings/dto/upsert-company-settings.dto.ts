@@ -1,18 +1,24 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { PDF_FONTS } from 'src/common/pdf-fonts';
 import {
   IsOptional,
   IsString,
   IsNumberString,
   IsEmail,
+  IsIn,
   IsPhoneNumber,
   Length,
   MaxLength,
   Matches,
+  ValidateIf,
 } from 'class-validator';
 
 const IMAGE_DATA_URL_REGEX =
   /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/]+=*$/i;
 const MAX_IMAGE_DATA_URL_LENGTH = 4_000_000;
+// Colors are interpolated straight into the PDF stylesheet, so the strict hex
+// shape is also what keeps arbitrary CSS out of it.
+const HEX_COLOR_REGEX = /^#[0-9a-f]{6}$/i;
 
 // Represents the parameters accepted when creating or editing the contractor's company profile
 export class UpsertCompanySettingsDto {
@@ -120,4 +126,46 @@ export class UpsertCompanySettingsDto {
     nullable: true,
   })
   signature?: string | null;
+
+  // Omitting a color keeps the stored one; null is rejected rather than
+  // accepted, since the column is non-nullable and always has a theme color.
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'pdfPrimaryColor must be a hex color like #1f2a44',
+  })
+  @ApiProperty({
+    example: '#1f2a44',
+    description:
+      'Primary brand color of exported PDFs (header band, table headers), as #rrggbb',
+    required: false,
+  })
+  pdfPrimaryColor?: string;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsString()
+  @Matches(HEX_COLOR_REGEX, {
+    message: 'pdfSecondaryColor must be a hex color like #c9a24b',
+  })
+  @ApiProperty({
+    example: '#c9a24b',
+    description:
+      'Secondary brand color of exported PDFs (accent rules, badges, totals), as #rrggbb',
+    required: false,
+  })
+  pdfSecondaryColor?: string;
+
+  // Like the colors: omitting it keeps the stored font, null is rejected. Only
+  // listed ids pass, since the value picks a bundled font file to embed.
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(PDF_FONTS, {
+    message: `pdfFont must be one of: ${PDF_FONTS.join(', ')}`,
+  })
+  @ApiProperty({
+    example: 'noto-sans-hebrew',
+    description: 'Font of exported PDFs',
+    enum: PDF_FONTS,
+    required: false,
+  })
+  pdfFont?: string;
 }

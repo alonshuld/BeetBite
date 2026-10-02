@@ -9,7 +9,7 @@ export class ProjectNotFoundError extends EntityNotFoundError {
    * @param projectId The ID of the project that was not found.
    */
   constructor(projectId: string) {
-    super(`Project with ID ${projectId} not found`);
+    super(`Project with ID ${projectId} not found`, 'PROJECT_NOT_FOUND');
     this.name = 'ProjectNotFoundError';
   }
 }

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { CreateSubcontractorPaymentDto } from './dto/create-subcontractor-payment.dto';
 import { UpdateSubcontractorPaymentDto } from './dto/update-subcontractor-payment.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
 import { SubcontractorPaymentResponseDto } from './dto/subcontractor-payments-response.dto';
 import { toSubcontractorPaymentResponse } from './mappers/subcontractor-payment.mapper';
 import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
@@ -18,11 +19,18 @@ import { MonthlySubcontractorPaymentsDto } from './dto/monthly-subcontractor-pay
 import { SubcontractorPaymentsByClientResponseDto } from './dto/subcontractor-payments-by-client-response.dto';
 import { toSubcontractorPaymentsByClientResponseList } from './mappers/subcontractor-payments-by-client.mapper';
 
+/** Blank or whitespace-only descriptions are stored as null, not "". */
+const toStoredDescription = (description: string | undefined) =>
+  description?.trim() || null;
+
 @Injectable()
 export class SubcontractorPaymentsService {
   private readonly logger = new Logger(SubcontractorPaymentsService.name);
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly assignmentsService: ProjectClientAssignmentsService,
+  ) {}
 
   private async calculateProjectExpectedTotal(
     subcontractorId: string,
@@ -34,7 +42,7 @@ export class SubcontractorPaymentsService {
       select: {
         profitMargin: true,
         incomeEntries: { select: { amount: true } },
-        corporationPayments: { select: { amount: true } },
+        supplierPayments: { select: { amount: true } },
       },
     });
 
@@ -46,12 +54,12 @@ export class SubcontractorPaymentsService {
     );
     const afterProfit =
       income - (report.profitMargin.toNumber() * income) / 100;
-    const corpTotal = report.corporationPayments.reduce(
+    const corpTotal = report.supplierPayments.reduce(
       (s, p) => s + p.amount.toNumber(),
       0,
     );
-    // The subcontractor receives whatever is left after profit and corporation
-    // payments. When corporation payments exceed that remainder the subcontractor
+    // The subcontractor receives whatever is left after profit and supplier
+    // payments. When supplier payments exceed that remainder the subcontractor
     // is owed nothing, never a negative amount, so floor the result at zero.
     return Math.max(0, afterProfit - corpTotal);
   }
@@ -66,7 +74,7 @@ export class SubcontractorPaymentsService {
         select: {
           profitMargin: true,
           incomeEntries: { select: { amount: true } },
-          corporationPayments: { select: { amount: true } },
+          supplierPayments: { select: { amount: true } },
         },
       });
 
@@ -77,13 +85,13 @@ export class SubcontractorPaymentsService {
       );
       const profitMargin = project.profitMargin.toNumber();
       const afterProfit = income - (profitMargin * income) / 100;
-      const corporationPaymentsTotal = project.corporationPayments.reduce(
+      const supplierPaymentsTotal = project.supplierPayments.reduce(
         (sum, payment) => sum + payment.amount.toNumber(),
         0,
       );
       // Floor each project at zero so one project's overage cannot cancel out
       // amounts legitimately owed on the subcontractor's other projects.
-      return total + Math.max(0, afterProfit - corporationPaymentsTotal);
+      return total + Math.max(0, afterProfit - supplierPaymentsTotal);
     }, 0);
   }
 
@@ -97,7 +105,7 @@ export class SubcontractorPaymentsService {
           subcontractorId: true,
           profitMargin: true,
           incomeEntries: { select: { amount: true } },
-          corporationPayments: { select: { amount: true } },
+          supplierPayments: { select: { amount: true } },
         },
       });
 
@@ -109,7 +117,7 @@ export class SubcontractorPaymentsService {
         );
         const profitMargin = project.profitMargin.toNumber();
         const afterProfit = income - (profitMargin * income) / 100;
-        const corporationPaymentsTotal = project.corporationPayments.reduce(
+        const supplierPaymentsTotal = project.supplierPayments.reduce(
           (sum, payment) => sum + payment.amount.toNumber(),
           0,
         );
@@ -117,7 +125,7 @@ export class SubcontractorPaymentsService {
         // amounts legitimately owed on the subcontractor's other projects.
         const subcontractorPayment = Math.max(
           0,
-          afterProfit - corporationPaymentsTotal,
+          afterProfit - supplierPaymentsTotal,
         );
 
         acc[project.subcontractorId] =
@@ -179,13 +187,29 @@ export class SubcontractorPaymentsService {
           }
 
           return tx.subcontractorPayment.create({
-            data: createSubcontractorPaymentDto,
+            // Build the row explicitly rather than spreading the DTO: the date
+            // fields arrive as strings and Prisma rejects a date-only string
+            // ("2026-09-17") for a DateTime column.
+            data: {
+              subcontractorId: createSubcontractorPaymentDto.subcontractorId,
+              projectId: createSubcontractorPaymentDto.projectId,
+              serviceDate,
+              amount: createSubcontractorPaymentDto.amount,
+              paymentDate: createSubcontractorPaymentDto.paymentDate
+                ? new Date(createSubcontractorPaymentDto.paymentDate)
+                : null,
+              description: toStoredDescription(
+                createSubcontractorPaymentDto.description,
+              ),
+            },
             select: {
               id: true,
               projectId: true,
               serviceDate: true,
               amount: true,
               isPaid: true,
+              paymentDate: true,
+              description: true,
               subcontractor: {
                 select: {
                   id: true,
@@ -235,6 +259,8 @@ export class SubcontractorPaymentsService {
               serviceDate: true,
               amount: true,
               isPaid: true,
+              paymentDate: true,
+              description: true,
             },
           },
         },
@@ -285,6 +311,8 @@ export class SubcontractorPaymentsService {
                 serviceDate: true,
                 amount: true,
                 isPaid: true,
+                paymentDate: true,
+                description: true,
               },
             },
           },
@@ -318,6 +346,7 @@ export class SubcontractorPaymentsService {
       where: { serviceDate },
       select: {
         amount: true,
+        projectId: true,
         project: {
           select: {
             client: { select: { id: true, name: true } },
@@ -330,7 +359,28 @@ export class SubcontractorPaymentsService {
       `Retrieved subcontractor payments by client for ${serviceDate.toLocaleDateString()}`,
     );
 
-    return toSubcontractorPaymentsByClientResponseList(payments);
+    // Group under whichever client owned each project in this service month —
+    // a project that has since changed hands keeps its past months where they
+    // were.
+    const resolved = await this.assignmentsService.resolveClientsForMonth(
+      serviceDate,
+      payments.map((payment) => payment.projectId),
+    );
+
+    const paymentsWithResolvedClient = payments.map((payment) => {
+      const client = resolved.get(payment.projectId);
+      if (!client) {
+        this.logger.warn(
+          `Project ${payment.projectId} has no client assignment covering ${monthQuery.month}; falling back to its current client`,
+        );
+        return payment;
+      }
+      return { ...payment, project: { client } };
+    });
+
+    return toSubcontractorPaymentsByClientResponseList(
+      paymentsWithResolvedClient,
+    );
   }
 
   async update(
@@ -387,15 +437,34 @@ export class SubcontractorPaymentsService {
             }
           }
 
+          const { serviceDate, paymentDate, description, ...rest } =
+            updateSubcontractorPaymentDto;
+
           return tx.subcontractorPayment.update({
             where: { id },
-            data: updateSubcontractorPaymentDto,
+            // Build the row explicitly rather than spreading the DTO: the date
+            // fields arrive as strings, and only the keys actually sent should
+            // reach the update, so an omitted field keeps its stored value.
+            data: {
+              ...rest,
+              ...(serviceDate !== undefined && {
+                serviceDate: new Date(serviceDate),
+              }),
+              ...(paymentDate !== undefined && {
+                paymentDate: new Date(paymentDate),
+              }),
+              ...(description !== undefined && {
+                description: toStoredDescription(description),
+              }),
+            },
             select: {
               id: true,
               projectId: true,
               serviceDate: true,
               amount: true,
               isPaid: true,
+              paymentDate: true,
+              description: true,
               subcontractor: {
                 select: {
                   id: true,

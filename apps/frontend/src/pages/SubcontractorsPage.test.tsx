@@ -73,6 +73,35 @@ describe("SubcontractorsPage", () => {
     expect(screen.queryByText("Jones Electric")).not.toBeInTheDocument();
   });
 
+  it("filters subcontractors by company number", async () => {
+    renderSubcontractorsPage();
+    await userEvent.type(screen.getByRole("searchbox"), "515123457");
+    expect(screen.getByText("Jones Electric")).toBeInTheDocument();
+    expect(screen.queryByText("Smith Builders")).not.toBeInTheDocument();
+  });
+
+  it("matches search case-insensitively and ignores surrounding spaces", async () => {
+    renderSubcontractorsPage();
+    await userEvent.type(screen.getByRole("searchbox"), "  sMiTh  ");
+    expect(screen.getByText("Smith Builders")).toBeInTheDocument();
+    expect(screen.queryByText("Jones Electric")).not.toBeInTheDocument();
+  });
+
+  it("shows no results empty state when search has no matches", async () => {
+    renderSubcontractorsPage();
+    await userEvent.type(screen.getByRole("searchbox"), "zzz");
+    expect(screen.getByText("No results")).toBeInTheDocument();
+  });
+
+  it("restores rows when the search box is cleared", async () => {
+    renderSubcontractorsPage();
+    const box = screen.getByRole("searchbox");
+    await userEvent.type(box, "zzz");
+    expect(screen.queryByText("Smith Builders")).not.toBeInTheDocument();
+    await userEvent.clear(box);
+    expect(screen.getByText("Smith Builders")).toBeInTheDocument();
+  });
+
   it("opens add modal when add button clicked", async () => {
     renderSubcontractorsPage();
     await userEvent.click(

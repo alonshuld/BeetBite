@@ -8,6 +8,7 @@ import {
 import { logout } from "@/features/auth/authSlice";
 import type { RootState } from "@/app/store";
 import { emitApiError } from "@/api/errorEmitter";
+import { toApiError } from "@/api/apiErrors";
 
 const baseQuery = fetchBaseQuery({
   baseUrl: "/api/v1",
@@ -30,15 +31,8 @@ const baseQueryWithReauth: BaseQueryFn<
     if (result.error.status === 401) {
       api.dispatch(logout());
     } else {
-      let message: string;
-      if (result.error.status === "FETCH_ERROR") {
-        message = "Network error. Check your connection.";
-      } else {
-        message =
-          (result.error.data as { message?: string } | undefined)?.message ??
-          "An unexpected error occurred.";
-      }
-      emitApiError(message);
+      // Translated at display time, where the user's language is known.
+      emitApiError(toApiError(result.error));
     }
   }
   return result;
@@ -50,14 +44,16 @@ export const baseApi = createApi({
   tagTypes: [
     "Clients",
     "Subcontractors",
-    "Corporations",
+    "Suppliers",
+    "Initiators",
     "Projects",
     "ProjectReports",
-    "CorporationPayments",
+    "SupplierPayments",
     "SubcontractorPayments",
     "Incomes",
     "CompanySettings",
     "VatRates",
+    "ProjectClientAssignments",
   ],
   endpoints: () => ({}),
 });

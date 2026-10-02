@@ -1,5 +1,12 @@
+import { OPENING_BALANCE_TAG } from 'src/common/constants';
+
 export interface ReportApprovalRow {
   tag: string | null;
+  /**
+   * When the income arrived, null while it is still pending. Only read when
+   * the page carries `screen` details; the plain approval has no status column.
+   */
+  incomeDate?: string | null;
   approvedAmount: number;
   invoiceInclVat: number;
   profitMarginPercent: number;
@@ -8,8 +15,23 @@ export interface ReportApprovalRow {
 }
 
 export interface ReportApprovalSupplierRow {
-  corporationName: string;
+  supplierName: string;
   amount: number;
+}
+
+/**
+ * What the Reports screen shows for a project on top of the approval figures.
+ * Only the client-simulated export supplies it, so the single-report
+ * document keeps its fixed layout.
+ */
+export interface ReportApprovalScreenDetails {
+  /** Margin in force on this page — simulated, or stored when not overridden. */
+  marginPercent: number;
+  /**
+   * The stored margin and the profit it would give, present only when the
+   * simulation moved this project — the sheet's "saved margin" line.
+   */
+  saved: { marginPercent: number; profitAmount: number } | null;
 }
 
 export interface ReportApprovalData {
@@ -17,15 +39,31 @@ export interface ReportApprovalData {
   contractorName: string;
   contractorCompanyNumber: string;
   contractorDescription: string | null;
-  clientName: string;
+  requesterName: string;
   subcontractorName: string;
   subcontractorCompanyNumber: string;
   projectName: string;
+  /**
+   * Description printed in the info box. The single-report export takes it
+   * from the export dialog — typed for that document alone, never written
+   * back to the project — and the client-simulated export from the project's
+   * stored description. Null prints no row at all.
+   */
+  projectDescription: string | null;
+  /** Printed after the description as "description • location". */
+  projectLocation: string | null;
   approvedFor: string;
   month: string;
   rows: ReportApprovalRow[];
   supplierRows: ReportApprovalSupplierRow[];
   supplierTotal: number;
+  /**
+   * Absent (not empty) when the project has no initiator — the whole
+   * initiator block is then omitted entirely, not rendered with a zero row.
+   * `income` is the report's own `initiatorIncome` — the caller guarantees it
+   * is set whenever `initiator` is non-null (export refuses to run otherwise).
+   */
+  initiator: { name: string; income: number | null } | null;
   totalIncome: number;
   totalAfterProfit: number;
   paymentExclVat: number;
@@ -36,6 +74,9 @@ export interface ReportApprovalData {
   companyAddress: string | null;
   logo: string | null;
   signature: string | null;
+  colors: PdfColors;
+  font: PdfFont;
+  screen?: ReportApprovalScreenDetails;
 }
 
 const LABELS = {
@@ -46,14 +87,16 @@ const LABELS = {
     mainContractor: 'קבלן ראשי:',
     subcontractor: 'קבלן משנה:',
     approvedFor: 'חשבון מאושר עבור:',
-    approvedAmount: 'חשבון שאושר',
+    approvedAmount: 'חשבון שאושר ע"י מזמין',
     invoiceInclVat: 'חשבונית כולל מע"מ',
-    profitMarginPercent: '% רווח קבלני',
+    profitMarginPercent: 'רווח קבלני',
     profitAmount: 'סה"כ רווח (לפני מע"מ)',
     afterProfit: 'סה"כ בקיזוז רווח (לפני מע"מ)',
     supplierName: 'שם הספק',
     supplierInvoice: 'חשבונית ספקים (ללא מע"מ)',
     supplierTotal: 'סה"כ קיזוזי ספקים',
+    initiator: 'יזם:',
+    initiatorIncome: 'חשבון שאושר ע"י מזמין',
     monthlySummary: 'סיכום חודשי',
     totalIncome: 'סה"כ הכנסות',
     totalAfterProfit: 'סה"כ הכנסות לאחר קיזוז רווח קבלני',
@@ -62,6 +105,14 @@ const LABELS = {
     paymentInclVat: 'לתשלום כולל מע"מ',
     signature: 'חתימה וחותמת מאשר',
     companyNumberPrefix: 'ח.פ.',
+    incomeStatus: 'סטטוס',
+    received: 'התקבל',
+    pending: 'ממתין',
+    openingBalance: 'יתרת פתיחה',
+    profit: 'רווח',
+    projectDescription: 'תיאור הפרויקט:',
+    savedMargin: '% רווח שמור:',
+    simulated: 'מדומה',
   },
   en: {
     subtitlePrefix: 'Account Approval –',
@@ -70,14 +121,16 @@ const LABELS = {
     mainContractor: 'Main Contractor:',
     subcontractor: 'Subcontractor:',
     approvedFor: 'Approved For:',
-    approvedAmount: 'Approved Amount',
+    approvedAmount: 'Amount Approved by Client',
     invoiceInclVat: 'Invoice incl. VAT',
-    profitMarginPercent: 'Profit Margin %',
+    profitMarginPercent: 'Profit Margin',
     profitAmount: 'Total Profit (excl. VAT)',
     afterProfit: 'Total After Profit (excl. VAT)',
     supplierName: 'Supplier',
     supplierInvoice: 'Supplier Invoice (excl. VAT)',
     supplierTotal: 'Total Supplier Deductions',
+    initiator: 'Initiator:',
+    initiatorIncome: 'Amount Approved by Client',
     monthlySummary: 'Monthly Summary',
     totalIncome: 'Total Income',
     totalAfterProfit: 'Total Income After Profit Cut',
@@ -86,68 +139,48 @@ const LABELS = {
     paymentInclVat: 'Payable Incl. VAT',
     signature: 'Approving Signature & Stamp',
     companyNumberPrefix: 'Reg.',
+    incomeStatus: 'Status',
+    received: 'Received',
+    pending: 'Pending',
+    openingBalance: 'Opening balance',
+    profit: 'Profit',
+    projectDescription: 'Description:',
+    savedMargin: 'Saved Margin %:',
+    simulated: 'Simulated',
   },
 } as const;
 
-const escapeHtml = (value: string): string =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+import {
+  escapeHtml,
+  formatCurrency,
+  formatDate,
+  formatMonthLabel,
+  localeFor,
+  dirFor,
+  PdfColors,
+  resolvePdfTheme,
+} from './shared';
+import { pdfFontCss } from './fonts';
+import { PdfFont } from 'src/common/pdf-fonts';
 
-const formatCurrency = (amount: number, locale: string): string =>
-  `${amount.toLocaleString(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ₪`;
-
-const formatMonthLabel = (monthIso: string, lang: 'en' | 'he'): string =>
-  new Intl.DateTimeFormat(lang === 'he' ? 'he-IL' : 'en-GB', {
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(monthIso));
-
-export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
-  const t = LABELS[data.lang];
-  const dir = data.lang === 'he' ? 'rtl' : 'ltr';
-  const locale = data.lang === 'he' ? 'he-IL' : 'en-GB';
-  const money = (amount: number): string => formatCurrency(amount, locale);
-  const monthLabel = formatMonthLabel(data.month, data.lang);
-
-  const rowsHtml = data.rows
-    .map(
-      (row) => `
-        <tr>
-          <td>${escapeHtml(row.tag ?? '')}</td>
-          <td class="amount strong">${money(row.approvedAmount)}</td>
-          <td class="amount">${money(row.invoiceInclVat)}</td>
-          <td class="amount muted">${row.profitMarginPercent}%</td>
-          <td class="amount">${money(row.profitAmount)}</td>
-          <td class="amount">${money(row.afterProfitAmount)}</td>
-        </tr>`,
-    )
-    .join('');
-
-  const supplierRowsHtml = data.supplierRows
-    .map(
-      (row) => `
-        <tr>
-          <td>${escapeHtml(row.corporationName)}</td>
-          <td class="amount">${money(row.amount)}</td>
-        </tr>`,
-    )
-    .join('');
-
-  return `<!DOCTYPE html>
-<html dir="${dir}" lang="${data.lang}">
-<head>
-<meta charset="UTF-8" />
-<style>
+/**
+ * The CSS shared by every account-approval-style page. Exported so the
+ * client-wide simulated export can wrap several of these pages plus its
+ * own summary page in one document without duplicating the stylesheet.
+ */
+export const reportApprovalStyles = (
+  dir: 'rtl' | 'ltr',
+  colors: PdfColors,
+  font: PdfFont,
+): string => {
+  const theme = resolvePdfTheme(colors);
+  const { fontFaces, fontFamily } = pdfFontCss(font);
+  return `
+  ${fontFaces}
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   body {
-    font-family: "Noto Sans Hebrew", "Noto Sans", Arial, sans-serif;
+    font-family: ${fontFamily};
     color: #1f2430;
     margin: 0;
     font-size: 12px;
@@ -157,18 +190,18 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
 
   /* Full-bleed header band */
   .header {
-    background: #1f2a44;
-    color: #fff;
+    background: ${theme.primary};
+    color: ${theme.onPrimary};
     padding: 20px 34px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 4px solid #c9a24b;
+    border-bottom: 4px solid ${theme.secondary};
   }
   .header .identity { text-align: ${dir === 'rtl' ? 'right' : 'left'}; }
   .header .contractor-name { font-size: 26px; font-weight: 700; line-height: 1.15; }
-  .header .contractor-desc { font-size: 12px; color: #c9c9d4; margin-top: 3px; }
-  .header .company-number { font-size: 11px; color: #9aa2b8; margin-top: 4px; }
+  .header .contractor-desc { font-size: 12px; opacity: 0.8; margin-top: 3px; }
+  .header .company-number { font-size: 11px; opacity: 0.65; margin-top: 4px; }
   .header .logo { max-height: 62px; max-width: 150px; }
 
   .title {
@@ -177,18 +210,30 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     font-weight: 700;
     margin: 26px 0 22px;
   }
-  .title span { border-bottom: 3px solid #c9a24b; padding-bottom: 6px; }
+  .title span { border-bottom: 3px solid ${theme.secondary}; padding-bottom: 6px; }
 
-  /* Info box — gold rule on the leading edge */
+  /* Info box — secondary-color rule on the leading edge */
   .info-box {
     background: #f7f8fa;
-    border-${dir === 'rtl' ? 'right' : 'left'}: 4px solid #c9a24b;
+    border-${dir === 'rtl' ? 'right' : 'left'}: 4px solid ${theme.secondary};
     border-radius: 6px;
     padding: 14px 18px;
     margin-bottom: 22px;
   }
   .info-row { display: flex; gap: 10px; padding: 3px 0; font-size: 12px; }
   .info-row .label { color: #667; font-weight: 700; min-width: 118px; }
+  .sim-badge {
+    display: inline-block;
+    background: ${theme.secondary};
+    color: ${theme.onSecondary};
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    border-radius: 3px;
+    padding: 1px 6px;
+    margin-inline-start: 6px;
+  }
 
   table { width: 100%; border-collapse: collapse; margin-bottom: 26px; }
   th, td {
@@ -198,8 +243,8 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     border-bottom: 1px solid #e8eaef;
   }
   thead th {
-    background: #1f2a44;
-    color: #fff;
+    background: ${theme.primary};
+    color: ${theme.onPrimary};
     font-weight: 600;
     font-size: 10px;
     line-height: 1.35;
@@ -214,7 +259,7 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
      on each page as if it were the grand total. Render it as a plain row
      group so it prints once, after the last supplier. */
   tfoot { display: table-row-group; }
-  tfoot td { font-weight: 700; background: #f0e6cc; border-bottom: none; }
+  tfoot td { font-weight: 700; background: ${theme.secondaryTint}; border-bottom: none; }
 
   .lower { display: flex; align-items: flex-start; gap: 28px; }
 
@@ -230,7 +275,7 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     font-weight: 700;
     padding-bottom: 8px;
     margin-bottom: 6px;
-    border-bottom: 2px solid #c9a24b;
+    border-bottom: 2px solid ${theme.secondary};
     display: inline-block;
   }
   .summary-row {
@@ -240,12 +285,12 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     padding: 5px 0;
     font-size: 11.5px;
   }
-  /* Both payable figures share one navy block — the subcontractor cares about
+  /* Both payable figures share one primary-color block — the subcontractor cares about
      the excl-VAT and incl-VAT amounts equally, so neither is a sub-row of the
      other. One block rather than two pills keeps them reading as a pair. */
   .summary-payable {
-    background: #1f2a44;
-    color: #fff;
+    background: ${theme.primary};
+    color: ${theme.onPrimary};
     border-radius: 5px;
     padding: 7px 12px;
     margin-top: 8px;
@@ -269,10 +314,121 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     font-size: 10px;
     color: #667;
   }
-</style>
-</head>
-<body>
-<div class="page">
+`;
+};
+
+/**
+ * Renders one account-approval report as a single `.page` block — everything
+ * that used to live directly in `<body>`. Split out so the client-wide
+ * simulated export can embed several of these, one per project, inside
+ * one shared document instead of duplicating this markup.
+ */
+export const renderReportApprovalPage = (data: ReportApprovalData): string => {
+  const t = LABELS[data.lang];
+  const locale = localeFor(data.lang);
+  const money = (amount: number): string => formatCurrency(amount, locale);
+  const monthLabel = formatMonthLabel(data.month, data.lang);
+
+  // The backend writes the opening-balance tag in one fixed language, so it is
+  // translated here to read right in either document language.
+  const tagLabel = (tag: string | null): string =>
+    tag === OPENING_BALANCE_TAG ? t.openingBalance : (tag ?? '');
+
+  const statusCellHtml = (row: ReportApprovalRow): string =>
+    data.screen
+      ? `<td>${
+          row.incomeDate
+            ? `${t.received} ${formatDate(row.incomeDate, data.lang)}`
+            : t.pending
+        }</td>`
+      : '';
+
+  // The initiator income is one figure for the whole report, so it is a single
+  // cell spanning every income row rather than repeated per row. It sits just
+  // before the approved amount in source order — visually to its right in RTL.
+  const initiatorIncome =
+    data.initiator && data.initiator.income != null
+      ? data.initiator.income
+      : null;
+
+  const initiatorIncomeCellHtml = (index: number): string =>
+    initiatorIncome != null && index === 0
+      ? `<td class="amount" rowspan="${data.rows.length}">${money(initiatorIncome)}</td>`
+      : '';
+
+  const rowsHtml = data.rows
+    .map(
+      (row, index) => `
+        <tr>
+          <td>${escapeHtml(tagLabel(row.tag))}</td>
+          ${statusCellHtml(row)}
+          ${initiatorIncomeCellHtml(index)}
+          <td class="amount strong">${money(row.approvedAmount)}</td>
+          <td class="amount">${money(row.invoiceInclVat)}</td>
+          <td class="amount muted">${row.profitMarginPercent}%</td>
+          <td class="amount">${money(row.profitAmount)}</td>
+          <td class="amount">${money(row.afterProfitAmount)}</td>
+        </tr>`,
+    )
+    .join('');
+
+  const supplierRowsHtml = data.supplierRows
+    .map(
+      (row) => `
+        <tr>
+          <td>${escapeHtml(row.supplierName)}</td>
+          <td class="amount">${money(row.amount)}</td>
+        </tr>`,
+    )
+    .join('');
+
+  // No initiator on the project → the whole block is absent, not an empty
+  // heading or a zero row. When present it leads the info box.
+  const initiatorInfoRowHtml = data.initiator
+    ? `<div class="info-row"><span class="label">${t.initiator}</span><span>${escapeHtml(data.initiator.name)}</span></div>`
+    : '';
+
+  const initiatorIncomeHeaderHtml =
+    initiatorIncome != null ? `<th>${t.initiatorIncome}</th>` : '';
+
+  // Empty when the caller has no approval text (the simulated export), so the
+  // row does not open with a stray bullet.
+  const approvedForValue = [data.approvedFor, data.projectName]
+    .filter(Boolean)
+    .map(escapeHtml)
+    .join(' • ');
+
+  // Description and location share one row; either may be missing, and the
+  // row is left out when both are.
+  const descriptionValue = [data.projectDescription, data.projectLocation]
+    .filter((part): part is string => Boolean(part))
+    .map(escapeHtml)
+    .join(' • ');
+
+  // The stored margin comes only from `screen`, which the client-simulated
+  // export alone passes, exactly as the project sheet shows it.
+  const infoRowsHtml = [
+    descriptionValue
+      ? `<div class="info-row"><span class="label">${t.projectDescription}</span><span>${descriptionValue}</span></div>`
+      : '',
+    data.screen?.saved
+      ? `<div class="info-row"><span class="label">${t.savedMargin}</span><span>${data.screen.saved.marginPercent}% • ${money(data.screen.saved.profitAmount)}</span></div>`
+      : '',
+  ].join('');
+
+  const simulatedBadgeHtml = data.screen?.saved
+    ? `<span class="sim-badge">${t.simulated}</span>`
+    : '';
+
+  const statusHeaderHtml = data.screen ? `<th>${t.incomeStatus}</th>` : '';
+
+  // The project sheet's "Profit (x%)" line: what the contractor keeps before
+  // the suppliers and the subcontractor are paid.
+  const profitSummaryRowHtml = data.screen
+    ? `<div class="summary-row"><span>${t.profit} (${data.screen.marginPercent}%)</span><span>${money(data.totalIncome - data.totalAfterProfit)}</span></div>`
+    : '';
+
+  return `<div class="page">
   <div class="header">
     <div class="identity">
       <div class="contractor-name">${escapeHtml(data.contractorName)}</div>
@@ -286,16 +442,20 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
     <div class="title"><span>${t.subtitlePrefix} ${monthLabel}</span></div>
 
     <div class="info-box">
-      <div class="info-row"><span class="label">${t.client}</span><span>${escapeHtml(data.clientName)}</span></div>
+      ${initiatorInfoRowHtml}
+      <div class="info-row"><span class="label">${t.client}</span><span>${escapeHtml(data.requesterName)}</span></div>
       <div class="info-row"><span class="label">${t.mainContractor}</span><span>${escapeHtml(data.contractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.contractorCompanyNumber)}</span></div>
       <div class="info-row"><span class="label">${t.subcontractor}</span><span>${escapeHtml(data.subcontractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.subcontractorCompanyNumber)}</span></div>
-      <div class="info-row"><span class="label">${t.approvedFor}</span><span>${escapeHtml(data.approvedFor)} • ${escapeHtml(data.projectName)}</span></div>
+      <div class="info-row"><span class="label">${t.approvedFor}</span><span>${approvedForValue}${simulatedBadgeHtml}</span></div>
+      ${infoRowsHtml}
     </div>
 
     <table>
       <thead>
         <tr>
           <th>${t.tag}</th>
+          ${statusHeaderHtml}
+          ${initiatorIncomeHeaderHtml}
           <th>${t.approvedAmount}</th>
           <th>${t.invoiceInclVat}</th>
           <th>${t.profitMarginPercent}</th>
@@ -326,6 +486,7 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
       <div class="summary-box">
         <div class="summary-title">${t.monthlySummary}</div>
         <div class="summary-row"><span>${t.totalIncome}</span><span>${money(data.totalIncome)}</span></div>
+        ${profitSummaryRowHtml}
         <div class="summary-row"><span>${t.totalAfterProfit}</span><span>${money(data.totalAfterProfit)}</span></div>
         <div class="summary-row"><span>${t.totalDeductions}</span><span>${money(data.supplierTotal)}</span></div>
         <div class="summary-payable">
@@ -348,7 +509,19 @@ export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
       .join(' • ')}</div>
     <div>${data.companyEmail ? escapeHtml(data.companyEmail) : ''}</div>
   </div>
-</div>
+</div>`;
+};
+
+export const renderReportApprovalHtml = (data: ReportApprovalData): string => {
+  const dir = dirFor(data.lang);
+  return `<!DOCTYPE html>
+<html dir="${dir}" lang="${data.lang}">
+<head>
+<meta charset="UTF-8" />
+<style>${reportApprovalStyles(dir, data.colors, data.font)}</style>
+</head>
+<body>
+${renderReportApprovalPage(data)}
 </body>
 </html>`;
 };

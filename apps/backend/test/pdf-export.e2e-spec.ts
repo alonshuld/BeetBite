@@ -8,6 +8,7 @@ import {
   StartedPostgreSqlContainer,
 } from '@testcontainers/postgresql';
 import { execSync } from 'child_process';
+import type { Server } from 'http';
 import * as path from 'path';
 import request from 'supertest';
 
@@ -83,13 +84,13 @@ describe('PDF Export Integration Tests', () => {
   let moduleRef: TestingModule;
   let service: PdfExportService;
   let prisma: PrismaService;
-  let app: INestApplication;
+  let app: INestApplication<Server>;
   let token: string;
 
   let clientId: string;
   let projectId: string;
   let subcontractorId: string;
-  let corporationId: string;
+  let supplierId: string;
   /** The report under test, set by `seedDefaultReport`. */
   let reportId: string;
 
@@ -118,6 +119,8 @@ describe('PDF Export Integration Tests', () => {
         name,
         estimatedAmount: 100000,
         description: `${name} description`,
+        requesterName: `${name} requester`,
+        location: `${name} location`,
       },
     });
 
@@ -127,7 +130,7 @@ describe('PDF Export Integration Tests', () => {
     date?: string;
     profitMargin?: number;
     incomes: Array<{ amount: number; tag?: string | null }>;
-    corporationPayments?: Array<{ corporationId: string; amount: number }>;
+    supplierPayments?: Array<{ supplierId: string; amount: number }>;
   }) =>
     prisma.projectReport.create({
       data: {
@@ -141,11 +144,11 @@ describe('PDF Export Integration Tests', () => {
             tag: entry.tag ?? null,
           })),
         },
-        ...(opts.corporationPayments
+        ...(opts.supplierPayments
           ? {
-              corporationPayments: {
-                create: opts.corporationPayments.map((payment) => ({
-                  corporationId: payment.corporationId,
+              supplierPayments: {
+                create: opts.supplierPayments.map((payment) => ({
+                  supplierId: payment.supplierId,
                   amount: payment.amount,
                   date: new Date(opts.date ?? MONTH),
                 })),
@@ -235,8 +238,8 @@ describe('PDF Export Integration Tests', () => {
         data: { name: 'Dan Builder', companyNumber: '515111222' },
       })
     ).id;
-    corporationId = (
-      await prisma.corporation.create({ data: { name: 'Flooring Ltd' } })
+    supplierId = (
+      await prisma.supplier.create({ data: { name: 'Flooring Ltd' } })
     ).id;
 
     await prisma.companySettings.create({
@@ -254,13 +257,13 @@ describe('PDF Export Integration Tests', () => {
   });
 
   afterEach(async () => {
-    await prisma.corporationPayment.deleteMany();
+    await prisma.supplierPayment.deleteMany();
     await prisma.projectReportIncome.deleteMany();
     await prisma.projectReport.deleteMany();
     await prisma.project.deleteMany();
     await prisma.client.deleteMany();
     await prisma.subcontractor.deleteMany();
-    await prisma.corporation.deleteMany();
+    await prisma.supplier.deleteMany();
     await prisma.vatRate.deleteMany();
     await prisma.companySettings.deleteMany();
   });
@@ -426,14 +429,14 @@ describe('PDF Export Integration Tests', () => {
     });
 
     it('should list supplier rows and their total', async () => {
-      const plumbing = await prisma.corporation.create({
+      const plumbing = await prisma.supplier.create({
         data: { name: 'Plumbing Ltd' },
       });
       const report = await seedReport({
         incomes: [{ amount: 10000 }],
-        corporationPayments: [
-          { corporationId, amount: 1000 },
-          { corporationId: plumbing.id, amount: 2500 },
+        supplierPayments: [
+          { supplierId, amount: 1000 },
+          { supplierId: plumbing.id, amount: 2500 },
         ],
       });
       reportId = report.id;
@@ -448,7 +451,7 @@ describe('PDF Export Integration Tests', () => {
     it('should compute payable excl. and incl. VAT', async () => {
       const report = await seedReport({
         incomes: [{ amount: 10000 }],
-        corporationPayments: [{ corporationId, amount: 1000 }],
+        supplierPayments: [{ supplierId, amount: 1000 }],
       });
       reportId = report.id;
 
@@ -463,7 +466,7 @@ describe('PDF Export Integration Tests', () => {
     it('should render both payable figures inside the highlighted block', async () => {
       const report = await seedReport({
         incomes: [{ amount: 10000 }],
-        corporationPayments: [{ corporationId, amount: 1000 }],
+        supplierPayments: [{ supplierId, amount: 1000 }],
       });
       reportId = report.id;
 
@@ -562,6 +565,32 @@ describe('PDF Export Integration Tests', () => {
 
       expect(html).toContain(`src="${logo}"`);
       expect(html).toContain(`src="${signature}"`);
+    });
+
+    it('should paint the configured PDF colors', async () => {
+      await prisma.companySettings.update({
+        where: { id: SETTINGS_ID },
+        data: { pdfPrimaryColor: '#0b6e4f', pdfSecondaryColor: '#e07a5f' },
+      });
+
+      const html = await renderHtml();
+
+      expect(html).toContain('background: #0b6e4f;');
+      expect(html).toContain('border-bottom: 4px solid #e07a5f;');
+      expect(html).not.toContain('#1f2a44');
+      expect(html).not.toContain('#c9a24b');
+    });
+
+    it('should embed the configured PDF font', async () => {
+      await prisma.companySettings.update({
+        where: { id: SETTINGS_ID },
+        data: { pdfFont: 'frank-ruhl-libre' },
+      });
+
+      const html = await renderHtml();
+
+      expect(html).toContain('font-family: "Frank Ruhl Libre",');
+      expect(html).toContain('url(data:font/woff2;base64,');
     });
 
     it('should render no image tags when logo and signature are unset', async () => {
@@ -705,9 +734,17 @@ describe('PDF Export Integration Tests', () => {
         .expect(404);
     });
 
+    // Optional since the export prints the project name alone when blank.
+    it('should accept a missing approvedFor', async () => {
+      await request(app.getHttpServer())
+        .post(url)
+        .set('Authorization', `Bearer ${token}`)
+        .send(body({ approvedFor: undefined }))
+        .expect(200);
+    });
+
     it.each([
       ['a missing projectReportId', { projectReportId: undefined }],
-      ['a missing approvedFor', { approvedFor: undefined }],
       ['an over-long approvedFor', { approvedFor: 'x'.repeat(501) }],
       ['an unsupported language', { lang: 'fr' }],
       ['an unknown property', { nope: true }],

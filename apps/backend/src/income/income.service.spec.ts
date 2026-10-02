@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { IncomeService } from './income.service';
+import { ProjectClientAssignmentsService } from '../project-client-assignments/project-client-assignments.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 describe('IncomeService', () => {
@@ -14,6 +15,14 @@ describe('IncomeService', () => {
   /** Builds a Decimal-like stub mirroring Prisma.Decimal's toNumber(). */
   const decimal = (value: number) => ({ toNumber: () => value });
 
+  // Resolution is exercised by project-client-assignments.service.spec.ts.
+  // An empty map here makes the read paths fall back to the project's cached
+  // client, which is the behaviour every assertion below was written against.
+  const mockAssignmentsService = {
+    resolveClientsForMonth: jest.fn().mockResolvedValue(new Map()),
+    createInitialAssignment: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -21,6 +30,10 @@ describe('IncomeService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: ProjectClientAssignmentsService,
+          useValue: mockAssignmentsService,
         },
       ],
     }).compile();
@@ -61,8 +74,18 @@ describe('IncomeService', () => {
           },
           profitMargin: decimal(10),
           incomeEntries: [
-            { amount: decimal(6000), incomeDate: new Date('2024-05-10') },
-            { amount: decimal(4000), incomeDate: null },
+            {
+              id: 'entry-1',
+              amount: decimal(6000),
+              incomeDate: new Date('2024-05-10'),
+              tag: 'שלד',
+            },
+            {
+              id: 'entry-2',
+              amount: decimal(4000),
+              incomeDate: null,
+              tag: null,
+            },
           ],
         },
       ]);
@@ -84,6 +107,16 @@ describe('IncomeService', () => {
           receivedIncome: 6000, // only the entry with a non-null incomeDate
           pendingIncome: 4000, // total - received
           profit: 1000,
+          // Each entry is returned too, so the page can show and edit its date.
+          incomeEntries: [
+            {
+              id: 'entry-1',
+              amount: 6000,
+              incomeDate: '2024-05-10T00:00:00.000Z',
+              tag: 'שלד',
+            },
+            { id: 'entry-2', amount: 4000, incomeDate: null, tag: null },
+          ],
         },
       ]);
     });

@@ -1,0 +1,17 @@
+{
+	email {$ACME_EMAIL}
+}
+
+# Terminates HTTPS (certificate issued and renewed automatically by Let's
+# Encrypt) and hands everything to the frontend nginx, which serves the SPA
+# and proxies /api to the backend.
+{$APP_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	reverse_proxy frontend:80
+}

@@ -5,9 +5,13 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { normalizeToMonthStartForTransform } from 'src/common/utils/date.utils';
+import {
+  normalizeToDayStartForTransform,
+  normalizeToMonthStartForTransform,
+} from 'src/common/utils/date.utils';
 
 /**
  * Represents the parameters required to update a subcontractor payment.
@@ -58,4 +62,26 @@ export class UpdateSubcontractorPaymentDto {
     description: 'Whether the payment has been marked as paid',
   })
   isPaid?: boolean;
+
+  @IsOptional()
+  @IsISO8601()
+  @Transform(({ value }: { value: unknown }) =>
+    normalizeToDayStartForTransform(value),
+  )
+  @ApiPropertyOptional({
+    example: '2026-01-17',
+    description:
+      'The day the money actually moved. Distinct from serviceDate, which is the month being settled.',
+  })
+  paymentDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  @ApiPropertyOptional({
+    example: 'Cheque #1042',
+    description:
+      'Optional free-text note about the payment. Send an empty string to clear it.',
+  })
+  description?: string;
 }

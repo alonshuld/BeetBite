@@ -11,6 +11,8 @@ export class ProjectReportAlreadyExistsError extends EntityAlreadyExistsError {
   constructor(projectId: string, date: string) {
     super(
       `A project report for project ${projectId} in the month ${date} already exists`,
+      'PROJECT_REPORT_ALREADY_EXISTS',
+      { month: String(date).slice(0, 7) },
     );
     this.name = 'ProjectReportAlreadyExistsError';
   }
