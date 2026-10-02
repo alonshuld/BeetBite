@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
+  useDeleteSupplierPaymentMutation,
   useGetSupplierPaymentsByMonthQuery,
   useSetSupplierPaymentIncludesVatMutation,
   useSetSupplierPaymentPaidMutation,
@@ -9,10 +10,18 @@ import {
   type SupplierPaymentsGroup,
 } from "@/api/endpoints/supplier-payments";
 import { PageHeader } from "@/components/molecules/PageHeader";
-import { ButtonPrimary, ButtonGhost, EmptyState } from "@/components/atoms";
+import {
+  ButtonPrimary,
+  ButtonGhost,
+  ButtonIcon,
+  EmptyState,
+} from "@/components/atoms";
 import { Badge } from "@/components/atoms/Badge";
 import { SupplierPaymentsBatchModal } from "@/components/organisms/SupplierPaymentsBatchModal";
+import { SupplierPaymentEditModal } from "@/components/organisms/SupplierPaymentEditModal";
+import { ConfirmModal } from "@/components/organisms/Modal";
 import { useLang } from "@/contexts/useLang";
+import { useToast } from "@/contexts/useToast";
 import { formatYM } from "@/utils/formatMonth";
 import { Icon } from "@/components/atoms/Icon";
 import { LoadingState } from "@/components/molecules/LoadingState";
@@ -136,9 +145,13 @@ function VatCell({ entry }: { entry: SupplierPaymentEntry }) {
 function SupplierGroup({
   group,
   month,
+  onEdit,
+  onDelete,
 }: {
   group: SupplierPaymentsGroup;
   month: string;
+  onEdit: (payment: SupplierPaymentEntry) => void;
+  onDelete: (payment: SupplierPaymentEntry) => void;
 }) {
   const { t } = useLang();
   const [setPaid] = useSetSupplierPaymentPaidMutation();
@@ -182,14 +195,15 @@ function SupplierGroup({
             page; the min width scrolls on a phone instead of squashing, and the
             description — optional and usually empty — gives up its column
             there so the controls are not pushed off-screen. */}
-        <table className="w-full min-w-[520px] table-fixed border-collapse text-sm sm:min-w-[760px]">
+        <table className="w-full min-w-[600px] table-fixed border-collapse text-sm sm:min-w-[840px]">
           <colgroup>
-            <col className="w-[26%]" />
-            <col className="hidden w-[22%] sm:table-column" />
-            <col className="w-[14%]" />
-            <col className="w-[14%]" />
-            <col className="w-[14%]" />
-            <col className="w-[10%]" />
+            <col className="w-[22%]" />
+            <col className="hidden w-[20%] sm:table-column" />
+            <col className="w-[13%]" />
+            <col className="w-[13%]" />
+            <col className="w-[13%]" />
+            <col className="w-[8%]" />
+            <col className="w-[11%]" />
           </colgroup>
           <thead>
             <tr className="border-b border-border bg-surface-2">
@@ -199,6 +213,9 @@ function SupplierGroup({
               <Th align="center">{t("vatPct")}</Th>
               <Th align="end">{t("totalInclVat")}</Th>
               <Th align="center">{t("paid")}</Th>
+              <Th align="center">
+                <span className="sr-only">{t("actions")}</span>
+              </Th>
             </tr>
           </thead>
           <tbody>
@@ -246,6 +263,24 @@ function SupplierGroup({
                     className={CHECKBOX}
                   />
                 </ControlCell>
+                <ControlCell>
+                  <ButtonIcon
+                    onClick={() => onEdit(payment)}
+                    title={t("edit")}
+                    aria-label={`${t("edit")} — ${payment.projectReport.projectName}`}
+                    className="h-7 w-7"
+                  >
+                    <Icon name="edit" size={14} />
+                  </ButtonIcon>
+                  <ButtonIcon
+                    onClick={() => onDelete(payment)}
+                    title={t("delete")}
+                    aria-label={`${t("delete")} — ${payment.projectReport.projectName}`}
+                    className="h-7 w-7 hover:border-danger hover:text-danger"
+                  >
+                    <Icon name="trash" size={14} />
+                  </ButtonIcon>
+                </ControlCell>
               </tr>
             ))}
           </tbody>
@@ -259,7 +294,28 @@ export default function SupplierPaymentsPage() {
   const { month } = useOutletContext<{ month: string }>();
   const { data, isLoading } = useGetSupplierPaymentsByMonthQuery(month);
   const { t, lang } = useLang();
+  const { toast } = useToast();
   const [batchOpen, setBatchOpen] = useState(false);
+  // The supplier travels with the payment: the entry itself does not carry it.
+  const [editTarget, setEditTarget] = useState<{
+    payment: SupplierPaymentEntry;
+    supplier: SupplierPaymentsGroup["supplier"];
+  } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    payment: SupplierPaymentEntry;
+    supplier: SupplierPaymentsGroup["supplier"];
+  } | null>(null);
+  const [deletePayment, { isLoading: deleting }] =
+    useDeleteSupplierPaymentMutation();
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    const result = await deletePayment(deleteTarget.payment.id);
+    if (!("error" in result)) {
+      toast(t("paymentDeleted"), "success");
+      setDeleteTarget(null);
+    }
+  }
 
   const groups = data?.suppliersPayments ?? [];
   const grandTotal = groups.reduce(
@@ -319,7 +375,16 @@ export default function SupplierPaymentsPage() {
                    table is not enough to separate one supplier from the next. */
                 className={i > 0 ? "mt-4" : undefined}
               >
-                <SupplierGroup group={group} month={month} />
+                <SupplierGroup
+                  group={group}
+                  month={month}
+                  onEdit={(payment) =>
+                    setEditTarget({ payment, supplier: group.supplier })
+                  }
+                  onDelete={(payment) =>
+                    setDeleteTarget({ payment, supplier: group.supplier })
+                  }
+                />
               </div>
             ))}
           </div>
@@ -330,6 +395,26 @@ export default function SupplierPaymentsPage() {
         open={batchOpen}
         month={month}
         onClose={() => setBatchOpen(false)}
+      />
+
+      <SupplierPaymentEditModal
+        payment={editTarget?.payment ?? null}
+        supplier={editTarget?.supplier ?? null}
+        month={month}
+        onClose={() => setEditTarget(null)}
+      />
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => void handleDelete()}
+        title={t("deleteSupplierPaymentTitle")}
+        message={
+          deleteTarget
+            ? `${t("permanentlyDelete")} ${deleteTarget.supplier.name} — ${deleteTarget.payment.projectReport.projectName} (${formatILS(deleteTarget.payment.amount)}). ${t("cannotBeUndone")}`
+            : ""
+        }
+        loading={deleting}
       />
     </div>
   );

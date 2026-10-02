@@ -387,4 +387,87 @@ dbTest.describe('Supplier Payments Page', () => {
       )
       .toBe(2);
   });
+
+  // Paperwork gets mistyped: a recorded line can be corrected or removed
+  // without touching the rest of the supplier's stack.
+  dbTest('edit and delete a recorded payment', async ({ page, db }) => {
+    const client = await db.client.create({ data: { name: 'Edit Client' } });
+    const subcontractor = await db.subcontractor.create({
+      data: { name: 'Edit Sub', companyNumber: '515222013' },
+    });
+    const supplier = await db.supplier.create({
+      data: { name: 'Edit Supplier' },
+    });
+    const reportIds: string[] = [];
+    for (const name of ['Edit Project A', 'Edit Project B']) {
+      const project = await db.project.create({
+        data: {
+          clientId: client.id,
+          name,
+          estimatedAmount: 100000,
+          description: 'Edit test',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
+        },
+      });
+      const report = await db.projectReport.create({
+        data: {
+          projectId: project.id,
+          subcontractorId: subcontractor.id,
+          date: new Date('2026-05-01'),
+          profitMargin: 20,
+        },
+      });
+      reportIds.push(report.id);
+    }
+    const [kept, removed] = await Promise.all(
+      [2500, 900].map((amount, i) =>
+        db.supplierPayment.create({
+          data: {
+            projectReportId: reportIds[i],
+            supplierId: supplier.id,
+            amount,
+            date: new Date('2026-05-05'),
+            isPaid: true,
+          },
+        }),
+      ),
+    );
+
+    await page.goto(`${BASE}/supplier-payments?month=2026-05`);
+    await page.waitForLoadState('networkidle');
+
+    await page.getByRole('button', { name: 'Edit — Edit Project A' }).click();
+    await page.fill('#edit-payment-amount', '3100');
+    await page.fill('#edit-payment-desc', 'Corrected invoice');
+    await page.getByRole('button', { name: /save/i }).click();
+
+    await expect
+      .poll(async () =>
+        (
+          await db.supplierPayment.findUniqueOrThrow({ where: { id: kept.id } })
+        ).amount.toNumber(),
+      )
+      .toBe(3100);
+    const edited = await db.supplierPayment.findUniqueOrThrow({
+      where: { id: kept.id },
+    });
+    expect(edited.description).toBe('Corrected invoice');
+    // Correcting the figures is not a reason to forget it was paid.
+    expect(edited.isPaid).toBe(true);
+
+    await page.getByRole('button', { name: 'Delete — Edit Project B' }).click();
+    await page
+      .getByRole('dialog', { name: 'Delete this payment?' })
+      .getByRole('button', { name: 'Delete' })
+      .click();
+
+    await expect
+      .poll(async () => db.supplierPayment.count({ where: { id: removed.id } }))
+      .toBe(0);
+    await expect(page.getByText('Edit Project B')).toHaveCount(0);
+    expect(
+      await db.supplierPayment.count({ where: { supplierId: supplier.id } }),
+    ).toBe(1);
+  });
 });
