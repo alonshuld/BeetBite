@@ -157,3 +157,12 @@ apps/frontend/vite.config.d.ts
 # Playwright run output
 test-results/
 playwright-report/
+
+# Terraform: provider cache, local state and per-operator variables (may hold tokens).
+# .terraform.lock.hcl is committed.
+infra/terraform/**/.terraform/
+infra/terraform/**/*.tfstate
+infra/terraform/**/*.tfstate.*
+infra/terraform/**/*.tfvars
+!infra/terraform/**/*.tfvars.example
+infra/terraform/**/backend.hcl
