@@ -640,6 +640,42 @@ describe("ReportsPage", () => {
         expect.objectContaining({ initiatorIncome: 30000 }),
       );
     });
+
+    it("keeps the modal open with the entered values when the server rejects the report", async () => {
+      mockProjectsWithInitiator();
+      createSpy.mockResolvedValueOnce({
+        error: { status: 400, data: { code: "INITIATOR_INCOME_TOO_LOW" } },
+      });
+      renderPage();
+      await userEvent.click(
+        screen.getAllByRole("button", { name: "+ Add" })[0],
+      );
+      await userEvent.selectOptions(screen.getByLabelText("Project"), "p2");
+
+      await userEvent.type(screen.getByLabelText("Initiator Income"), "5000");
+      await userEvent.type(screen.getByLabelText("Income (₪)"), "10000");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(createSpy).toHaveBeenCalled();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByLabelText("Initiator Income")).toHaveValue(5000);
+    });
+
+    it("closes the modal once the report is saved", async () => {
+      mockProjectsWithInitiator();
+      createSpy.mockResolvedValueOnce({ data: {} });
+      renderPage();
+      await userEvent.click(
+        screen.getAllByRole("button", { name: "+ Add" })[0],
+      );
+      await userEvent.selectOptions(screen.getByLabelText("Project"), "p2");
+
+      await userEvent.type(screen.getByLabelText("Initiator Income"), "30000");
+      await userEvent.type(screen.getByLabelText("Income (₪)"), "10000");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
   });
 
   // Total income per client, beside the existing subcontractor total.

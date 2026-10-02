@@ -260,7 +260,10 @@ export default function ReportsPage() {
         })),
       initiatorIncome: initiatorIncome ? Number(initiatorIncome) : undefined,
     };
-    await createReport(dto);
+    const result = await createReport(dto);
+    // A rejected write has already toasted its reason — keep the form open
+    // so the user can correct it instead of re-entering everything.
+    if ("error" in result) return;
     setModalOpen(false);
   }
 
@@ -899,7 +902,11 @@ function TileTagEditor({
   const [updateIncomeEntry, { isLoading }] = useUpdateIncomeEntryMutation();
 
   async function handleSave() {
-    await updateIncomeEntry({ id: entry.id, tag: value.trim() || null });
+    const result = await updateIncomeEntry({
+      id: entry.id,
+      tag: value.trim() || null,
+    });
+    if ("error" in result) return;
     setEditing(false);
   }
 
