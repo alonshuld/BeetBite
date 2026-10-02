@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# First-boot setup for the BeetBite production host (Ubuntu 24.04 arm64).
+# First-boot setup for the BeetBite production host (Ubuntu 24.04 amd64).
 # Rendered by Terraform; runs once via cloud-init. Progress and errors land in
 # /var/log/beetbite-bootstrap.log. Every step is safe to re-run by hand:
 #   sudo bash /var/lib/cloud/instance/scripts/part-001
@@ -126,7 +126,7 @@ set -x
 # aggregation_dimensions publishes a copy keyed on InstanceId alone, which is
 # what the Terraform alarms watch.
 curl -fsSL -o /tmp/cwagent.deb \
-  https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/arm64/latest/amazon-cloudwatch-agent.deb
+  https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
 dpkg -i /tmp/cwagent.deb
 rm -f /tmp/cwagent.deb
 cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<'EOF'
