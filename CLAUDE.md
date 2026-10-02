@@ -54,6 +54,41 @@ pnpm infra:up       # docker compose up db backend -d
 pnpm infra:down     # docker compose stop db backend
 ```
 
+## Running locally (quick reference)
+
+Usual dev setup: Postgres in Docker, backend + frontend from `pnpm dev` (hot reload).
+
+```bash
+docker compose up db -d     # Postgres only, on localhost:5432
+pnpm dev                    # backend :3000 (runs db:sync first) + frontend :5173
+```
+
+- Open http://localhost:5173. Log in with `ADMIN_USERNAME` / `ADMIN_PASSWORD` from `.env`.
+- `pnpm dev` runs the backend's `db:sync` first (`apps/backend/scripts/db-sync.sh`): migrate deploy, then prisma generate, then fail if the DB has drifted from `schema.prisma`.
+- Don't run `pnpm dev` while the Docker `backend` container is up: both bind `:3000`. Stop it with `docker compose stop backend`. `pnpm infra:up` starts that container.
+- Full Docker stack: `docker compose up -d --build` → frontend on http://localhost:80, backend on :3000.
+
+### Seeding demo data
+
+`docker-compose.yml` does **not** forward `SEED_MOCK_DATA` to the backend container. The container's start command only seeds the admin user, so seed demo data from the host against the Docker DB (`apps/backend/.env` → `localhost:5432`):
+
+```bash
+cd apps/backend
+SEED_MOCK_DATA=true npx prisma db seed   # DESTRUCTIVE: wipes every business table, keeps admin + company settings
+```
+
+- There is no `pnpm seed` script. The seed command lives under `prisma.seed` in `apps/backend/package.json`.
+- If you get type errors about missing Prisma fields, the generated client is stale: run `npx prisma generate` in `apps/backend`.
+- The demo data's showcase month is **May 2026**: multiple income entries, supplier payments, and initiator projects with a single income entry and an initiator income set.
+
+### Inspecting the DB
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select count(*) from projects;"'
+```
+
+Table names are snake_case plural (`projects`, `project_reports`, `project_report_incomes`, `initiators`, …). Columns are camelCase, so quote them (`"initiatorId"`).
+
 ## How the apps connect
 
 ```
@@ -102,7 +137,7 @@ cp .env.example .env
 docker compose up
 ```
 
-`ADMIN_PASSWORD` bootstraps the admin account on first start only; the seed never overwrites an existing password, so restarts cannot reset a rotated credential. Demo data is opt-in via `SEED_MOCK_DATA=true` and is destructive — it truncates every business table before inserting fixtures.
+`ADMIN_PASSWORD` bootstraps the admin account on first start only; the seed never overwrites an existing password, so restarts cannot reset a rotated credential. Demo data is opt-in via `SEED_MOCK_DATA=true` and is destructive — it truncates every business table before inserting fixtures. Compose does not pass that variable to the container; see *Seeding demo data* above for how to seed.
 
 Backend and frontend each have a `Dockerfile` in their app directory.
 
