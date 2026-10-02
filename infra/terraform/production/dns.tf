@@ -1,23 +1,26 @@
 resource "aws_route53_zone" "main" {
-  count = var.manage_dns && var.create_hosted_zone ? 1 : 0
+  count = local.manage_dns && var.create_hosted_zone ? 1 : 0
 
   name = var.domain_name
 }
 
 data "aws_route53_zone" "existing" {
-  count = var.manage_dns && !var.create_hosted_zone ? 1 : 0
+  count = local.manage_dns && !var.create_hosted_zone ? 1 : 0
 
   name = var.domain_name
 }
 
 locals {
-  zone_id = !var.manage_dns ? null : (
+  # Without a domain there is nothing to put in DNS.
+  manage_dns = var.manage_dns && local.has_domain
+
+  zone_id = !local.manage_dns ? null : (
     var.create_hosted_zone ? aws_route53_zone.main[0].zone_id : data.aws_route53_zone.existing[0].zone_id
   )
 }
 
 resource "aws_route53_record" "app" {
-  count = var.manage_dns ? 1 : 0
+  count = local.manage_dns ? 1 : 0
 
   zone_id = local.zone_id
   name    = local.app_fqdn
@@ -27,7 +30,7 @@ resource "aws_route53_record" "app" {
 }
 
 resource "aws_route53_record" "caa" {
-  count = var.manage_dns && var.caa_letsencrypt_only ? 1 : 0
+  count = local.manage_dns && var.caa_letsencrypt_only ? 1 : 0
 
   zone_id = local.zone_id
   name    = var.domain_name

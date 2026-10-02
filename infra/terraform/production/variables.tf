@@ -34,8 +34,9 @@ variable "rds_multi_az" {
 }
 
 variable "domain_name" {
-  description = "Apex domain, e.g. yourcompany.co.il."
+  description = "Apex domain, e.g. yourcompany.co.il. Empty serves plain HTTP on the Elastic IP: for a trial run with test data only."
   type        = string
+  default     = ""
 }
 
 variable "app_subdomain" {
@@ -63,8 +64,9 @@ variable "caa_letsencrypt_only" {
 }
 
 variable "acme_email" {
-  description = "Let's Encrypt account email; receives certificate expiry warnings."
+  description = "Let's Encrypt account email; receives certificate expiry warnings. Defaults to the first alert email."
   type        = string
+  default     = ""
 }
 
 variable "alert_emails" {

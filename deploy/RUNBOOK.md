@@ -103,7 +103,7 @@ The data is safe in RDS and S3.
 ```bash
 compose ps                          # container state
 compose logs --since 1h backend     # recent backend logs
-curl -fsS https://$(grep ^APP_DOMAIN= /opt/beetbite/.env | cut -d= -f2-)/api/v1/health
+curl -fsS "$(grep ^APP_URL= /opt/beetbite/.env | cut -d= -f2-)/api/v1/health"
 tail -n 50 /var/log/beetbite-backup.log
 /opt/beetbite/render-env.sh         # rebuild .env from SSM after a parameter change
 ```
