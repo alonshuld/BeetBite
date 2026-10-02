@@ -378,6 +378,7 @@ export class PdfExportService {
       subcontractorCompanyNumber: subcontractor.companyNumber,
       projectName: report.project.name,
       projectDescription,
+      projectLocation: report.project.location || null,
       approvedFor,
       month: report.date,
       rows,
@@ -398,7 +399,6 @@ export class PdfExportService {
       font: this.pdfFont(companySettings),
       screen: includeScreenDetails
         ? {
-            projectLocation: report.project.location,
             marginPercent: effectiveMargin,
             saved:
               effectiveMargin === report.profitMargin
