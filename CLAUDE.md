@@ -143,4 +143,4 @@ Backend and frontend each have a `Dockerfile` in their app directory.
 
 ## Pre-commit hook
 
-Husky runs `pnpm format:check` then `pnpm lint:check` on every commit. Fix with `pnpm format && pnpm lint` before committing.
+Husky's pre-commit is deliberately light (the dev box has ~3.8 GB RAM and the full checks have crashed WSL): for each app with staged `.ts/.tsx/.js/.mjs` files it runs prettier `--check` and eslint on just those files, then that app's `typecheck` — one at a time, under `nice -n 19`, with a 1 GB Node heap. Apps with nothing staged are skipped. The full-repo checks (`pnpm format:check && pnpm lint:check`) are still available to run by hand. Fix with `pnpm format && pnpm lint`.
