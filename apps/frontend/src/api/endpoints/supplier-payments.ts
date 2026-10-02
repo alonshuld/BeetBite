@@ -74,7 +74,10 @@ export const supplierPaymentsApi = baseApi.injectEndpoints({
     }),
     updateSupplierPayment: build.mutation<
       { id: string },
-      { id: string } & CreateSupplierPaymentDto
+      { id: string } & Omit<CreateSupplierPaymentDto, "description"> & {
+          /** null clears the stored description; omitted leaves it as is. */
+          description?: string | null;
+        }
     >({
       query: ({ id, ...body }) => ({
         url: `/suppliers/payments/${id}`,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import SupplierPaymentsPage from "./SupplierPaymentsPage";
@@ -15,6 +15,8 @@ vi.mock("@/api/endpoints/supplier-payments", () => ({
   useSetSupplierPaymentPaidMutation: vi.fn(),
   useSetSupplierPaymentsPaidMutation: vi.fn(),
   useBatchCreateSupplierPaymentsMutation: vi.fn(),
+  useUpdateSupplierPaymentMutation: vi.fn(),
+  useDeleteSupplierPaymentMutation: vi.fn(),
 }));
 vi.mock("@/api/endpoints/suppliers", () => ({ useGetSuppliersQuery: vi.fn() }));
 vi.mock("@/api/endpoints/project-reports", () => ({
@@ -30,6 +32,8 @@ import {
   useSetSupplierPaymentPaidMutation,
   useSetSupplierPaymentsPaidMutation,
   useBatchCreateSupplierPaymentsMutation,
+  useUpdateSupplierPaymentMutation,
+  useDeleteSupplierPaymentMutation,
 } from "@/api/endpoints/supplier-payments";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
@@ -124,6 +128,8 @@ const setPaidSpy = vi.fn().mockResolvedValue({ data: {} });
 const setIncludesVatSpy = vi.fn().mockResolvedValue({ data: {} });
 const setAllPaidSpy = vi.fn().mockResolvedValue({ data: {} });
 const batchSpy = vi.fn().mockResolvedValue({ data: [] });
+const updateSpy = vi.fn().mockResolvedValue({ data: { id: "pp1" } });
+const deleteSpy = vi.fn().mockResolvedValue({ data: undefined });
 
 describe("SupplierPaymentsPage", () => {
   beforeEach(() => {
@@ -152,6 +158,14 @@ describe("SupplierPaymentsPage", () => {
       batchSpy,
       { isLoading: false },
     ] as unknown as ReturnType<typeof useBatchCreateSupplierPaymentsMutation>);
+    vi.mocked(useUpdateSupplierPaymentMutation).mockReturnValue([
+      updateSpy,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useUpdateSupplierPaymentMutation>);
+    vi.mocked(useDeleteSupplierPaymentMutation).mockReturnValue([
+      deleteSpy,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useDeleteSupplierPaymentMutation>);
     vi.mocked(useGetSuppliersQuery).mockReturnValue({
       data: [{ id: "corp1", name: "Global Inc" }],
     } as unknown as ReturnType<typeof useGetSuppliersQuery>);
@@ -378,6 +392,81 @@ describe("SupplierPaymentsPage", () => {
       expect(
         screen.getAllByRole("columnheader", { name: /Description/ }).length,
       ).toBeGreaterThan(0);
+    });
+  });
+
+  describe("editing and deleting a payment", () => {
+    beforeEach(() => {
+      updateSpy.mockClear();
+      deleteSpy.mockClear();
+    });
+
+    it("opens the edit form prefilled with the payment", async () => {
+      renderSupplierPaymentsPage();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Edit — Tower Block" }),
+      );
+
+      expect(
+        screen.getByRole("dialog", { name: /Edit payment — Global Inc/ }),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText(/Amount/)).toHaveValue(5000);
+      expect(screen.getByLabelText(/^Date/)).toHaveValue("2025-03-01");
+    });
+
+    it("saves the corrected payment, keeping its supplier", async () => {
+      renderSupplierPaymentsPage();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Edit — Tower Block" }),
+      );
+      const amount = screen.getByLabelText(/Amount/);
+      await userEvent.clear(amount);
+      await userEvent.type(amount, "4200");
+      await userEvent.type(screen.getByLabelText(/Description/), "Tiles");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateSpy).toHaveBeenCalledWith({
+        id: "pp1",
+        supplierId: "corp1",
+        projectReportId: "r1",
+        amount: 4200,
+        date: "2025-03-01",
+        isFuture: true,
+        description: "Tiles",
+        includesVat: false,
+      });
+    });
+
+    it("deletes a payment only after confirming", async () => {
+      renderSupplierPaymentsPage();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Delete — Bridge" }),
+      );
+      expect(deleteSpy).not.toHaveBeenCalled();
+
+      const dialog = screen.getByRole("dialog", {
+        name: "Delete this payment?",
+      });
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Delete" }),
+      );
+
+      expect(deleteSpy).toHaveBeenCalledWith("pp2");
+    });
+
+    it("leaves the payment alone when the delete is cancelled", async () => {
+      renderSupplierPaymentsPage();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Delete — Bridge" }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(deleteSpy).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).toBeNull();
     });
   });
 });
