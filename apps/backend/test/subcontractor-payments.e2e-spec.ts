@@ -11,6 +11,8 @@ import { SubcontractorNotFoundError } from '../src/subcontractors/errors/subcont
 import { execSync } from 'child_process';
 import * as path from 'path';
 import { PrismaModule } from 'src/prisma/prisma.module';
+import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
+import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 
 /**
  * Integration tests for SubcontractorPaymentsService.
@@ -28,7 +30,7 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
   let clientId: string;
   let subcontractorId: string;
   let projectId: string;
-  let corporationId: string;
+  let supplierId: string;
 
   const jan = new Date('2026-01-15').toISOString();
   const dec2025 = new Date('2025-12-15').toISOString(); // previous month seed
@@ -57,7 +59,12 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
         }),
         PrismaModule,
       ],
-      providers: [SubcontractorPaymentsService, ProjectReportsService],
+      providers: [
+        SubcontractorPaymentsService,
+        ProjectReportsService,
+        ProjectClientAssignmentsService,
+        VatRatesService,
+      ],
     }).compile();
 
     service = module.get<SubcontractorPaymentsService>(
@@ -92,12 +99,14 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
           clientId,
           estimatedAmount: 500000,
           description: '',
+          requesterName: 'Test requester',
+          location: 'Test location',
         },
       })
     ).id;
 
-    corporationId = (
-      await prismaService.corporation.create({
+    supplierId = (
+      await prismaService.supplier.create({
         data: { name: `SubPay Test Corp ${Date.now()}` },
       })
     ).id;
@@ -116,11 +125,11 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
 
   afterEach(async () => {
     await prismaService.subcontractorPayment.deleteMany({});
-    await prismaService.corporationPayment.deleteMany({});
+    await prismaService.supplierPayment.deleteMany({});
     await prismaService.projectReportIncome.deleteMany({});
     await prismaService.projectReport.deleteMany({});
     await prismaService.project.deleteMany({});
-    await prismaService.corporation.deleteMany({});
+    await prismaService.supplier.deleteMany({});
     await prismaService.subcontractor.deleteMany({});
     await prismaService.client.deleteMany({});
   });
@@ -140,8 +149,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
     date: string;
     incomeAmount: number;
     profitMargin: number;
-    corporationPayments?: {
-      corporationId: string;
+    supplierPayments?: {
+      supplierId: string;
       amount: number;
       date?: string;
     }[];
@@ -152,7 +161,7 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
       date: opts.date,
       incomeEntries: [{ amount: opts.incomeAmount }],
       profitMargin: opts.profitMargin,
-      corporationPayments: opts.corporationPayments ?? [],
+      supplierPayments: opts.supplierPayments ?? [],
     });
   }
 
@@ -191,6 +200,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
             clientId,
             estimatedAmount: 300000,
             description: '',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -234,7 +245,7 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
       expect(Math.abs(result.amountOwed - expected)).toBeLessThan(1);
     });
 
-    it('should subtract corporation payments from amountOwed', async () => {
+    it('should subtract supplier payments from amountOwed', async () => {
       const incomeAmount = 100000;
       const profitMargin = 20;
       const corpAmount = 15000;
@@ -245,7 +256,7 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
         date: jan,
         incomeAmount,
         profitMargin,
-        corporationPayments: [{ corporationId, amount: corpAmount, date: jan }],
+        supplierPayments: [{ supplierId, amount: corpAmount, date: jan }],
       });
 
       const result = await service.findSubcontractorMonthlyPayments(
@@ -362,6 +373,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
             clientId,
             estimatedAmount: 300000,
             description: '',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -454,6 +467,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
             clientId,
             estimatedAmount: 300000,
             description: '',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -537,6 +552,39 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
       expect(records[0].subcontractorId).toBe(subcontractorId);
     });
 
+    it('should store, return and clear an optional description', async () => {
+      await createReport({
+        projectId,
+        subcontractorId,
+        date: jan,
+        incomeAmount: 50000,
+        profitMargin: 20,
+      });
+
+      const payment = await service.create({
+        subcontractorId,
+        projectId,
+        serviceDate: jan,
+        amount: 20000,
+        description: 'Cheque #1042',
+      });
+      expect(payment.description).toBe('Cheque #1042');
+
+      const monthly = await service.findSubcontractorMonthlyPayments(
+        subcontractorId,
+        { month: jan },
+      );
+      expect(monthly.payments[0].description).toBe('Cheque #1042');
+
+      const cleared = await service.update(payment.id, { description: '' });
+      expect(cleared.description).toBeNull();
+      const record = await prismaService.subcontractorPayment.findUniqueOrThrow(
+        { where: { id: payment.id } },
+      );
+      expect(record.description).toBeNull();
+      expect(record.amount.toNumber()).toBe(20000);
+    });
+
     it('should allow multiple partial payments per subcontractor+project+month', async () => {
       await createReport({
         projectId,
@@ -577,6 +625,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
             clientId,
             estimatedAmount: 200000,
             description: '',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;
@@ -639,6 +689,8 @@ describe('SubcontractorPaymentsService Integration Tests', () => {
             clientId,
             estimatedAmount: 200000,
             description: '',
+            requesterName: 'Test requester',
+            location: 'Test location',
           },
         })
       ).id;

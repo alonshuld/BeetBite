@@ -81,6 +81,47 @@ jobs:
       - name: Frontend unit tests (Vitest)
         run: pnpm --filter frontend test
 
+  # Replays every migration into an empty Postgres and fails if the result is
+  # not exactly schema.prisma — catches a schema edit committed without its
+  # migration, which would otherwise only show up as drift in someone's dev DB.
+  migrations:
+    name: Migrations match schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The same script `pnpm dev` runs: deploy, generate, then diff the DB
+      # against schema.prisma with a non-zero exit on any difference.
+      - name: Apply migrations and check for drift
+        run: pnpm --filter backend db:sync
+
   build:
     name: Build
     runs-on: ubuntu-latest

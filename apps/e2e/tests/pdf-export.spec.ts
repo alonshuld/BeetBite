@@ -32,6 +32,8 @@ dbTest.describe('PDF export', () => {
         name: 'Export Project',
         estimatedAmount: 200000,
         description: 'PDF export tests',
+        requesterName: 'Test Requester',
+        location: 'Test Location',
       },
     });
     projectId = project.id;
@@ -76,16 +78,6 @@ dbTest.describe('PDF export', () => {
     ).toBeVisible();
   }
 
-  /** Counts export requests, so "nothing was sent" is assertable. */
-  async function countExportRequests(page: Page): Promise<() => number> {
-    let count = 0;
-    await page.route(EXPORT_ROUTE, async (route) => {
-      count += 1;
-      await route.fallback();
-    });
-    return () => count;
-  }
-
   // ==========================================================================
   // Modal mechanics
   // ==========================================================================
@@ -101,20 +93,29 @@ dbTest.describe('PDF export', () => {
     ).toContainText('Export Project');
   });
 
-  dbTest('a blank "Approved For" sends no request', async ({ page, db }) => {
-    void db;
-    await openExportModal(page);
-    const exportCount = await countExportRequests(page);
+  dbTest(
+    'a blank "Approved For" is optional — the export still downloads',
+    async ({ page, db }) => {
+      await openExportModal(page);
 
-    // Whitespace only — handleExport trims before its emptiness check.
-    await page.getByLabel('Approved For').fill('   ');
-    await page.getByRole('button', { name: 'Save' }).click();
+      // Whitespace only — trimmed to nothing, so the field is left out.
+      await page.getByLabel('Approved For').fill('   ');
+      const [request, download] = await Promise.all([
+        page.waitForRequest(EXPORT_ROUTE),
+        page.waitForEvent('download'),
+        page.getByRole('button', { name: 'Save' }).click(),
+      ]);
 
-    await expect(
-      page.getByRole('dialog', { name: 'Export PDF' }),
-    ).toBeVisible();
-    expect(exportCount()).toBe(0);
-  });
+      expect(request.postDataJSON()).not.toHaveProperty('approvedFor');
+      expectValidPdf(await readFile(await download.path()));
+
+      // Nothing typed, nothing remembered for the next export's prefill.
+      const project = await db.project.findUnique({
+        where: { id: projectId },
+      });
+      expect(project.lastApprovedFor).toBeNull();
+    },
+  );
 
   // ==========================================================================
   // Happy path
@@ -157,8 +158,38 @@ dbTest.describe('PDF export', () => {
       expect(request.postDataJSON()).toEqual({
         projectReportId: reportId,
         approvedFor: 'Shell works',
+        // Seeded from the project, sent as part of this one document.
+        description: 'PDF export tests',
         lang: 'en',
       });
+    },
+  );
+
+  // The dialog's description belongs to the document being produced, not to
+  // the project. Editing it here used to write straight through to the
+  // project record; the projects page is now the only place that changes.
+  dbTest(
+    'editing the description prints it without touching the project',
+    async ({ page, db }) => {
+      await openExportModal(page);
+
+      await page.getByLabel('Approved For').fill('Shell works');
+      await page.locator('#export-project-description').fill('This month only');
+
+      const [request] = await Promise.all([
+        page.waitForRequest(EXPORT_ROUTE),
+        page.waitForEvent('download'),
+        page.getByRole('button', { name: 'Save' }).click(),
+      ]);
+
+      expect(request.postDataJSON()).toMatchObject({
+        description: 'This month only',
+      });
+
+      const project = await db.project.findUniqueOrThrow({
+        where: { id: projectId },
+      });
+      expect(project.description).toBe('PDF export tests');
     },
   );
 

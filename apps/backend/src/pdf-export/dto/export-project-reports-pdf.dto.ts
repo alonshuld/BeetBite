@@ -23,15 +23,25 @@ export class ExportProjectReportsPdfDto {
   })
   projectReportId!: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(500)
-  @ApiProperty({
+  @ApiPropertyOptional({
+    example: 'ישראל ישראלי',
+    description:
+      'Name of the person or company this project report is for; the project name is appended to it on the document. Omit or leave empty to print the project name alone.',
+  })
+  approvedFor?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  @ApiPropertyOptional({
     example: 'עבודות שלד + גמר',
     description:
-      'Free text describing what the account approval covers; the project name is appended to it on the document',
+      "Description printed on this document only. It is never written back to the project — the project's own description is edited from the projects screen.",
   })
-  approvedFor!: string;
+  description?: string;
 
   @IsOptional()
   @IsIn(['en', 'he'])

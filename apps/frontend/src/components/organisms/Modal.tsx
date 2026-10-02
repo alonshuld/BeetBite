@@ -1,5 +1,10 @@
 import { ReactNode, useEffect } from "react";
-import { ButtonGhost, ButtonDanger, ButtonPrimary } from "@/components/atoms";
+import {
+  ButtonGhost,
+  ButtonDanger,
+  ButtonPrimary,
+  Icon,
+} from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
 
 interface ModalProps {
@@ -32,43 +37,37 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-      style={{ backgroundColor: "oklch(5% 0.01 350 / 0.75)" }}
+      className="fixed inset-0 z-50 flex items-end justify-center animate-fadeIn bg-[oklch(12%_0.03_350_/_0.6)] backdrop-blur-[2px] sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`bg-surface rounded-[var(--radius)] w-full mx-4 max-h-[90vh] flex flex-col overflow-hidden animate-[slideUp_0.2s_ease] sm:rounded-[var(--radius)] sm:rounded-b-[var(--radius)] max-[640px]:rounded-b-none ${large ? "sm:max-w-[720px]" : "sm:max-w-[520px]"}`}
+        className={`flex max-h-[92vh] w-full animate-sheetIn flex-col overflow-hidden border border-border bg-surface shadow-modal rounded-t-lg sm:rounded-lg ${
+          large ? "sm:max-w-[760px]" : "sm:max-w-[540px]"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
-          <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-border shrink-0">
-            <h2 className="font-serif text-xl text-text">{title}</h2>
+          <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-6 py-4">
+            <h2 className="text-title text-text">{title}</h2>
             <button
               onClick={onClose}
-              className="text-text-muted hover:text-text text-lg leading-none p-1 -mr-1"
+              className="-me-1.5 rounded p-1.5 text-text-dim transition-colors hover:bg-surface-2 hover:text-text"
               aria-label="Close"
             >
-              ✕
+              <Icon name="close" size={17} />
             </button>
           </div>
         )}
-        <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+        <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
         {footer && (
-          <div className="px-6 pb-5 pt-3 border-t border-border shrink-0 flex justify-end gap-2">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-surface-2 px-6 py-4">
             {footer}
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes slideUp {
-          from { transform: translateY(20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }

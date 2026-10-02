@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SubcontractorPaymentsService } from './subcontractor-payments.service';
+import { ProjectClientAssignmentsService } from '../project-client-assignments/project-client-assignments.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { SubcontractorPaymentNotFoundError } from './errors/subcontractor-payment-not-found.error';
 import { SubcontractorPaymentOverpaymentError } from './errors/subcontractor-payment-overpayment.error';
@@ -34,6 +35,14 @@ describe('SubcontractorPaymentsService', () => {
     },
   };
 
+  // Resolution is exercised by project-client-assignments.service.spec.ts.
+  // An empty map here makes the read paths fall back to the project's cached
+  // client, which is the behaviour every assertion below was written against.
+  const mockAssignmentsService = {
+    resolveClientsForMonth: jest.fn().mockResolvedValue(new Map()),
+    createInitialAssignment: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -41,6 +50,10 @@ describe('SubcontractorPaymentsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: ProjectClientAssignmentsService,
+          useValue: mockAssignmentsService,
         },
       ],
     }).compile();
@@ -78,7 +91,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 5000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
       mockPrismaService.subcontractorPayment.create.mockResolvedValue(
@@ -93,17 +106,27 @@ describe('SubcontractorPaymentsService', () => {
         subcontractor: mockPayment.subcontractor,
         serviceDate: mockPayment.serviceDate.toISOString(),
         amount: 1000,
+        paymentDate: null,
       });
       expect(
         mockPrismaService.subcontractorPayment.create,
       ).toHaveBeenCalledWith({
-        data: createDto,
+        data: {
+          subcontractorId: createDto.subcontractorId,
+          projectId: createDto.projectId,
+          serviceDate: new Date(createDto.serviceDate),
+          amount: createDto.amount,
+          paymentDate: null,
+          description: null,
+        },
         select: {
           id: true,
           projectId: true,
           serviceDate: true,
           amount: true,
           isPaid: true,
+          paymentDate: true,
+          description: true,
           subcontractor: {
             select: {
               id: true,
@@ -118,7 +141,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 1000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       // amountOwed = 900, already paid = 500, new amount = 1000 → overpayment
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([
@@ -130,11 +153,112 @@ describe('SubcontractorPaymentsService', () => {
       ).rejects.toThrow(SubcontractorPaymentOverpaymentError);
     });
 
+    // 🔴 serviceDate says which month is being settled; paymentDate says when
+    // the money moved. A payment made on the 17th still settles the month that
+    // starts on the 1st. Conflating the two is the failure this guards.
+    it('keeps the settled month and the payment day distinct', async () => {
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
+        profitMargin: { toNumber: () => 10 },
+        supplierPayments: [],
+      });
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+      mockPrismaService.subcontractorPayment.create.mockResolvedValue({
+        ...mockPayment,
+        paymentDate: new Date('2023-01-17'),
+      });
+
+      const result = await service.create({
+        ...createDto,
+        paymentDate: '2023-01-17',
+      });
+
+      expect(result.serviceDate).toBe('2023-01-01T00:00:00.000Z');
+      expect(result.paymentDate).toBe('2023-01-17T00:00:00.000Z');
+      // Both reach Prisma as Date objects, each keeping its own meaning. A
+      // date-only string here would be accepted by @IsISO8601() and then
+      // rejected by Prisma at runtime, which is exactly how this broke before.
+      const call = (
+        mockPrismaService.subcontractorPayment.create.mock.calls as unknown[][]
+      )[0][0] as { data: { serviceDate: Date; paymentDate: Date | null } };
+      expect(call.data.serviceDate).toBeInstanceOf(Date);
+      expect(call.data.serviceDate.toISOString()).toBe(
+        '2023-01-01T00:00:00.000Z',
+      );
+      expect(call.data.paymentDate).toBeInstanceOf(Date);
+      expect(call.data.paymentDate!.toISOString()).toBe(
+        '2023-01-17T00:00:00.000Z',
+      );
+    });
+
+    it('records a payment with no date at all', async () => {
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
+        profitMargin: { toNumber: () => 10 },
+        supplierPayments: [],
+      });
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+      mockPrismaService.subcontractorPayment.create.mockResolvedValue(
+        mockPayment,
+      );
+
+      const result = await service.create(createDto);
+
+      expect(result.paymentDate).toBeNull();
+      const call = (
+        mockPrismaService.subcontractorPayment.create.mock.calls as unknown[][]
+      )[0][0] as { data: { paymentDate: Date | null } };
+      expect(call.data.paymentDate).toBeNull();
+    });
+
+    it('stores a trimmed description', async () => {
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
+        profitMargin: { toNumber: () => 10 },
+        supplierPayments: [],
+      });
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+      mockPrismaService.subcontractorPayment.create.mockResolvedValue({
+        ...mockPayment,
+        description: 'Cheque #1042',
+      });
+
+      const result = await service.create({
+        ...createDto,
+        description: '  Cheque #1042  ',
+      });
+
+      expect(result.description).toBe('Cheque #1042');
+      const call = (
+        mockPrismaService.subcontractorPayment.create.mock.calls as unknown[][]
+      )[0][0] as { data: { description: string | null } };
+      expect(call.data.description).toBe('Cheque #1042');
+    });
+
+    it('stores a blank description as null', async () => {
+      mockPrismaService.projectReport.findFirst.mockResolvedValue({
+        incomeEntries: [{ amount: { toNumber: () => 5000 } }],
+        profitMargin: { toNumber: () => 10 },
+        supplierPayments: [],
+      });
+      mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
+      mockPrismaService.subcontractorPayment.create.mockResolvedValue(
+        mockPayment,
+      );
+
+      await service.create({ ...createDto, description: '   ' });
+
+      const call = (
+        mockPrismaService.subcontractorPayment.create.mock.calls as unknown[][]
+      )[0][0] as { data: { description: string | null } };
+      expect(call.data.description).toBeNull();
+    });
+
     it('should throw SubcontractorNotFoundError when subcontractor does not exist', async () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 5000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
@@ -401,12 +525,81 @@ describe('SubcontractorPaymentsService', () => {
       );
     });
 
+    // 🔴 The day the money moved is correctable on its own: a wrong date must
+    // be fixable without restating the amount and re-running the guard.
+    it('should update only the payment date when that is all that was sent', async () => {
+      const mockPayment = {
+        id: 'clh0000000000000000000001',
+        projectId: 'project-1',
+        serviceDate: new Date('2023-01-01'),
+        amount: { toNumber: () => 900 },
+        isPaid: false,
+        paymentDate: new Date('2023-01-17'),
+        subcontractor: {
+          id: 'clh0000000000000000000001',
+          name: 'Test Subcontractor',
+        },
+      };
+      mockPrismaService.subcontractorPayment.update.mockResolvedValue(
+        mockPayment,
+      );
+
+      const result = await service.update('clh0000000000000000000001', {
+        paymentDate: '2023-01-17',
+      });
+
+      expect(mockPrismaService.projectReport.findFirst).not.toHaveBeenCalled();
+      const call = (
+        mockPrismaService.subcontractorPayment.update.mock.calls as [
+          { data: { paymentDate: Date; serviceDate?: Date } },
+        ][]
+      )[0][0];
+      expect(call.data.paymentDate).toBeInstanceOf(Date);
+      expect(call.data.paymentDate.toISOString()).toBe(
+        '2023-01-17T00:00:00.000Z',
+      );
+      // The month being settled is untouched by a date correction.
+      expect(call.data.serviceDate).toBeUndefined();
+      expect(result.paymentDate).toBe('2023-01-17T00:00:00.000Z');
+    });
+
+    // A note is not money: editing it must skip the overpayment guard, and an
+    // empty string clears it rather than storing "".
+    it('should update only the description, clearing it when blank', async () => {
+      mockPrismaService.subcontractorPayment.update.mockResolvedValue({
+        id: 'clh0000000000000000000001',
+        projectId: 'project-1',
+        serviceDate: new Date('2023-01-01'),
+        amount: { toNumber: () => 900 },
+        isPaid: false,
+        paymentDate: null,
+        description: null,
+        subcontractor: {
+          id: 'clh0000000000000000000001',
+          name: 'Test Subcontractor',
+        },
+      });
+
+      const result = await service.update('clh0000000000000000000001', {
+        description: '',
+      });
+
+      expect(mockPrismaService.projectReport.findFirst).not.toHaveBeenCalled();
+      const call = (
+        mockPrismaService.subcontractorPayment.update.mock.calls as [
+          { data: Record<string, unknown> },
+        ][]
+      )[0][0];
+      expect(call.data).toEqual({ description: null });
+      expect(result.description).toBeNull();
+    });
+
     it('should throw SubcontractorPaymentOverpaymentError when updated amount exceeds amount owed', async () => {
       // amountOwed = 900. Other payments = 600. New amount = 400 → total 1000 > 900
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 1000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([
         { amount: { toNumber: () => 600 } },
@@ -425,7 +618,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 1000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
@@ -466,7 +659,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 2000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
       mockPrismaService.subcontractorPayment.update.mockResolvedValue(
@@ -484,18 +677,27 @@ describe('SubcontractorPaymentsService', () => {
         subcontractor: mockPayment.subcontractor,
         serviceDate: mockPayment.serviceDate.toISOString(),
         amount: 1500,
+        paymentDate: null,
       });
       expect(
         mockPrismaService.subcontractorPayment.update,
       ).toHaveBeenCalledWith({
         where: { id: 'clh0000000000000000000001' },
-        data: updateDto,
+        // The date arrives as a string and reaches Prisma as a Date.
+        data: {
+          subcontractorId: updateDto.subcontractorId,
+          projectId: updateDto.projectId,
+          serviceDate: new Date(updateDto.serviceDate),
+          amount: updateDto.amount,
+        },
         select: {
           id: true,
           projectId: true,
           serviceDate: true,
           amount: true,
           isPaid: true,
+          paymentDate: true,
+          description: true,
           subcontractor: {
             select: {
               id: true,
@@ -511,7 +713,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 2000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
@@ -588,7 +790,7 @@ describe('SubcontractorPaymentsService', () => {
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => owed } }],
         profitMargin: { toNumber: () => 0 },
-        corporationPayments: [],
+        supplierPayments: [],
       });
 
     it('should NOT reject a fractional payment that exactly reaches the owed amount (owed=7988.44, paid=0.44, new=7988)', async () => {
@@ -651,12 +853,12 @@ describe('SubcontractorPaymentsService', () => {
       ).rejects.toThrow(SubcontractorPaymentOverpaymentError);
     });
 
-    it('should subtract corporation payments and profit margin from income when computing the owed amount', async () => {
+    it('should subtract supplier payments and profit margin from income when computing the owed amount', async () => {
       // income=10000, margin=10% -> 9000, corp payments 2500 -> owed 6500
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 10000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [
+        supplierPayments: [
           { amount: { toNumber: () => 1500 } },
           { amount: { toNumber: () => 1000 } },
         ],
@@ -669,12 +871,12 @@ describe('SubcontractorPaymentsService', () => {
       ).rejects.toThrow(SubcontractorPaymentOverpaymentError);
     });
 
-    it('should treat the owed amount as zero (not negative) when corporation payments exceed income minus profit', async () => {
+    it('should treat the owed amount as zero (not negative) when supplier payments exceed income minus profit', async () => {
       // income=1000, margin=10% -> 900, corp payments 1500 -> raw owed = -600, floored to 0
       mockPrismaService.projectReport.findFirst.mockResolvedValue({
         incomeEntries: [{ amount: { toNumber: () => 1000 } }],
         profitMargin: { toNumber: () => 10 },
-        corporationPayments: [{ amount: { toNumber: () => 1500 } }],
+        supplierPayments: [{ amount: { toNumber: () => 1500 } }],
       });
       mockPrismaService.subcontractorPayment.findMany.mockResolvedValue([]);
 
@@ -698,12 +900,12 @@ describe('SubcontractorPaymentsService', () => {
         {
           profitMargin: { toNumber: () => 0 },
           incomeEntries: [{ amount: { toNumber: () => 1000 } }],
-          corporationPayments: [{ amount: { toNumber: () => 1500 } }],
+          supplierPayments: [{ amount: { toNumber: () => 1500 } }],
         },
         {
           profitMargin: { toNumber: () => 0 },
           incomeEntries: [{ amount: { toNumber: () => 2000 } }],
-          corporationPayments: [],
+          supplierPayments: [],
         },
       ]);
 
@@ -723,13 +925,13 @@ describe('SubcontractorPaymentsService', () => {
           subcontractorId: 'sub-1',
           profitMargin: { toNumber: () => 0 },
           incomeEntries: [{ amount: { toNumber: () => 500 } }],
-          corporationPayments: [{ amount: { toNumber: () => 900 } }], // raw -400 -> 0
+          supplierPayments: [{ amount: { toNumber: () => 900 } }], // raw -400 -> 0
         },
         {
           subcontractorId: 'sub-1',
           profitMargin: { toNumber: () => 0 },
           incomeEntries: [{ amount: { toNumber: () => 3000 } }],
-          corporationPayments: [{ amount: { toNumber: () => 500 } }], // 2500
+          supplierPayments: [{ amount: { toNumber: () => 500 } }], // 2500
         },
       ]);
 

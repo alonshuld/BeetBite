@@ -18,6 +18,8 @@ dbTest.describe('Subcontractor Payments', () => {
         name: 'SubPay Project',
         estimatedAmount: 200000,
         description: 'Subcontractor payment tests',
+        requesterName: 'Test Requester',
+        location: 'Test Location',
       },
     });
     projectId = project.id;
@@ -42,7 +44,7 @@ dbTest.describe('Subcontractor Payments', () => {
     await page.getByText('SubPay Worker').first().click();
   }
 
-  /** Fill the inline partial row for the seeded project and save it. */
+  /** Fill the inline instalment row for the seeded project and save it. */
   async function payPartial(
     page: import('@playwright/test').Page,
     amount: string,
@@ -63,6 +65,52 @@ dbTest.describe('Subcontractor Payments', () => {
       await expect(page.getByText(/10,000|10000/).first()).toBeVisible({
         timeout: 5000,
       });
+    },
+  );
+
+  dbTest(
+    'records a description with an instalment, then edits and deletes it',
+    async ({ page, db }) => {
+      await openWorkerPanel(page);
+
+      await page.getByTitle('Partial', { exact: true }).first().click();
+      await page.fill(`#partial-${projectId}`, '10000');
+      await page.fill(`#payment-description-${projectId}`, 'Cheque #1042');
+      await page.getByTitle('Save', { exact: true }).first().click();
+
+      // Shown on the instalment's own line once saved.
+      const line = page.getByRole('listitem').filter({ hasText: '₪10,000' });
+      await expect(line.getByText('Cheque #1042')).toBeVisible();
+      await expect(async () => {
+        const payments = await db.subcontractorPayment.findMany();
+        expect(payments).toHaveLength(1);
+        expect(payments[0].description).toBe('Cheque #1042');
+      }).toPass({ timeout: 5000 });
+
+      // Corrected through the edit button, committed by the Save button.
+      await line.getByTitle('Edit description', { exact: true }).click();
+      const input = line.getByLabel('Description', { exact: true });
+      await expect(input).toHaveValue('Cheque #1042');
+      await input.fill('Bank transfer');
+      await line.getByRole('button', { name: 'Save', exact: true }).click();
+
+      await expect(line.getByText('Bank transfer')).toBeVisible();
+      await expect(async () => {
+        const [payment] = await db.subcontractorPayment.findMany();
+        expect(payment.description).toBe('Bank transfer');
+      }).toPass({ timeout: 5000 });
+
+      // Deleted through its own button — the payment itself stays.
+      await line.getByTitle('Delete description', { exact: true }).click();
+      await expect(line.getByText('Bank transfer')).not.toBeVisible();
+      await expect(
+        line.getByTitle('Add description', { exact: true }),
+      ).toBeVisible();
+      await expect(async () => {
+        const payments = await db.subcontractorPayment.findMany();
+        expect(payments).toHaveLength(1);
+        expect(payments[0].description).toBeNull();
+      }).toPass({ timeout: 5000 });
     },
   );
 
@@ -88,19 +136,140 @@ dbTest.describe('Subcontractor Payments', () => {
   );
 
   dbTest(
-    'marking a project paid records the full amount owed',
+    'marking a project paid records the full amount owed on a chosen day',
     async ({ page, db }) => {
       void db;
       await openWorkerPanel(page);
 
+      // The green tick no longer writes on the click: it opens the instalment
+      // row with the outstanding balance filled in and waits for the day.
       await page.getByTitle('Paid', { exact: true }).first().click();
+      await expect(page.locator(`#partial-${projectId}`)).toHaveValue('45000');
+      await page.fill(`#payment-date-${projectId}`, '2026-05-21');
+      await page.getByTitle('Save', { exact: true }).first().click();
 
       // Owed = 45000, and the whole owed amount is recorded as one payment.
       await expect(async () => {
         const payments = await db.subcontractorPayment.findMany();
         expect(payments).toHaveLength(1);
         expect(Number(payments[0].amount)).toBe(45000);
+        expect(payments[0].paymentDate?.toISOString().slice(0, 10)).toBe(
+          '2026-05-21',
+        );
+        // The month being settled is untouched by the day chosen.
+        expect(payments[0].serviceDate.toISOString().slice(0, 10)).toBe(
+          '2026-05-01',
+        );
       }).toPass({ timeout: 5000 });
+    },
+  );
+
+  dbTest(
+    'a second instalment is added beside the first, not in place of it',
+    async ({ page, db }) => {
+      await openWorkerPanel(page);
+
+      await page.getByTitle('Partial', { exact: true }).first().click();
+      await page.fill(`#partial-${projectId}`, '10000');
+      await page.fill(`#payment-date-${projectId}`, '2026-05-04');
+      await page.getByTitle('Save', { exact: true }).first().click();
+
+      await expect(async () => {
+        expect(await db.subcontractorPayment.count()).toBe(1);
+      }).toPass({ timeout: 5000 });
+
+      await page.getByTitle('Partial', { exact: true }).first().click();
+      await page.fill(`#partial-${projectId}`, '5000');
+      await page.fill(`#payment-date-${projectId}`, '2026-05-18');
+      await page.getByTitle('Save', { exact: true }).first().click();
+
+      // Two rows, two days, and the first instalment survived the second.
+      await expect(async () => {
+        const payments = await db.subcontractorPayment.findMany();
+        expect(payments).toHaveLength(2);
+        const byDay = [...payments].sort(
+          (a, b) => Number(a.paymentDate) - Number(b.paymentDate),
+        );
+        expect(byDay.map((row) => Number(row.amount))).toEqual([10000, 5000]);
+        expect(
+          byDay.map((row) => row.paymentDate?.toISOString().slice(0, 10)),
+        ).toEqual(['2026-05-04', '2026-05-18']);
+      }).toPass({ timeout: 5000 });
+    },
+  );
+
+  dbTest(
+    'two partial payments on different dates are each listed',
+    async ({ page, db }) => {
+      const client = await db.client.create({ data: { name: 'Dates Client' } });
+      const subcontractor = await db.subcontractor.create({
+        data: { name: 'Dates Sub', companyNumber: '515222020' },
+      });
+      const project = await db.project.create({
+        data: {
+          clientId: client.id,
+          name: 'Dates Project',
+          estimatedAmount: 100000,
+          description: 'Payment date test',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
+        },
+      });
+      const report = await db.projectReport.create({
+        data: {
+          projectId: project.id,
+          subcontractorId: subcontractor.id,
+          date: new Date('2026-05-01'),
+          profitMargin: 20,
+        },
+      });
+      await db.projectReportIncome.create({
+        data: {
+          projectReportId: report.id,
+          amount: 10000,
+          incomeDate: new Date('2026-05-10'),
+        },
+      });
+
+      // Two instalments settling the same month, paid on different days.
+      for (const [amount, day] of [
+        [3000, '2026-05-05'],
+        [2000, '2026-05-19'],
+      ] as const) {
+        await db.subcontractorPayment.create({
+          data: {
+            subcontractorId: subcontractor.id,
+            projectId: project.id,
+            serviceDate: new Date('2026-05-01'),
+            amount,
+            paymentDate: new Date(day),
+          },
+        });
+      }
+
+      await page.goto(`${BASE}/subcontractor-payments`);
+      await page.waitForLoadState('networkidle');
+      await page.getByText('Dates Sub').click();
+
+      // Each instalment shows its own day next to its own amount. Assert on
+      // the pair within one list row: a bare amount lookup also matches the
+      // balance and remaining lines, which can carry the same figure.
+      for (const [day, amount] of [
+        ['5 May 2026', '₪3,000'],
+        ['19 May 2026', '₪2,000'],
+      ] as const) {
+        await expect(
+          page.getByRole('listitem').filter({ hasText: day }),
+        ).toContainText(amount, { timeout: 5000 });
+      }
+
+      // The month being settled is untouched by either day.
+      const rows = await db.subcontractorPayment.findMany({
+        where: { projectId: project.id },
+      });
+      for (const row of rows) {
+        expect(row.serviceDate.toISOString().slice(0, 10)).toBe('2026-05-01');
+      }
     },
   );
 });

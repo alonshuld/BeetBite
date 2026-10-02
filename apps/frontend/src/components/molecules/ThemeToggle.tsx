@@ -1,16 +1,19 @@
+import { Icon } from "@/components/atoms/Icon";
 import { useTheme } from "@/contexts/useTheme";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const nextLabel =
+    theme === "light" ? "Switch to dark mode" : "Switch to light mode";
 
   return (
     <button
       onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-      className="flex items-center justify-center w-8 h-8 rounded border border-border bg-surface-2 text-text-muted hover:bg-surface-3 hover:text-text transition-colors"
+      className="flex h-9 w-9 items-center justify-center rounded border border-border bg-surface text-text-muted transition-colors duration-150 hover:bg-surface-2 hover:text-text hover:border-border-strong"
       aria-label="Toggle theme"
-      title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+      title={nextLabel}
     >
-      {theme === "light" ? "🌙" : "☀️"}
+      <Icon name={theme === "light" ? "moon" : "sun"} size={17} />
     </button>
   );
 }

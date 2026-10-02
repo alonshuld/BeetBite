@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { NestedCorporationPaymentDto } from './nested-corporation-payment.dto';
+import { NestedSupplierPaymentDto } from './nested-supplier-payment.dto';
 import { NestedProjectDto } from './nested-project.dto';
 import { NestedSubcontractorWithPaymentDto } from './nested-subcontractor-with-payment.dto';
 import { IncomeEntryResponseDto } from './income-entry-response.dto';
@@ -50,10 +50,18 @@ export class ProjectReportResponseDto {
 
   @ApiProperty({
     description:
-      'The payments made to corporations for their work on the project that month',
-    type: [NestedCorporationPaymentDto],
+      'The payments made to suppliers for their work on the project that month',
+    type: [NestedSupplierPaymentDto],
   })
-  corporationPayments!: NestedCorporationPaymentDto[];
+  supplierPayments!: NestedSupplierPaymentDto[];
+
+  @ApiProperty({
+    example: 120000,
+    nullable: true,
+    description:
+      "Income the project's initiator (יזם) reports for this month. Null unless set; only relevant for PDF export, and only meaningful when the project has an initiator.",
+  })
+  initiatorIncome!: number | null;
 
   @ApiProperty({
     description:

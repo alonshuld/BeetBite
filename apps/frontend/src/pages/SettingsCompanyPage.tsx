@@ -8,8 +8,11 @@ import {
 } from "@/api/endpoints/companySettings";
 import {
   CompanySettingsForm,
+  DEFAULT_PDF_COLORS,
+  DEFAULT_PDF_FONT,
   type CompanySettingsFormValue,
 } from "@/components/organisms/CompanySettingsForm";
+import { LoadingState } from "@/components/molecules/LoadingState";
 
 const BLANK_VALUE: CompanySettingsFormValue = {
   name: "",
@@ -21,6 +24,8 @@ const BLANK_VALUE: CompanySettingsFormValue = {
   addressCity: "",
   logo: null,
   signature: null,
+  ...DEFAULT_PDF_COLORS,
+  pdfFont: DEFAULT_PDF_FONT,
 };
 
 export default function SettingsCompanyPage() {
@@ -44,6 +49,9 @@ export default function SettingsCompanyPage() {
       addressCity: data.addressCity ?? "",
       logo: data.logo,
       signature: data.signature,
+      pdfPrimaryColor: data.pdfPrimaryColor,
+      pdfSecondaryColor: data.pdfSecondaryColor,
+      pdfFont: data.pdfFont,
     });
   }
 
@@ -58,6 +66,9 @@ export default function SettingsCompanyPage() {
       addressCity: value.addressCity.trim() || null,
       logo: value.logo,
       signature: value.signature,
+      pdfPrimaryColor: value.pdfPrimaryColor,
+      pdfSecondaryColor: value.pdfSecondaryColor,
+      pdfFont: value.pdfFont,
     });
   }
 
@@ -69,7 +80,7 @@ export default function SettingsCompanyPage() {
       />
 
       {isLoading ? (
-        <p className="text-text-muted text-sm">{t("loading")}</p>
+        <LoadingState label={t("loading")} />
       ) : (
         <div className="bg-surface rounded p-7 max-w-[640px]">
           <CompanySettingsForm value={value} onChange={setValue} />

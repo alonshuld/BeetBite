@@ -1,0 +1,28 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+
+domain_name   = "yourcompany.co.il"
+app_subdomain = "app"
+acme_email    = "ops@yourcompany.co.il"
+alert_emails  = ["ops@yourcompany.co.il"]
+
+# Route 53 hosts DNS and Terraform creates the zone. Set create_hosted_zone =
+# false if the zone already exists, or manage_dns = false to keep DNS at
+# another provider (then add the A record there by hand, using the elastic_ip
+# output).
+manage_dns         = true
+create_hosted_zone = true
+
+# Backups default to Frankfurt so a Tel Aviv outage can't take both copies.
+# Use "il-central-1" if client data must stay in Israel.
+# backup_region = "eu-central-1"
+
+# Numeric GitHub user IDs whose approval each production deploy waits for
+# (curl https://api.github.com/users/<login> | jq .id). Empty = no approval.
+# github_deploy_reviewers = [12345678]
+
+# Only when the GHCR packages are private: a classic PAT with read:packages.
+# ghcr_username = "your-github-login"
+# ghcr_token    = "ghp_..."
+
+# Optional Healthchecks.io ping URL for the nightly backup.
+# backup_ping_url = "https://hc-ping.com/<uuid>"

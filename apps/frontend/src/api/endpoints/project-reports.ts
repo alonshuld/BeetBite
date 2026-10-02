@@ -15,16 +15,33 @@ export interface ProjectReport {
   profitMargin: number;
   totalIncome: number;
   incomeEntries: IncomeEntry[];
-  corporationPayments: CorporationPaymentRow[];
-  project: { id: string; name: string; client: { id: string; name: string } };
+  supplierPayments: SupplierPaymentRow[];
+  /**
+   * Income the project's initiator (יזם) reports for this month. Null unless
+   * set. Only meaningful when the project has an initiator, and only
+   * relevant for PDF export — required (and always greater than
+   * `totalIncome`) once the project has one, or export is refused.
+   */
+  initiatorIncome: number | null;
+  project: {
+    id: string;
+    name: string;
+    description: string;
+    location: string;
+    requesterName: string;
+    /** Null when the project has no initiator — gates the whole section. */
+    initiatorName: string | null;
+    client: { id: string; name: string };
+  };
   subcontractor: { id: string; name: string };
 }
 
 // Matches backend ProjectReportResponseDto
-export interface CorporationPaymentRow {
+export interface SupplierPaymentRow {
   id: string;
-  corporation: { id: string; name: string };
+  supplier: { id: string; name: string };
   amount: number;
+  includesVat?: boolean;
   vatPercentage?: number | null;
   effectiveTotal?: number;
 }
@@ -36,9 +53,10 @@ export interface ProjectReportDetail {
   profit: number;
   totalIncome: number;
   incomeEntries: IncomeEntry[];
-  project: { id: string; name: string };
+  project: { id: string; name: string; initiatorName: string | null };
   subcontractor: { id: string; name: string; payment: number };
-  corporationPayments: CorporationPaymentRow[];
+  supplierPayments: SupplierPaymentRow[];
+  initiatorIncome: number | null;
 }
 
 // Matches backend CreateProjectReportDto
@@ -48,24 +66,31 @@ export interface CreateProjectReportDto {
   date: string; // ISO date "2024-06-01"
   incomeEntries: { amount: number; incomeDate?: string; tag?: string | null }[];
   profitMargin?: number;
-  corporationPayments: {
-    corporationId: string;
+  supplierPayments: {
+    supplierId: string;
     amount: number;
     date: string;
-    vatPercentage?: number;
   }[];
+  initiatorIncome?: number;
 }
 
-export type UpdateProjectReportDto = Partial<CreateProjectReportDto>;
+export type UpdateProjectReportDto = Partial<
+  Omit<CreateProjectReportDto, "initiatorIncome">
+> & {
+  /** Omit to leave unchanged; null clears it. */
+  initiatorIncome?: number | null;
+};
 
 export interface AddIncomeEntryDto {
   amount: number;
   incomeDate?: string;
+  tag?: string | null;
 }
 
 export interface UpdateIncomeEntryDto {
   amount?: number;
   incomeDate?: string | null;
+  tag?: string | null;
 }
 
 export const projectReportsApi = baseApi.injectEndpoints({
@@ -80,7 +105,7 @@ export const projectReportsApi = baseApi.injectEndpoints({
     }),
     createProjectReport: build.mutation<ProjectReport, CreateProjectReportDto>({
       query: (body) => ({ url: "/projects/reports", method: "POST", body }),
-      invalidatesTags: ["ProjectReports", "Projects"],
+      invalidatesTags: ["ProjectReports", "Projects", "Incomes"],
     }),
     updateProjectReport: build.mutation<
       ProjectReport,
@@ -91,11 +116,11 @@ export const projectReportsApi = baseApi.injectEndpoints({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["ProjectReports"],
+      invalidatesTags: ["ProjectReports", "Incomes"],
     }),
     deleteProjectReport: build.mutation<void, string>({
       query: (id) => ({ url: `/projects/reports/${id}`, method: "DELETE" }),
-      invalidatesTags: ["ProjectReports", "Projects"],
+      invalidatesTags: ["ProjectReports", "Projects", "Incomes"],
     }),
     addIncomeEntry: build.mutation<
       IncomeEntry,
@@ -106,7 +131,7 @@ export const projectReportsApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["ProjectReports", "Projects"],
+      invalidatesTags: ["ProjectReports", "Projects", "Incomes"],
     }),
     updateIncomeEntry: build.mutation<
       IncomeEntry,
@@ -117,14 +142,14 @@ export const projectReportsApi = baseApi.injectEndpoints({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["ProjectReports", "Projects"],
+      invalidatesTags: ["ProjectReports", "Projects", "Incomes"],
     }),
     deleteIncomeEntry: build.mutation<void, string>({
       query: (id) => ({
         url: `/projects/reports/income-entries/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["ProjectReports", "Projects"],
+      invalidatesTags: ["ProjectReports", "Projects", "Incomes"],
     }),
   }),
 });

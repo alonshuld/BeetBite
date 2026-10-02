@@ -1,0 +1,69 @@
+# Production stack for the EC2 host. Differs from the dev docker-compose.yml:
+# no db service (RDS replaces it), pinned GHCR images instead of local builds,
+# only Caddy publishes ports, containers restart on their own, logs rotate.
+#
+# Run through deploy.sh, which supplies the env file:
+#   docker compose --env-file /opt/beetbite/.env -f docker-compose.prod.yml ...
+#
+# SEED_MOCK_DATA is deliberately never forwarded to the backend.
+
+name: beetbite
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN must be set}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates. Losing this volume forces re-issuance, and Let's Encrypt
+      # allows only 5 duplicate certificates per week.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - frontend
+    logging: *logging
+
+  frontend:
+    image: ghcr.io/alonshuld/beetbite-frontend:${IMAGE_TAG:?IMAGE_TAG must be set}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    logging: *logging
+
+  # Must stay named `backend`: the frontend's nginx.conf proxies /api to
+  # http://backend:3000.
+  backend:
+    image: ghcr.io/alonshuld/beetbite-backend:${IMAGE_TAG:?IMAGE_TAG must be set}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set}
+      ALLOWED_ORIGINS: https://${APP_DOMAIN}
+      # pg treats sslmode=require as full verification, and Node does not
+      # trust Amazon's RDS certificate authority by default.
+      NODE_EXTRA_CA_CERTS: /certs/rds-global-bundle.pem
+    volumes:
+      - /opt/beetbite/certs/rds-global-bundle.pem:/certs/rds-global-bundle.pem:ro
+    logging: *logging
+
+volumes:
+  caddy-data:
+  caddy-config:

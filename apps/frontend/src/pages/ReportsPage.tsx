@@ -7,33 +7,48 @@ import {
 import {
   useGetProjectReportsQuery,
   useCreateProjectReportMutation,
+  useUpdateIncomeEntryMutation,
   type ProjectReport,
   type CreateProjectReportDto,
+  type IncomeEntry,
 } from "@/api/endpoints/project-reports";
-import { useExportProjectReportsPdfMutation } from "@/api/endpoints/project-report-exports";
+import { useExportClientSimulatedPdfMutation } from "@/api/endpoints/project-report-exports";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
-import { useGetCorporationsQuery } from "@/api/endpoints/corporations";
+import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import {
   ButtonPrimary,
   ButtonGhost,
+  ButtonQuiet,
   ButtonDanger,
   Badge,
   EmptyState,
+  Icon,
   Input,
   Select,
-  Textarea,
 } from "@/components/atoms";
+import {
+  Statement,
+  StatementRow,
+  StatementRule,
+  StatementTotalRule,
+} from "@/components/molecules/Statement";
 import { FormModal } from "@/components/organisms/Modal";
+import { ExportReportPdfModal } from "@/components/organisms/ExportReportPdfModal";
+import { isMissingInitiatorIncome } from "@/utils/reportExport";
+import { ProfitSimulatorPanel } from "@/components/organisms/ProfitSimulatorPanel";
+import { useProfitSimulation } from "@/features/simulator/useProfitSimulation";
 import { FormRow } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
+import { useFieldCheck } from "@/hooks/useFieldCheck";
 import { useToast } from "@/contexts/useToast";
 import { formatISODate } from "@/utils/formatMonth";
+import { computeSubcontractorRemainder } from "@/utils/subcontractorPayment";
 
 interface CorpPaymentDraft {
-  corporationId: string;
+  supplierId: string;
   amount: string;
   date: string;
 }
@@ -43,6 +58,13 @@ interface IncomeEntryDraft {
   incomeDate: string;
   tag: string;
 }
+
+/**
+ * The tag the backend writes on an opening-balance income entry. Kept in sync
+ * with OPENING_BALANCE_TAG in the backend's common/constants.ts — it is stored
+ * data, so the two must agree.
+ */
+const OPENING_BALANCE_TAG = "Opening balance";
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -60,6 +82,7 @@ export default function ReportsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { t, lang } = useLang();
   const { toast } = useToast();
+  const checkFields = useFieldCheck();
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
@@ -70,13 +93,11 @@ export default function ReportsPage() {
   const { data: clients = [] } = useGetClientsQuery();
   const { data: projects = [] } = useGetProjectsQuery();
   const { data: subcontractors = [] } = useGetSubcontractorsQuery();
-  const { data: corporations = [] } = useGetCorporationsQuery();
+  const { data: suppliers = [] } = useGetSuppliersQuery();
   const [createReport, { isLoading: saving }] =
     useCreateProjectReportMutation();
-  const [exportPdf, { isLoading: exporting }] =
-    useExportProjectReportsPdfMutation();
-
-  const [simMargin, setSimMargin] = useState("");
+  const [exportClientSimulatedPdf, { isLoading: exportingSimulated }] =
+    useExportClientSimulatedPdfMutation();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [clientId, setClientId] = useState("");
@@ -88,35 +109,35 @@ export default function ReportsPage() {
   ]);
   const [profitMarginPercent, setProfitMarginPercent] = useState("");
   const [corpPayments, setCorpPayments] = useState<CorpPaymentDraft[]>([]);
+  const [initiatorIncome, setInitiatorIncome] = useState("");
 
-  // Export is per report: a report is already one project for one month, so
-  // the only thing the dialog still asks for is the free-text approval line.
   const [exportReport, setExportReport] = useState<ProjectReport | null>(null);
-  const [approvedFor, setApprovedFor] = useState("");
 
-  async function handleExport() {
-    if (!exportReport || !approvedFor.trim()) return;
+  // Client-wide simulated export. Overrides are transient UI state:
+  // never written back to a report, only sent along with this one request.
+  async function handleExportSimulated() {
+    if (!selectedClientId) return;
 
     try {
-      const blob = await exportPdf({
-        projectReportId: exportReport.id,
-        approvedFor: approvedFor.trim(),
+      const blob = await exportClientSimulatedPdf({
+        clientId: selectedClientId,
+        month: month + "-01",
+        overrides: simulation.overrides,
         lang,
       }).unwrap();
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `account-approval-${month}.pdf`;
+      a.download = `simulated-report-${month}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      setExportReport(null);
-      toast(t("exportPdf"), "success");
+      toast(t("exportWithSimulator"), "success");
     } catch {
       // The global RTK Query error listener already surfaces a toast with
-      // the server's message (missing company settings, VAT, no report).
+      // the server's message.
     }
   }
 
@@ -145,22 +166,42 @@ export default function ReportsPage() {
     [reports, selectedClientId],
   );
 
-  const totalSubcontractorPayments = useMemo(
-    () =>
-      selectedClientReports.reduce((sum, r) => {
-        const profit = r.totalIncome * (r.profitMargin / 100);
-        const corpTotal = r.corporationPayments.reduce(
-          (s, cp) => s + cp.amount,
-          0,
-        );
-        return sum + (r.totalIncome - profit - corpTotal);
-      }, 0),
-    [selectedClientReports],
+  // The whole client's simulation state. Transient: cleared whenever the
+  // client or the month changes, and never written back to a report. The
+  // sheets, the client-header totals and the simulated PDF export all read
+  // their margins from here, so the page shows one consistent set of numbers.
+  const simulation = useProfitSimulation(
+    selectedClientReports,
+    `${selectedClientId ?? ""}:${month}`,
   );
+
+  // The drawer starts closed and closing it ends the simulation, so the page
+  // only ever shows stored figures unless the user is actively simulating.
+  const [simulatorOpen, setSimulatorOpen] = useState(false);
+  const { reset: resetSimulation } = simulation;
+
+  function closeSimulator() {
+    setSimulatorOpen(false);
+    resetSimulation();
+  }
+
+  useEffect(() => {
+    setSimulatorOpen(false);
+  }, [selectedClientId, month]);
+
+  // The income side of the same figure, for the selected month only.
+  // Income is never simulated: only the margin split moves.
+  const totalClientIncome = simulation.totals.income;
+  const totalSubcontractorPayments = simulation.totals.subcontractorPayment;
 
   const filteredProjects = clientId
     ? projects.filter((p) => p.clientId === clientId)
     : projects;
+
+  // Initiator payment rows only appear when the selected project
+  // actually has an initiator linked. No initiator on the project → no
+  // section at all, not an empty one.
+  const selectedProjectForModal = projects.find((p) => p.id === projectId);
 
   function handleProjectChange(pid: string) {
     setProjectId(pid);
@@ -194,13 +235,20 @@ export default function ReportsPage() {
     setIncomeEntries([{ amount: "", incomeDate: "", tag: "" }]);
     setProfitMarginPercent("");
     setCorpPayments([]);
+    setInitiatorIncome("");
     setModalOpen(true);
   }
 
   async function handleSave() {
-    if (!projectId) return;
     const validEntries = incomeEntries.filter((e) => e.amount !== "");
-    if (validEntries.length === 0) return;
+    if (
+      !checkFields([
+        [t("client"), !clientId && "missing"],
+        [t("project"), !projectId && "missing"],
+        [t("incomeILS"), validEntries.length === 0 && "missing"],
+      ])
+    )
+      return;
     const dto: CreateProjectReportDto = {
       projectId,
       subcontractorId: subcontractorId || undefined,
@@ -211,15 +259,19 @@ export default function ReportsPage() {
         tag: e.tag.trim() || null,
       })),
       profitMargin: Number(profitMarginPercent) || undefined,
-      corporationPayments: corpPayments
-        .filter((cp) => cp.corporationId !== "")
+      supplierPayments: corpPayments
+        .filter((cp) => cp.supplierId !== "")
         .map((cp) => ({
-          corporationId: cp.corporationId,
+          supplierId: cp.supplierId,
           amount: Number(cp.amount),
           date: cp.date,
         })),
+      initiatorIncome: initiatorIncome ? Number(initiatorIncome) : undefined,
     };
-    await createReport(dto);
+    const result = await createReport(dto);
+    // A rejected write has already toasted its reason — keep the form open
+    // so the user can correct it instead of re-entering everything.
+    if ("error" in result) return;
     setModalOpen(false);
   }
 
@@ -243,7 +295,7 @@ export default function ReportsPage() {
   function addCorpPayment() {
     setCorpPayments((prev) => [
       ...prev,
-      { corporationId: "", amount: "", date: todayISO() },
+      { supplierId: "", amount: "", date: todayISO() },
     ]);
   }
 
@@ -271,7 +323,14 @@ export default function ReportsPage() {
     "";
 
   return (
-    <div className="flex flex-col gap-6">
+    // The drawer is fixed to the page edge; from `md` up the content is inset
+    // by its width as it slides, so it pushes the sheets aside rather than
+    // covering them. Both transitions run at the same 200ms.
+    <div
+      className={`flex flex-col gap-6 transition-[padding] duration-200 ${
+        simulatorOpen ? "md:pe-[356px]" : ""
+      }`}
+    >
       {selectedClientId === null ? (
         <>
           <PageHeader
@@ -306,23 +365,47 @@ export default function ReportsPage() {
         </>
       ) : (
         <>
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <ButtonGhost
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-4">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <button
                 onClick={() => setSelectedClientId(null)}
-                className="text-xs py-1 px-3"
+                className="inline-flex w-fit items-center gap-1 text-label font-semibold text-text-muted transition-colors hover:text-beet"
               >
-                ← {t("clients")}
-              </ButtonGhost>
-              <h1 className="font-serif text-[26px] text-text">
+                <Icon name="chevronLeft" size={13} className="rtl:rotate-180" />
+                {t("clients")}
+              </button>
+              <h1 className="truncate text-page text-text">
                 {selectedClientName}
               </h1>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-text-muted">
-                {t("totalSubcontractorPayments")}:{" "}
-                <span className="text-text font-semibold">
-                  ₪{totalSubcontractorPayments.toLocaleString("he-IL")}
+
+            {/* The client's two running figures, set as a pair so they read
+                as one line of account rather than two loose captions. */}
+            <div className="flex flex-wrap items-end gap-6">
+              <div className="tnum flex flex-col gap-0.5">
+                <span className="text-label text-text-muted">
+                  {t("totalIncome")}
+                </span>
+                <span className="text-title font-semibold leading-none text-text">
+                  ₪{Math.round(totalClientIncome).toLocaleString("he-IL")}
+                </span>
+              </div>
+              <div className="tnum flex flex-col gap-0.5">
+                <span className="flex items-center gap-1.5 text-label text-text-muted">
+                  {t("totalSubcontractorPayments")}
+                  {simulation.isDirty && (
+                    <Badge variant="beet">{t("simulated")}</Badge>
+                  )}
+                </span>
+                <span
+                  className={`text-title font-semibold leading-none ${
+                    simulation.isDirty ? "text-beet-bright" : "text-text"
+                  }`}
+                >
+                  ₪
+                  {Math.round(totalSubcontractorPayments).toLocaleString(
+                    "he-IL",
+                  )}
                 </span>
               </div>
               <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
@@ -338,15 +421,25 @@ export default function ReportsPage() {
             />
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div
+                className={`grid grid-cols-1 gap-4 ${
+                  simulatorOpen ? "xl:grid-cols-2" : "sm:grid-cols-2"
+                }`}
+              >
                 {selectedClientReports.map((report) => (
                   <ProjectSheet
                     key={report.id}
                     report={report}
                     lang={lang}
                     month={month}
+                    simulatedMargin={simulation.simulatedMarginFor(
+                      report.project.id,
+                    )}
                     onExport={() => {
-                      setApprovedFor("");
+                      if (isMissingInitiatorIncome(report)) {
+                        toast(t("initiatorIncomeRequiredForExport"), "error");
+                        return;
+                      }
                       setExportReport(report);
                     }}
                     onNavigate={() =>
@@ -357,68 +450,15 @@ export default function ReportsPage() {
                   />
                 ))}
               </div>
-              <div className="border border-border rounded-[var(--radius)] p-4 flex flex-col gap-3">
-                <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
-                  {t("profitSimulator")}
-                </h3>
-                <div className="flex items-end gap-3">
-                  <Input
-                    label={t("profitMarginPct")}
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.1}
-                    value={simMargin}
-                    onChange={(e) => setSimMargin(e.target.value)}
-                    className="w-32"
-                  />
-                </div>
-                {simMargin !== "" &&
-                  (() => {
-                    const margin = Number(simMargin);
-                    const totalIncome = selectedClientReports.reduce(
-                      (s, r) => s + r.totalIncome,
-                      0,
-                    );
-                    const corpTotal = selectedClientReports.reduce(
-                      (s, r) =>
-                        s +
-                        r.corporationPayments.reduce(
-                          (cs, cp) => cs + cp.amount,
-                          0,
-                        ),
-                      0,
-                    );
-                    const profit = totalIncome * (margin / 100);
-                    const subPay = totalIncome - profit - corpTotal;
-                    return (
-                      <div className="flex flex-col gap-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-text-muted">{t("income")}</span>
-                          <span className="text-text font-medium">
-                            ₪{Math.round(totalIncome).toLocaleString("he-IL")}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-text-muted">
-                            {t("profit")} ({margin}%)
-                          </span>
-                          <span className="text-success font-medium">
-                            ₪{Math.round(profit).toLocaleString("he-IL")}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-text-muted">
-                            {t("subcontractorPayment")}
-                          </span>
-                          <span className="text-text font-medium">
-                            ₪{Math.round(subPay).toLocaleString("he-IL")}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })()}
-              </div>
+
+              <ProfitSimulatorPanel
+                simulation={simulation}
+                open={simulatorOpen}
+                onOpen={() => setSimulatorOpen(true)}
+                onClose={closeSimulator}
+                onExport={() => void handleExportSimulated()}
+                exporting={exportingSimulated}
+              />
             </>
           )}
         </>
@@ -502,7 +542,7 @@ export default function ReportsPage() {
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
+              <span className="text-label font-semibold text-text-muted">
                 {t("incomeEntries")}
               </span>
               <ButtonGhost
@@ -561,8 +601,8 @@ export default function ReportsPage() {
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="text-[12px] font-medium uppercase tracking-wide text-text-muted">
-                {t("corporationPayments")}
+              <span className="text-label font-semibold text-text-muted">
+                {t("supplierPayments")}
               </span>
               <ButtonGhost
                 onClick={addCorpPayment}
@@ -579,13 +619,13 @@ export default function ReportsPage() {
               >
                 <div className="grid grid-cols-3 gap-2 items-end">
                   <Select
-                    value={cp.corporationId}
+                    value={cp.supplierId}
                     onChange={(e) =>
-                      updateCorpPayment(i, { corporationId: e.target.value })
+                      updateCorpPayment(i, { supplierId: e.target.value })
                     }
                   >
-                    <option value="">— {t("corporation")} —</option>
-                    {corporations.map((c) => (
+                    <option value="">— {t("supplier")} —</option>
+                    {suppliers.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
@@ -620,30 +660,29 @@ export default function ReportsPage() {
               </div>
             ))}
           </div>
+
+          {selectedProjectForModal?.initiatorId && (
+            <div className="flex flex-col gap-1">
+              <Input
+                id="report-initiator-income"
+                label={t("initiatorIncome")}
+                type="number"
+                min={0}
+                value={initiatorIncome}
+                onChange={(e) => setInitiatorIncome(e.target.value)}
+              />
+              <p className="text-xs text-text-muted">
+                {t("initiatorIncomeHint")}
+              </p>
+            </div>
+          )}
         </div>
       </FormModal>
 
-      <FormModal
-        open={exportReport !== null}
+      <ExportReportPdfModal
+        report={exportReport}
         onClose={() => setExportReport(null)}
-        onSubmit={() => void handleExport()}
-        title={t("exportPdf")}
-        loading={exporting}
-      >
-        <div className="flex flex-col gap-4">
-          <p className="text-sm text-text-muted">
-            {exportReport?.project.name}
-          </p>
-          <Textarea
-            id="export-approved-for"
-            label={t("approvedForLabel")}
-            placeholder={t("approvedForPlaceholder")}
-            value={approvedFor}
-            onChange={(e) => setApprovedFor(e.target.value)}
-            rows={3}
-          />
-        </div>
-      </FormModal>
+      />
     </div>
   );
 }
@@ -659,12 +698,21 @@ function ClientCard({ client, reportCount, onClick }: ClientCardProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-surface rounded-[var(--radius)] border border-border p-4 flex flex-col gap-2 transition-colors hover:border-beet/40 hover:bg-surface-2 active:scale-[0.99]"
+      className="group flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4 text-start transition-colors duration-150 hover:border-beet/45 hover:bg-beet-tint"
     >
-      <p className="font-medium text-text">{client.name}</p>
-      <p className="text-text-muted text-sm">
-        {reportCount} {t("projectReports").toLowerCase()}
-      </p>
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate text-lead font-semibold text-text">
+          {client.name}
+        </span>
+        <span className="tnum text-sm text-text-muted">
+          {reportCount} {t("projectReports").toLowerCase()}
+        </span>
+      </span>
+      <Icon
+        name="chevronRight"
+        size={18}
+        className="text-text-dim transition-colors group-hover:text-beet rtl:rotate-180"
+      />
     </button>
   );
 }
@@ -673,6 +721,11 @@ interface ProjectSheetProps {
   report: ProjectReport;
   lang: string;
   month: string;
+  /**
+   * Margin currently dialled in on the simulator, when it differs from
+   * the report's saved one. Undefined means the sheet shows stored figures.
+   */
+  simulatedMargin?: number;
   onNavigate: () => void;
   onExport: () => void;
 }
@@ -680,95 +733,231 @@ interface ProjectSheetProps {
 function ProjectSheet({
   report,
   lang,
+  simulatedMargin,
   onNavigate,
   onExport,
 }: ProjectSheetProps) {
   const { t } = useLang();
 
-  const profit = report.totalIncome * (report.profitMargin / 100);
-  const corpTotal = report.corporationPayments.reduce(
-    (s, cp) => s + cp.amount,
-    0,
-  );
-  const subPayment = report.totalIncome - profit - corpTotal;
+  // Tags are free text the user typed, shown verbatim — except the one the
+  // backend writes itself on an opening-balance report, which is stored
+  // in one fixed language and translated here so it reads right either way.
+  function incomeTagLabel(tag: string): string {
+    return tag === OPENING_BALANCE_TAG ? t("openingBalanceTag") : tag;
+  }
+
+  // The sheet renders whichever margin is in force — simulated when the
+  // simulator has moved this project, stored otherwise. The saved figures are
+  // kept alongside so an overridden sheet can still show what it replaced.
+  const isSimulated = simulatedMargin !== undefined;
+  const effectiveMargin = simulatedMargin ?? report.profitMargin;
+
+  const { profit, subcontractorPayment: subPayment } =
+    computeSubcontractorRemainder({
+      totalIncome: report.totalIncome,
+      profitMargin: effectiveMargin,
+      supplierPayments: report.supplierPayments,
+    });
+  const { profit: savedProfit } = computeSubcontractorRemainder({
+    totalIncome: report.totalIncome,
+    profitMargin: report.profitMargin,
+    supplierPayments: report.supplierPayments,
+  });
 
   return (
-    <div className="bg-surface border border-border rounded-[var(--radius)] p-4 flex flex-col gap-2 h-full">
-      <div className="flex items-center justify-between mb-1">
-        <button
-          onClick={onNavigate}
-          className="font-medium text-text hover:text-beet hover:underline transition-colors text-left"
-        >
-          {report.project.name}
-        </button>
-        <ButtonGhost onClick={onExport} className="text-xs py-1 px-2">
-          {t("exportPdf")}
-        </ButtonGhost>
+    <div
+      className={`flex h-full flex-col rounded-lg border bg-surface ${
+        isSimulated ? "border-beet-bright" : "border-border"
+      }`}
+    >
+      {/* Sheet head: who and where, then the two things you can do with it. */}
+      <div className="flex items-start justify-between gap-3 border-b border-border p-4 pb-3">
+        <div className="flex min-w-0 flex-col items-start gap-0.5">
+          <button
+            onClick={onNavigate}
+            className="max-w-full truncate text-start text-lead font-semibold text-text transition-colors hover:text-beet"
+          >
+            {report.project.name}
+          </button>
+          {isSimulated && (
+            <Badge variant="beet" className="my-0.5">
+              {t("simulated")}
+            </Badge>
+          )}
+          {report.project.location && (
+            <span className="truncate text-sm text-text-muted">
+              {report.project.location}
+            </span>
+          )}
+          {report.project.description && (
+            <span className="line-clamp-2 text-label text-text-dim">
+              {report.project.description}
+            </span>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <ButtonQuiet onClick={onExport} className="gap-1.5">
+            <Icon name="download" size={13} />
+            {t("exportPdf")}
+          </ButtonQuiet>
+        </div>
       </div>
 
-      {report.incomeEntries.map((entry) => {
-        const isReceived = Boolean(entry.incomeDate);
-        return (
-          <div
-            key={entry.id}
-            className="flex justify-between items-center text-sm"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-text-muted">
-                {entry.tag ?? t("income")}
-              </span>
-              <Badge variant={isReceived ? "green" : "yellow"}>
-                {isReceived
-                  ? `${t("received")} ${formatISODate(entry.incomeDate!, lang as "en" | "he")}`
-                  : t("pending")}
-              </Badge>
-            </div>
-            <span className="text-text font-medium">
-              ₪{entry.amount.toLocaleString("he-IL")}
+      {/* The account itself: income in, the contractor's cut and the
+          suppliers' cuts out, and what is left for the subcontractor. */}
+      <Statement className="flex-1 px-4 py-3">
+        {report.incomeEntries.map((entry) => {
+          const isReceived = Boolean(entry.incomeDate);
+          return (
+            <StatementRow
+              key={entry.id}
+              label={
+                <TileTagEditor entry={entry} incomeTagLabel={incomeTagLabel} />
+              }
+              meta={
+                <Badge variant={isReceived ? "green" : "yellow"}>
+                  {isReceived
+                    ? `${t("received")} ${formatISODate(entry.incomeDate!, lang as "en" | "he")}`
+                    : t("pending")}
+                </Badge>
+              }
+              amount={`₪${entry.amount.toLocaleString("he-IL")}`}
+            />
+          );
+        })}
+
+        {report.incomeEntries.length > 1 && (
+          <>
+            <StatementRule />
+            <StatementRow
+              label={t("totalIncome")}
+              amount={`₪${report.totalIncome.toLocaleString("he-IL")}`}
+              tone="total"
+            />
+          </>
+        )}
+
+        <StatementRule />
+
+        <StatementRow
+          label={`${t("profit")} (${effectiveMargin}%)`}
+          amount={`₪${Math.round(profit).toLocaleString("he-IL")}`}
+          tone={isSimulated ? "default" : "positive"}
+          className={isSimulated ? "text-beet-bright" : ""}
+        />
+        {isSimulated && (
+          <StatementRow
+            label={`${t("savedMarginLabel")} ${report.profitMargin}%`}
+            amount={`₪${Math.round(savedProfit).toLocaleString("he-IL")}`}
+            tone="muted"
+            className="text-micro"
+          />
+        )}
+
+        {report.supplierPayments.map((cp) => (
+          <StatementRow
+            key={cp.id}
+            label={cp.supplier.name}
+            amount={`− ₪${cp.amount.toLocaleString("he-IL")}`}
+            tone="deduction"
+          />
+        ))}
+
+        <StatementTotalRule />
+
+        <StatementRow
+          label={report.subcontractor.name}
+          amount={`₪${Math.round(subPayment).toLocaleString("he-IL")}`}
+          tone="total"
+          emphasis
+          className={isSimulated ? "text-beet-bright" : ""}
+        />
+      </Statement>
+
+      {/* Informational only: initiator income never participates in the
+          subtotal above, so it sits outside the account entirely. No
+          initiator on the project → this section is absent. */}
+      {report.project.initiatorName && (
+        <div className="tnum flex flex-col gap-1 border-t border-dashed border-border px-4 py-2.5">
+          <span className="text-micro font-semibold text-text-dim">
+            {t("initiator")}: {report.project.initiatorName}
+          </span>
+          <div className="flex items-center justify-between gap-3 text-label text-text-dim">
+            <span className="truncate">{t("initiatorIncome")}</span>
+            <span className="shrink-0">
+              {report.initiatorIncome != null
+                ? `₪${report.initiatorIncome.toLocaleString("he-IL")}`
+                : t("notConfigured")}
             </span>
           </div>
-        );
-      })}
-
-      {report.incomeEntries.length > 1 && (
-        <div className="flex justify-between items-center text-sm border-t border-border pt-1">
-          <span className="text-text-muted font-medium">
-            {t("totalIncome")}
-          </span>
-          <span className="text-text font-semibold">
-            ₪{report.totalIncome.toLocaleString("he-IL")}
-          </span>
         </div>
       )}
+    </div>
+  );
+}
 
-      <div className="flex justify-between items-center text-sm">
-        <span className="text-text-muted">
-          {t("profit")} ({report.profitMargin}%)
-        </span>
-        <span className="text-success font-medium">
-          ₪{Math.round(profit).toLocaleString("he-IL")}
-        </span>
-      </div>
+/** Light-touch inline tag edit directly on a tile row — no modal. */
+function TileTagEditor({
+  entry,
+  incomeTagLabel,
+}: {
+  entry: IncomeEntry;
+  incomeTagLabel: (tag: string) => string;
+}) {
+  const { t } = useLang();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(entry.tag ?? "");
+  const [updateIncomeEntry, { isLoading }] = useUpdateIncomeEntryMutation();
 
-      {report.corporationPayments.map((cp) => (
-        <div key={cp.id} className="flex justify-between items-center text-sm">
-          <span className="text-text-muted">{cp.corporation.name}</span>
-          <span className="text-warning font-medium">
-            − ₪{cp.amount.toLocaleString("he-IL")}
-          </span>
-        </div>
-      ))}
+  async function handleSave() {
+    const result = await updateIncomeEntry({
+      id: entry.id,
+      tag: value.trim() || null,
+    });
+    if ("error" in result) return;
+    setEditing(false);
+  }
 
-      <div className="border-t border-border my-1" />
+  if (!editing) {
+    return (
+      <button
+        onClick={() => {
+          setValue(entry.tag ?? "");
+          setEditing(true);
+        }}
+        className="text-text-muted hover:text-text hover:underline transition-colors text-left"
+      >
+        {entry.tag ? incomeTagLabel(entry.tag) : t("income")}
+      </button>
+    );
+  }
 
-      <div className="flex justify-between items-center text-sm">
-        <span className="text-text font-medium">
-          {report.subcontractor.name}
-        </span>
-        <span className="text-text font-semibold">
-          ₪{Math.round(subPayment).toLocaleString("he-IL")}
-        </span>
-      </div>
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        autoFocus
+        type="text"
+        maxLength={100}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={t("tagPlaceholder")}
+        className="w-24 rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-text focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+      <button
+        onClick={() => void handleSave()}
+        disabled={isLoading}
+        className="flex h-5 w-5 items-center justify-center rounded bg-beet text-white text-[10px] font-bold disabled:opacity-50"
+        aria-label="Save tag"
+      >
+        <Icon name="check" size={14} />
+      </button>
+      <button
+        onClick={() => setEditing(false)}
+        className="flex h-5 w-5 items-center justify-center rounded text-text-muted text-[10px]"
+        aria-label="Cancel"
+      >
+        <Icon name="close" size={14} />
+      </button>
     </div>
   );
 }

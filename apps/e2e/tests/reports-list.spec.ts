@@ -25,6 +25,8 @@ dbTest.describe('Reports list', () => {
         name: 'Grid Project',
         estimatedAmount: 300000,
         description: 'Reports grid tests',
+        requesterName: 'Test Requester',
+        location: 'Test Location',
       },
     });
     projectId = project.id;
@@ -70,6 +72,8 @@ dbTest.describe('Reports list', () => {
           name: 'Quiet Project',
           estimatedAmount: 1000,
           description: 'Different month',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
         },
       });
       const sub = await db.subcontractor.create({
@@ -102,7 +106,11 @@ dbTest.describe('Reports list', () => {
       await expect(
         page.getByRole('heading', { name: 'Grid Client' }),
       ).toBeVisible();
-      await expect(page.getByText('Grid Project')).toBeVisible();
+      // The project name also appears in the client-wide simulator's
+      // per-project row — scope to the sheet's own clickable header.
+      await expect(
+        page.getByRole('button', { name: 'Grid Project' }),
+      ).toBeVisible();
     },
   );
 
@@ -149,7 +157,7 @@ dbTest.describe('Reports list', () => {
   });
 
   dbTest(
-    'the profit simulator previews without writing',
+    'the master slider previews every project without writing',
     async ({ page, db }) => {
       await openClient(page);
 
@@ -160,15 +168,56 @@ dbTest.describe('Reports list', () => {
         await route.fallback();
       });
 
-      await page.getByLabel('Profit Margin %').fill('25');
+      // Closed by default — the bookmark tab on the far edge opens it.
+      await page.getByRole('button', { name: 'Profit Simulator' }).click();
+      await page.getByRole('slider', { name: 'All projects' }).fill('15');
 
-      // 40,000 × 25% = 10,000 profit, leaving 30,000 for the subcontractor.
-      await expect(page.getByText('₪10,000')).toBeVisible();
-      await expect(page.getByText('₪30,000')).toBeVisible();
+      // 40,000 × 15% = 6,000 profit, leaving 34,000 for the subcontractor.
+      // Shown on the simulator rail and, since T-sim, on the sheet itself.
+      await expect(page.getByText('₪6,000').first()).toBeVisible();
+      await expect(page.getByText('₪34,000').first()).toBeVisible();
+      await expect(page.getByText('Profit (15%)')).toBeVisible();
 
       expect(writes).toBe(0);
       const reports = await db.projectReport.findMany();
       expect(Number(reports[0].profitMargin)).toBe(10);
+    },
+  );
+
+  dbTest(
+    "a project's own slider marks that sheet as simulated",
+    async ({ page, db }) => {
+      void db;
+      await openClient(page);
+
+      await page.getByRole('button', { name: 'Profit Simulator' }).click();
+      // 50% is past the slider's 0–20 range, so it goes in via the number box.
+      await page.getByRole('spinbutton', { name: 'Grid Project %' }).fill('50');
+
+      await expect(page.getByText('Simulated').first()).toBeVisible();
+      await expect(page.getByText('Profit (50%)')).toBeVisible();
+      // The saved margin stays on the sheet as the reference it replaced.
+      await expect(page.getByText(/Saved margin:\s*10%/).first()).toBeVisible();
+    },
+  );
+
+  dbTest(
+    'closing the simulator drops back to the stored figures',
+    async ({ page, db }) => {
+      void db;
+      await openClient(page);
+
+      await page.getByRole('button', { name: 'Profit Simulator' }).click();
+      await page.getByRole('slider', { name: 'All projects' }).fill('18');
+      await expect(page.getByText('Profit (18%)')).toBeVisible();
+
+      // The handle stays on screen while open and closes the drawer.
+      await page.getByRole('button', { name: 'Profit Simulator' }).click();
+
+      await expect(page.getByText('Simulated')).toHaveCount(0);
+      // Stored margin is 10%: 40,000 × 10% = 4,000.
+      await expect(page.getByText('Profit (10%)')).toBeVisible();
+      await expect(page.getByText('₪4,000').first()).toBeVisible();
     },
   );
 
@@ -189,11 +238,15 @@ dbTest.describe('Reports list', () => {
       void db;
       await openClient(page);
 
-      // 40,000 income − 10% profit − no corporation payments. The same figure
-      // also appears on the project sheet, so scope to the header total.
-      await expect(page.getByText(/Total Sub Payments:/)).toContainText(
-        '36,000',
-      );
+      // 40,000 income − 10% profit − no supplier payments. The same figure
+      // also appears on the project sheet, so scope to the header total. The
+      // header renders the caption and the amount as two sibling spans, so the
+      // assertion has to run against the pair's wrapper — the caption element
+      // itself holds no digits.
+      const headerTotal = page
+        .getByText('Total Sub Payments', { exact: true })
+        .locator('..');
+      await expect(headerTotal).toContainText('36,000');
     },
   );
 
@@ -209,6 +262,8 @@ dbTest.describe('Reports list', () => {
           name: 'Second Grid Project',
           estimatedAmount: 90000,
           description: 'Created via modal',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
         },
       });
 

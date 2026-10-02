@@ -43,7 +43,7 @@ src/
       authSlice.ts          # JWT token in localStorage (key: beetbite.token)
   components/
     atoms/                  # Primitive UI: Button variants, Badge, Input, Select, Textarea, Toggle, Divider, EmptyState, SearchInput, StatCard, MonthPicker, FormGroup, LangToggle, PageHeader, ThemeToggle
-    molecules/              # Composed but stateless: (currently flat — files in atoms/ re-exported via index), + ImageUploadField (file input → base64 data URL, preview, remove)
+    molecules/              # Composed but stateless: (currently flat — files in atoms/ re-exported via index), + ImageUploadField (file input → base64 data URL, preview, remove), ColorField, FontField (PDF font picker with a live preview, loading the picked font from Google Fonts on demand)
     organisms/              # Modal (+ ConfirmModal + FormModal), Sidebar, TopHeader, CompanySettingsForm (shared by onboarding + settings pages)
     AppShell.tsx            # Sidebar + TopHeader + <Outlet />
     RequireAuth.tsx         # Redirects to /login when unauthenticated
@@ -57,9 +57,11 @@ src/
     useTheme.ts             # Hook: { theme, setTheme }
     useToast.ts             # Hook: { toast(message, variant?) }
     langContext.ts          # createContext + translations object (en/he)
+  hooks/
+    useFieldCheck.ts        # Save guard that toasts which fields are missing/invalid
   pages/                    # One file per route, lazy-loaded
   styles/
-    globals.css             # :root CSS vars + Tailwind directives + scrollbar + grain
+    globals.css             # :root CSS vars + Tailwind directives + base type, focus, scrollbar
   utils/
     formatMonth.ts          # formatYM(ym, lang, format?) and formatISODate(iso, lang, opts?) — locale-aware date helpers
   router.tsx                # createBrowserRouter route table
@@ -79,6 +81,9 @@ Re-run `pnpm codegen` whenever backend DTOs change. The backend must be running 
 - `baseQueryWithReauth`: wraps base query; dispatches `logout()` on 401.
 - `authSlice`: persists JWT to `localStorage` under key `beetbite.token`.
 - Endpoint slices under `src/api/endpoints/` are injected into `baseApi`.
+- API errors: `baseQueryWithReauth` emits an `ApiError` (`status`, English `message`, `code`, `params`) through `errorEmitter`; `AppShell` toasts it via `describeApiError` (`src/api/apiErrors.ts`). Hebrew uses the `hebrewApiErrors` table by code (never the server's English — unknown codes fall back to a status-based line); English shows the server message. Add a Hebrew entry for every new backend error code.
+- Validation errors: the backend answers a rejected body with code `VALIDATION_FAILED` and `params.missing` / `params.invalid` (comma-separated field paths). `describeApiError` turns those into "Fill in the required fields: Description, Location" in either language via the label map in `src/api/fieldLabels.ts` — add a field there when a DTO gains one the user types.
+- Form guards: a save handler must never `return` silently on bad input. Use `useFieldCheck()` (`src/hooks/useFieldCheck.ts`): `if (!checkFields([[t("name"), !name.trim() && "missing"]])) return;` — it toasts the field labels and returns false. Error toasts stay up 8s (others 3s).
 
 ## Routing
 
@@ -91,21 +96,33 @@ Data router via `createBrowserRouter`. All authenticated routes are wrapped in `
 | `/` | redirect → `/reports` |
 | `/reports` | ReportsPage |
 | `/reports/projects/:id` | ProjectReportsPage |
-| `/corporation-payments` | CorporationPaymentsPage |
+| `/supplier-payments` | SupplierPaymentsPage |
 | `/subcontractor-payments` | SubcontractorPaymentsPage |
 | `/projects` | ProjectsPage |
 | `/clients` | ClientsPage |
 | `/subcontractors` | SubcontractorsPage |
-| `/corporations` | CorporationsPage |
+| `/suppliers` | SuppliersPage |
 | `/settings/company` | SettingsCompanyPage |
-| `/simulator` | ProfitSimulatorPage |
 | `*` | NotFoundPage |
 
 ## Styling
 
-Tailwind v3 with `tailwind.config.ts`. All colours map to CSS custom properties declared in `src/styles/globals.css`, which in turn use the oklch palette from the mockup. Use Tailwind utility classes; reach for raw CSS vars only when no utility maps to the token.
+Tailwind v3 with `tailwind.config.ts`. All colours map to CSS custom properties declared in `src/styles/globals.css`. Use Tailwind utility classes; reach for raw CSS vars only when no utility maps to the token.
 
-Design reference for all visual specs (colours, spacing, component shapes, animations): `apps/frontend/BeetBite.mockup.html`.
+### Design system
+
+- **Palette.** Every neutral sits on the beet hue (350) with real chroma, so paper, rules and ink read as tints of the brand rather than grey with an accent dropped on top. The app is pink on purpose. The exported account-approval PDF is the formal document and keeps its own restrained palette — screens do not imitate it.
+- **Accent vs. money.** `--beet` marks what you can *act on* (buttons, nav, focus). It never states an amount. Money has its own scale: `--success` for received/settled, `--warning` for pending or part-settled, plain ink for amounts outstanding or leaving. Owing money is the normal state of this business, so it is never coloured as an error; `--danger` is reserved for destructive actions and real faults.
+- **Type.** `Frank Ruhl Libre` (serif) for page, section and modal titles via `font-serif` and the base `h1–h3` rule; `Assistant` for everything else. Both carry full Hebrew. Sizes come from the named scale in `tailwind.config.ts` (`micro`/`label`/`sm`/`base`/`lead`/`title`/`page`/`hero`) rather than arbitrary pixel values.
+- **No ALL-CAPS labels.** Hebrew has no uppercase, so `uppercase` silently applied to only half the UI and the two languages rendered as different products. Labels are sentence case at `text-label`.
+- **Icons.** `components/atoms/Icon.tsx` — one hand-drawn stroke set on a 24-unit grid, plus `BeetMark` for the product mark. Never emoji: they ignore `currentColor`, can't dim with muted text, and render differently per OS. Each renders `data-icon={name}`, which is how tests assert on them.
+- **Surfaces.** Cards and tables get a border, never a shadow; shadow (`shadow-pop`, `shadow-modal`) is reserved for things that genuinely float. `rounded-lg` for panels, `rounded`/`rounded-sm` for controls.
+- **Money figures.** Set in containers carrying `.tnum` (or any `table`, which opts in via `globals.css`) so digits stay on their vertical rails. Wrap an amount in `dir="ltr"` when a sign is attached — otherwise bidi pushes the minus to the far side of the number in RTL.
+- **Statement rows.** `components/molecules/Statement.tsx` renders the money screens' shared shape, where rule weight is arithmetic: `StatementRule` (single) closes a subtotal, `StatementTotalRule` (double) closes the figure the sheet was computing.
+- **RTL.** Prefer logical properties (`ps-`/`pe-`/`ms-`/`me-`/`text-start`/`text-end`) over `ltr:`/`rtl:` pairs.
+- **Motion.** Reserved for what answers an action (modal open, dropdown). `prefers-reduced-motion` is honoured globally in `globals.css`.
+
+`apps/frontend/BeetBite.mockup.html` is the **superseded** pre-redesign mockup. Do not use it as a visual reference; `globals.css` plus the components are the source of truth.
 
 ## Provider tree
 
@@ -140,11 +157,9 @@ Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`, `setLang`) is provided at 
 
 ## Sidebar nav sections
 
-**Overview** (use global month picker in TopHeader): Project Reports, Monthly Income, Corporation Payments, Subcontractors, Income Per Month\*
+**Overview** (use global month picker in TopHeader): Project Reports, Monthly Income, Supplier Payments, Subcontractors, Income Per Month\*
 
-**Management**: Projects, Clients, Subcontractors, Corporations
-
-**Tools**: Profit Margin Simulator
+**Management**: Projects, Clients, Subcontractors, Suppliers
 
 **Settings**: Company Settings (`/settings/company`)
 
@@ -155,9 +170,11 @@ Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`, `setLang`) is provided at 
 - **Project completion %**: `sum of reports with incomeDate ÷ project.estimatedAmount`. Shown as 6px progress bar across Projects page, Project Detail, and Income Per Month.
 - **Subcontractor overpay guard**: block save in AddInstalmentModal if `totalPaid + newAmount > subcontractor.agreedAmount`.
 - **Subcontractor company number**: required, unique, exactly 9 digits (Israeli company registration number). `SubcontractorsPage` strips non-digits and caps input length at 9 on change (`value.replace(/\D/g, "").slice(0, 9)`) rather than only relying on `pattern`/`maxLength`.
-- **Corporation payment fields**: `amount`, `description`, `date`, `isFuture` (bool), `vatPercentage` (number, default 18, shown only when `isFuture = false`).
+- **Supplier payment fields**: `amount`, `description`, `date`, `isFuture` (bool), `includesVat` (bool).
+- **Supplier payment VAT**: the user only chooses *whether* a payment carries VAT — a checkbox per row on `SupplierPaymentsPage` (`PATCH /suppliers/payments/:id/vat` via `useSetSupplierPaymentIncludesVatMutation`) and a per-line switch in `SupplierPaymentsBatchModal` (default on). The percentage is never typed: the backend derives it from the global VAT rate for the report's month and returns it read-only as `vatPercentage`. The page shows it beside the checkbox (⚠ when VAT is on but that month has no rate yet); the modal shows the rate that will apply to its month.
 - **Project filters** (three independent toggles, Active on by default): Active (`isDone=false` + has reports), Future (no reports yet), Closed (`isDone=true`).
-- **ProjectReportFormModal flow**: client picker → filtered project list → subcontractor prefills from last month → completion % prefills from last month → report month → income + date → profit margin % → corporation payments (multi-row).
+- **Profit simulator**: lives on `ReportsPage`'s client drill-down as a drawer (`components/organisms/ProfitSimulatorPanel`, state in `features/simulator/useProfitSimulation`). **Closed by default** — a bookmark tab pinned to the edge opposite the sidebar (right in LTR, left in RTL) opens it, then rides out with the drawer and closes it — one handle, no ✕; closing it (handle or Esc) resets the simulation, so the page shows stored figures unless the user is actively simulating. It slides in from that edge (`fixed top-14`, below the app header, `transition-transform duration-200`, kept mounted for the slide-out) and from `md` up the page content is inset by `md:pe-[356px]` over the same 200ms, so the drawer pushes the sheets aside instead of covering them; below `md` there is no room to push, so it overlays. No backdrop — the sheets stay readable while a slider is dragged. Each row pairs a slider (0–20%, where margins actually land) with a number box (0–100%) for the rare margin above the track — the thumb parks at 20 then. A master slider sets one margin for every project; moving a project's own slider pins it, so later master moves skip it. Effective margin = pin → master → saved, with the master resting at the average saved margin until moved. Everything on the page reads it — project sheets (marked "Simulated", saved figure beneath) and the client header's Total Sub Payments — but nothing is written back; the only consumer is the client-simulated PDF export, which receives just the projects whose margin actually differs. Clears on client or month change.
+- **ProjectReportFormModal flow**: client picker → filtered project list → subcontractor prefills from last month → completion % prefills from last month → report month → income + date → profit margin % → supplier payments (multi-row).
 - **Date display in reports**: month + year only (`MMM YYYY`), no day. Use `formatISODate(iso, lang)` — locale-aware.
 - **MonthPicker**: click the label to open a popover with a year `<select>` (±10 years) and a 3×4 month button grid. No prev/next arrows. Month names in the picker also respect `lang` via `MONTH_NAMES[lang]` arrays defined in the component.
 - **Profit Simulator**: read-only, no API writes. Uses already-loaded RTK Query data.

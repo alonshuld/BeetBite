@@ -8,13 +8,31 @@ export interface ProjectClient {
 export interface Project {
   id: string;
   clientId: string;
-  client: ProjectClient | null;
+  client: ProjectClient;
   name: string;
   description: string;
   estimatedAmount: number;
   isDone: boolean;
   hasReports: boolean;
   paymentProgress: { totalPaid: number };
+  requesterName: string;
+  location: string;
+  /** The "approved for" text from this project's most recent PDF export, if any. */
+  lastApprovedFor: string | null;
+  /** ID of the project's initiator (יזם), if one exists — nullable, unlike clientId. */
+  initiatorId: string | null;
+}
+
+/**
+ * Money the project already brought in before it was entered into the system.
+ * The backend turns this into one back-dated project report, in the same
+ * transaction as the project itself.
+ */
+export interface OpeningBalanceDto {
+  amount: number;
+  month: string;
+  subcontractorId: string;
+  profitMargin: number;
 }
 
 export interface CreateProjectDto {
@@ -23,9 +41,15 @@ export interface CreateProjectDto {
   description: string;
   estimatedAmount: number;
   isDone?: boolean;
+  requesterName: string;
+  location: string;
+  initiatorId?: string | null;
+  openingBalance?: OpeningBalanceDto;
 }
 
-export type UpdateProjectDto = CreateProjectDto;
+// An opening balance only exists at creation — there is nothing to back-date
+// once the project is already in the system and has its own reports.
+export type UpdateProjectDto = Omit<CreateProjectDto, "openingBalance">;
 
 export const projectsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/atoms/Icon";
 import { useLang } from "@/contexts/useLang";
 
 interface MonthPickerProps {
@@ -115,17 +116,26 @@ export function MonthPicker({
     <div ref={ref} className={`relative inline-flex ${className}`}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="min-w-[120px] text-center text-sm font-medium text-text hover:text-beet transition-colors px-2 py-1 rounded border border-border hover:bg-surface-2 cursor-pointer"
+        aria-expanded={open}
+        className="inline-flex h-9 min-w-[150px] items-center justify-between gap-2 rounded border border-border bg-surface px-3 text-sm font-semibold text-text transition-colors duration-150 hover:border-border-strong hover:bg-surface-2"
       >
-        {MONTH_NAMES[lang][month]} {year}
+        <span className="tnum">
+          {MONTH_NAMES[lang][month]} {year}
+        </span>
+        <Icon
+          name="chevronDown"
+          size={14}
+          className={`text-text-dim transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
       {open && (
-        <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-50 bg-surface-2 border border-border rounded-md shadow-lg p-3 w-[220px]">
+        <div className="absolute top-full z-50 mt-1.5 w-[248px] animate-fadeIn rounded-lg border border-border bg-surface p-3 shadow-pop ltr:left-0 rtl:right-0">
           <select
             value={year}
             onChange={(e) => selectYear(Number(e.target.value))}
-            className="w-full mb-3 px-2 py-1.5 rounded bg-surface-3 border border-border text-text text-sm outline-none cursor-pointer focus:border-beet appearance-none"
+            aria-label={MONTH_NAMES[lang][month]}
+            className="tnum mb-2.5 w-full cursor-pointer appearance-none rounded-sm border border-border bg-surface-2 px-2.5 py-1.5 text-sm font-semibold text-text outline-none transition-colors hover:border-border-strong focus:border-beet"
           >
             {years.map((y) => (
               <option key={y} value={y}>
@@ -139,10 +149,11 @@ export function MonthPicker({
               <button
                 key={i}
                 onClick={() => selectMonth(i)}
-                className={`py-1.5 text-xs font-medium rounded transition-colors cursor-pointer ${
+                aria-current={i === month}
+                className={`cursor-pointer rounded-sm py-1.5 text-label font-semibold transition-colors duration-150 ${
                   i === month
                     ? "bg-beet text-white"
-                    : "text-text hover:bg-surface-3"
+                    : "text-text-muted hover:bg-surface-2 hover:text-text"
                 }`}
               >
                 {name}

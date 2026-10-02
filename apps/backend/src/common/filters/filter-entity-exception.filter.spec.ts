@@ -5,6 +5,8 @@ import { EntityAlreadyExistsError } from '../errors/entity-already-exists.error'
 import { EntityError } from '../errors/entity.error';
 import { EntityHasRelatedRecordsError } from '../errors/entity-has-related-records.error';
 import { EntityNotFoundError } from '../errors/entity-not-found.error';
+import { ClientAlreadyExistsError } from '../../clients/errors/client-already-exists.exception';
+import { SubcontractorPaymentOverpaymentError } from '../../subcontractor-payments/errors/subcontractor-payment-overpayment.error';
 
 describe('EntityExceptionFilter', () => {
   let filter: EntityExceptionFilter;
@@ -147,6 +149,49 @@ describe('EntityExceptionFilter', () => {
       expect(typeof responseBody['timestamp']).toBe('string');
       expect(responseBody['path']).toBe('/api/v1/test');
       expect(responseBody['method']).toBe('DELETE');
+    });
+  });
+
+  describe('error codes', () => {
+    it('should include the code and params of a coded domain error', () => {
+      filter.catch(new ClientAlreadyExistsError('Acme'), mockHost);
+
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: HttpStatus.CONFLICT,
+          code: 'CLIENT_ALREADY_EXISTS',
+          params: { name: 'Acme' },
+        }),
+      );
+    });
+
+    it('should include the code and params of a coded HttpException', () => {
+      filter.catch(
+        new SubcontractorPaymentOverpaymentError(100, 80, 50),
+        mockHost,
+      );
+
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: HttpStatus.BAD_REQUEST,
+          code: 'SUBCONTRACTOR_PAYMENT_OVERPAYMENT',
+          params: { amount: 50, owed: 100, paid: 80 },
+        }),
+      );
+    });
+
+    it('should fall back to the base code when a subclass sets none', () => {
+      filter.catch(new EntityNotFoundError('Not found'), mockHost);
+
+      const responseBody = mockJson.mock.calls[0][0];
+      expect(responseBody['code']).toBe('NOT_FOUND');
+      expect(responseBody).not.toHaveProperty('params');
+    });
+
+    it('should omit code for an uncoded HttpException', () => {
+      filter.catch(new HttpException('Bad', HttpStatus.BAD_REQUEST), mockHost);
+
+      expect(mockJson.mock.calls[0][0]).not.toHaveProperty('code');
     });
   });
 });

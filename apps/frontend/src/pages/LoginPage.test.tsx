@@ -90,4 +90,30 @@ describe("LoginPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     expect(await screen.findByText("Login failed")).toBeInTheDocument();
   });
+
+  it("offers the theme toggle before signing in", async () => {
+    renderLoginPage();
+    await userEvent.click(screen.getByRole("button", { name: "Toggle theme" }));
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    localStorage.removeItem("beetbite.theme");
+    document.documentElement.removeAttribute("data-theme");
+  });
+
+  it("shows a coded login error in Hebrew", async () => {
+    localStorage.setItem("beetbite.lang", "he");
+    mockLoginFn.mockReturnValue({
+      unwrap: vi.fn().mockRejectedValue({
+        status: 401,
+        data: { message: "Invalid credentials", code: "INVALID_CREDENTIALS" },
+      }),
+    });
+    renderLoginPage();
+    await userEvent.type(screen.getByLabelText("שם משתמש"), "admin");
+    await userEvent.type(screen.getByLabelText("סיסמה"), "wrong");
+    await userEvent.click(screen.getByRole("button", { name: "כניסה" }));
+    expect(
+      await screen.findByText("שם משתמש או סיסמה שגויים."),
+    ).toBeInTheDocument();
+    localStorage.removeItem("beetbite.lang");
+  });
 });
