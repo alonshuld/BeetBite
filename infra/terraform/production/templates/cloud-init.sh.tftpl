@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# First-boot setup for the BeetBite production host (Ubuntu 24.04 arm64).
+# Rendered by Terraform; runs once via cloud-init. Progress and errors land in
+# /var/log/beetbite-bootstrap.log. Every step is safe to re-run by hand:
+#   sudo bash /var/lib/cloud/instance/scripts/part-001
+set -euxo pipefail
+exec > >(tee -a /var/log/beetbite-bootstrap.log) 2>&1
+
+export HOME=/root
+export DEBIAN_FRONTEND=noninteractive
+export AWS_DEFAULT_REGION=${region}
+root=/opt/beetbite
+
+# --- Packages ----------------------------------------------------------------
+apt-get update
+apt-get -y upgrade
+apt-get install -y ca-certificates curl git jq
+
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  > /etc/apt/sources.list.d/docker.list
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+systemctl enable --now docker
+
+snap install aws-cli --classic
+export PATH="$PATH:/snap/bin"
+
+# --- Swap: a PDF export spike must not wake the OOM killer -------------------
+if [ ! -f /swapfile ]; then
+  fallocate -l 2G /swapfile
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+echo 'vm.swappiness=10' > /etc/sysctl.d/99-swappiness.conf
+sysctl --system
+
+# --- Security updates reboot the host when needed, at a quiet hour (UTC) ------
+cat > /etc/apt/apt.conf.d/52unattended-upgrades-local <<'EOF'
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "02:00";
+EOF
+
+# --- RDS CA bundle (Node and libpq verify the database certificate) ----------
+mkdir -p "$root/certs"
+curl -fsSL https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+  -o "$root/certs/rds-global-bundle.pem"
+
+# --- Read-only clone of the repo via the Terraform-managed deploy key --------
+install -d -m 700 /root/.ssh
+aws ssm get-parameter --name "${ssm_prefix}/bootstrap/DEPLOY_KEY" --with-decryption \
+  --query Parameter.Value --output text > /root/.ssh/beetbite_deploy
+chmod 600 /root/.ssh/beetbite_deploy
+if ! grep -q beetbite_deploy /root/.ssh/config 2>/dev/null; then
+  cat >> /root/.ssh/config <<'EOF'
+Host github.com
+  IdentityFile /root/.ssh/beetbite_deploy
+  IdentitiesOnly yes
+EOF
+fi
+ssh-keyscan github.com >> /root/.ssh/known_hosts 2>/dev/null
+if [ ! -d "$root/src/.git" ]; then
+  git clone --filter=blob:none "${repo_ssh_url}" "$root/src"
+fi
+
+# --- .env from SSM Parameter Store --------------------------------------------
+# Re-run render-env.sh after changing a parameter (e.g. a rotated secret), then
+# re-run deploy.sh with the current commit.
+cat > "$root/render-env.sh" <<'EOF'
+#!/usr/bin/env bash
+# Rebuild /opt/beetbite/.env from SSM, keeping the currently deployed IMAGE_TAG.
+set -euo pipefail
+export PATH="$PATH:/snap/bin"
+env_file=/opt/beetbite/.env
+tag=$(grep -s '^IMAGE_TAG=' "$env_file" | cut -d= -f2- || true)
+tmp=$(mktemp)
+aws ssm get-parameters-by-path --region ${region} --path "${ssm_prefix}/" --with-decryption \
+  --query 'Parameters[].[Name,Value]' --output text \
+  | while IFS=$'\t' read -r name value; do printf '%s=%s\n' "$${name##*/}" "$value"; done > "$tmp"
+echo "IMAGE_TAG=$tag" >> "$tmp"
+install -m 600 "$tmp" "$env_file"
+rm -f "$tmp"
+EOF
+chmod 700 "$root/render-env.sh"
+"$root/render-env.sh"
+
+# --- GHCR login (only when the packages are private) --------------------------
+# Tracing off from here to the database role: these steps handle secrets.
+set +x
+ghcr_token=$(aws ssm get-parameter --name "${ssm_prefix}/bootstrap/GHCR_TOKEN" --with-decryption \
+  --query Parameter.Value --output text 2>/dev/null || true)
+if [ -n "$ghcr_token" ]; then
+  ghcr_user=$(aws ssm get-parameter --name "${ssm_prefix}/bootstrap/GHCR_USERNAME" \
+    --query Parameter.Value --output text)
+  echo "$ghcr_token" | docker login ghcr.io -u "$ghcr_user" --password-stdin
+fi
+
+# --- App database role --------------------------------------------------------
+# beetbite_app owns the database so Prisma migrations can create tables. The
+# master user (password managed by RDS in Secrets Manager) is used only here.
+master_password=$(aws secretsmanager get-secret-value --secret-id "${master_secret_arn}" \
+  --query SecretString --output text | jq -r .password)
+app_password=$(aws ssm get-parameter --name "${ssm_prefix}/bootstrap/APP_DB_PASSWORD" --with-decryption \
+  --query Parameter.Value --output text)
+
+docker run --rm -i \
+  -v "$root/certs:/certs:ro" \
+  -e PGSSLROOTCERT=/certs/rds-global-bundle.pem \
+  -e PGPASSWORD="$master_password" \
+  postgres:17-alpine \
+  psql -v ON_ERROR_STOP=1 -v app_password="$app_password" \
+  "host=${rds_address} port=5432 dbname=beetbite user=beetbite_admin sslmode=verify-full" <<'SQL'
+SELECT 'CREATE ROLE beetbite_app LOGIN'
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'beetbite_app') \gexec
+ALTER ROLE beetbite_app LOGIN PASSWORD :'app_password';
+GRANT beetbite_app TO beetbite_admin;
+ALTER DATABASE beetbite OWNER TO beetbite_app;
+SQL
+unset master_password app_password ghcr_token
+set -x
+
+# --- CloudWatch agent: memory and root-disk usage -----------------------------
+# aggregation_dimensions publishes a copy keyed on InstanceId alone, which is
+# what the Terraform alarms watch.
+curl -fsSL -o /tmp/cwagent.deb \
+  https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/arm64/latest/amazon-cloudwatch-agent.deb
+dpkg -i /tmp/cwagent.deb
+rm -f /tmp/cwagent.deb
+cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<'EOF'
+{
+  "metrics": {
+    "append_dimensions": { "InstanceId": "$${aws:InstanceId}" },
+    "aggregation_dimensions": [["InstanceId"]],
+    "metrics_collected": {
+      "mem": { "measurement": ["mem_used_percent"] },
+      "disk": { "measurement": ["used_percent"], "resources": ["/"] }
+    }
+  }
+}
+EOF
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 \
+  -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+
+# --- Nightly pg_dump to S3 (00:30 UTC) ----------------------------------------
+cat > /etc/cron.d/beetbite-backup <<'EOF'
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+30 0 * * * root /opt/beetbite/src/deploy/backup.sh >> /var/log/beetbite-backup.log 2>&1
+EOF
+
+# --- First deploy ---------------------------------------------------------------
+# Needs the deploy/ files merged to main, images published for that commit, and
+# DNS already pointing at the Elastic IP (Caddy's certificate, deploy.sh's
+# health check). If any is missing, run deploy.sh by hand once they are.
+git -C "$root/src" fetch --quiet origin
+git -C "$root/src" checkout --quiet --detach origin/HEAD
+if [ -x "$root/src/deploy/deploy.sh" ]; then
+  "$root/src/deploy/deploy.sh" "$(git -C "$root/src" rev-parse origin/HEAD)" \
+    || echo "First deploy did not finish; re-run deploy.sh by hand (see the deployment plan, 6.2)."
+else
+  echo "deploy/deploy.sh not on main yet; merge Phase 1, then run deploy.sh by hand."
+fi
+
+echo "beetbite bootstrap complete"
