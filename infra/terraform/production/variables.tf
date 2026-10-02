@@ -17,9 +17,9 @@ variable "backup_region" {
 }
 
 variable "ec2_instance_type" {
-  description = "Must be ARM (Graviton) unless the AMI filter below is switched to amd64."
+  description = "Must be x86_64: the GHCR images are built for linux/amd64 only (arm64 under QEMU crashed Node during pnpm install)."
   type        = string
-  default     = "t4g.small"
+  default     = "t3.small"
 }
 
 variable "rds_instance_class" {

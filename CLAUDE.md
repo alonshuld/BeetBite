@@ -143,7 +143,7 @@ Backend and frontend each have a `Dockerfile` in their app directory.
 
 ## Production
 
-AWS, Tel Aviv (`il-central-1`): one EC2 `t4g.small` (ARM) runs `deploy/docker-compose.prod.yml` (Caddy for HTTPS → frontend nginx → backend), with data in RDS PostgreSQL 17 and a nightly `pg_dump` to S3 in a second region.
+AWS, Tel Aviv (`il-central-1`): one EC2 `t3.small` runs `deploy/docker-compose.prod.yml` (Caddy for HTTPS → frontend nginx → backend), with data in RDS PostgreSQL 17 and a nightly `pg_dump` to S3 in a second region.
 
 | Path | What |
 | --- | --- |
@@ -151,7 +151,7 @@ AWS, Tel Aviv (`il-central-1`): one EC2 `t4g.small` (ARM) runs `deploy/docker-co
 | `infra/terraform/production/templates/cloud-init.sh.tftpl` | First-boot host setup (Docker, swap, `.env` from SSM Parameter Store, app DB role, backup cron, first deploy) |
 | `deploy/` | What runs on the host: prod compose file, `Caddyfile`, `deploy.sh`, `backup.sh`, `.env.example`, and `RUNBOOK.md` (rollback, restores, rebuilds) |
 
-- CD (`.github/workflows/cd.yml`) builds amd64 + arm64 images to GHCR on every push to `main`, then its `deploy` job runs `deploy.sh <sha>` on the host via SSM (GitHub OIDC → AWS role, no stored keys, no SSH). The job is skipped until Terraform sets `EC2_INSTANCE_ID` on the `production` environment.
+- CD (`.github/workflows/cd.yml`) builds linux/amd64 images to GHCR on every push to `main`, then its `deploy` job runs `deploy.sh <sha>` on the host via SSM (GitHub OIDC → AWS role, no stored keys, no SSH). The job is skipped until Terraform sets `EC2_INSTANCE_ID` on the `production` environment.
 - `GET /api/v1/health` is public and runs `SELECT 1`; `deploy.sh` and the uptime monitor depend on it.
 - The host's `.env` is generated, never hand-edited: change the SSM parameter (through Terraform), then run `/opt/beetbite/render-env.sh` and redeploy.
 - `seed.ts` refuses `SEED_MOCK_DATA=true` when `NODE_ENV=production`, and the prod compose file never forwards it.
