@@ -60,41 +60,45 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center bg-[var(--bg)] px-4 py-10">
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse 600px 400px at 50% 40%, oklch(52% 0.22 5 / 0.12), transparent)",
-        }}
-      />
+    // body is overflow:hidden (AppShell scrolls its own <main>), so this
+    // full-screen page has to be its own scroll container.
+    <div className="h-full overflow-y-auto bg-[var(--bg)]">
+      <div className="relative flex min-h-full flex-col items-center justify-center px-4 py-10">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(ellipse 600px 400px at 50% 40%, oklch(52% 0.22 5 / 0.12), transparent)",
+          }}
+        />
 
-      <div className="relative w-full max-w-[520px] flex flex-col gap-6">
-        <div className="text-center">
-          <h1 className="text-page text-text">{t("onboardingHeading")}</h1>
-          <p className="text-[14px] text-text-muted mt-1">
-            {t("onboardingSubtitle")}
-          </p>
-        </div>
+        <div className="relative w-full max-w-[520px] flex flex-col gap-6">
+          <div className="text-center">
+            <h1 className="text-page text-text">{t("onboardingHeading")}</h1>
+            <p className="text-[14px] text-text-muted mt-1">
+              {t("onboardingSubtitle")}
+            </p>
+          </div>
 
-        <div className="bg-surface rounded p-7">
-          <CompanySettingsForm value={value} onChange={setValue} />
+          <div className="bg-surface rounded p-7">
+            <CompanySettingsForm value={value} onChange={setValue} />
 
-          <div className="flex items-center justify-end gap-3 mt-2">
-            <ButtonGhost
-              type="button"
-              disabled={isLoading}
-              onClick={() => void handleSkip()}
-            >
-              {t("skipForNow")}
-            </ButtonGhost>
-            <ButtonPrimary
-              type="button"
-              disabled={isLoading}
-              onClick={() => void handleSave()}
-            >
-              {t("saveAndContinue")}
-            </ButtonPrimary>
+            <div className="flex items-center justify-end gap-3 mt-2">
+              <ButtonGhost
+                type="button"
+                disabled={isLoading}
+                onClick={() => void handleSkip()}
+              >
+                {t("skipForNow")}
+              </ButtonGhost>
+              <ButtonPrimary
+                type="button"
+                disabled={isLoading}
+                onClick={() => void handleSave()}
+              >
+                {t("saveAndContinue")}
+              </ButtonPrimary>
+            </div>
           </div>
         </div>
       </div>
