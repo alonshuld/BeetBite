@@ -68,6 +68,35 @@ dbTest.describe.serial('Onboarding', () => {
     },
   );
 
+  dbTest(
+    'is scrollable on a short screen so the buttons stay reachable',
+    async ({ page, db }) => {
+      await db.companySettings.deleteMany();
+      await page.setViewportSize({ width: 1024, height: 500 });
+
+      await page.goto(`${BASE}/onboarding`);
+      const save = page.getByRole('button', { name: 'Save & Continue' });
+      await expect(save).toBeAttached();
+
+      // body is overflow:hidden, so the page must scroll itself.
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const el = document
+              .querySelector('h1')
+              ?.closest('.overflow-y-auto');
+            return el ? el.scrollHeight > el.clientHeight : false;
+          }),
+        )
+        .toBe(true);
+
+      await save.scrollIntoViewIfNeeded();
+      await expect(save).toBeInViewport();
+      await save.click();
+      await expect(page).toHaveURL(/\/reports$/);
+    },
+  );
+
   dbTest('does not redirect once settings exist', async ({ page, db }) => {
     void db;
     await page.goto(`${BASE}/reports`);
