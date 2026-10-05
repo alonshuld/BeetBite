@@ -208,7 +208,9 @@ dbTest.describe('Initiator link and income — documentation only', () => {
       // Not above the report's 40,000 income → rejected, nothing stored.
       await input.fill('1200');
       await page.getByRole('button', { name: 'Save', exact: true }).click();
-      await expect(page.getByText(/greater than/i)).toBeVisible({
+      await expect(
+        page.getByText(/initiator income must be greater than/i),
+      ).toBeVisible({
         timeout: 5000,
       });
       const rejected = await db.projectReport.findUnique({
