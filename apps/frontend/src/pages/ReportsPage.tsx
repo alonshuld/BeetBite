@@ -15,7 +15,7 @@ import {
 import { useExportClientSimulatedPdfMutation } from "@/api/endpoints/project-report-exports";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
-import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
+import { SubcontractorSelect } from "@/components/molecules/SubcontractorSelect";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import {
@@ -92,7 +92,6 @@ export default function ReportsPage() {
   );
   const { data: clients = [] } = useGetClientsQuery();
   const { data: projects = [] } = useGetProjectsQuery();
-  const { data: subcontractors = [] } = useGetSubcontractorsQuery();
   const { data: suppliers = [] } = useGetSuppliersQuery();
   const [createReport, { isLoading: saving }] =
     useCreateProjectReportMutation();
@@ -129,7 +128,7 @@ export default function ReportsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `simulated-report-${month}.pdf`;
+      a.download = `projects-report-${month}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -508,19 +507,13 @@ export default function ReportsPage() {
           </FormRow>
 
           <FormRow>
-            <Select
+            <SubcontractorSelect
               id="report-subcontractor"
               label={t("subcontractor")}
               value={subcontractorId}
-              onChange={(e) => setSubcontractorId(e.target.value)}
-            >
-              <option value="">—</option>
-              {subcontractors.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </Select>
+              onChange={setSubcontractorId}
+              emptyLabel="—"
+            />
 
             <Input
               label={t("reportMonth")}

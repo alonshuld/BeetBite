@@ -13,8 +13,8 @@ export interface ExportProjectReportsPdfDto {
 }
 
 /**
- * A summary page + one account-approval-style page per project, every
- * report of a client for one month, rendered at simulated margins. Never
+ * Every report of a client for one month, laid out as the Reports screen's
+ * project sheets and rendered at simulated margins (never named as such). Never
  * persisted: the override map is transient, applied server-side at render
  * time only.
  */

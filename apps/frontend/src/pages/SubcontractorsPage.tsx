@@ -6,6 +6,7 @@ import {
   useCreateSubcontractorMutation,
   useUpdateSubcontractorMutation,
   useDeleteSubcontractorMutation,
+  useGetSubcontractorTeamsQuery,
   type Subcontractor,
 } from "@/api/endpoints/subcontractors";
 import { PageHeader } from "@/components/molecules/PageHeader";
@@ -13,6 +14,7 @@ import { SearchInput } from "@/components/molecules/SearchInput";
 import { FormGroup, FormRow } from "@/components/molecules/FormGroup";
 import { Input } from "@/components/atoms/Input";
 import {
+  ButtonGhost,
   ButtonPrimary,
   ButtonIcon,
   EmptyState,
@@ -20,11 +22,15 @@ import {
 } from "@/components/atoms";
 import { FormModal, ConfirmModal } from "@/components/organisms/Modal";
 import { LoadingState } from "@/components/molecules/LoadingState";
+import { TeamsModal } from "@/components/organisms/TeamsModal";
+import { teamLabel, teamsByMember } from "@/utils/subcontractorTeams";
 
 export default function SubcontractorsPage() {
   const { t } = useLang();
   const checkFields = useFieldCheck();
   const { data: subcontractors = [], isLoading } = useGetSubcontractorsQuery();
+  const { data: teams = [] } = useGetSubcontractorTeamsQuery();
+  const teamOf = teamsByMember(teams);
   const [createSubcontractor, { isLoading: creating }] =
     useCreateSubcontractorMutation();
   const [updateSubcontractor, { isLoading: updating }] =
@@ -33,6 +39,7 @@ export default function SubcontractorsPage() {
     useDeleteSubcontractorMutation();
 
   const [search, setSearch] = useState("");
+  const [teamsOpen, setTeamsOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Subcontractor | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Subcontractor | null>(null);
@@ -104,9 +111,14 @@ export default function SubcontractorsPage() {
         title={t("subcontractors")}
         subtitle={t("manageSubcontractorsSubtitle")}
         actions={
-          <ButtonPrimary onClick={openAdd}>
-            + {t("addSubcontractor")}
-          </ButtonPrimary>
+          <>
+            <ButtonGhost onClick={() => setTeamsOpen(true)}>
+              {t("teams")}
+            </ButtonGhost>
+            <ButtonPrimary onClick={openAdd}>
+              + {t("addSubcontractor")}
+            </ButtonPrimary>
+          </>
         }
       />
 
@@ -143,6 +155,9 @@ export default function SubcontractorsPage() {
                 <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("companyNumberLabel")}
                 </th>
+                <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
+                  {t("team")}
+                </th>
                 <th className="text-right py-3 px-4 text-label font-semibold text-text-muted rtl:text-left">
                   {t("actions")}
                 </th>
@@ -156,6 +171,11 @@ export default function SubcontractorsPage() {
                 >
                   <td className="py-3 px-4 text-text">{sub.name}</td>
                   <td className="py-3 px-4 text-text">{sub.companyNumber}</td>
+                  <td className="py-3 px-4 text-text-muted">
+                    {teamOf.has(sub.id)
+                      ? teamLabel(teamOf.get(sub.id)!.members)
+                      : "—"}
+                  </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center justify-end gap-2 rtl:justify-start">
                       <ButtonIcon
@@ -215,6 +235,8 @@ export default function SubcontractorsPage() {
           </FormGroup>
         </FormRow>
       </FormModal>
+
+      <TeamsModal open={teamsOpen} onClose={() => setTeamsOpen(false)} />
 
       <ConfirmModal
         open={!!deleteTarget}

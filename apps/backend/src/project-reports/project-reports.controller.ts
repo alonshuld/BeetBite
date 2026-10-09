@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -33,6 +34,7 @@ import { MonthQueryDto } from 'src/common/month-query.dto';
 import { IncomeEntryResponseDto } from './dto/income-entry-response.dto';
 import { CreateIncomeEntryDto } from './dto/create-income-entry.dto';
 import { UpdateIncomeEntryDto } from './dto/update-income-entry.dto';
+import { ChangeReportSubcontractorDto } from './dto/change-report-subcontractor.dto';
 
 @ApiBearerAuth()
 @ApiTags('projects/reports')
@@ -144,6 +146,28 @@ export class ProjectReportsController {
     @Body() updateProjectReportDto: UpdateProjectReportDto,
   ): Promise<ProjectReportListItemDto> {
     return await this.projectReportsService.update(id, updateProjectReportDto);
+  }
+
+  @Patch('/projects/reports/:id/subcontractor')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Hand the project to another member of the same team this month',
+  })
+  @ApiParam({ name: 'id', description: 'Project report ID' })
+  @ApiNoContentResponse()
+  @ApiNotFoundResponse({ description: 'Report or subcontractor not found' })
+  @ApiBadRequestResponse({ description: 'Not a member of the same team' })
+  @ApiConflictResponse({
+    description: 'Payments are already recorded for this project and month',
+  })
+  async changeSubcontractor(
+    @Param('id') id: string,
+    @Body() dto: ChangeReportSubcontractorDto,
+  ): Promise<void> {
+    await this.projectReportsService.changeSubcontractor(
+      id,
+      dto.subcontractorId,
+    );
   }
 
   @Delete('/projects/reports/:id')

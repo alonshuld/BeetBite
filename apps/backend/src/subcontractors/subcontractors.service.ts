@@ -155,8 +155,21 @@ export class SubcontractorsService {
    */
   async remove(id: string): Promise<void> {
     try {
-      await this.prismaService.subcontractor.delete({
-        where: { id },
+      await this.prismaService.$transaction(async (tx) => {
+        const { teamId } = await tx.subcontractor.delete({
+          where: { id },
+          select: { teamId: true },
+        });
+
+        // A team is at least two people; the one left behind works alone.
+        if (teamId) {
+          const remaining = await tx.subcontractor.count({
+            where: { teamId },
+          });
+          if (remaining < 2) {
+            await tx.subcontractorTeam.delete({ where: { id: teamId } });
+          }
+        }
       });
 
       this.logger.log(`Subcontractor deleted: ${id}`);

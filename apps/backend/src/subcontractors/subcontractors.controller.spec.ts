@@ -47,6 +47,7 @@ describe('SubcontractorsController', () => {
         id: 'clh0000000000000000000001',
         name: 'Test Subcontractor',
         companyNumber: '515123456',
+        teamId: null,
       };
 
       mockSubcontractorService.create.mockResolvedValue(expectedResult);
@@ -108,11 +109,13 @@ describe('SubcontractorsController', () => {
           id: 'clh0000000000000000000001',
           name: 'Subcontractor 1',
           companyNumber: '515123456',
+          teamId: null,
         },
         {
           id: 'clh0000000000000000000002',
           name: 'Subcontractor 2',
           companyNumber: '515123457',
+          teamId: null,
         },
       ];
 
@@ -130,11 +133,13 @@ describe('SubcontractorsController', () => {
           id: 'clh0000000000000000000001',
           name: 'Subcontractor 1',
           companyNumber: '515123456',
+          teamId: null,
         },
         {
           id: 'clh0000000000000000000002',
           name: 'Subcontractor 2',
           companyNumber: '515123457',
+          teamId: null,
         },
       ];
 
@@ -178,6 +183,7 @@ describe('SubcontractorsController', () => {
         id: 'clh0000000000000000000001',
         name: 'Updated Subcontractor',
         companyNumber: '515123456',
+        teamId: null,
       };
 
       mockSubcontractorService.update.mockResolvedValue(expectedResult);
@@ -261,6 +267,7 @@ describe('SubcontractorsController', () => {
         id: 'clh0000000000000000000001',
         name: 'Subcontractor 1',
         companyNumber: '515123456',
+        teamId: null,
       };
 
       mockSubcontractorService.findOne.mockResolvedValue(expectedResult);

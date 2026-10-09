@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer';
 import { CompanySettingsService } from 'src/company-settings/company-settings.service';
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 import { ProjectReportsService } from 'src/project-reports/project-reports.service';
-import { SubcontractorsService } from 'src/subcontractors/subcontractors.service';
+import { SubcontractorTeamsService } from 'src/subcontractors/subcontractor-teams.service';
 import { ProjectsService } from 'src/projects/projects.service';
 import { ExportProjectReportsPdfDto } from './dto/export-project-reports-pdf.dto';
 import { ExportClientSimulatedPdfDto } from './dto/export-client-simulated-pdf.dto';
@@ -20,7 +20,7 @@ import {
   ReportApprovalSupplierRow,
 } from './templates/report-approval.template';
 import {
-  ClientSimulatedProjectRow,
+  ClientSimulatedProjectCard,
   renderClientSimulatedExportHtml,
 } from './templates/client-simulated-export.template';
 import { PdfColors } from './templates/shared';
@@ -55,7 +55,7 @@ export class PdfExportService {
     private readonly companySettingsService: CompanySettingsService,
     private readonly vatRatesService: VatRatesService,
     private readonly projectReportsService: ProjectReportsService,
-    private readonly subcontractorsService: SubcontractorsService,
+    private readonly subcontractorTeamsService: SubcontractorTeamsService,
     private readonly projectsService: ProjectsService,
   ) {}
 
@@ -83,7 +83,9 @@ export class PdfExportService {
       throw new VatRateNotConfiguredError(month);
     }
 
-    const subcontractor = await this.subcontractorsService.findOne(
+    // A team project names every member of the team, not just the one who
+    // took it this month; a subcontractor working alone is a team of one.
+    const subcontractors = await this.subcontractorTeamsService.findTeamOf(
       report.subcontractor.id,
     );
 
@@ -93,7 +95,7 @@ export class PdfExportService {
       report,
       effectiveMargin: report.profitMargin,
       vatPercentage,
-      subcontractor,
+      subcontractors,
       companySettings,
       approvedFor,
       // Typed in the export dialog for this document only. The project's own
@@ -123,10 +125,10 @@ export class PdfExportService {
   }
 
   /**
-   * A summary page followed by one account-approval-style page per project —
-   * every report of a client for one month, rendered at simulated margins.
-   * Simulated margins are transient: applied here at render time only, never
-   * written to any ProjectReport.
+   * Every report of a client for one month, laid out as the Reports screen's
+   * project sheets and rendered at the simulator's margins. Those margins are
+   * transient: applied here at render time only, never written to any
+   * ProjectReport — and the document never mentions that they differ.
    */
   async exportClientSimulatedPdf(
     dto: ExportClientSimulatedPdfDto,
@@ -163,60 +165,53 @@ export class PdfExportService {
     }
 
     const month = clientReports[0].date;
-    const vatPercentage = await this.vatRatesService.resolveForMonth(month);
-    if (vatPercentage === null) {
-      throw new VatRateNotConfiguredError(month);
-    }
-
     const lang = dto.lang ?? 'he';
-    const detailPages: ReportApprovalData[] = [];
-    const summaryRows: ClientSimulatedProjectRow[] = [];
-    for (const report of clientReports) {
+    const teams = await this.subcontractorTeamsService.findTeamsOf(
+      clientReports.map((report) => report.subcontractor.id),
+    );
+    // One card per project, as the Reports screen draws its sheets — at the
+    // margin in force, with nothing of the stored one it may have replaced.
+    const cards: ClientSimulatedProjectCard[] = clientReports.map((report) => {
       this.assertInitiatorIncomeSet(report);
 
-      const subcontractor = await this.subcontractorsService.findOne(
-        report.subcontractor.id,
-      );
-      const effectiveMargin =
+      const margin =
         overridesByProject.get(report.project.id) ?? report.profitMargin;
-
-      const data = this.buildReportApprovalData({
-        report,
-        effectiveMargin,
-        vatPercentage,
-        subcontractor,
-        companySettings,
-        // This is a new, distinct document from the manual per-report
-        // export — it does not carry that flow's remembered "approved for"
-        // text, by design.
-        approvedFor: '',
-        projectDescription: report.project.description || null,
-        lang,
-        // The document mirrors the Reports screen, so each page carries what
-        // that screen shows for the project, not just the approval figures.
-        includeScreenDetails: true,
-      });
-      detailPages.push(data);
-
-      const profit = report.totalIncome * (effectiveMargin / 100);
+      const profit = report.totalIncome * (margin / 100);
       const supplierTotal = report.supplierPayments.reduce(
         (sum, p) => sum + p.amount,
         0,
       );
-      summaryRows.push({
-        projectId: report.project.id,
+      return {
         projectName: report.project.name,
-        projectLocation: report.project.location,
-        subcontractorName: subcontractor.name,
+        projectLocation: report.project.location || null,
+        projectDescription: report.project.description || null,
+        incomeEntries: report.incomeEntries.map((entry) => ({
+          tag: entry.tag,
+          incomeDate: entry.incomeDate,
+          amount: entry.amount,
+        })),
         totalIncome: report.totalIncome,
-        simMargin: effectiveMargin,
-        savedMargin: report.profitMargin,
+        margin,
         profit,
-        savedProfit: report.totalIncome * (report.profitMargin / 100),
-        supplierTotal,
+        suppliers: report.supplierPayments.map((payment) => ({
+          name: payment.supplier.name,
+          amount: payment.amount,
+        })),
+        // Every member of a team project, the same on every card it worked.
+        subcontractorName:
+          teams
+            .get(report.subcontractor.id)
+            ?.map((member) => member.name)
+            .join(' + ') ?? report.subcontractor.name,
         subcontractorPayment: report.totalIncome - profit - supplierTotal,
-      });
-    }
+        initiator: report.project.initiatorName
+          ? {
+              name: report.project.initiatorName,
+              income: report.initiatorIncome,
+            }
+          : null,
+      };
+    });
 
     const html = renderClientSimulatedExportHtml({
       lang,
@@ -225,13 +220,11 @@ export class PdfExportService {
       contractorDescription: companySettings.description,
       clientName: clientReports[0].project.client.name,
       month,
-      summaryRows,
-      detailPages,
+      cards,
       companyPhone: companySettings.phone,
       companyEmail: companySettings.email,
       companyAddress: this.formatCompanyAddress(companySettings),
       logo: companySettings.logo,
-      signature: companySettings.signature,
       colors: this.pdfColors(companySettings),
       font: this.pdfFont(companySettings),
     });
@@ -296,37 +289,26 @@ export class PdfExportService {
     );
   }
 
-  /**
-   * Builds the shared per-report page data used by both the single-report
-   * export and each detail page of the client-simulated export. `effectiveMargin`
-   * is the only thing that differs between the two callers — the real stored
-   * margin for a normal export, a simulated one for the client-wide export —
-   * everything else (income entries, supplier/initiator payments) always
-   * reflects real data. `includeScreenDetails` adds what the Reports screen
-   * shows beyond the approval (see ReportApprovalScreenDetails); the
-   * single-report export leaves it off so its layout stays fixed.
-   */
+  /** Builds the account-approval page data for the single-report export. */
   private buildReportApprovalData(args: {
     report: ProjectReportListItemDto;
     effectiveMargin: number;
     vatPercentage: number;
-    subcontractor: { name: string; companyNumber: string };
+    subcontractors: { name: string; companyNumber: string }[];
     companySettings: CompanySettingsForPdf;
     approvedFor: string;
     projectDescription: string | null;
     lang: 'en' | 'he';
-    includeScreenDetails?: boolean;
   }): ReportApprovalData {
     const {
       report,
       effectiveMargin,
       vatPercentage,
-      subcontractor,
+      subcontractors,
       companySettings,
       approvedFor,
       projectDescription,
       lang,
-      includeScreenDetails = false,
     } = args;
 
     // One row per income entry: each is a chunk of approved work carrying its
@@ -335,7 +317,6 @@ export class PdfExportService {
       const profitAmount = entry.amount * (effectiveMargin / 100);
       return {
         tag: entry.tag,
-        incomeDate: entry.incomeDate,
         approvedAmount: entry.amount,
         invoiceInclVat: entry.amount * (1 + vatPercentage / 100),
         profitMarginPercent: effectiveMargin,
@@ -374,8 +355,10 @@ export class PdfExportService {
       contractorCompanyNumber: companySettings.companyNumber,
       contractorDescription: companySettings.description,
       requesterName: report.project.requesterName,
-      subcontractorName: subcontractor.name,
-      subcontractorCompanyNumber: subcontractor.companyNumber,
+      subcontractors: subcontractors.map((member) => ({
+        name: member.name,
+        companyNumber: member.companyNumber,
+      })),
       projectName: report.project.name,
       projectDescription,
       projectLocation: report.project.location || null,
@@ -397,19 +380,6 @@ export class PdfExportService {
       signature: companySettings.signature,
       colors: this.pdfColors(companySettings),
       font: this.pdfFont(companySettings),
-      screen: includeScreenDetails
-        ? {
-            marginPercent: effectiveMargin,
-            saved:
-              effectiveMargin === report.profitMargin
-                ? null
-                : {
-                    marginPercent: report.profitMargin,
-                    profitAmount:
-                      report.totalIncome * (report.profitMargin / 100),
-                  },
-          }
-        : undefined,
     };
   }
 

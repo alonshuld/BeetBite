@@ -118,6 +118,18 @@ export const projectReportsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["ProjectReports", "Incomes"],
     }),
+    /** Hands a team project to another member of the same team this month. */
+    changeReportSubcontractor: build.mutation<
+      void,
+      { id: string; subcontractorId: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/projects/reports/${id}/subcontractor`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["ProjectReports", "SubcontractorPayments"],
+    }),
     deleteProjectReport: build.mutation<void, string>({
       query: (id) => ({ url: `/projects/reports/${id}`, method: "DELETE" }),
       invalidatesTags: ["ProjectReports", "Projects", "Incomes"],
@@ -160,6 +172,7 @@ export const {
   useCreateProjectReportMutation,
   useUpdateProjectReportMutation,
   useDeleteProjectReportMutation,
+  useChangeReportSubcontractorMutation,
   useAddIncomeEntryMutation,
   useUpdateIncomeEntryMutation,
   useDeleteIncomeEntryMutation,
