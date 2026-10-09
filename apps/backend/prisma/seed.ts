@@ -144,6 +144,7 @@ async function seedMockData(): Promise<void> {
   await prisma.project.deleteMany({});
   await prisma.client.deleteMany({});
   await prisma.subcontractor.deleteMany({});
+  await prisma.subcontractorTeam.deleteMany({});
   await prisma.supplier.deleteMany({});
   await prisma.initiator.deleteMany({});
   await prisma.companySettings.deleteMany({});
@@ -231,6 +232,16 @@ async function seedMockData(): Promise<void> {
       data: { name: 'Tal Golan', companyNumber: '515000015' },
     }), // 14
   ]);
+
+  // Moshe and Avi work as a team: May 2026 shows their projects on one card on
+  // the subcontractor payments screen, with totals per member.
+  await prisma.subcontractorTeam.create({
+    data: {
+      members: {
+        connect: [{ id: subcontractors[0].id }, { id: subcontractors[1].id }],
+      },
+    },
+  });
 
   // ── Suppliers (12) ─────────────────────────────────────────────────────
   const suppliers = await Promise.all([

@@ -9,6 +9,10 @@ vi.mock("@/api/endpoints/subcontractors", () => ({
   useCreateSubcontractorMutation: vi.fn(),
   useUpdateSubcontractorMutation: vi.fn(),
   useDeleteSubcontractorMutation: vi.fn(),
+  useGetSubcontractorTeamsQuery: vi.fn(() => ({ data: [] })),
+  useCreateSubcontractorTeamMutation: vi.fn(() => [vi.fn(), {}]),
+  useUpdateSubcontractorTeamMutation: vi.fn(() => [vi.fn(), {}]),
+  useDeleteSubcontractorTeamMutation: vi.fn(() => [vi.fn(), {}]),
 }));
 
 import {

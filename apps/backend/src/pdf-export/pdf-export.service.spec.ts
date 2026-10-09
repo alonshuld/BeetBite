@@ -3,7 +3,7 @@ import { PdfExportService } from './pdf-export.service';
 import { CompanySettingsService } from 'src/company-settings/company-settings.service';
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 import { ProjectReportsService } from 'src/project-reports/project-reports.service';
-import { SubcontractorsService } from 'src/subcontractors/subcontractors.service';
+import { SubcontractorTeamsService } from 'src/subcontractors/subcontractor-teams.service';
 import { ProjectsService } from 'src/projects/projects.service';
 import { CompanySettingsIncompleteError } from './errors/company-settings-incomplete.error';
 import { VatRateNotConfiguredError } from './errors/vat-rate-not-configured.error';
@@ -34,7 +34,10 @@ describe('PdfExportService', () => {
     findOneForExport: jest.fn(),
     findProjectReportsInMonth: jest.fn(),
   };
-  const mockSubcontractorsService = { findOne: jest.fn() };
+  const mockSubcontractorTeamsService = {
+    findTeamOf: jest.fn(),
+    findTeamsOf: jest.fn(),
+  };
   const mockProjectsService = { updateLastApprovedFor: jest.fn() };
 
   const completeCompanySettings = {
@@ -129,7 +132,10 @@ describe('PdfExportService', () => {
         },
         { provide: VatRatesService, useValue: mockVatRatesService },
         { provide: ProjectReportsService, useValue: mockProjectReportsService },
-        { provide: SubcontractorsService, useValue: mockSubcontractorsService },
+        {
+          provide: SubcontractorTeamsService,
+          useValue: mockSubcontractorTeamsService,
+        },
         { provide: ProjectsService, useValue: mockProjectsService },
       ],
     }).compile();
@@ -142,11 +148,9 @@ describe('PdfExportService', () => {
     );
     mockVatRatesService.resolveForMonth.mockResolvedValue(18);
     mockProjectReportsService.findOneForExport.mockResolvedValue(mockReport);
-    mockSubcontractorsService.findOne.mockResolvedValue({
-      id: 'sub-1',
-      name: 'Israelov Engineering',
-      companyNumber: '516469053',
-    });
+    mockSubcontractorTeamsService.findTeamOf.mockResolvedValue([
+      { id: 'sub-1', name: 'Israelov Engineering', companyNumber: '516469053' },
+    ]);
     mockProjectsService.updateLastApprovedFor.mockResolvedValue(undefined);
   });
 
@@ -280,6 +284,30 @@ describe('PdfExportService', () => {
   // The description belongs to the document, not to the project: the dialog
   // seeds it from the project but the export never writes it back — the
   // projects screen is the only place the project's own description changes.
+  it('prints the subcontractor with its company number', async () => {
+    const html = await renderHtml();
+
+    expect(html).toContain('Israelov Engineering');
+    expect(html).toContain('516469053');
+  });
+
+  it('prints every member of a team project, each with their company number', async () => {
+    mockSubcontractorTeamsService.findTeamOf.mockResolvedValue([
+      { id: 'sub-1', name: 'Israelov Engineering', companyNumber: '516469053' },
+      { id: 'sub-9', name: 'Partner Works', companyNumber: '512345678' },
+    ]);
+
+    const html = await renderHtml();
+
+    expect(mockSubcontractorTeamsService.findTeamOf).toHaveBeenCalledWith(
+      'sub-1',
+    );
+    expect(html).toContain('Israelov Engineering');
+    expect(html).toContain('516469053');
+    expect(html).toContain('Partner Works');
+    expect(html).toContain('512345678');
+  });
+
   describe('per-document description', () => {
     it("prints the description it was given, not the project's stored one", async () => {
       mockProjectReportsService.findOneForExport.mockResolvedValue({
@@ -678,15 +706,25 @@ describe('PdfExportService', () => {
       mockProjectReportsService.findProjectReportsInMonth.mockResolvedValue(
         reportsForClient1,
       );
-      mockSubcontractorsService.findOne.mockImplementation(
-        (id: string) =>
-          Promise.resolve({
-            id,
-            name:
-              reportsForClient1.find((r) => r.subcontractor.id === id)
-                ?.subcontractor.name ?? 'Unknown',
-            companyNumber: '000000000',
-          }) as unknown,
+      // Each subcontractor works alone unless a test says otherwise.
+      mockSubcontractorTeamsService.findTeamsOf.mockImplementation(
+        (ids: string[]) =>
+          Promise.resolve(
+            new Map(
+              ids.map((id) => [
+                id,
+                [
+                  {
+                    id,
+                    name:
+                      reportsForClient1.find((r) => r.subcontractor.id === id)
+                        ?.subcontractor.name ?? 'Unknown',
+                    companyNumber: '000000000',
+                  },
+                ],
+              ]),
+            ),
+          ),
       );
     });
 
@@ -858,6 +896,28 @@ describe('PdfExportService', () => {
         expect(html).toContain('− ₪1,000');
         expect(html).toContain('Israelov Engineering');
         expect(html).toContain('Bar Yam Builders');
+      });
+
+      it('names every team member on the remainder of a team project', async () => {
+        mockSubcontractorTeamsService.findTeamsOf.mockResolvedValue(
+          new Map([
+            [
+              'sub-1',
+              [
+                {
+                  id: 'sub-1',
+                  name: 'Israelov Engineering',
+                  companyNumber: '1',
+                },
+                { id: 'sub-9', name: 'Partner Works', companyNumber: '2' },
+              ],
+            ],
+          ]),
+        );
+
+        const html = await renderSimHtml({ ...simDto, lang: 'en' });
+
+        expect(html).toContain('Israelov Engineering + Partner Works');
       });
 
       it("prints each project's location and description", async () => {

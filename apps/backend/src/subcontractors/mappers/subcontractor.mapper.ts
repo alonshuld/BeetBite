@@ -9,7 +9,10 @@ import { SubcontractorResponseDto } from '../dto/subcontractor-response.dto';
 export const toSubcontractorResponse = (
   subcontractor: Subcontractor,
 ): SubcontractorResponseDto => ({
-  ...subcontractor,
+  id: subcontractor.id,
+  name: subcontractor.name,
+  companyNumber: subcontractor.companyNumber,
+  teamId: subcontractor.teamId,
 });
 
 /**

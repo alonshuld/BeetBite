@@ -20,7 +20,7 @@ import {
   useDeleteSupplierPaymentMutation,
 } from "@/api/endpoints/supplier-payments";
 import { useGetProjectsQuery } from "@/api/endpoints/projects";
-import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
+import { SubcontractorSelect } from "@/components/molecules/SubcontractorSelect";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { StatCard } from "@/components/molecules/StatCard";
 import {
@@ -71,7 +71,6 @@ export default function ProjectReportsPage() {
   const { data: monthReports = [], isLoading } =
     useGetProjectReportsQuery(month);
   const { data: projects = [] } = useGetProjectsQuery();
-  const { data: subcontractors = [] } = useGetSubcontractorsQuery();
   const { data: suppliers = [] } = useGetSuppliersQuery();
   const [createReport, { isLoading: creating }] =
     useCreateProjectReportMutation();
@@ -944,18 +943,12 @@ export default function ProjectReportsPage() {
         large
       >
         <div className="flex flex-col gap-4">
-          <Select
+          <SubcontractorSelect
             label={t("subcontractor")}
             value={subcontractorId}
-            onChange={(e) => setSubcontractorId(e.target.value)}
-          >
-            <option value="">— None —</option>
-            {subcontractors.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </Select>
+            onChange={setSubcontractorId}
+            emptyLabel="— None —"
+          />
 
           <FormRow>
             <Input

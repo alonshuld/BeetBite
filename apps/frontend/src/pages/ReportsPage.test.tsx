@@ -21,6 +21,7 @@ vi.mock("@/api/endpoints/projects", () => ({
 }));
 vi.mock("@/api/endpoints/subcontractors", () => ({
   useGetSubcontractorsQuery: vi.fn(),
+  useGetSubcontractorTeamsQuery: vi.fn(() => ({ data: [] })),
 }));
 vi.mock("@/api/endpoints/suppliers", () => ({
   useGetSuppliersQuery: vi.fn(),

@@ -39,6 +39,7 @@ const testWithDb = base.extend<DbFixture>({
     await prisma.project.deleteMany();
     await prisma.client.deleteMany();
     await prisma.subcontractor.deleteMany();
+    await prisma.subcontractorTeam.deleteMany();
     await prisma.supplier.deleteMany();
     await prisma.initiator.deleteMany();
 

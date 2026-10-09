@@ -18,7 +18,12 @@ describe('SubcontractorsService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      count: jest.fn(),
     },
+    subcontractorTeam: {
+      delete: jest.fn(),
+    },
+    $transaction: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -243,14 +248,50 @@ describe('SubcontractorsService', () => {
       name: 'Test Subcontractor',
     };
 
-    it('should delete a subcontractor', async () => {
-      mockPrismaService.subcontractor.delete.mockResolvedValue(
-        mockSubcontractor,
+    beforeEach(() => {
+      mockPrismaService.$transaction.mockImplementation(
+        (callback: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          callback(mockPrismaService),
       );
+    });
+
+    it('should delete a subcontractor', async () => {
+      mockPrismaService.subcontractor.delete.mockResolvedValue({
+        ...mockSubcontractor,
+        teamId: null,
+      });
 
       const result = await service.remove('clh0000000000000000000001');
 
       expect(result).toBeUndefined();
+      expect(mockPrismaService.subcontractorTeam.delete).not.toHaveBeenCalled();
+    });
+
+    it('disbands a team left with a single member', async () => {
+      mockPrismaService.subcontractor.delete.mockResolvedValue({
+        teamId: 'team-1',
+      });
+      mockPrismaService.subcontractor.count.mockResolvedValue(1);
+
+      await service.remove('clh0000000000000000000001');
+
+      expect(mockPrismaService.subcontractor.count).toHaveBeenCalledWith({
+        where: { teamId: 'team-1' },
+      });
+      expect(mockPrismaService.subcontractorTeam.delete).toHaveBeenCalledWith({
+        where: { id: 'team-1' },
+      });
+    });
+
+    it('keeps a team that still has two members', async () => {
+      mockPrismaService.subcontractor.delete.mockResolvedValue({
+        teamId: 'team-1',
+      });
+      mockPrismaService.subcontractor.count.mockResolvedValue(2);
+
+      await service.remove('clh0000000000000000000001');
+
+      expect(mockPrismaService.subcontractorTeam.delete).not.toHaveBeenCalled();
     });
 
     it('should throw SubcontractorNotFoundError when subcontractor does not exist', async () => {

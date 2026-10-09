@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class SubcontractorResponseDto {
   @ApiProperty({
@@ -19,4 +19,12 @@ export class SubcontractorResponseDto {
       'Israeli company registration number of the private company, 9 digits',
   })
   companyNumber!: string;
+
+  @ApiPropertyOptional({
+    example: 'cmb1team',
+    description: 'The team this subcontractor works in, or null',
+    type: String,
+    nullable: true,
+  })
+  teamId!: string | null;
 }

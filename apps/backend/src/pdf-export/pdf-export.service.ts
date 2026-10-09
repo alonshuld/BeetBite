@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer';
 import { CompanySettingsService } from 'src/company-settings/company-settings.service';
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 import { ProjectReportsService } from 'src/project-reports/project-reports.service';
-import { SubcontractorsService } from 'src/subcontractors/subcontractors.service';
+import { SubcontractorTeamsService } from 'src/subcontractors/subcontractor-teams.service';
 import { ProjectsService } from 'src/projects/projects.service';
 import { ExportProjectReportsPdfDto } from './dto/export-project-reports-pdf.dto';
 import { ExportClientSimulatedPdfDto } from './dto/export-client-simulated-pdf.dto';
@@ -55,7 +55,7 @@ export class PdfExportService {
     private readonly companySettingsService: CompanySettingsService,
     private readonly vatRatesService: VatRatesService,
     private readonly projectReportsService: ProjectReportsService,
-    private readonly subcontractorsService: SubcontractorsService,
+    private readonly subcontractorTeamsService: SubcontractorTeamsService,
     private readonly projectsService: ProjectsService,
   ) {}
 
@@ -83,7 +83,9 @@ export class PdfExportService {
       throw new VatRateNotConfiguredError(month);
     }
 
-    const subcontractor = await this.subcontractorsService.findOne(
+    // A team project names every member of the team, not just the one who
+    // took it this month; a subcontractor working alone is a team of one.
+    const subcontractors = await this.subcontractorTeamsService.findTeamOf(
       report.subcontractor.id,
     );
 
@@ -93,7 +95,7 @@ export class PdfExportService {
       report,
       effectiveMargin: report.profitMargin,
       vatPercentage,
-      subcontractor,
+      subcontractors,
       companySettings,
       approvedFor,
       // Typed in the export dialog for this document only. The project's own
@@ -164,6 +166,9 @@ export class PdfExportService {
 
     const month = clientReports[0].date;
     const lang = dto.lang ?? 'he';
+    const teams = await this.subcontractorTeamsService.findTeamsOf(
+      clientReports.map((report) => report.subcontractor.id),
+    );
     // One card per project, as the Reports screen draws its sheets — at the
     // margin in force, with nothing of the stored one it may have replaced.
     const cards: ClientSimulatedProjectCard[] = clientReports.map((report) => {
@@ -192,7 +197,12 @@ export class PdfExportService {
           name: payment.supplier.name,
           amount: payment.amount,
         })),
-        subcontractorName: report.subcontractor.name,
+        // Every member of a team project, the same on every card it worked.
+        subcontractorName:
+          teams
+            .get(report.subcontractor.id)
+            ?.map((member) => member.name)
+            .join(' + ') ?? report.subcontractor.name,
         subcontractorPayment: report.totalIncome - profit - supplierTotal,
         initiator: report.project.initiatorName
           ? {
@@ -284,7 +294,7 @@ export class PdfExportService {
     report: ProjectReportListItemDto;
     effectiveMargin: number;
     vatPercentage: number;
-    subcontractor: { name: string; companyNumber: string };
+    subcontractors: { name: string; companyNumber: string }[];
     companySettings: CompanySettingsForPdf;
     approvedFor: string;
     projectDescription: string | null;
@@ -294,7 +304,7 @@ export class PdfExportService {
       report,
       effectiveMargin,
       vatPercentage,
-      subcontractor,
+      subcontractors,
       companySettings,
       approvedFor,
       projectDescription,
@@ -345,8 +355,10 @@ export class PdfExportService {
       contractorCompanyNumber: companySettings.companyNumber,
       contractorDescription: companySettings.description,
       requesterName: report.project.requesterName,
-      subcontractorName: subcontractor.name,
-      subcontractorCompanyNumber: subcontractor.companyNumber,
+      subcontractors: subcontractors.map((member) => ({
+        name: member.name,
+        companyNumber: member.companyNumber,
+      })),
       projectName: report.project.name,
       projectDescription,
       projectLocation: report.project.location || null,

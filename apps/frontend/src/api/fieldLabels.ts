@@ -22,6 +22,7 @@ const BY_FIELD: Record<string, TranslationKey> = {
   projectId: "project",
   supplierId: "supplier",
   subcontractorId: "subcontractor",
+  memberIds: "teamMembers",
   initiatorId: "initiator",
   projectReportId: "project",
   estimatedAmount: "estimatedAmountLabel",
