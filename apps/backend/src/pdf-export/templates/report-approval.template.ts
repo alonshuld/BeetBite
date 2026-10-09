@@ -20,8 +20,11 @@ export interface ReportApprovalData {
   contractorCompanyNumber: string;
   contractorDescription: string | null;
   requesterName: string;
-  subcontractorName: string;
-  subcontractorCompanyNumber: string;
+  /**
+   * The subcontractor on the report — or, for a team project, every member of
+   * the team, each with their own company number.
+   */
+  subcontractors: { name: string; companyNumber: string }[];
   projectName: string;
   /**
    * Description printed in the info box. The single-report export takes it
@@ -183,6 +186,7 @@ const reportApprovalStyles = (
   }
   .info-row { display: flex; gap: 10px; padding: 3px 0; font-size: 12px; }
   .info-row .label { color: #667; font-weight: 700; min-width: 118px; }
+  .info-row .stacked { display: flex; flex-direction: column; gap: 2px; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 26px; }
   th, td {
     padding: 9px 10px;
@@ -317,6 +321,14 @@ const renderReportApprovalPage = (data: ReportApprovalData): string => {
 
   // No initiator on the project → the whole block is absent, not an empty
   // heading or a zero row. When present it leads the info box.
+  // One line per subcontractor: a team project lists every member.
+  const subcontractorsHtml = data.subcontractors
+    .map(
+      (member) =>
+        `<span>${escapeHtml(member.name)} • ${t.companyNumberPrefix} ${escapeHtml(member.companyNumber)}</span>`,
+    )
+    .join('');
+
   const initiatorInfoRowHtml = data.initiator
     ? `<div class="info-row"><span class="label">${t.initiator}</span><span>${escapeHtml(data.initiator.name)}</span></div>`
     : '';
@@ -359,7 +371,7 @@ const renderReportApprovalPage = (data: ReportApprovalData): string => {
       ${initiatorInfoRowHtml}
       <div class="info-row"><span class="label">${t.client}</span><span>${escapeHtml(data.requesterName)}</span></div>
       <div class="info-row"><span class="label">${t.mainContractor}</span><span>${escapeHtml(data.contractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.contractorCompanyNumber)}</span></div>
-      <div class="info-row"><span class="label">${t.subcontractor}</span><span>${escapeHtml(data.subcontractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.subcontractorCompanyNumber)}</span></div>
+      <div class="info-row"><span class="label">${t.subcontractor}</span><span class="stacked">${subcontractorsHtml}</span></div>
       <div class="info-row"><span class="label">${t.approvedFor}</span><span>${approvedForValue}</span></div>
       ${infoRowsHtml}
     </div>

@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
+import {
+  useGetProjectReportsQuery,
+  useChangeReportSubcontractorMutation,
+} from "@/api/endpoints/project-reports";
+import { useGetSubcontractorTeamsQuery } from "@/api/endpoints/subcontractors";
 import {
   useGetSubcontractorPaymentsQuery,
   useCreateSubcontractorPaymentMutation,
@@ -9,7 +13,10 @@ import {
 } from "@/api/endpoints/subcontractor-payments";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { Input } from "@/components/atoms/Input";
-import { Badge, EmptyState } from "@/components/atoms";
+import { Select } from "@/components/atoms/Select";
+import { Badge, ButtonGhost, EmptyState } from "@/components/atoms";
+import { TeamsModal } from "@/components/organisms/TeamsModal";
+import { teamLabel, teamsByMember } from "@/utils/subcontractorTeams";
 import { useLang } from "@/contexts/useLang";
 import { useFieldCheck } from "@/hooks/useFieldCheck";
 import { formatYM, formatISODate } from "@/utils/formatMonth";
@@ -46,10 +53,15 @@ export default function SubcontractorPaymentsPage() {
   const [createPayment] = useCreateSubcontractorPaymentMutation();
   const [updatePayment] = useUpdateSubcontractorPaymentMutation();
   const [deletePayment] = useDeleteSubcontractorPaymentMutation();
+  const [changeReportSubcontractor] = useChangeReportSubcontractorMutation();
+  const { data: teams = [] } = useGetSubcontractorTeamsQuery();
+  const teamOf = teamsByMember(teams);
   const { t, lang } = useLang();
   const checkFields = useFieldCheck();
 
-  const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
+  // A card is one subcontractor working alone, or one whole team.
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [teamsOpen, setTeamsOpen] = useState(false);
   // The inline row that records one instalment: which project it is open for,
   // the amount typed into it, the day that money moved and an optional note.
   const [entryOpen, setEntryOpen] = useState<Record<string, boolean>>({});
@@ -76,82 +88,140 @@ export default function SubcontractorPaymentsPage() {
   }
 
   interface SubCard {
-    subId: string;
-    subName: string;
+    /** The team id for a team, the subcontractor id for someone alone. */
+    key: string;
+    label: string;
+    isTeam: boolean;
+    /** Everyone on the card: the whole team, or the one subcontractor. */
+    members: { id: string; name: string }[];
     projectBreakdown: {
+      reportId: string;
       projectId: string;
       projectName: string;
       clientId: string;
       clientName: string;
       owed: number;
+      /** The member who took the project this month — the report's subcontractor. */
+      subId: string;
     }[];
     totalOwed: number;
     totalPaid: number;
   }
 
-  const subMap = new Map<string, SubCard>();
+  const cardMap = new Map<string, SubCard>();
   for (const report of monthReports) {
     const sub = report.subcontractor;
+    const team = teamOf.get(sub.id);
     const corpTotal = report.supplierPayments.reduce(
       (s, cp) => s + cp.amount,
       0,
     );
-    const owed =
+    const owed = Math.round(
       report.totalIncome -
-      report.totalIncome * (report.profitMargin / 100) -
-      corpTotal;
-    const existing = subMap.get(sub.id);
-    const entry = {
+        report.totalIncome * (report.profitMargin / 100) -
+        corpTotal,
+    );
+    const key = team?.id ?? sub.id;
+    let card = cardMap.get(key);
+    if (!card) {
+      card = team
+        ? {
+            key,
+            label: teamLabel(team.members),
+            isTeam: true,
+            members: team.members,
+            projectBreakdown: [],
+            totalOwed: 0,
+            totalPaid: 0,
+          }
+        : {
+            key,
+            label: sub.name,
+            isTeam: false,
+            members: [{ id: sub.id, name: sub.name }],
+            projectBreakdown: [],
+            totalOwed: 0,
+            totalPaid: 0,
+          };
+      cardMap.set(key, card);
+    }
+    card.projectBreakdown.push({
+      reportId: report.id,
       projectId: report.project.id,
       projectName: report.project.name,
       clientId: report.project.client.id,
       clientName: report.project.client.name,
-      owed: Math.round(owed),
-    };
-    if (existing) {
-      existing.projectBreakdown.push(entry);
-      existing.totalOwed += Math.round(owed);
-    } else {
-      subMap.set(sub.id, {
-        subId: sub.id,
-        subName: sub.name,
-        projectBreakdown: [entry],
-        totalOwed: Math.round(owed),
-        totalPaid: 0,
-      });
-    }
+      owed,
+      subId: sub.id,
+    });
+    card.totalOwed += owed;
   }
 
-  for (const mp of monthlyPayments) {
-    const card = subMap.get(mp.subcontractor.id);
-    if (card) {
-      card.totalPaid = mp.amountPaid;
-    }
-  }
-
-  const cards = Array.from(subMap.values()).sort((a, b) =>
-    a.subName.localeCompare(b.subName),
+  // Every recorded instalment of the month, tagged with who received it.
+  const allPayments = monthlyPayments.flatMap((mp) =>
+    mp.payments.map((payment) => ({
+      ...payment,
+      subcontractorId: mp.subcontractor.id,
+    })),
+  );
+  const paidByMember = new Map(
+    monthlyPayments.map((mp) => [mp.subcontractor.id, mp.amountPaid]),
   );
 
-  const selectedCard = cards.find((c) => c.subId === selectedSubId) ?? null;
-
-  const selectedMonthlyData = monthlyPayments.find(
-    (mp) => mp.subcontractor.id === selectedSubId,
-  );
-  const paymentsForSelected = selectedMonthlyData?.payments ?? [];
-
-  const paidPerProject = new Map<string, number>();
-  for (const p of paymentsForSelected) {
-    paidPerProject.set(
-      p.projectId,
-      (paidPerProject.get(p.projectId) ?? 0) + p.amount,
+  for (const card of cardMap.values()) {
+    card.totalPaid = card.members.reduce(
+      (sum, m) => sum + (paidByMember.get(m.id) ?? 0),
+      0,
     );
   }
 
-  async function handleSetUnpaid(projectId: string) {
-    const toDelete = paymentsForSelected.filter(
-      (p) => p.projectId === projectId,
+  const cards = Array.from(cardMap.values()).sort((a, b) =>
+    a.label.localeCompare(b.label),
+  );
+
+  const selectedCard = cards.find((c) => c.key === selectedKey) ?? null;
+
+  /** A project's instalments, counting only those to the member who took it. */
+  function paymentsFor(projectId: string, subId: string) {
+    return allPayments.filter(
+      (p) => p.projectId === projectId && p.subcontractorId === subId,
     );
+  }
+
+  function paidFor(projectId: string, subId: string): number {
+    return paymentsFor(projectId, subId).reduce((s, p) => s + p.amount, 0);
+  }
+
+  function cardStatusOf(card: SubCard): PaymentStatus {
+    const statuses = card.projectBreakdown.map((pb) =>
+      projectStatus(paidFor(pb.projectId, pb.subId), pb.owed),
+    );
+    if (statuses.every((s) => s === "Paid")) return "Paid";
+    if (statuses.every((s) => s === "Unpaid")) return "Unpaid";
+    return "Partial";
+  }
+
+  /** Owed and paid for each member of a card, for the per-member totals. */
+  function memberTotals(card: SubCard) {
+    return card.members.map((m) => ({
+      ...m,
+      owed: card.projectBreakdown
+        .filter((pb) => pb.subId === m.id)
+        .reduce((s, pb) => s + pb.owed, 0),
+      paid: paidByMember.get(m.id) ?? 0,
+    }));
+  }
+
+  /**
+   * Hand a team project to another member for this month. Next month's
+   * report inherits the choice; the server refuses once instalments exist.
+   */
+  async function handleChangeMember(reportId: string, subcontractorId: string) {
+    await changeReportSubcontractor({ id: reportId, subcontractorId });
+  }
+
+  async function handleSetUnpaid(projectId: string, subId: string) {
+    const toDelete = paymentsFor(projectId, subId);
     if (toDelete.length === 0) return;
     setPendingProject((prev) => ({ ...prev, [projectId]: true }));
     let failed = false;
@@ -188,7 +258,7 @@ export default function SubcontractorPaymentsPage() {
    * settled in three transfers is three rows, each with its own date, not one
    * row rewritten three times.
    */
-  async function handleAddPayment(projectId: string) {
+  async function handleAddPayment(projectId: string, subId: string) {
     const raw = entryAmounts[projectId] ?? "";
     const amount = parseFloat(raw);
     if (
@@ -204,7 +274,7 @@ export default function SubcontractorPaymentsPage() {
       return;
     setPendingProject((prev) => ({ ...prev, [projectId]: true }));
     const result = await createPayment({
-      subcontractorId: selectedSubId!,
+      subcontractorId: subId,
       projectId,
       // serviceDate is the month being settled; paymentDate is the day the
       // money moved. They are deliberately different things.
@@ -274,15 +344,10 @@ export default function SubcontractorPaymentsPage() {
   }
 
   const aggregateStatus: PaymentStatus = selectedCard
-    ? (() => {
-        const statuses = selectedCard.projectBreakdown.map((pb) =>
-          projectStatus(paidPerProject.get(pb.projectId) ?? 0, pb.owed),
-        );
-        if (statuses.every((s) => s === "Paid")) return "Paid";
-        if (statuses.every((s) => s === "Unpaid")) return "Unpaid";
-        return "Partial";
-      })()
+    ? cardStatusOf(selectedCard)
     : "Unpaid";
+
+  const colCount = selectedCard?.isTeam ? 5 : 4;
 
   const totalAmountClass =
     aggregateStatus === "Paid"
@@ -296,7 +361,14 @@ export default function SubcontractorPaymentsPage() {
       <PageHeader
         title={t("subcontractorPayments")}
         subtitle={formatYM(month, lang)}
+        actions={
+          <ButtonGhost onClick={() => setTeamsOpen(true)}>
+            {t("teams")}
+          </ButtonGhost>
+        }
       />
+
+      <TeamsModal open={teamsOpen} onClose={() => setTeamsOpen(false)} />
 
       {cards.length === 0 ? (
         <EmptyState
@@ -309,35 +381,13 @@ export default function SubcontractorPaymentsPage() {
           {/* Sidebar */}
           <div className="flex flex-col gap-2 w-72 shrink-0 max-[768px]:w-full">
             {cards.map((card) => {
-              const cardPayments =
-                monthlyPayments.find((mp) => mp.subcontractor.id === card.subId)
-                  ?.payments ?? [];
-              const cardPaidPerProject = new Map<string, number>();
-              for (const p of cardPayments) {
-                cardPaidPerProject.set(
-                  p.projectId,
-                  (cardPaidPerProject.get(p.projectId) ?? 0) + p.amount,
-                );
-              }
-              const cardStatuses = card.projectBreakdown.map((pb) =>
-                projectStatus(
-                  cardPaidPerProject.get(pb.projectId) ?? 0,
-                  pb.owed,
-                ),
-              );
-              const cardStatus: PaymentStatus = cardStatuses.every(
-                (s) => s === "Paid",
-              )
-                ? "Paid"
-                : cardStatuses.every((s) => s === "Unpaid")
-                  ? "Unpaid"
-                  : "Partial";
-              const isActive = selectedSubId === card.subId;
+              const cardStatus = cardStatusOf(card);
+              const isActive = selectedKey === card.key;
               return (
                 <button
-                  key={card.subId}
+                  key={card.key}
                   onClick={() => {
-                    setSelectedSubId(card.subId);
+                    setSelectedKey(card.key);
                   }}
                   className={`text-left p-4 rounded border transition-colors ${
                     isActive
@@ -347,7 +397,7 @@ export default function SubcontractorPaymentsPage() {
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <span className="font-medium text-text text-sm">
-                      {card.subName}
+                      {card.label}
                     </span>
                     <Badge variant={STATUS_VARIANT[cardStatus]}>
                       {t(
@@ -382,6 +432,21 @@ export default function SubcontractorPaymentsPage() {
                   >
                     {t("balance")}: {formatILS(card.totalOwed - card.totalPaid)}
                   </p>
+                  {card.isTeam && (
+                    <ul className="mt-2 flex flex-col gap-0.5 border-t border-border pt-2 text-[11px] text-text-muted">
+                      {memberTotals(card).map((m) => (
+                        <li
+                          key={m.id}
+                          className="tnum flex justify-between gap-2"
+                        >
+                          <span>{m.name}</span>
+                          <span>
+                            {formatILS(m.paid)} / {formatILS(m.owed)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </button>
               );
             })}
@@ -392,7 +457,7 @@ export default function SubcontractorPaymentsPage() {
             <div className="flex-1">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-serif text-xl text-text">
-                  {selectedCard.subName} — Projects
+                  {selectedCard.label}
                 </h2>
               </div>
               <table className="w-full border-collapse text-sm">
@@ -401,6 +466,11 @@ export default function SubcontractorPaymentsPage() {
                     <th className="text-left py-2 px-3 text-label font-semibold text-text-muted rtl:text-right">
                       {t("project")}
                     </th>
+                    {selectedCard.isTeam && (
+                      <th className="text-left py-2 px-3 text-label font-semibold text-text-muted rtl:text-right">
+                        {t("takenBy")}
+                      </th>
+                    )}
                     <th className="text-right py-2 px-3 text-label font-semibold text-text-muted rtl:text-left">
                       {t("amountOwed")}
                     </th>
@@ -414,12 +484,13 @@ export default function SubcontractorPaymentsPage() {
                 </thead>
                 <tbody>
                   {selectedCard.projectBreakdown.map((pb) => {
-                    const paid = paidPerProject.get(pb.projectId) ?? 0;
+                    const projectPayments = paymentsFor(pb.projectId, pb.subId);
+                    const paid = projectPayments.reduce(
+                      (s, p) => s + p.amount,
+                      0,
+                    );
                     const status = projectStatus(paid, pb.owed);
                     const remaining = pb.owed - paid;
-                    const projectPayments = paymentsForSelected.filter(
-                      (payment) => payment.projectId === pb.projectId,
-                    );
                     const isPending = pendingProject[pb.projectId] ?? false;
                     const isEntryOpen = entryOpen[pb.projectId] ?? false;
 
@@ -440,6 +511,34 @@ export default function SubcontractorPaymentsPage() {
                               </div>
                             )}
                           </td>
+                          {selectedCard.isTeam && (
+                            <td className="py-3 px-3">
+                              {/* Who took the project this month. Locked once
+                                  instalments are recorded to that member. */}
+                              <Select
+                                aria-label={`${t("takenBy")} — ${pb.projectName}`}
+                                value={pb.subId}
+                                disabled={projectPayments.length > 0}
+                                title={
+                                  projectPayments.length > 0
+                                    ? t("changeMemberBlocked")
+                                    : undefined
+                                }
+                                onChange={(e) =>
+                                  void handleChangeMember(
+                                    pb.reportId,
+                                    e.target.value,
+                                  )
+                                }
+                              >
+                                {selectedCard.members.map((m) => (
+                                  <option key={m.id} value={m.id}>
+                                    {m.name}
+                                  </option>
+                                ))}
+                              </Select>
+                            </td>
+                          )}
                           <td className="py-3 px-3 text-right font-medium rtl:text-left">
                             <span
                               style={{
@@ -463,7 +562,7 @@ export default function SubcontractorPaymentsPage() {
                               <button
                                 disabled={isPending}
                                 onClick={() =>
-                                  void handleSetUnpaid(pb.projectId)
+                                  void handleSetUnpaid(pb.projectId, pb.subId)
                                 }
                                 title={t("unpaid")}
                                 className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
@@ -552,7 +651,7 @@ export default function SubcontractorPaymentsPage() {
                             key={`${pb.projectId}-payments`}
                             className="border-b border-border"
                           >
-                            <td colSpan={4} className="px-3 py-1">
+                            <td colSpan={colCount} className="px-3 py-1">
                               <ul className="flex flex-col gap-0.5">
                                 {projectPayments.map((payment) => (
                                   <li
@@ -746,7 +845,7 @@ export default function SubcontractorPaymentsPage() {
                             key={`${pb.projectId}-partial`}
                             className="border-b border-border bg-surface"
                           >
-                            <td colSpan={4} className="px-3 py-2">
+                            <td colSpan={colCount} className="px-3 py-2">
                               <div className="flex items-center gap-2">
                                 <div className="w-40">
                                   <Input
@@ -810,7 +909,10 @@ export default function SubcontractorPaymentsPage() {
                                     )
                                   }
                                   onClick={() =>
-                                    void handleAddPayment(pb.projectId)
+                                    void handleAddPayment(
+                                      pb.projectId,
+                                      pb.subId,
+                                    )
                                   }
                                   title={t("save")}
                                   className="inline-flex h-8 items-center justify-center rounded px-3 text-white transition-colors disabled:opacity-40"
@@ -834,9 +936,37 @@ export default function SubcontractorPaymentsPage() {
                   })}
                 </tbody>
                 <tfoot>
+                  {selectedCard.isTeam &&
+                    memberTotals(selectedCard).map((m, i) => (
+                      <tr
+                        key={m.id}
+                        className={
+                          i === 0 ? "border-t-2 border-border" : undefined
+                        }
+                      >
+                        <td className="py-1.5 px-3 text-text-muted">
+                          {i === 0 && (
+                            <span className="block text-label">
+                              {t("memberTotals")}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-1.5 px-3 text-text">{m.name}</td>
+                        <td className="py-1.5 px-3 text-right font-medium text-text rtl:text-left">
+                          {formatILS(m.owed)}
+                        </td>
+                        <td className="py-1.5 px-3 text-right font-medium text-success rtl:text-left">
+                          {formatILS(m.paid)}
+                        </td>
+                        <td />
+                      </tr>
+                    ))}
                   <tr className="border-t-2 border-border">
-                    <td className="py-2 px-3 font-semibold text-text">
-                      {t("totalOwed")}
+                    <td
+                      colSpan={selectedCard.isTeam ? 2 : 1}
+                      className="py-2 px-3 font-semibold text-text"
+                    >
+                      {selectedCard.isTeam ? t("teamTotal") : t("totalOwed")}
                     </td>
                     <td
                       className={`py-2 px-3 text-right font-bold rtl:text-left ${totalAmountClass}`}

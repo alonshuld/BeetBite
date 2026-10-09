@@ -320,6 +320,26 @@ export const translations = {
       "Set this report's initiator income before exporting its PDF.",
     // Client-wide simulated export
     exportWithSimulator: "Export Simulation PDF",
+    // Subcontractor teams
+    teams: "Teams",
+    team: "Team",
+    newTeam: "New team",
+    editTeam: "Edit team",
+    teamMembers: "Team members",
+    teamMembersHint:
+      "Choose at least two subcontractors who work together. A subcontractor can be in one team only.",
+    noTeamsYet: "No teams yet",
+    noTeamsHint:
+      "A team is subcontractors who split projects between them. Each month you choose which member took each project.",
+    inAnotherTeam: "In another team",
+    disbandTeam: "Disband team",
+    disbandTeamMessage:
+      "The members stay and work alone again. Past reports and payments are not changed.",
+    takenBy: "Taken by",
+    teamTotal: "Team total",
+    memberTotals: "Totals per member",
+    changeMemberBlocked:
+      "Payments are already recorded for this project this month. Delete them to change the member.",
   },
   he: {
     // Nav
@@ -629,6 +649,26 @@ export const translations = {
       "יש להגדיר הכנסה מיזם לדוח זה לפני ייצוא ה-PDF שלו.",
     // Client-wide simulated export
     exportWithSimulator: "ייצוא PDF של הסימולציה",
+    // Subcontractor teams
+    teams: "צוותים",
+    team: "צוות",
+    newTeam: "צוות חדש",
+    editTeam: "עריכת צוות",
+    teamMembers: "חברי הצוות",
+    teamMembersHint:
+      "בחרו לפחות שני קבלני משנה שעובדים יחד. קבלן משנה יכול להיות בצוות אחד בלבד.",
+    noTeamsYet: "אין צוותים עדיין",
+    noTeamsHint:
+      "צוות הוא קבלני משנה שמחלקים ביניהם פרויקטים. בכל חודש בוחרים מי מהם לקח כל פרויקט.",
+    inAnotherTeam: "בצוות אחר",
+    disbandTeam: "פירוק הצוות",
+    disbandTeamMessage:
+      "קבלני המשנה יישארו ויעבדו שוב לבד. דוחות ותשלומים קודמים לא ישתנו.",
+    takenBy: "בוצע ע״י",
+    teamTotal: "סה״כ צוות",
+    memberTotals: "סיכום לפי חבר צוות",
+    changeMemberBlocked:
+      "כבר נרשמו תשלומים על הפרויקט החודש. יש למחוק אותם כדי להחליף חבר צוות.",
   },
 } as const;
 

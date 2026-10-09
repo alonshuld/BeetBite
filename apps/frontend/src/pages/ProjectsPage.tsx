@@ -9,7 +9,7 @@ import {
   type Project,
 } from "@/api/endpoints/projects";
 import { useGetClientsQuery } from "@/api/endpoints/clients";
-import { useGetSubcontractorsQuery } from "@/api/endpoints/subcontractors";
+import { SubcontractorSelect } from "@/components/molecules/SubcontractorSelect";
 import { useGetInitiatorsQuery } from "@/api/endpoints/initiators";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { LoadingState } from "@/components/molecules/LoadingState";
@@ -117,7 +117,6 @@ export default function ProjectsPage() {
   const { toast } = useToast();
   const { data: projects = [], isLoading } = useGetProjectsQuery();
   const { data: clients = [] } = useGetClientsQuery();
-  const { data: subcontractors = [] } = useGetSubcontractorsQuery();
   const { data: initiators = [] } = useGetInitiatorsQuery();
   const [createProject, { isLoading: creating }] = useCreateProjectMutation();
   const [updateProject, { isLoading: updating }] = useUpdateProjectMutation();
@@ -724,21 +723,13 @@ export default function ProjectsPage() {
                 </FormRow>
                 <FormRow>
                   <FormGroup>
-                    <Select
+                    <SubcontractorSelect
                       id="proj-opening-subcontractor"
                       label={t("subcontractor")}
                       value={form.openingSubcontractorId}
-                      onChange={(e) =>
-                        setField("openingSubcontractorId", e.target.value)
-                      }
-                    >
-                      <option value="">{t("chooseSubcontractor")}</option>
-                      {subcontractors.map((sc) => (
-                        <option key={sc.id} value={sc.id}>
-                          {sc.name}
-                        </option>
-                      ))}
-                    </Select>
+                      onChange={(id) => setField("openingSubcontractorId", id)}
+                      emptyLabel={t("chooseSubcontractor")}
+                    />
                   </FormGroup>
                   <FormGroup>
                     <Input
