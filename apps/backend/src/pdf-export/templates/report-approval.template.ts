@@ -84,7 +84,7 @@ const LABELS = {
     subtitlePrefix: 'אישור חשבון – חודש',
     client: 'שם המזמין:',
     tag: 'תיאור',
-    mainContractor: 'קבלן ראשי:',
+    mainContractor: 'קבלן:',
     subcontractor: 'קבלן משנה:',
     approvedFor: 'חשבון מאושר עבור:',
     approvedAmount: 'חשבון שאושר ע"י מזמין',
