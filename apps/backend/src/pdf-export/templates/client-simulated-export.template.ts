@@ -58,7 +58,7 @@ const LABELS = {
   he: {
     subtitlePrefix: 'דוח רווח מדומה – חודש',
     client: 'לקוח:',
-    mainContractor: 'קבלן ראשי:',
+    mainContractor: 'קבלן:',
     project: 'פרויקט',
     income: 'הכנסה',
     simMargin: '% רווח מדומה',
