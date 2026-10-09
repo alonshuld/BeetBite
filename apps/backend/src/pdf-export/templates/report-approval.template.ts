@@ -2,11 +2,6 @@ import { OPENING_BALANCE_TAG } from 'src/common/constants';
 
 export interface ReportApprovalRow {
   tag: string | null;
-  /**
-   * When the income arrived, null while it is still pending. Only read when
-   * the page carries `screen` details; the plain approval has no status column.
-   */
-  incomeDate?: string | null;
   approvedAmount: number;
   invoiceInclVat: number;
   profitMarginPercent: number;
@@ -17,21 +12,6 @@ export interface ReportApprovalRow {
 export interface ReportApprovalSupplierRow {
   supplierName: string;
   amount: number;
-}
-
-/**
- * What the Reports screen shows for a project on top of the approval figures.
- * Only the client-simulated export supplies it, so the single-report
- * document keeps its fixed layout.
- */
-export interface ReportApprovalScreenDetails {
-  /** Margin in force on this page — simulated, or stored when not overridden. */
-  marginPercent: number;
-  /**
-   * The stored margin and the profit it would give, present only when the
-   * simulation moved this project — the sheet's "saved margin" line.
-   */
-  saved: { marginPercent: number; profitAmount: number } | null;
 }
 
 export interface ReportApprovalData {
@@ -46,8 +26,7 @@ export interface ReportApprovalData {
   /**
    * Description printed in the info box. The single-report export takes it
    * from the export dialog — typed for that document alone, never written
-   * back to the project — and the client-simulated export from the project's
-   * stored description. Null prints no row at all.
+   * back to the project. Null prints no row at all.
    */
   projectDescription: string | null;
   /** Printed after the description as "description • location". */
@@ -76,7 +55,6 @@ export interface ReportApprovalData {
   signature: string | null;
   colors: PdfColors;
   font: PdfFont;
-  screen?: ReportApprovalScreenDetails;
 }
 
 const LABELS = {
@@ -105,14 +83,8 @@ const LABELS = {
     paymentInclVat: 'לתשלום כולל מע"מ',
     signature: 'חתימה וחותמת מאשר',
     companyNumberPrefix: 'ח.פ.',
-    incomeStatus: 'סטטוס',
-    received: 'התקבל',
-    pending: 'ממתין',
     openingBalance: 'יתרת פתיחה',
-    profit: 'רווח',
     projectDescription: 'תיאור הפרויקט:',
-    savedMargin: '% רווח שמור:',
-    simulated: 'מדומה',
   },
   en: {
     subtitlePrefix: 'Account Approval –',
@@ -139,21 +111,14 @@ const LABELS = {
     paymentInclVat: 'Payable Incl. VAT',
     signature: 'Approving Signature & Stamp',
     companyNumberPrefix: 'Reg.',
-    incomeStatus: 'Status',
-    received: 'Received',
-    pending: 'Pending',
     openingBalance: 'Opening balance',
-    profit: 'Profit',
     projectDescription: 'Description:',
-    savedMargin: 'Saved Margin %:',
-    simulated: 'Simulated',
   },
 } as const;
 
 import {
   escapeHtml,
   formatCurrency,
-  formatDate,
   formatMonthLabel,
   localeFor,
   dirFor,
@@ -163,12 +128,8 @@ import {
 import { pdfFontCss } from './fonts';
 import { PdfFont } from 'src/common/pdf-fonts';
 
-/**
- * The CSS shared by every account-approval-style page. Exported so the
- * client-wide simulated export can wrap several of these pages plus its
- * own summary page in one document without duplicating the stylesheet.
- */
-export const reportApprovalStyles = (
+/** The account-approval page's stylesheet. */
+const reportApprovalStyles = (
   dir: 'rtl' | 'ltr',
   colors: PdfColors,
   font: PdfFont,
@@ -222,19 +183,6 @@ export const reportApprovalStyles = (
   }
   .info-row { display: flex; gap: 10px; padding: 3px 0; font-size: 12px; }
   .info-row .label { color: #667; font-weight: 700; min-width: 118px; }
-  .sim-badge {
-    display: inline-block;
-    background: ${theme.secondary};
-    color: ${theme.onSecondary};
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.4px;
-    text-transform: uppercase;
-    border-radius: 3px;
-    padding: 1px 6px;
-    margin-inline-start: 6px;
-  }
-
   table { width: 100%; border-collapse: collapse; margin-bottom: 26px; }
   th, td {
     padding: 9px 10px;
@@ -317,13 +265,8 @@ export const reportApprovalStyles = (
 `;
 };
 
-/**
- * Renders one account-approval report as a single `.page` block — everything
- * that used to live directly in `<body>`. Split out so the client-wide
- * simulated export can embed several of these, one per project, inside
- * one shared document instead of duplicating this markup.
- */
-export const renderReportApprovalPage = (data: ReportApprovalData): string => {
+/** Renders one account-approval report as a single `.page` block. */
+const renderReportApprovalPage = (data: ReportApprovalData): string => {
   const t = LABELS[data.lang];
   const locale = localeFor(data.lang);
   const money = (amount: number): string => formatCurrency(amount, locale);
@@ -333,15 +276,6 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
   // translated here to read right in either document language.
   const tagLabel = (tag: string | null): string =>
     tag === OPENING_BALANCE_TAG ? t.openingBalance : (tag ?? '');
-
-  const statusCellHtml = (row: ReportApprovalRow): string =>
-    data.screen
-      ? `<td>${
-          row.incomeDate
-            ? `${t.received} ${formatDate(row.incomeDate, data.lang)}`
-            : t.pending
-        }</td>`
-      : '';
 
   // The initiator income is one figure for the whole report, so it is a single
   // cell spanning every income row rather than repeated per row. It sits just
@@ -361,7 +295,6 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
       (row, index) => `
         <tr>
           <td>${escapeHtml(tagLabel(row.tag))}</td>
-          ${statusCellHtml(row)}
           ${initiatorIncomeCellHtml(index)}
           <td class="amount strong">${money(row.approvedAmount)}</td>
           <td class="amount">${money(row.invoiceInclVat)}</td>
@@ -391,8 +324,8 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
   const initiatorIncomeHeaderHtml =
     initiatorIncome != null ? `<th>${t.initiatorIncome}</th>` : '';
 
-  // Empty when the caller has no approval text (the simulated export), so the
-  // row does not open with a stray bullet.
+  // Empty when there is no approval text, so the row does not open with a
+  // stray bullet.
   const approvedForValue = [data.approvedFor, data.projectName]
     .filter(Boolean)
     .map(escapeHtml)
@@ -405,27 +338,8 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
     .map(escapeHtml)
     .join(' • ');
 
-  // The stored margin comes only from `screen`, which the client-simulated
-  // export alone passes, exactly as the project sheet shows it.
-  const infoRowsHtml = [
-    descriptionValue
-      ? `<div class="info-row"><span class="label">${t.projectDescription}</span><span>${descriptionValue}</span></div>`
-      : '',
-    data.screen?.saved
-      ? `<div class="info-row"><span class="label">${t.savedMargin}</span><span>${data.screen.saved.marginPercent}% • ${money(data.screen.saved.profitAmount)}</span></div>`
-      : '',
-  ].join('');
-
-  const simulatedBadgeHtml = data.screen?.saved
-    ? `<span class="sim-badge">${t.simulated}</span>`
-    : '';
-
-  const statusHeaderHtml = data.screen ? `<th>${t.incomeStatus}</th>` : '';
-
-  // The project sheet's "Profit (x%)" line: what the contractor keeps before
-  // the suppliers and the subcontractor are paid.
-  const profitSummaryRowHtml = data.screen
-    ? `<div class="summary-row"><span>${t.profit} (${data.screen.marginPercent}%)</span><span>${money(data.totalIncome - data.totalAfterProfit)}</span></div>`
+  const infoRowsHtml = descriptionValue
+    ? `<div class="info-row"><span class="label">${t.projectDescription}</span><span>${descriptionValue}</span></div>`
     : '';
 
   return `<div class="page">
@@ -446,7 +360,7 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
       <div class="info-row"><span class="label">${t.client}</span><span>${escapeHtml(data.requesterName)}</span></div>
       <div class="info-row"><span class="label">${t.mainContractor}</span><span>${escapeHtml(data.contractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.contractorCompanyNumber)}</span></div>
       <div class="info-row"><span class="label">${t.subcontractor}</span><span>${escapeHtml(data.subcontractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.subcontractorCompanyNumber)}</span></div>
-      <div class="info-row"><span class="label">${t.approvedFor}</span><span>${approvedForValue}${simulatedBadgeHtml}</span></div>
+      <div class="info-row"><span class="label">${t.approvedFor}</span><span>${approvedForValue}</span></div>
       ${infoRowsHtml}
     </div>
 
@@ -454,7 +368,6 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
       <thead>
         <tr>
           <th>${t.tag}</th>
-          ${statusHeaderHtml}
           ${initiatorIncomeHeaderHtml}
           <th>${t.approvedAmount}</th>
           <th>${t.invoiceInclVat}</th>
@@ -486,7 +399,6 @@ export const renderReportApprovalPage = (data: ReportApprovalData): string => {
       <div class="summary-box">
         <div class="summary-title">${t.monthlySummary}</div>
         <div class="summary-row"><span>${t.totalIncome}</span><span>${money(data.totalIncome)}</span></div>
-        ${profitSummaryRowHtml}
         <div class="summary-row"><span>${t.totalAfterProfit}</span><span>${money(data.totalAfterProfit)}</span></div>
         <div class="summary-row"><span>${t.totalDeductions}</span><span>${money(data.supplierTotal)}</span></div>
         <div class="summary-payable">

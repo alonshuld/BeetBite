@@ -466,18 +466,6 @@ describe('PdfExportService', () => {
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
   });
 
-  // The single-report document is the customer's fixed reference layout: what
-  // only the client-simulated export adds (income status, profit line) must
-  // not leak into it.
-  it('should not add the simulated export’s screen details to the single-report layout', async () => {
-    const html = await renderHtml();
-
-    expect(html).not.toContain('התקבל'); // received
-    expect(html).not.toContain('ממתין'); // pending
-    expect(html).not.toContain('(5%)'); // the "Profit (x%)" summary line
-    expect(html).not.toContain('class="sim-badge"');
-  });
-
   it('should translate the opening-balance tag rather than print the stored English one', async () => {
     mockProjectReportsService.findOneForExport.mockResolvedValue({
       ...mockReport,
@@ -607,8 +595,8 @@ describe('PdfExportService', () => {
     });
   });
 
-  // Client-wide simulated export: summary page + one detail page per
-  // project, all of a client's reports for the month, at simulated margins.
+  // Client-wide simulated export: every report of a client for the month as
+  // project cards, at simulated margins.
   describe('exportClientSimulatedPdf', () => {
     const simDto: ExportClientSimulatedPdfDto = {
       clientId: 'client-1',
@@ -755,12 +743,13 @@ describe('PdfExportService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw VatRateNotConfiguredError when no VAT rate resolves for the month', async () => {
+    // The sheets show no VAT, so the document does not depend on a VAT rate.
+    it('exports without a VAT rate configured for the month', async () => {
       mockVatRatesService.resolveForMonth.mockResolvedValue(null);
 
-      await expect(service.exportClientSimulatedPdf(simDto)).rejects.toThrow(
-        VatRateNotConfiguredError,
-      );
+      await expect(
+        service.exportClientSimulatedPdf(simDto),
+      ).resolves.toBeDefined();
     });
 
     it('should cover every report of the client for the month, and none of another client', async () => {
@@ -786,19 +775,18 @@ describe('PdfExportService', () => {
 
       // project-1: overridden to 15% -> profit 1,500, supplier 1,000,
       // subcontractor remainder 10,000 - 1,500 - 1,000 = 7,500.
-      expect(html).toContain('7,500.00');
+      expect(html).toContain('₪7,500');
       // project-2: no override, stays at its saved 20% -> profit 1,000,
       // no supplier deductions, subcontractor remainder 5,000 - 1,000 = 4,000.
-      expect(html).toContain('4,000.00');
+      expect(html).toContain('₪4,000');
     });
 
-    it('renders a detail page per project after the summary page', async () => {
+    it('renders one card per project and nothing else per project', async () => {
       const html = await renderSimHtml();
 
-      // Both project names appear once in the summary table, and again on
-      // their own detail page's info box / title area — at least twice each.
-      expect(html.split('Tower Block').length - 1).toBeGreaterThanOrEqual(2);
-      expect(html.split('Riverside').length - 1).toBeGreaterThanOrEqual(2);
+      expect(html.split('class="card"').length - 1).toBe(2);
+      expect(html.split('Tower Block').length - 1).toBe(1);
+      expect(html.split('Riverside').length - 1).toBe(1);
     });
 
     // 🔴 The test that defines this task: exporting with overrides must never
@@ -825,11 +813,11 @@ describe('PdfExportService', () => {
       await service.exportClientSimulatedPdf({ ...simDto, lang: 'en' });
       const html = mockPage.setContent.mock.calls[0][0];
 
-      expect(html).toContain('Simulated Profit Report');
+      expect(html).toContain('Projects Report');
     });
 
-    // The document mirrors the Reports screen: everything below is something
-    // that screen shows for a project, and the export used to leave out.
+    // The document mirrors the Reports screen's project sheets — but only
+    // ever at the margin in force, never naming it a simulation.
     describe('mirrors the Reports screen', () => {
       const withProject1 = (patch: Record<string, unknown>) =>
         mockProjectReportsService.findProjectReportsInMonth.mockResolvedValue([
@@ -837,52 +825,42 @@ describe('PdfExportService', () => {
           reportsForClient1[1],
         ]);
 
-      it("shows the stored margin and profit beside a simulated project's, and only there", async () => {
+      it('never shows the stored margin or calls anything simulated', async () => {
+        for (const lang of ['en', 'he'] as const) {
+          const html = await renderSimHtml({ ...simDto, lang });
+
+          // project-1's stored margin is 10%, simulated to 15%.
+          expect(html).not.toContain('10%');
+          expect(html).not.toMatch(/simulat|saved|מדומה|שמור|סימולציה/i);
+        }
+      });
+
+      it('prints the profit line at the margin in force', async () => {
         const html = await renderSimHtml({ ...simDto, lang: 'en' });
 
-        // project-1 moved 10% -> 15%; project-2 keeps its stored 20%.
-        expect(html.split('class="cell-sub">Saved:').length - 1).toBe(2);
-        expect(html).toContain('Saved: 10%');
-        expect(html).toContain('Saved: 1,000.00 ₪');
-        expect(html.split('class="sim-badge"').length - 1).toBe(2); // summary row + detail page
+        expect(html).toContain('Profit (15%)'); // project-1, simulated
+        expect(html).toContain('Profit (20%)'); // project-2, stored
+        expect(html).toContain('₪1,500');
       });
 
-      it('totals the simulated profit against the stored one', async () => {
+      it('carries the client header totals at the margins in force', async () => {
         const html = await renderSimHtml({ ...simDto, lang: 'en' });
 
-        // simulated 1,500 + 1,000; stored 1,000 + 1,000.
-        expect(html).toContain('Simulated Profit');
-        expect(html).toContain('Saved Profit');
-        expect(html).toContain('Delta vs Saved');
-        expect(html).toContain('+500.00 ₪');
+        expect(html).toContain('Acme Corp');
+        expect(html).toContain('₪15,000'); // income 10,000 + 5,000
+        expect(html).toContain('₪11,500'); // remainders 7,500 + 4,000
       });
 
-      it('shows a negative delta with a minus sign', async () => {
-        const html = await renderSimHtml({
-          ...simDto,
-          lang: 'en',
-          overrides: [{ projectId: 'project-1', margin: 5 }],
-        });
+      it('lists each supplier as a deduction and names the subcontractor on the remainder', async () => {
+        const html = await renderSimHtml({ ...simDto, lang: 'en' });
 
-        expect(html).toContain('−500.00 ₪'); // 500 vs the stored 1,000
-        expect(html).toContain('delta-down');
+        expect(html).toContain('Flooring Ltd');
+        expect(html).toContain('− ₪1,000');
+        expect(html).toContain('Israelov Engineering');
+        expect(html).toContain('Bar Yam Builders');
       });
 
-      it('leaves out the stored-profit and delta lines when nothing was simulated', async () => {
-        const html = await renderSimHtml({
-          ...simDto,
-          lang: 'en',
-          overrides: [],
-        });
-
-        expect(html).toContain('Simulated Profit');
-        expect(html).not.toContain('Saved Profit');
-        expect(html).not.toContain('Delta vs Saved');
-        expect(html).not.toContain('class="sim-badge"');
-        expect(html).not.toContain('class="cell-sub">Saved:');
-      });
-
-      it("prints each project's location, description and subcontractor", async () => {
+      it("prints each project's location and description", async () => {
         withProject1({
           project: {
             ...reportsForClient1[0].project,
@@ -893,14 +871,11 @@ describe('PdfExportService', () => {
 
         const html = await renderSimHtml({ ...simDto, lang: 'en' });
 
-        // Location: once on the summary row, once on the detail page,
-        // where it follows the description.
-        expect(html.split('Ashkelon, plot 309').length - 1).toBe(2);
-        expect(html).toContain('Lobby renovation • Ashkelon, plot 309');
-        expect(html).toContain('Subcontractor: Israelov Engineering');
+        expect(html).toContain('Ashkelon, plot 309');
+        expect(html).toContain('Lobby renovation');
       });
 
-      it('marks each income entry received (with its date) or pending', async () => {
+      it('marks each income entry received (with its month) or pending, and totals several', async () => {
         withProject1({
           incomeEntries: [
             {
@@ -915,15 +890,18 @@ describe('PdfExportService', () => {
 
         const html = await renderSimHtml({ ...simDto, lang: 'en' });
 
-        expect(html).toContain('Received 10/03/2026');
-        expect(html).toContain('<td>Pending</td>');
+        expect(html).toContain('Received Mar 2026');
+        expect(html).toContain('>Pending<');
+        expect(html).toContain('Frame');
+        expect(html).toContain('Finish');
+        // Only project-1 has more than one entry, so only it gets a total row.
+        expect(html.split('class="row total"').length - 1).toBe(1);
       });
 
-      it('adds the sheet’s profit line, at the margin in force, to each monthly summary', async () => {
+      it('labels an untagged entry as income', async () => {
         const html = await renderSimHtml({ ...simDto, lang: 'en' });
 
-        expect(html).toContain('Profit (15%)'); // project-1, simulated
-        expect(html).toContain('Profit (20%)'); // project-2, stored
+        expect(html).toContain('<span>Income</span>');
       });
 
       it('translates the opening-balance tag', async () => {
@@ -944,10 +922,34 @@ describe('PdfExportService', () => {
         expect(html).not.toContain(OPENING_BALANCE_TAG);
       });
 
-      it('does not open the approved-for row with a stray bullet when there is no approval text', async () => {
+      it("shows the initiator's income only for a project with an initiator", async () => {
+        withProject1({
+          project: {
+            ...reportsForClient1[0].project,
+            initiatorName: 'Dan Initiator',
+          },
+          initiatorIncome: 12000,
+        });
+
         const html = await renderSimHtml({ ...simDto, lang: 'en' });
 
-        expect(html).not.toMatch(/<span>\s*•/);
+        expect(html.split('class="initiator"').length - 1).toBe(1);
+        expect(html).toContain('Initiator: Dan Initiator');
+        expect(html).toContain('₪12,000');
+      });
+
+      it('escapes HTML in project and supplier names', async () => {
+        withProject1({
+          project: {
+            ...reportsForClient1[0].project,
+            name: '<b>Tower</b>',
+          },
+        });
+
+        const html = await renderSimHtml({ ...simDto, lang: 'en' });
+
+        expect(html).not.toContain('<b>Tower</b>');
+        expect(html).toContain('&lt;b&gt;Tower&lt;/b&gt;');
       });
     });
   });
