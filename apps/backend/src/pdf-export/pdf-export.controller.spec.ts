@@ -116,7 +116,7 @@ describe('PdfExportController', () => {
         expect.objectContaining({
           'Content-Type': 'application/pdf',
           'Content-Disposition': expect.stringContaining(
-            'simulated-report-2026-03',
+            'projects-report-2026-03',
           ) as string,
         }),
       );

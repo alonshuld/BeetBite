@@ -11,6 +11,14 @@ vi.mock("react-router-dom", async (importOriginal) => {
 
 vi.mock("@/api/endpoints/project-reports", () => ({
   useGetProjectReportsQuery: vi.fn(),
+  useChangeReportSubcontractorMutation: vi.fn(),
+}));
+vi.mock("@/api/endpoints/subcontractors", () => ({
+  useGetSubcontractorsQuery: vi.fn(() => ({ data: [] })),
+  useGetSubcontractorTeamsQuery: vi.fn(),
+  useCreateSubcontractorTeamMutation: vi.fn(() => [vi.fn(), {}]),
+  useUpdateSubcontractorTeamMutation: vi.fn(() => [vi.fn(), {}]),
+  useDeleteSubcontractorTeamMutation: vi.fn(() => [vi.fn(), {}]),
 }));
 vi.mock("@/api/endpoints/subcontractor-payments", () => ({
   useGetSubcontractorPaymentsQuery: vi.fn(),
@@ -22,7 +30,11 @@ vi.mock("@/api/endpoints/project-report-exports", () => ({
   useExportProjectReportsPdfMutation: vi.fn(),
 }));
 
-import { useGetProjectReportsQuery } from "@/api/endpoints/project-reports";
+import {
+  useGetProjectReportsQuery,
+  useChangeReportSubcontractorMutation,
+} from "@/api/endpoints/project-reports";
+import { useGetSubcontractorTeamsQuery } from "@/api/endpoints/subcontractors";
 import {
   useGetSubcontractorPaymentsQuery,
   useCreateSubcontractorPaymentMutation,
@@ -84,6 +96,7 @@ const createSpy = vi
   .fn()
   .mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
 const deleteSpy = vi.fn().mockReturnValue({ unwrap: vi.fn() });
+const changeMemberSpy = vi.fn().mockResolvedValue({ data: undefined });
 const exportSpy = vi
   .fn()
   .mockReturnValue({ unwrap: vi.fn().mockResolvedValue(new Blob()) });
@@ -113,6 +126,13 @@ describe("SubcontractorPaymentsPage", () => {
       data: mockReports,
     } as unknown as ReturnType<typeof useGetProjectReportsQuery>);
     setPayments(makePayments([], 0));
+    vi.mocked(useGetSubcontractorTeamsQuery).mockReturnValue({
+      data: [],
+    } as unknown as ReturnType<typeof useGetSubcontractorTeamsQuery>);
+    vi.mocked(useChangeReportSubcontractorMutation).mockReturnValue([
+      changeMemberSpy,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useChangeReportSubcontractorMutation>);
     vi.mocked(useCreateSubcontractorPaymentMutation).mockReturnValue([
       createSpy,
       { isLoading: false },
@@ -615,6 +635,135 @@ describe("SubcontractorPaymentsPage", () => {
 
       expect(updateSpy).toHaveBeenCalledWith({ id: "i1", description: "" });
       expect(deleteSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("teams", () => {
+    // Bob and Dana work as a team. Bob took Tower Block (owed 8,000), Dana
+    // took Harbour Flats: income 5,000 at 20% → owed 4,000.
+    const teamReports = [
+      mockReports[0],
+      {
+        id: "r2",
+        project: {
+          id: "p2",
+          name: "Harbour Flats",
+          client: { id: "c1", name: "Acme Ltd." },
+        },
+        subcontractor: { id: "s2", name: "Dana Works" },
+        totalIncome: 5000,
+        profitMargin: 20,
+        supplierPayments: [],
+      },
+    ];
+    const team = {
+      id: "team-1",
+      members: [
+        { id: "s1", name: "Bob the Builder", companyNumber: "111111111" },
+        { id: "s2", name: "Dana Works", companyNumber: "222222222" },
+      ],
+    };
+
+    beforeEach(() => {
+      vi.mocked(useGetProjectReportsQuery).mockReturnValue({
+        data: teamReports,
+      } as unknown as ReturnType<typeof useGetProjectReportsQuery>);
+      vi.mocked(useGetSubcontractorTeamsQuery).mockReturnValue({
+        data: [team],
+      } as unknown as ReturnType<typeof useGetSubcontractorTeamsQuery>);
+      setPayments([
+        {
+          subcontractor: { id: "s1", name: "Bob the Builder" },
+          amountPaid: 3000,
+          payments: [makePayment({ amount: 3000 })],
+        },
+      ]);
+    });
+
+    async function openTeam() {
+      await userEvent.click(screen.getByText("Bob the Builder + Dana Works"));
+    }
+
+    it("shows the team as one card named after its members", () => {
+      renderPage();
+
+      expect(
+        screen.getByText("Bob the Builder + Dana Works"),
+      ).toBeInTheDocument();
+      // No separate card per member.
+      expect(screen.queryByText("Dana Works")).toBeInTheDocument();
+      expect(
+        screen.getAllByRole("button", { name: /Bob the Builder/ }),
+      ).toHaveLength(1);
+    });
+
+    it("lists both members' projects with who took each", async () => {
+      renderPage();
+      await openTeam();
+
+      const tower = screen.getByLabelText(/— Tower Block$/);
+      const harbour = screen.getByLabelText(/— Harbour Flats$/);
+      expect(tower).toHaveValue("s1");
+      expect(harbour).toHaveValue("s2");
+    });
+
+    it("hands a project to the other member", async () => {
+      renderPage();
+      await openTeam();
+
+      await userEvent.selectOptions(
+        screen.getByLabelText(/— Harbour Flats$/),
+        "s1",
+      );
+
+      expect(changeMemberSpy).toHaveBeenCalledWith({
+        id: "r2",
+        subcontractorId: "s1",
+      });
+    });
+
+    it("locks the member once payments are recorded to them", async () => {
+      renderPage();
+      await openTeam();
+
+      expect(screen.getByLabelText(/— Tower Block$/)).toBeDisabled();
+      expect(screen.getByLabelText(/— Harbour Flats$/)).toBeEnabled();
+    });
+
+    it("shows totals per member and for the whole team", async () => {
+      renderPage();
+      await openTeam();
+
+      const footer = screen.getByText("Team total").closest("tfoot")!;
+      const rows = within(footer).getAllByRole("row");
+      // Bob: owed 8,000, paid 3,000. Dana: owed 4,000, paid 0.
+      expect(rows[0]).toHaveTextContent("Bob the Builder");
+      expect(rows[0]).toHaveTextContent("₪8,000");
+      expect(rows[0]).toHaveTextContent("₪3,000");
+      expect(rows[1]).toHaveTextContent("Dana Works");
+      expect(rows[1]).toHaveTextContent("₪4,000");
+      expect(rows[2]).toHaveTextContent("₪12,000");
+      expect(rows[2]).toHaveTextContent("₪3,000");
+    });
+
+    it("records a payment to the member who took the project", async () => {
+      renderPage();
+      await openTeam();
+
+      const harbourRow = screen
+        .getByLabelText(/— Harbour Flats$/)
+        .closest("tr")!;
+      await userEvent.click(within(harbourRow).getByTitle("Partial"));
+      await userEvent.type(screen.getByPlaceholderText("0 – 4000"), "1000");
+      await userEvent.click(screen.getByTitle("Save"));
+
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subcontractorId: "s2",
+          projectId: "p2",
+          amount: 1000,
+        }),
+      );
     });
   });
 });

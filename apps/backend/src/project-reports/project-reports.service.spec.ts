@@ -14,6 +14,8 @@ import { SupplierNotFoundError } from 'src/suppliers/errors/supplier-not-found.e
 import { EntityNotFoundError } from 'src/common/errors/entity-not-found.error';
 import { InitiatorIncomeNotAllowedError } from './errors/initiator-income-not-allowed.error';
 import { InitiatorIncomeTooLowError } from './errors/initiator-income-too-low.error';
+import { SubcontractorNotInTeamError } from './errors/subcontractor-not-in-team.error';
+import { ProjectReportHasSubcontractorPaymentsError } from './errors/project-report-has-subcontractor-payments.error';
 
 describe('ProjectReportsService', () => {
   let service: ProjectReportsService;
@@ -1064,6 +1066,97 @@ describe('ProjectReportsService', () => {
       await expect(service.removeIncomeEntry('missing-entry')).rejects.toThrow(
         EntityNotFoundError,
       );
+    });
+  });
+
+  describe('changeSubcontractor', () => {
+    const changeTx = {
+      projectReport: { findUnique: jest.fn(), update: jest.fn() },
+      subcontractor: { findUnique: jest.fn() },
+      subcontractorPayment: { count: jest.fn() },
+    };
+    const reportDate = new Date('2026-05-01');
+
+    beforeEach(() => {
+      mockPrismaService.$transaction.mockImplementation(
+        (cb: (tx: typeof changeTx) => Promise<unknown>) => cb(changeTx),
+      );
+      changeTx.projectReport.findUnique.mockResolvedValue({
+        projectId: 'project-1',
+        date: reportDate,
+        subcontractor: { id: 'member-a', teamId: 'team-1' },
+      });
+      changeTx.subcontractor.findUnique.mockResolvedValue({ teamId: 'team-1' });
+      changeTx.subcontractorPayment.count.mockResolvedValue(0);
+    });
+
+    it('hands the project to a teammate', async () => {
+      await service.changeSubcontractor('report-1', 'member-b');
+
+      expect(changeTx.subcontractorPayment.count).toHaveBeenCalledWith({
+        where: {
+          subcontractorId: 'member-a',
+          projectId: 'project-1',
+          serviceDate: reportDate,
+        },
+      });
+      expect(changeTx.projectReport.update).toHaveBeenCalledWith({
+        where: { id: 'report-1' },
+        data: { subcontractorId: 'member-b' },
+      });
+    });
+
+    it('does nothing when the member is unchanged', async () => {
+      await service.changeSubcontractor('report-1', 'member-a');
+
+      expect(changeTx.projectReport.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses a subcontractor from another team', async () => {
+      changeTx.subcontractor.findUnique.mockResolvedValue({ teamId: 'team-2' });
+
+      await expect(
+        service.changeSubcontractor('report-1', 'other'),
+      ).rejects.toThrow(SubcontractorNotInTeamError);
+      expect(changeTx.projectReport.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses when neither works in a team', async () => {
+      changeTx.projectReport.findUnique.mockResolvedValue({
+        projectId: 'project-1',
+        date: reportDate,
+        subcontractor: { id: 'solo-a', teamId: null },
+      });
+      changeTx.subcontractor.findUnique.mockResolvedValue({ teamId: null });
+
+      await expect(
+        service.changeSubcontractor('report-1', 'solo-b'),
+      ).rejects.toThrow(SubcontractorNotInTeamError);
+    });
+
+    it('refuses once payments are recorded for the current member', async () => {
+      changeTx.subcontractorPayment.count.mockResolvedValue(1);
+
+      await expect(
+        service.changeSubcontractor('report-1', 'member-b'),
+      ).rejects.toThrow(ProjectReportHasSubcontractorPaymentsError);
+      expect(changeTx.projectReport.update).not.toHaveBeenCalled();
+    });
+
+    it('throws when the report does not exist', async () => {
+      changeTx.projectReport.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.changeSubcontractor('missing', 'member-b'),
+      ).rejects.toThrow(ProjectReportNotFoundError);
+    });
+
+    it('throws when the new subcontractor does not exist', async () => {
+      changeTx.subcontractor.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.changeSubcontractor('report-1', 'ghost'),
+      ).rejects.toThrow(SubcontractorNotFoundError);
     });
   });
 });

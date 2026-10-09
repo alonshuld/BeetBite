@@ -405,6 +405,42 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/subcontractor-teams": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get all subcontractor teams with their members */
+    get: operations["SubcontractorTeamsController_findAll"];
+    put?: never;
+    /** Create a team from existing subcontractors */
+    post: operations["SubcontractorTeamsController_create"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/subcontractor-teams/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Replace a team's members */
+    put: operations["SubcontractorTeamsController_update"];
+    post?: never;
+    /** Disband a team; its members stay */
+    delete: operations["SubcontractorTeamsController_remove"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/projects/reports": {
     parameters: {
       query?: never;
@@ -492,6 +528,23 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  "/api/v1/projects/reports/{id}/subcontractor": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Hand the project to another member of the same team this month */
+    patch: operations["ProjectReportsController_changeSubcontractor"];
     trace?: never;
   };
   "/api/v1/projects": {
@@ -1324,6 +1377,11 @@ export interface components {
        * @example 515123456
        */
       companyNumber: string;
+      /**
+       * @description The team this subcontractor works in, or null
+       * @example cmb1team
+       */
+      teamId?: string | null;
     };
     UpdateSubcontractorDto: {
       /**
@@ -1336,6 +1394,33 @@ export interface components {
        * @example 515123456
        */
       companyNumber: string;
+    };
+    SubcontractorTeamMemberDto: {
+      /** @example cmb1member1 */
+      id: string;
+      /** @example Quality Builders LLC */
+      name: string;
+      /** @example 515123456 */
+      companyNumber: string;
+    };
+    SubcontractorTeamResponseDto: {
+      /**
+       * @description Unique identifier for the team
+       * @example cmb1team
+       */
+      id: string;
+      /** @description The team members, sorted by name. A team has no name of its own. */
+      members: components["schemas"]["SubcontractorTeamMemberDto"][];
+    };
+    SubcontractorTeamRequestDto: {
+      /**
+       * @description IDs of the subcontractors in the team — at least two
+       * @example [
+       *       "cmb1member1",
+       *       "cmb1member2"
+       *     ]
+       */
+      memberIds: string[];
     };
     CreateIncomeEntryDto: {
       /**
@@ -1663,6 +1748,13 @@ export interface components {
       incomeEntries?: components["schemas"]["CreateIncomeEntryDto"][];
       /** @description Supplier payments for this report. Omit to leave existing payments untouched; when provided, replaces all of them. */
       supplierPayments?: components["schemas"]["CreateSupplierPaymentDto"][];
+    };
+    ChangeReportSubcontractorDto: {
+      /**
+       * @description The team member who takes the project this month — must be in the same team as the current subcontractor
+       * @example cmb1member2
+       */
+      subcontractorId: string;
     };
     OpeningBalanceDto: {
       /**
@@ -3412,6 +3504,137 @@ export interface operations {
       };
     };
   };
+  SubcontractorTeamsController_findAll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SubcontractorTeamResponseDto"][];
+        };
+      };
+    };
+  };
+  SubcontractorTeamsController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SubcontractorTeamRequestDto"];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SubcontractorTeamResponseDto"];
+        };
+      };
+      /** @description Fewer than two members */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description A member does not exist */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description A member is already in a team */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SubcontractorTeamsController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Team ID */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SubcontractorTeamRequestDto"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SubcontractorTeamResponseDto"];
+        };
+      };
+      /** @description Team or member not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description A member is already in another team */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SubcontractorTeamsController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Team ID */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Team disbanded */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Team not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   ProjectReportsController_findProjectReportsInMonth: {
     parameters: {
       query: {
@@ -3710,6 +3933,51 @@ export interface operations {
       };
       /** @description Project report not found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProjectReportsController_changeSubcontractor: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Project report ID */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ChangeReportSubcontractorDto"];
+      };
+    };
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not a member of the same team */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Report or subcontractor not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Payments are already recorded for this project and month */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -4017,7 +4285,7 @@ export interface operations {
       };
     };
     responses: {
-      /** @description Company settings incomplete, no VAT rate configured for the month, or an override references a project outside this client */
+      /** @description Company settings incomplete, or an override references a project outside this client */
       400: {
         headers: {
           [name: string]: unknown;

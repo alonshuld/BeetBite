@@ -263,6 +263,7 @@ describe('PDF Export Integration Tests', () => {
     await prisma.project.deleteMany();
     await prisma.client.deleteMany();
     await prisma.subcontractor.deleteMany();
+    await prisma.subcontractorTeam.deleteMany();
     await prisma.supplier.deleteMany();
     await prisma.vatRate.deleteMany();
     await prisma.companySettings.deleteMany();
@@ -632,6 +633,31 @@ describe('PDF Export Integration Tests', () => {
 
       expect(html).toContain('Shell works');
       expect(html).toContain('Tower A');
+    });
+
+    it('should name the subcontractor with its company number', async () => {
+      const html = await renderHtml();
+
+      expect(html).toContain('Dan Builder');
+      expect(html).toContain('515111222');
+    });
+
+    it('should name every member of a team project', async () => {
+      const partner = await prisma.subcontractor.create({
+        data: { name: 'Avi Partner', companyNumber: '515333444' },
+      });
+      await prisma.subcontractorTeam.create({
+        data: {
+          members: { connect: [{ id: subcontractorId }, { id: partner.id }] },
+        },
+      });
+
+      const html = await renderHtml();
+
+      expect(html).toContain('Dan Builder');
+      expect(html).toContain('515111222');
+      expect(html).toContain('Avi Partner');
+      expect(html).toContain('515333444');
     });
 
     it('should escape HTML in the approved-for text', async () => {

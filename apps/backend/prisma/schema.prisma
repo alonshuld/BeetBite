@@ -76,14 +76,32 @@ model ProjectClientAssignment {
 }
 
 model Subcontractor {
-  id            String @id @default(cuid())
-  name          String @unique
-  companyNumber String @unique
+  id            String  @id @default(cuid())
+  name          String  @unique
+  companyNumber String  @unique
+  /// The team this subcontractor works in, if any. One team per member, so a
+  /// plain nullable column rather than a join table.
+  teamId        String?
 
+  team     SubcontractorTeam?     @relation(fields: [teamId], references: [id], onDelete: SetNull)
   reports  ProjectReport[]
   payments SubcontractorPayment[]
 
+  @@index([teamId])
   @@map("subcontractors")
+}
+
+/// Subcontractors who work together and split the team's projects between
+/// them. Has no name of its own — it is shown as its members' names. Each
+/// project report still names the one member who took that project that
+/// month, so amounts owed and payments stay per member.
+model SubcontractorTeam {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  members Subcontractor[]
+
+  @@map("subcontractor_teams")
 }
 
 model Supplier {

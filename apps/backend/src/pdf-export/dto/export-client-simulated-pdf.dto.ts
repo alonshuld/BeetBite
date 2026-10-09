@@ -12,9 +12,8 @@ import { Type } from 'class-transformer';
 import { MarginOverrideDto } from './margin-override.dto';
 
 /**
- * Requests the client-wide simulated PDF — a summary page followed by
- * one account-approval-style detail page per project, all of a client's
- * reports for one month, rendered as if the simulated margins were the real
+ * Requests the client-wide simulated PDF — all of a client's reports for
+ * one month as the Reports screen's project sheets, rendered as if the simulated margins were the real
  * ones. The override map is transient: applied at render time only, never
  * written back to any ProjectReport.
  */

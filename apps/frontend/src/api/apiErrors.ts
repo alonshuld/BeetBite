@@ -65,6 +65,11 @@ export const hebrewApiErrors: Record<string, string> = {
   SUBCONTRACTOR_COMPANY_NUMBER_TAKEN:
     "קבלן משנה עם מספר חברה {value} כבר קיים.",
   SUBCONTRACTOR_NOT_FOUND: "קבלן המשנה לא נמצא.",
+  SUBCONTRACTOR_ALREADY_IN_TEAM: "{name} כבר חבר/ה בצוות אחר.",
+  SUBCONTRACTOR_TEAM_NOT_FOUND: "הצוות לא נמצא.",
+  SUBCONTRACTOR_NOT_IN_TEAM: "אפשר להעביר את הפרויקט רק לחבר/ה באותו צוות.",
+  PROJECT_REPORT_HAS_SUBCONTRACTOR_PAYMENTS:
+    "כבר נרשמו תשלומים על הפרויקט החודש. יש למחוק אותם לפני החלפת חבר הצוות.",
   // Subcontractor payments
   SUBCONTRACTOR_PAYMENT_NOT_FOUND: "התשלום לקבלן המשנה לא נמצא.",
   SUBCONTRACTOR_PAYMENT_OVERPAYMENT:

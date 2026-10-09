@@ -27,6 +27,8 @@ import { InitiatorIncomeTooLowError } from './errors/initiator-income-too-low.er
 import { IncomeEntryResponseDto } from './dto/income-entry-response.dto';
 import { CreateIncomeEntryDto } from './dto/create-income-entry.dto';
 import { UpdateIncomeEntryDto } from './dto/update-income-entry.dto';
+import { SubcontractorNotInTeamError } from './errors/subcontractor-not-in-team.error';
+import { ProjectReportHasSubcontractorPaymentsError } from './errors/project-report-has-subcontractor-payments.error';
 
 const REPORT_INCLUDE = {
   project: {
@@ -644,6 +646,59 @@ export class ProjectReportsService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Hands a team project to another member of the same team for the report's
+   * month. Next month's report inherits the choice like any subcontractor.
+   * Refused once payments are recorded against the current member, since
+   * they would then settle an amount nobody owes.
+   */
+  async changeSubcontractor(
+    id: string,
+    subcontractorId: string,
+  ): Promise<void> {
+    await this.prismaService.$transaction(async (tx) => {
+      const report = await tx.projectReport.findUnique({
+        where: { id },
+        select: {
+          projectId: true,
+          date: true,
+          subcontractor: { select: { id: true, teamId: true } },
+        },
+      });
+      if (!report) throw new ProjectReportNotFoundError(id);
+      if (report.subcontractor.id === subcontractorId) return;
+
+      const next = await tx.subcontractor.findUnique({
+        where: { id: subcontractorId },
+        select: { teamId: true },
+      });
+      if (!next) throw new SubcontractorNotFoundError(subcontractorId);
+      if (!next.teamId || next.teamId !== report.subcontractor.teamId) {
+        throw new SubcontractorNotInTeamError(subcontractorId);
+      }
+
+      const payments = await tx.subcontractorPayment.count({
+        where: {
+          subcontractorId: report.subcontractor.id,
+          projectId: report.projectId,
+          serviceDate: report.date,
+        },
+      });
+      if (payments > 0) {
+        throw new ProjectReportHasSubcontractorPaymentsError(id);
+      }
+
+      await tx.projectReport.update({
+        where: { id },
+        data: { subcontractorId },
+      });
+    });
+
+    this.logger.log(
+      `Project report ${id} handed to subcontractor ${subcontractorId}`,
+    );
   }
 
   // Income entry CRUD

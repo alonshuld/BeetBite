@@ -44,6 +44,7 @@ export const baseApi = createApi({
   tagTypes: [
     "Clients",
     "Subcontractors",
+    "SubcontractorTeams",
     "Suppliers",
     "Initiators",
     "Projects",

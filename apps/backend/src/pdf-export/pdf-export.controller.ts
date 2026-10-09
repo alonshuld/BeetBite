@@ -55,9 +55,9 @@ export class PdfExportController {
   }
 
   /**
-   * Renders the client-wide simulated PDF — a summary page followed by
-   * one account-approval-style page per project, all of a client's reports
-   * for one month, at simulated (never persisted) profit margins.
+   * Renders the client-wide simulated PDF — all of a client's reports for one
+   * month as the Reports screen's project sheets, at simulated (never
+   * persisted) profit margins.
    * @param dto Export parameters (client, month, per-project margin overrides, language)
    * @param res Raw Express response — this endpoint streams a PDF binary, not JSON
    */
@@ -69,7 +69,7 @@ export class PdfExportController {
   @ApiProduces('application/pdf')
   @ApiBadRequestResponse({
     description:
-      'Company settings incomplete, no VAT rate configured for the month, or an override references a project outside this client',
+      'Company settings incomplete, or an override references a project outside this client',
   })
   @ApiNotFoundResponse({
     description: 'No reports found for this client in the given month',
@@ -83,7 +83,7 @@ export class PdfExportController {
 
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="simulated-report-${month.slice(0, 7)}.pdf"`,
+      'Content-Disposition': `attachment; filename="projects-report-${month.slice(0, 7)}.pdf"`,
       'Content-Length': pdf.length,
     });
     res.status(HttpStatus.OK).send(pdf);
