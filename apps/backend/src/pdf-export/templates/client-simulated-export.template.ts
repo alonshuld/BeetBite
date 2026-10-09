@@ -1,33 +1,40 @@
-import {
-  reportApprovalStyles,
-  renderReportApprovalPage,
-  ReportApprovalData,
-} from './report-approval.template';
+import { OPENING_BALANCE_TAG } from 'src/common/constants';
+import { pdfFontCss } from './fonts';
 import {
   escapeHtml,
-  formatCurrency,
   formatMonthLabel,
-  formatSignedCurrency,
   localeFor,
   dirFor,
   PdfColors,
+  resolvePdfTheme,
 } from './shared';
 import { PdfFont } from 'src/common/pdf-fonts';
 
-export interface ClientSimulatedProjectRow {
-  projectId: string;
+export interface ClientSimulatedIncomeEntry {
+  tag: string | null;
+  /** When the income arrived, null while it is still pending. */
+  incomeDate: string | null;
+  amount: number;
+}
+
+/**
+ * One project sheet, exactly as the Reports screen draws it — computed at the
+ * margin the simulator left in force. The stored margin is deliberately not
+ * carried: the document presents these figures as the figures.
+ */
+export interface ClientSimulatedProjectCard {
   projectName: string;
-  projectLocation: string;
-  subcontractorName: string;
+  projectLocation: string | null;
+  projectDescription: string | null;
+  incomeEntries: ClientSimulatedIncomeEntry[];
   totalIncome: number;
-  /** Margin in force: the simulated one, or the stored one when not overridden. */
-  simMargin: number;
-  savedMargin: number;
+  margin: number;
   profit: number;
-  /** Profit the stored margin would give — what the simulation replaced. */
-  savedProfit: number;
-  supplierTotal: number;
+  suppliers: { name: string; amount: number }[];
+  subcontractorName: string;
   subcontractorPayment: number;
+  /** Absent (not empty) when the project has no initiator. */
+  initiator: { name: string; income: number | null } | null;
 }
 
 export interface ClientSimulatedExportData {
@@ -37,132 +44,277 @@ export interface ClientSimulatedExportData {
   contractorDescription: string | null;
   clientName: string;
   month: string;
-  /** One row per project, for the summary page. */
-  summaryRows: ClientSimulatedProjectRow[];
-  /**
-   * One full account-approval-style page per project, already computed at
-   * the simulated margin. Rendered after the summary page, in the same
-   * document.
-   */
-  detailPages: ReportApprovalData[];
+  cards: ClientSimulatedProjectCard[];
   companyPhone: string | null;
   companyEmail: string | null;
   companyAddress: string | null;
   logo: string | null;
-  signature: string | null;
   colors: PdfColors;
   font: PdfFont;
 }
 
+// Worded as the Reports screen words them, so the page reads like the sheets.
 const LABELS = {
   he: {
-    subtitlePrefix: 'דוח רווח מדומה – חודש',
+    subtitlePrefix: 'דוח פרויקטים – חודש',
     client: 'לקוח:',
-    mainContractor: 'קבלן:',
-    project: 'פרויקט',
-    income: 'הכנסה',
-    simMargin: '% רווח מדומה',
-    profit: 'רווח',
-    supplierDeductions: 'קיזוזי ספקים',
-    subcontractorPayment: 'יתרת קבלן משנה',
-    total: 'סה"כ',
     companyNumberPrefix: 'ח.פ.',
-    projectCount: 'מספר פרויקטים:',
-    subcontractor: 'קבלן משנה:',
-    saved: 'שמור:',
-    simulated: 'מדומה',
-    simulationSummary: 'סיכום סימולציה',
-    simulatedProfit: 'רווח מדומה',
-    savedProfit: 'רווח שמור',
-    deltaVsSaved: 'הפרש מהשמור',
-    simulatedNotice:
-      'המסמך מבוסס על אחוזי רווח מדומים, לצורכי הדמיה בלבד — הנתונים השמורים במערכת לא השתנו.',
+    totalIncome: 'סך הכנסות',
+    totalSubcontractorPayments: 'סה"כ תשלומי קבלן',
+    income: 'הכנסה',
+    received: 'התקבל',
+    pending: 'ממתין',
+    profit: 'רווח',
+    openingBalance: 'יתרת פתיחה',
+    initiator: 'יזם',
+    initiatorIncome: 'הכנסה מיזם',
+    notConfigured: 'לא הוגדר',
   },
   en: {
-    subtitlePrefix: 'Simulated Profit Report –',
+    subtitlePrefix: 'Projects Report –',
     client: 'Client:',
-    mainContractor: 'Main Contractor:',
-    project: 'Project',
-    income: 'Income',
-    simMargin: 'Sim. Margin %',
-    profit: 'Profit',
-    supplierDeductions: 'Supplier Deductions',
-    subcontractorPayment: 'Subcontractor Remainder',
-    total: 'Total',
     companyNumberPrefix: 'Reg.',
-    projectCount: 'Projects:',
-    subcontractor: 'Subcontractor:',
-    saved: 'Saved:',
-    simulated: 'Simulated',
-    simulationSummary: 'Simulation Summary',
-    simulatedProfit: 'Simulated Profit',
-    savedProfit: 'Saved Profit',
-    deltaVsSaved: 'Delta vs Saved',
-    simulatedNotice:
-      'This document uses simulated profit margins for preview purposes only — no stored figures were changed.',
+    totalIncome: 'Total Income',
+    totalSubcontractorPayments: 'Total Sub Payments',
+    income: 'Income',
+    received: 'Received',
+    pending: 'Pending',
+    profit: 'Profit',
+    openingBalance: 'Opening balance',
+    initiator: 'Initiator',
+    initiatorIncome: 'Initiator Income',
+    notConfigured: 'Not configured',
   },
 } as const;
 
-const renderSummaryPage = (data: ClientSimulatedExportData): string => {
-  const t = LABELS[data.lang];
-  const locale = localeFor(data.lang);
-  const money = (amount: number): string => formatCurrency(amount, locale);
-  const monthLabel = formatMonthLabel(data.month, data.lang);
+/** Whole shekels, as the screen prints them. */
+const shekels = (amount: number, locale: string): string =>
+  `₪${Math.round(amount).toLocaleString(locale)}`;
 
-  // A second, muted line under a figure that the simulation moved — the
-  // stored value it replaced, as the project sheet shows it.
-  const savedLine = (isSimulated: boolean, saved: string): string =>
-    isSimulated ? `<span class="cell-sub">${t.saved} ${saved}</span>` : '';
+/** Month + year, as the screen dates a received payment. UTC: stored dates are UTC midnight. */
+const formatReceivedDate = (iso: string, lang: 'en' | 'he'): string =>
+  new Intl.DateTimeFormat(localeFor(lang), {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(iso));
 
-  const rowsHtml = data.summaryRows
-    .map((row) => {
-      const isSimulated = row.simMargin !== row.savedMargin;
-      return `
-        <tr>
-          <td>
-            ${escapeHtml(row.projectName)}${isSimulated ? `<span class="sim-badge">${t.simulated}</span>` : ''}
-            ${row.projectLocation ? `<span class="cell-sub">${escapeHtml(row.projectLocation)}</span>` : ''}
-            <span class="cell-sub">${t.subcontractor} ${escapeHtml(row.subcontractorName)}</span>
-          </td>
-          <td class="amount">${money(row.totalIncome)}</td>
-          <td class="amount muted">${row.simMargin}%${savedLine(isSimulated, `${row.savedMargin}%`)}</td>
-          <td class="amount">${money(row.profit)}${savedLine(isSimulated, money(row.savedProfit))}</td>
-          <td class="amount">${money(row.supplierTotal)}</td>
-          <td class="amount strong">${money(row.subcontractorPayment)}</td>
-        </tr>`;
+const styles = (
+  dir: 'rtl' | 'ltr',
+  colors: PdfColors,
+  font: PdfFont,
+): string => {
+  const theme = resolvePdfTheme(colors);
+  const { fontFaces, fontFamily } = pdfFontCss(font);
+  const start = dir === 'rtl' ? 'right' : 'left';
+  return `
+  ${fontFaces}
+  /* Later pages get a top margin so a card never starts at the paper's edge;
+     the first opens on the full-bleed header band. */
+  @page { size: A4; margin: 22px 0; }
+  @page :first { margin-top: 0; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: ${fontFamily};
+    color: #1f2430;
+    margin: 0;
+    font-size: 11px;
+  }
+  .content { padding: 0 30px; }
+
+  .header {
+    background: ${theme.primary};
+    color: ${theme.onPrimary};
+    padding: 20px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 4px solid ${theme.secondary};
+  }
+  .header .identity { text-align: ${start}; }
+  .header .contractor-name { font-size: 24px; font-weight: 700; line-height: 1.15; }
+  .header .contractor-desc { font-size: 12px; opacity: 0.8; margin-top: 3px; }
+  .header .company-number { font-size: 11px; opacity: 0.65; margin-top: 4px; }
+  .header .logo { max-height: 62px; max-width: 150px; }
+
+  .title {
+    text-align: center;
+    font-size: 20px;
+    font-weight: 700;
+    margin: 22px 0 18px;
+  }
+  .title span { border-bottom: 3px solid ${theme.secondary}; padding-bottom: 6px; }
+
+  /* The client header: whose sheets these are, and the two running figures. */
+  .client-bar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #e3e5ea;
+  }
+  .client-bar .client-name { font-size: 18px; font-weight: 700; }
+  .client-bar .client-label { font-size: 10px; color: #667; }
+  .figures { display: flex; gap: 24px; }
+  .figure { display: flex; flex-direction: column; gap: 2px; }
+  .figure .figure-label { font-size: 10px; color: #667; }
+  .figure .figure-value { font-size: 16px; font-weight: 700; }
+
+  /* One rectangle per project, two abreast like the screen's grid. */
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card {
+    border: 1px solid #d9dce3;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    break-inside: avoid;
+  }
+  .card-head { padding: 11px 13px 9px; border-bottom: 1px solid #e8eaef; }
+  .card-name { font-size: 13px; font-weight: 700; }
+  .card-location { font-size: 10.5px; color: #667; margin-top: 2px; }
+  .card-desc { font-size: 9.5px; color: #8a8f9c; margin-top: 2px; }
+
+  .statement { flex: 1; padding: 8px 13px 10px; }
+  .row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 3px 0;
+  }
+  .row .label { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .row .amount { white-space: nowrap; }
+  .row.total { font-weight: 600; }
+  .row.positive .amount { color: #1e7a46; font-weight: 600; }
+  .row.deduction { color: #555b68; }
+  .row.emphasis { font-size: 12.5px; font-weight: 700; }
+  .rule { border-top: 1px solid #d9dce3; margin: 4px 0; }
+  .total-rule { border-top: 3px double #9a9fab; margin: 5px 0; }
+
+  .badge {
+    font-size: 8.5px;
+    font-weight: 600;
+    border-radius: 3px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+  .badge.received { background: #e3f3ea; color: #1e7a46; }
+  .badge.pending { background: #fbf0dc; color: #8a5a10; }
+
+  .initiator {
+    border-top: 1px dashed #d9dce3;
+    padding: 7px 13px 9px;
+    color: #8a8f9c;
+    font-size: 10px;
+  }
+  .initiator .initiator-name { font-size: 9.5px; font-weight: 600; margin-bottom: 2px; }
+
+  .footer {
+    margin: 24px 30px 0;
+    padding-top: 10px;
+    border-top: 1px solid #e8eaef;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #667;
+  }
+`;
+};
+
+const renderCard = (
+  card: ClientSimulatedProjectCard,
+  lang: 'en' | 'he',
+): string => {
+  const t = LABELS[lang];
+  const locale = localeFor(lang);
+  const money = (amount: number): string =>
+    `<span class="amount" dir="ltr">${shekels(amount, locale)}</span>`;
+
+  // The backend writes the opening-balance tag in one fixed language, so it is
+  // translated here to read right in either document language.
+  const tagLabel = (tag: string | null): string =>
+    tag === OPENING_BALANCE_TAG ? t.openingBalance : (tag ?? t.income);
+
+  const incomeRowsHtml = card.incomeEntries
+    .map((entry) => {
+      const badge = entry.incomeDate
+        ? `<span class="badge received">${t.received} ${formatReceivedDate(entry.incomeDate, lang)}</span>`
+        : `<span class="badge pending">${t.pending}</span>`;
+      return `<div class="row"><span class="label"><span>${escapeHtml(tagLabel(entry.tag))}</span>${badge}</span>${money(entry.amount)}</div>`;
     })
     .join('');
 
-  const totals = data.summaryRows.reduce(
-    (acc, row) => ({
-      totalIncome: acc.totalIncome + row.totalIncome,
-      profit: acc.profit + row.profit,
-      savedProfit: acc.savedProfit + row.savedProfit,
-      supplierTotal: acc.supplierTotal + row.supplierTotal,
-      subcontractorPayment: acc.subcontractorPayment + row.subcontractorPayment,
-    }),
-    {
-      totalIncome: 0,
-      profit: 0,
-      savedProfit: 0,
-      supplierTotal: 0,
-      subcontractorPayment: 0,
-    },
-  );
-  const anySimulated = data.summaryRows.some(
-    (row) => row.simMargin !== row.savedMargin,
-  );
-  const profitDelta = totals.profit - totals.savedProfit;
+  const totalIncomeHtml =
+    card.incomeEntries.length > 1
+      ? `<div class="rule"></div><div class="row total"><span class="label">${t.totalIncome}</span>${money(card.totalIncome)}</div>`
+      : '';
 
-  // The simulator drawer's own totals: what the margins now add up to, and —
-  // only once something was actually moved — how far that is from the stored
-  // figures.
-  const deltaRowHtml = anySimulated
-    ? `<div class="summary-row"><span>${t.savedProfit}</span><span>${money(totals.savedProfit)}</span></div>
-        <div class="summary-row"><span>${t.deltaVsSaved}</span><span dir="ltr" class="${profitDelta >= 0 ? 'delta-up' : 'delta-down'}">${formatSignedCurrency(profitDelta, locale)}</span></div>`
+  const supplierRowsHtml = card.suppliers
+    .map(
+      (supplier) =>
+        `<div class="row deduction"><span class="label">${escapeHtml(supplier.name)}</span><span class="amount" dir="ltr">− ${shekels(supplier.amount, locale)}</span></div>`,
+    )
+    .join('');
+
+  // Informational only, outside the account — as on the screen. No initiator
+  // on the project → the section is absent.
+  const initiatorHtml = card.initiator
+    ? `<div class="initiator">
+        <div class="initiator-name">${t.initiator}: ${escapeHtml(card.initiator.name)}</div>
+        <div class="row"><span class="label">${t.initiatorIncome}</span>${
+          card.initiator.income != null
+            ? money(card.initiator.income)
+            : `<span class="amount">${t.notConfigured}</span>`
+        }</div>
+      </div>`
     : '';
 
-  return `<div class="page">
+  return `<div class="card">
+    <div class="card-head">
+      <div class="card-name">${escapeHtml(card.projectName)}</div>
+      ${card.projectLocation ? `<div class="card-location">${escapeHtml(card.projectLocation)}</div>` : ''}
+      ${card.projectDescription ? `<div class="card-desc">${escapeHtml(card.projectDescription)}</div>` : ''}
+    </div>
+    <div class="statement">
+      ${incomeRowsHtml}
+      ${totalIncomeHtml}
+      <div class="rule"></div>
+      <div class="row positive"><span class="label">${t.profit} (${card.margin}%)</span>${money(card.profit)}</div>
+      ${supplierRowsHtml}
+      <div class="total-rule"></div>
+      <div class="row total emphasis"><span class="label">${escapeHtml(card.subcontractorName)}</span>${money(card.subcontractorPayment)}</div>
+    </div>
+    ${initiatorHtml}
+  </div>`;
+};
+
+/**
+ * The client's project sheets for one month, as the Reports screen lays them
+ * out: the client header with its two totals, then one rectangle per project.
+ */
+export const renderClientSimulatedExportHtml = (
+  data: ClientSimulatedExportData,
+): string => {
+  const t = LABELS[data.lang];
+  const locale = localeFor(data.lang);
+  const dir = dirFor(data.lang);
+  const monthLabel = formatMonthLabel(data.month, data.lang);
+
+  const totalIncome = data.cards.reduce((sum, c) => sum + c.totalIncome, 0);
+  const totalSubcontractor = data.cards.reduce(
+    (sum, c) => sum + c.subcontractorPayment,
+    0,
+  );
+
+  return `<!DOCTYPE html>
+<html dir="${dir}" lang="${data.lang}">
+<head>
+<meta charset="UTF-8" />
+<style>${styles(dir, data.colors, data.font)}</style>
+</head>
+<body>
   <div class="header">
     <div class="identity">
       <div class="contractor-name">${escapeHtml(data.contractorName)}</div>
@@ -175,43 +327,25 @@ const renderSummaryPage = (data: ClientSimulatedExportData): string => {
   <div class="content">
     <div class="title"><span>${t.subtitlePrefix} ${monthLabel}</span></div>
 
-    <div class="info-box">
-      <div class="info-row"><span class="label">${t.client}</span><span>${escapeHtml(data.clientName)}</span></div>
-      <div class="info-row"><span class="label">${t.mainContractor}</span><span>${escapeHtml(data.contractorName)} • ${t.companyNumberPrefix} ${escapeHtml(data.contractorCompanyNumber)}</span></div>
-      <div class="info-row"><span class="label">${t.projectCount}</span><span>${data.summaryRows.length}</span></div>
+    <div class="client-bar">
+      <div>
+        <div class="client-label">${t.client}</div>
+        <div class="client-name">${escapeHtml(data.clientName)}</div>
+      </div>
+      <div class="figures">
+        <div class="figure">
+          <span class="figure-label">${t.totalIncome}</span>
+          <span class="figure-value" dir="ltr">${shekels(totalIncome, locale)}</span>
+        </div>
+        <div class="figure">
+          <span class="figure-label">${t.totalSubcontractorPayments}</span>
+          <span class="figure-value" dir="ltr">${shekels(totalSubcontractor, locale)}</span>
+        </div>
+      </div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>${t.project}</th>
-          <th>${t.income}</th>
-          <th>${t.simMargin}</th>
-          <th>${t.profit}</th>
-          <th>${t.supplierDeductions}</th>
-          <th>${t.subcontractorPayment}</th>
-        </tr>
-      </thead>
-      <tbody>${rowsHtml}</tbody>
-      <tfoot>
-        <tr>
-          <td>${t.total}</td>
-          <td class="amount">${money(totals.totalIncome)}</td>
-          <td></td>
-          <td class="amount">${money(totals.profit)}</td>
-          <td class="amount">${money(totals.supplierTotal)}</td>
-          <td class="amount">${money(totals.subcontractorPayment)}</td>
-        </tr>
-      </tfoot>
-    </table>
-
-    <div class="lower">
-      <div class="summary-box">
-        <div class="summary-title">${t.simulationSummary}</div>
-        <div class="summary-row"><span>${t.simulatedProfit}</span><span>${money(totals.profit)}</span></div>
-        ${deltaRowHtml}
-      </div>
-      <p class="notice">${t.simulatedNotice}</p>
+    <div class="cards">
+      ${data.cards.map((card) => renderCard(card, data.lang)).join('')}
     </div>
   </div>
 
@@ -222,37 +356,6 @@ const renderSummaryPage = (data: ClientSimulatedExportData): string => {
       .join(' • ')}</div>
     <div>${data.companyEmail ? escapeHtml(data.companyEmail) : ''}</div>
   </div>
-</div>`;
-};
-
-export const renderClientSimulatedExportHtml = (
-  data: ClientSimulatedExportData,
-): string => {
-  const dir = dirFor(data.lang);
-  const summaryPage = renderSummaryPage(data);
-  const detailPages = data.detailPages.map(renderReportApprovalPage).join('');
-
-  return `<!DOCTYPE html>
-<html dir="${dir}" lang="${data.lang}">
-<head>
-<meta charset="UTF-8" />
-<style>
-${reportApprovalStyles(dir, data.colors, data.font)}
-/* Each project's page (summary included) must start on its own printed page
-   — without this, puppeteer would run them together as one continuous flow. */
-.page { break-after: page; }
-.page:last-child { break-after: auto; }
-/* A muted second line inside a summary cell — location, subcontractor, or the
-   stored figure a simulated one replaced. */
-.cell-sub { display: block; font-size: 9px; font-weight: 400; color: #667; margin-top: 2px; }
-.delta-up { color: #1e7a46; }
-.delta-down { color: #b4531a; }
-.notice { flex: 1; margin: 0; font-size: 10.5px; color: #667; }
-</style>
-</head>
-<body>
-${summaryPage}
-${detailPages}
 </body>
 </html>`;
 };
