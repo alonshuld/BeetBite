@@ -915,8 +915,7 @@ export default function SubcontractorPaymentsPage() {
                                     )
                                   }
                                   title={t("save")}
-                                  className="inline-flex h-8 items-center justify-center rounded px-3 text-white transition-colors disabled:opacity-40"
-                                  style={{ background: "var(--warning)" }}
+                                  className="inline-flex h-8 items-center justify-center rounded bg-beet px-3 text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                                 >
                                   <Icon name="check" size={14} />
                                 </button>
