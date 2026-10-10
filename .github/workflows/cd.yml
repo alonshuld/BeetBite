@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       customer:
-        description: Deploy only this customer (a name from the deploy matrix). Empty deploys all.
+        description: Deploy only this customer (a prod-<customer> environment name without the prefix). Empty deploys all.
         type: string
         default: ""
 
@@ -18,6 +18,47 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # The customer list is the repo's `prod-<customer>` environments, which each
+  # customer's Terraform stack creates. Onboarding a customer is applying their
+  # stack; nothing here changes. Runs alongside CI so a bad input fails fast.
+  discover:
+    name: Discover customers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      actions: read
+
+    outputs:
+      customers: ${{ steps.list.outputs.customers }}
+
+    steps:
+      - name: List prod-<customer> environments
+        id: list
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ONLY: ${{ inputs.customer }}
+        run: |
+          all=$(gh api "repos/${GITHUB_REPOSITORY}/environments" --paginate \
+            --jq '[.environments[].name | select(startswith("prod-")) | ltrimstr("prod-")]' | jq -cs 'add // []')
+          echo "Customers: ${all}"
+
+          if [ -n "$ONLY" ]; then
+            # Refuse unknown names: deploying to one would make GitHub create
+            # an empty prod-<typo> environment.
+            if ! jq -e --arg c "$ONLY" 'index($c) != null' <<<"$all" >/dev/null; then
+              echo "::error::No prod-${ONLY} environment. Known customers: ${all}"
+              exit 1
+            fi
+            all=$(jq -cn --arg c "$ONLY" '[$c]')
+          fi
+
+          if [ "$all" = "[]" ]; then
+            echo "::error::No prod-<customer> environments found. Apply a customer's Terraform stack first."
+            exit 1
+          fi
+          echo "customers=${all}" >> "$GITHUB_OUTPUT"
+
   # Never publish an image built from a commit that does not pass CI. Reusing
   # ci.yml rather than re-declaring its steps keeps the two in lockstep.
   ci:
@@ -121,22 +162,20 @@ jobs:
   # through GitHub's OIDC token (no stored keys) and runs deploy.sh on the
   # instance through SSM Run Command, so no SSH port is open.
   #
-  # To onboard a customer: apply their Terraform stack, then add their name to
-  # the list in `matrix.customer` below. Customers deploy in parallel and one failure does not stop
-  # the others; set `max-parallel: 1` and order the list for a canary rollout.
+  # The customers come from the `discover` job. Customers deploy in parallel
+  # and one failure does not stop the others; set `max-parallel: 1` for a
+  # one-at-a-time rollout.
   deploy:
     name: Deploy ${{ matrix.customer }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: publish
+    needs: [publish, discover]
     environment: prod-${{ matrix.customer }}
 
-    # A job-level `if` cannot read `matrix`, so a manual run for one customer
-    # narrows the matrix itself. Pushes have no input and deploy the full list.
     strategy:
       fail-fast: false
       matrix:
-        customer: ${{ fromJSON(inputs.customer && format('["{0}"]', inputs.customer) || '["rimonim","sshaul"]') }}
+        customer: ${{ fromJSON(needs.discover.outputs.customers) }}
 
     permissions:
       id-token: write
