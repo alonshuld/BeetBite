@@ -84,6 +84,16 @@ variable "admin_username" {
   default = "admin"
 }
 
+variable "customer" {
+  description = "Short lowercase name of the customer this stack deploys, e.g. rimonim. Names the GitHub environment (prod-<customer>) that CD deploys through; it must also be listed in the deploy matrix in .github/workflows/cd.yml."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9-]{1,30}$", var.customer))
+    error_message = "Use 2-31 lowercase letters, digits or hyphens, starting with a letter."
+  }
+}
+
 variable "github_owner" {
   type    = string
   default = "alonshuld"
@@ -95,7 +105,7 @@ variable "github_repository" {
 }
 
 variable "github_deploy_reviewers" {
-  description = "GitHub user IDs (numeric) whose approval every production deploy waits for. Empty list deploys without approval."
+  description = "GitHub user IDs (numeric) whose approval every deploy to this customer waits for. Empty list deploys without approval."
   type        = list(number)
   default     = []
 }
