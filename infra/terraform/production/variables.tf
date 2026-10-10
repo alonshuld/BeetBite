@@ -85,7 +85,7 @@ variable "admin_username" {
 }
 
 variable "customer" {
-  description = "Short lowercase name of the customer this stack deploys, e.g. rimonim. Names the GitHub environment (prod-<customer>) that CD deploys through; it must also be listed in the deploy matrix in .github/workflows/cd.yml."
+  description = "Short lowercase name of the customer this stack deploys, e.g. rimonim. Names the GitHub environment (prod-<customer>) that CD deploys through; CD finds it by that prefix, so .github/workflows/cd.yml needs no change."
   type        = string
 
   validation {
