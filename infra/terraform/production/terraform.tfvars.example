@@ -1,5 +1,9 @@
 # Copy to terraform.tfvars (gitignored) and fill in.
 
+# Names this customer's GitHub environment (prod-<customer>). Add the same name
+# to the deploy matrix in .github/workflows/cd.yml.
+customer = "rimonim"
+
 alert_emails = ["ops@yourcompany.co.il"]
 
 # Leave domain_name unset for a trial run: the app is then served over plain
