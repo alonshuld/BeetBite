@@ -122,20 +122,21 @@ jobs:
   # instance through SSM Run Command, so no SSH port is open.
   #
   # To onboard a customer: apply their Terraform stack, then add their name to
-  # the list below. Customers deploy in parallel and one failure does not stop
+  # the list in `matrix.customer` below. Customers deploy in parallel and one failure does not stop
   # the others; set `max-parallel: 1` and order the list for a canary rollout.
   deploy:
     name: Deploy ${{ matrix.customer }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: publish
-    if: inputs.customer == '' || inputs.customer == matrix.customer
     environment: prod-${{ matrix.customer }}
 
+    # A job-level `if` cannot read `matrix`, so a manual run for one customer
+    # narrows the matrix itself. Pushes have no input and deploy the full list.
     strategy:
       fail-fast: false
       matrix:
-        customer: [rimonim, sshaul]
+        customer: ${{ fromJSON(inputs.customer && format('["{0}"]', inputs.customer) || '["rimonim","sshaul"]') }}
 
     permissions:
       id-token: write
