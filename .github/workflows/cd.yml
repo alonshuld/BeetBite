@@ -135,7 +135,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        customer: [rimonim]
+        customer: [rimonim, sshaul]
 
     permissions:
       id-token: write
