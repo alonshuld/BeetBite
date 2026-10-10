@@ -63,9 +63,13 @@ locals {
   site_address = local.has_domain ? local.app_fqdn : ":80"
   app_url      = local.has_domain ? "https://${local.app_fqdn}" : "http://${aws_eip.app.public_ip}"
 
+  # GitHub environment CD deploys through for this customer.
+  github_environment = "prod-${var.customer}"
+
   tags = {
     Project     = "beetbite"
     Environment = "production"
+    Customer    = var.customer
     ManagedBy   = "terraform"
   }
 }

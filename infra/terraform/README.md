@@ -26,6 +26,17 @@ terraform plan -out tfplan                     # read it
 terraform apply tfplan
 ```
 
+## One stack per customer
+
+Each customer runs in its own AWS account. Deploy a new one by repeating the
+steps above with that account's credentials, its own `bootstrap` state and
+`terraform.tfvars` (set `customer = "<name>"`), then add `<name>` to the
+`deploy` matrix in `.github/workflows/cd.yml`. The stack creates the GitHub
+environment `prod-<name>` holding `AWS_DEPLOY_ROLE_ARN`, `AWS_REGION` and
+`EC2_INSTANCE_ID`; the IAM role trusts only that environment, so a deploy for
+one customer cannot reach another's account. Run a single customer by hand with
+the workflow's `customer` input.
+
 Things to know before changing anything here:
 
 - **Read every plan.** RDS, the backup bucket and the state bucket have

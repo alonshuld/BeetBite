@@ -1,6 +1,8 @@
 # CD's deploy job assumes this role through GitHub's OIDC token, so no AWS
-# keys are stored in GitHub. Only jobs in the repo's `production` environment
-# can assume it, and it can only run commands on this one instance.
+# keys are stored in GitHub. Only jobs in this customer's GitHub environment
+# (`local.github_environment`) can assume it, and it can only run commands on
+# this one instance. Each customer runs this stack in its own AWS account with
+# its own state, so the environments never share a role.
 
 resource "aws_iam_openid_connect_provider" "github" {
   url            = "https://token.actions.githubusercontent.com"
@@ -19,7 +21,7 @@ resource "aws_iam_role" "github_deploy" {
       Condition = {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          "token.actions.githubusercontent.com:sub" = "repo:${var.github_owner}/${var.github_repository}:environment:production"
+          "token.actions.githubusercontent.com:sub" = "repo:${var.github_owner}/${var.github_repository}:environment:${local.github_environment}"
         }
       }
     }]
@@ -52,7 +54,7 @@ resource "aws_iam_role_policy" "github_deploy" {
 
 resource "github_repository_environment" "production" {
   repository  = var.github_repository
-  environment = "production"
+  environment = local.github_environment
 
   dynamic "reviewers" {
     for_each = length(var.github_deploy_reviewers) > 0 ? [1] : []
@@ -80,6 +82,13 @@ resource "github_actions_environment_variable" "deploy_role" {
   value         = aws_iam_role.github_deploy.arn
 }
 
+resource "github_actions_environment_variable" "region" {
+  repository    = var.github_repository
+  environment   = github_repository_environment.production.environment
+  variable_name = "AWS_REGION"
+  value         = var.region
+}
+
 resource "github_actions_environment_variable" "instance_id" {
   repository    = var.github_repository
   environment   = github_repository_environment.production.environment
@@ -89,7 +98,7 @@ resource "github_actions_environment_variable" "instance_id" {
 
 resource "github_repository_deploy_key" "host" {
   repository = var.github_repository
-  title      = "${local.name} (read-only, managed by Terraform)"
+  title      = "${local.github_environment} (read-only, managed by Terraform)"
   key        = tls_private_key.deploy_key.public_key_openssh
   read_only  = true
 }

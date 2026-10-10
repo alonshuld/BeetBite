@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      customer:
+        description: Deploy only this customer (a name from the deploy matrix). Empty deploys all.
+        type: string
+        default: ""
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -108,28 +113,55 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.app }}
 
-  # Phase 3: roll the EC2 host to this commit's images. The job assumes an AWS
-  # role through GitHub's OIDC token (no stored keys) and runs deploy.sh on the
-  # instance through SSM Run Command, so no SSH port is open. Both variables
-  # live on the `production` environment and are written by Terraform
-  # (infra/terraform/production/github.tf); until then the job is skipped.
+  # Phase 3: roll each customer's EC2 host to this commit's images. Every
+  # customer runs in its own AWS account, so each has its own GitHub
+  # environment `prod-<customer>` holding AWS_DEPLOY_ROLE_ARN, AWS_REGION and
+  # EC2_INSTANCE_ID (written by that customer's Terraform stack, see
+  # infra/terraform/production/github.tf). The job assumes the customer's role
+  # through GitHub's OIDC token (no stored keys) and runs deploy.sh on the
+  # instance through SSM Run Command, so no SSH port is open.
+  #
+  # To onboard a customer: apply their Terraform stack, then add their name to
+  # the list below. Customers deploy in parallel and one failure does not stop
+  # the others; set `max-parallel: 1` and order the list for a canary rollout.
   deploy:
-    name: Deploy to production
+    name: Deploy ${{ matrix.customer }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: publish
-    if: vars.EC2_INSTANCE_ID != ''
-    environment: production
+    if: inputs.customer == '' || inputs.customer == matrix.customer
+    environment: prod-${{ matrix.customer }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        customer: [rimonim]
 
     permissions:
       id-token: write
       contents: read
 
     steps:
+      # An environment that Terraform has not populated yet exists but is empty
+      # (GitHub creates it on first reference), so say so instead of failing
+      # inside the AWS action.
+      - name: Check environment is provisioned
+        env:
+          INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+          ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          REGION: ${{ vars.AWS_REGION }}
+        run: |
+          for v in INSTANCE_ID ROLE_ARN REGION; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Environment prod-${{ matrix.customer }} has no ${v}. Apply that customer's Terraform stack first."
+              exit 1
+            fi
+          done
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: il-central-1
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Roll out on the EC2 host
         env:
