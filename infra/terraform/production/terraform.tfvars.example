@@ -1,7 +1,7 @@
 # Copy to terraform.tfvars (gitignored) and fill in.
 
-# Names this customer's GitHub environment (prod-<customer>). Add the same name
-# to the deploy matrix in .github/workflows/cd.yml.
+# Names this customer's GitHub environment (prod-<customer>). CD deploys to
+# every prod-* environment, so this is all it takes to add the customer to CD.
 customer = "rimonim"
 
 alert_emails = ["ops@yourcompany.co.il"]
