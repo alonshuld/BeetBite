@@ -11,11 +11,11 @@ describe('AuthService', () => {
   let service: AuthService;
 
   const mockUsersService = {
-    findByUsername: jest.fn(),
+    findByUsername: vi.fn(),
   };
 
   const mockJwtService = {
-    sign: jest.fn(),
+    sign: vi.fn(),
   };
 
   const mockUser = {
@@ -37,7 +37,7 @@ describe('AuthService', () => {
 
     service = module.get<AuthService>(AuthService);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

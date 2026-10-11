@@ -237,10 +237,11 @@ Run from the repo root — these fan out across the workspace:
 ```bash
 pnpm dev            # backend + frontend dev servers
 pnpm build          # build all apps
-pnpm test           # backend Jest + frontend Vitest
-pnpm lint           # ESLint + tsc (auto-fix)
-pnpm lint:check     # ESLint + tsc, no fix (what CI and the pre-commit hook run)
-pnpm format         # Prettier write
+pnpm test           # backend + frontend unit tests (Vitest)
+pnpm check          # format + lint + type check in one pass (what CI and the pre-commit hook run)
+pnpm lint           # Oxlint + type check (auto-fix)
+pnpm lint:check     # Oxlint + type check, no fix
+pnpm format         # Oxfmt write
 pnpm test:e2e       # Playwright suite (requires Docker)
 pnpm infra:up       # docker compose up db backend -d
 pnpm infra:down     # stop them
@@ -250,14 +251,13 @@ Per app:
 
 ```bash
 pnpm --filter backend start:dev            # Nest watch mode
-pnpm --filter backend test:cov             # Jest coverage
 pnpm --filter backend exec prisma migrate dev
 pnpm --filter frontend codegen             # regenerate API types (backend must be running)
-pnpm --filter frontend vitest run src/pages/ReportsPage.test.tsx
+pnpm --filter frontend exec vp test run src/pages/ReportsPage.test.tsx
 pnpm --filter e2e exec playwright test --ui
 ```
 
-A Husky pre-commit hook runs `pnpm format:check` then `pnpm lint:check`.
+Tooling is [Vite+](https://viteplus.dev) (`vp`): Vite, Vitest, Oxlint and Oxfmt behind one CLI, configured in the root `vite.config.ts` (format and lint rules for every app) plus each app's own `vite.config.ts`. The pre-commit hook (`.vite-hooks/pre-commit`, installed by `pnpm install`) runs `vp check` on the staged files; it needs Node ≥ 22.22.1.
 
 ---
 
@@ -289,8 +289,8 @@ Validation is global and strict: unknown properties are rejected with 400 (`whit
 
 | Suite | Count | What it covers |
 | --- | --- | --- |
-| Backend unit (Jest) | 350 tests / 30 suites | Controllers and services with `PrismaService` fully mocked |
-| Backend integration (Jest) | `pnpm --filter backend test:e2e` | Services against a real PostgreSQL via testcontainers |
+| Backend unit (Vitest) | 350 tests / 30 suites | Controllers and services with `PrismaService` fully mocked |
+| Backend integration (Vitest) | `pnpm --filter backend test:e2e` | Services against a real PostgreSQL via testcontainers |
 | Frontend unit (Vitest) | 305 tests / 38 files | Components, pages and hooks in jsdom |
 | End-to-end (Playwright) | 60 tests / 9 suites | Auth, clients, projects, project reports, suppliers, supplier payments, subcontractors, subcontractor payments, income |
 
@@ -307,7 +307,7 @@ E2E_VERBOSE=1 pnpm test:e2e       # stream backend/frontend logs
 
 | Workflow | Trigger | Jobs |
 | --- | --- | --- |
-| `ci.yml` | push / PR on `main`, `dev`; callable | Format check, ESLint + `tsc`, backend Jest, frontend Vitest, full build |
+| `ci.yml` | push / PR on `main`, `dev`; callable | `vp check` (format, lint, type check), backend + frontend Vitest, full build |
 | `e2e.yml` | push / PR on `main`, `dev` | Playwright suite; uploads the HTML report on failure |
 | `cd.yml` | push to `main`, manual | Re-runs CI, builds both images, then publishes to GHCR |
 

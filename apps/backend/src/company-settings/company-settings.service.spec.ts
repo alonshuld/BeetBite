@@ -8,8 +8,8 @@ describe('CompanySettingsService', () => {
 
   const mockPrismaService = {
     companySettings: {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
     },
   };
 
@@ -43,7 +43,7 @@ describe('CompanySettingsService', () => {
 
     service = module.get<CompanySettingsService>(CompanySettingsService);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

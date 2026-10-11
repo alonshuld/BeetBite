@@ -9,7 +9,7 @@ describe('UsersService', () => {
 
   const mockPrismaService = {
     user: {
-      findUnique: jest.fn(),
+      findUnique: vi.fn(),
     },
   };
 
@@ -34,7 +34,7 @@ describe('UsersService', () => {
 
     service = module.get<UsersService>(UsersService);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

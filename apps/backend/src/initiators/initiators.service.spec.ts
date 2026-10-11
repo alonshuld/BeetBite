@@ -13,11 +13,11 @@ describe('InitiatorsService', () => {
 
   const mockPrismaService = {
     initiator: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
   };
 
@@ -34,7 +34,7 @@ describe('InitiatorsService', () => {
 
     service = module.get<InitiatorsService>(InitiatorsService);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

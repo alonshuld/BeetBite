@@ -47,14 +47,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check formatting
-        run: pnpm format:check
-
-      # `lint:check` runs ESLint across all three workspaces and then
-      # `pnpm -r typecheck`. Keeping typecheck inside `lint:check` means the
-      # Husky pre-commit hook enforces exactly what CI does.
-      - name: Lint & typecheck
-        run: pnpm lint:check
+      # `vp check` formats (Oxfmt), lints (Oxlint) and type-checks (tsgolint)
+      # every app in one pass, from the root vite.config.ts. The pre-commit
+      # hook runs the same command on the staged files.
+      - name: Format, lint & typecheck
+        run: pnpm check
 
   test:
     name: Unit tests
@@ -75,7 +72,7 @@ jobs:
 
       # Run the unit suites explicitly: the root `test` script fans out to every
       # workspace, and apps/e2e's `test` is the Playwright suite (see e2e.yml).
-      - name: Backend unit tests (Jest)
+      - name: Backend unit tests (Vitest)
         run: pnpm --filter backend test
 
       - name: Frontend unit tests (Vitest)

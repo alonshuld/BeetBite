@@ -15,10 +15,10 @@ const MONTH_DATE = new Date(`${MONTH}-01`);
  * End-to-end coverage for the account-approval PDF, driven from the export
  * button on each project sheet under /reports.
  *
- * This is also the only layer that renders a PDF for real: puppeteer v25 is
- * ESM-only and Jest cannot load it, so the backend integration spec stubs the
- * browser and asserts HTML. Here the backend runs as an ordinary Node process,
- * so the bytes coming back are produced by a real Chromium.
+ * This is also the only layer that renders a PDF for real: the backend
+ * integration spec stubs puppeteer so it needs no browser, and asserts HTML.
+ * Here the backend runs as an ordinary Node process, so the bytes coming back
+ * are produced by a real Chromium.
  */
 dbTest.describe('PDF export', () => {
   let projectId: string;

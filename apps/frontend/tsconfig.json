@@ -19,11 +19,11 @@
     // Browser sources must not see Node globals. `@types/node` is a real
     // dependency (tsconfig.e2e.json declares `"types": ["node"]`), and without
     // this it would be auto-included here too, letting `process.env`/`Buffer`
-    // typecheck in code that runs in the browser.
-    "types": [],
-    "baseUrl": ".",
+    // typecheck in code that runs in the browser. `vite-plus/client` is the
+    // browser-side Vite types (CSS/asset imports, `import.meta.env`).
+    "types": ["vite-plus/client"],
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"],
