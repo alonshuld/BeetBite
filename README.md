@@ -257,7 +257,7 @@ pnpm --filter frontend exec vp test run src/pages/ReportsPage.test.tsx
 pnpm --filter e2e exec playwright test --ui
 ```
 
-Tooling is [Vite+](https://viteplus.dev) (`vp`): Vite, Vitest, Oxlint and Oxfmt behind one CLI, configured in the root `vite.config.ts` (format and lint rules for every app) plus each app's own `vite.config.ts`. The pre-commit hook (`.vite-hooks/pre-commit`, installed by `pnpm install`) runs `vp check` on the staged files; it needs Node ≥ 22.22.1.
+Tooling is [Vite+](https://viteplus.dev) (`vp`): Vite, Vitest, Oxlint and Oxfmt behind one CLI, configured in the root `vite.config.ts` (format and lint rules for every app) plus each app's own `vite.config.ts`. The pre-commit hook (`.vite-hooks/pre-commit`, installed by `pnpm install`) runs `vp check` on the staged files. Use Node 24 (what Docker and CI run) and pnpm 12 (`corepack enable`).
 
 ---
 

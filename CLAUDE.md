@@ -57,9 +57,11 @@ pnpm infra:up       # docker compose up db backend -d
 pnpm infra:down     # docker compose stop db backend
 ```
 
-## Package manager
+## Runtime and package manager
 
-pnpm 12 (pinned in `package.json` → `packageManager`). It is a native binary: install it with Corepack ≥ 0.36 (bundled with Node ≥ 22.23; older Corepack fails with `Cannot find module …/bin/pnpm.cjs`) or `npm i -g pnpm@12`. Things pnpm 12 enforces:
+Node 24 everywhere: the Docker images (`node:24-alpine`), CI (`node-version: 24`) and `@types/node` 24. Use Node 24 locally too.
+
+pnpm 12 (pinned in `package.json` → `packageManager`). It is a native binary: install it with Corepack ≥ 0.36 (bundled with Node 24, and Node 22 from 22.23; older Corepack fails with `Cannot find module …/bin/pnpm.cjs`) or `npm i -g pnpm@12`. Things pnpm 12 enforces:
 
 - **Install scripts** run only for packages listed `true` under `allowBuilds` in `pnpm-workspace.yaml`; an unlisted package with a script fails the install (`ERR_PNPM_IGNORED_BUILDS`). List it as `true` or `false` deliberately.
 - **Release age:** versions published less than 24 h ago are refused (`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`). Wait, or re-resolve that package to an older version.
@@ -170,7 +172,7 @@ AWS, Tel Aviv (`il-central-1`): per customer, one EC2 `t3.small` runs `deploy/do
 
 ## Pre-commit hook
 
-`.vite-hooks/pre-commit` runs `vp staged`, which runs `vp check` (Oxfmt + Oxlint + type check, no auto-fix) on the staged `.ts/.tsx/.js/.mjs` files per the `staged` block in the root `vite.config.ts`, under `nice -n 19` with a 1 GB Node heap (the dev box has ~3.8 GB RAM). `pnpm install` installs the hook dispatcher (`prepare` → `vp config`); `vp hooks status` shows whether it is active. `vp staged` needs Node ≥ 22.22.1 and Git ≥ 2.32. Full-repo check: `pnpm check`. Fix with `pnpm format && pnpm lint`.
+`.vite-hooks/pre-commit` runs `vp staged`, which runs `vp check` (Oxfmt + Oxlint + type check, no auto-fix) on the staged `.ts/.tsx/.js/.mjs` files per the `staged` block in the root `vite.config.ts`, under `nice -n 19` with a 1 GB Node heap (the dev box has ~3.8 GB RAM). `pnpm install` installs the hook dispatcher (`prepare` → `vp config`); `vp hooks status` shows whether it is active. `vp staged` needs Git ≥ 2.32 (and Node ≥ 22.22.1, which Node 24 satisfies). Full-repo check: `pnpm check`. Fix with `pnpm format && pnpm lint`.
 
 ## Tooling (Vite+)
 
