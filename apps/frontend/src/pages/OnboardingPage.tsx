@@ -64,7 +64,7 @@ export default function OnboardingPage() {
   return (
     // body is overflow:hidden (AppShell scrolls its own <main>), so this
     // full-screen page has to be its own scroll container.
-    <div className="h-full overflow-y-auto bg-[var(--bg)]">
+    <div className="h-full overflow-y-auto bg-(--bg)">
       <div className="relative flex min-h-full flex-col items-center justify-center px-4 py-10">
         <div
           className="absolute inset-0 pointer-events-none"

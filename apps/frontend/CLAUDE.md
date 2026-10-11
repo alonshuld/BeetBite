@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Stack
 
-Vite + React 18 + TypeScript (strict). State: Redux Toolkit + RTK Query. Routing: React Router v7 data router. Styling: Tailwind CSS v3 + CSS custom properties. API types: `openapi-typescript` generated from backend Swagger.
+Vite + React 19 + TypeScript (strict). State: Redux Toolkit + RTK Query. Routing: React Router v7 data router. Styling: Tailwind CSS v4 + CSS custom properties. API types: `openapi-typescript` generated from backend Swagger.
 
 ## Commands
 
@@ -58,7 +58,7 @@ src/
     useFieldCheck.ts        # Save guard that toasts which fields are missing/invalid
   pages/                    # One file per route, lazy-loaded
   styles/
-    globals.css             # :root CSS vars + Tailwind directives + base type, focus, scrollbar
+    globals.css             # Tailwind import + @theme tokens, :root CSS vars, base type, focus, scrollbar
   utils/
     formatMonth.ts          # formatYM(ym, lang, format?) and formatISODate(iso, lang, opts?) — locale-aware date helpers
   router.tsx                # createBrowserRouter route table
@@ -104,13 +104,18 @@ Data router via `createBrowserRouter`. All authenticated routes are wrapped in `
 
 ## Styling
 
-Tailwind v3 with `tailwind.config.ts`. All colours map to CSS custom properties declared in `src/styles/globals.css`. Use Tailwind utility classes; reach for raw CSS vars only when no utility maps to the token.
+Tailwind v4 through the `@tailwindcss/vite` plugin; there is no `tailwind.config.ts` or PostCSS config. The theme lives in the `@theme` blocks at the top of `src/styles/globals.css`, and every colour there maps to a runtime CSS custom property declared further down (light + `[data-theme="dark"]`). Use Tailwind utility classes; reach for raw CSS vars only when no utility maps to the token (`bg-(--bg)`).
+
+Cascade rules worth knowing (v4 puts utilities in a native CSS layer, and unlayered CSS beats any layer):
+- Element-level base styles (the reset, `html`/`body`, `h1–h3`) live in `@layer base`, so utilities override them.
+- Rules that must beat utilities (the global `:focus-visible` ring, `[dir="rtl"] th/td` alignment, native control sizing) are deliberately unlayered. Don't move them into a layer.
+- Opacity modifiers accept any number (`bg-success/12`), unlike v3 which only had steps of 5. Conflicting utilities on one element (`h-9` from a component plus `h-11` from the caller) resolve by numeric order, not v3's order, so pass overrides that don't collide.
 
 ### Design system
 
 - **Palette.** Every neutral sits on the beet hue (350) with real chroma, so paper, rules and ink read as tints of the brand rather than grey with an accent dropped on top. The app is pink on purpose. The exported account-approval PDF is the formal document and keeps its own restrained palette — screens do not imitate it.
 - **Accent vs. money.** `--beet` marks what you can *act on* (buttons, nav, focus). It never states an amount. Money has its own scale: `--success` for received/settled, `--warning` for pending or part-settled, plain ink for amounts outstanding or leaving. Owing money is the normal state of this business, so it is never coloured as an error; `--danger` is reserved for destructive actions and real faults.
-- **Type.** `Frank Ruhl Libre` (serif) for page, section and modal titles via `font-serif` and the base `h1–h3` rule; `Assistant` for everything else. Both carry full Hebrew. Sizes come from the named scale in `tailwind.config.ts` (`micro`/`label`/`sm`/`base`/`lead`/`title`/`page`/`hero`) rather than arbitrary pixel values.
+- **Type.** `Frank Ruhl Libre` (serif) for page, section and modal titles via `font-serif` and the base `h1–h3` rule; `Assistant` for everything else. Both carry full Hebrew. Sizes come from the named scale in the `@theme` block of `globals.css` (`micro`/`label`/`sm`/`base`/`lead`/`title`/`page`/`hero`) rather than arbitrary pixel values.
 - **No ALL-CAPS labels.** Hebrew has no uppercase, so `uppercase` silently applied to only half the UI and the two languages rendered as different products. Labels are sentence case at `text-label`.
 - **Icons.** `components/atoms/Icon.tsx` — one hand-drawn stroke set on a 24-unit grid, plus `BeetMark` for the product mark. Never emoji: they ignore `currentColor`, can't dim with muted text, and render differently per OS. Each renders `data-icon={name}`, which is how tests assert on them.
 - **Surfaces.** Cards and tables get a border, never a shadow; shadow (`shadow-pop`, `shadow-modal`) is reserved for things that genuinely float. `rounded-lg` for panels, `rounded`/`rounded-sm` for controls.

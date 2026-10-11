@@ -12,7 +12,7 @@ Track client projects, monthly income, subcontractor payouts and supplier invoic
 [![E2E Tests](https://github.com/alonshuld/BeetBite/actions/workflows/e2e.yml/badge.svg)](https://github.com/alonshuld/BeetBite/actions/workflows/e2e.yml)
 [![CD](https://github.com/alonshuld/BeetBite/actions/workflows/cd.yml/badge.svg)](https://github.com/alonshuld/BeetBite/actions/workflows/cd.yml)
 
-NestJS 11 · React 18 · PostgreSQL 17 · Prisma 7 · Playwright · Docker
+NestJS 12 · React 19 · PostgreSQL 17 · Prisma 7 · Playwright · Docker
 
 </div>
 
@@ -134,7 +134,7 @@ erDiagram
 
 ```mermaid
 flowchart LR
-    B["Browser<br/>React 18 SPA"]
+    B["Browser<br/>React 19 SPA"]
     F["Frontend<br/>Vite dev :5173 / nginx :80"]
     A["Backend<br/>NestJS :3000<br/>/api/v1"]
     D[("PostgreSQL 17")]
@@ -149,8 +149,8 @@ pnpm workspace with three apps:
 
 | App | Path | Stack |
 | --- | --- | --- |
-| `backend` | `apps/backend/` | NestJS 11, Prisma 7, PostgreSQL, Passport JWT, Swagger, Puppeteer (PDF) |
-| `frontend` | `apps/frontend/` | Vite, React 18, TypeScript strict, Redux Toolkit + RTK Query, Tailwind CSS v3, React Router v7 |
+| `backend` | `apps/backend/` | NestJS 12, Prisma 7, PostgreSQL, Passport JWT, Swagger, Puppeteer (PDF) |
+| `frontend` | `apps/frontend/` | Vite, React 19, TypeScript strict, Redux Toolkit + RTK Query, Tailwind CSS v4, React Router v7 |
 | `e2e` | `apps/e2e/` | Playwright, testcontainers-driven full-stack bootstrap |
 
 Notable choices:

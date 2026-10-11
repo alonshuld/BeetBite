@@ -26,7 +26,7 @@ export function LangToggle({
           aria-pressed={lang === l}
           className={`h-full rounded-sm px-2.5 text-label font-semibold transition-colors duration-150 ${
             lang === l
-              ? "bg-surface text-text shadow-sm"
+              ? "bg-surface text-text shadow-xs"
               : "text-text-dim hover:text-text"
           }`}
         >

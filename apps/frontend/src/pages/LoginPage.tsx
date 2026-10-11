@@ -40,7 +40,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[var(--bg)] px-4">
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-(--bg) px-4">
       {/* One wash of beet across the top edge, so the door to the app is
           recognisably the app. Nothing else decorates this screen. */}
       <div
@@ -108,7 +108,7 @@ export default function LoginPage() {
             <ButtonPrimary
               type="submit"
               disabled={isLoading}
-              className="mt-1 h-11 w-full"
+              className="mt-1 w-full"
             >
               {isLoading ? t("signingIn") : t("signIn")}
             </ButtonPrimary>

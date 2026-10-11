@@ -41,9 +41,9 @@ type Align = "start" | "center" | "end";
  * checkbox beneath it stays put, and the two look offset.
  */
 const ALIGN: Record<Align, string> = {
-  start: "!text-start",
-  center: "!text-center",
-  end: "!text-end",
+  start: "text-start!",
+  center: "text-center!",
+  end: "text-end!",
 };
 
 /** A header cell aligned the same way as the cells beneath it. */

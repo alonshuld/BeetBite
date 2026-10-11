@@ -247,7 +247,7 @@ export default function ProjectsPage() {
 
   function invalidProps(field: keyof typeof invalid) {
     return showInvalid && invalid[field]
-      ? { "aria-invalid": true, className: "!border-danger" }
+      ? { "aria-invalid": true, className: "border-danger!" }
       : {};
   }
 
