@@ -14,17 +14,17 @@ describe('ClientsService', () => {
 
   const mockPrismaService = {
     client: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      count: jest.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
     },
     projectClientAssignment: {
-      findMany: jest.fn(),
+      findMany: vi.fn(),
     },
-    $transaction: jest.fn(),
+    $transaction: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -40,7 +40,7 @@ describe('ClientsService', () => {
 
     service = module.get<ClientsService>(ClientsService);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

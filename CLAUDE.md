@@ -42,11 +42,12 @@ Run from the repo root — these delegate to each app via `pnpm -r`:
 ```bash
 pnpm dev            # Start backend + frontend dev servers (parallel)
 pnpm build          # Build all apps
-pnpm test           # Run all unit tests (backend Jest + frontend Vitest)
-pnpm lint           # ESLint + tsc across all apps (auto-fix)
-pnpm lint:check     # ESLint + tsc (no fix, used by pre-commit hook)
-pnpm format         # Prettier across all apps
-pnpm format:check   # Prettier check (no write)
+pnpm test           # Run all unit tests (backend + frontend Vitest)
+pnpm check          # vp check: format + lint + type check in one pass (what CI runs)
+pnpm lint           # vp lint --fix: Oxlint + type check across all apps
+pnpm lint:check     # vp lint (no fix)
+pnpm format         # vp fmt: Oxfmt across all apps
+pnpm format:check   # vp fmt --check (no write)
 
 # E2E tests (requires Docker)
 pnpm test:e2e       # Run Playwright suite via apps/e2e
@@ -161,4 +162,13 @@ AWS, Tel Aviv (`il-central-1`): per customer, one EC2 `t3.small` runs `deploy/do
 
 ## Pre-commit hook
 
-Husky's pre-commit is deliberately light (the dev box has ~3.8 GB RAM and the full checks have crashed WSL): for each app with staged `.ts/.tsx/.js/.mjs` files it runs prettier `--check` and eslint on just those files, then that app's `typecheck` — one at a time, under `nice -n 19`, with a 1 GB Node heap. Apps with nothing staged are skipped. The full-repo checks (`pnpm format:check && pnpm lint:check`) are still available to run by hand. Fix with `pnpm format && pnpm lint`.
+`.vite-hooks/pre-commit` runs `vp staged`, which runs `vp check` (Oxfmt + Oxlint + type check, no auto-fix) on the staged `.ts/.tsx/.js/.mjs` files per the `staged` block in the root `vite.config.ts`, under `nice -n 19` with a 1 GB Node heap (the dev box has ~3.8 GB RAM). `pnpm install` installs the hook dispatcher (`prepare` → `vp config`); `vp hooks status` shows whether it is active. `vp staged` needs Node ≥ 22.22.1 and Git ≥ 2.32. Full-repo check: `pnpm check`. Fix with `pnpm format && pnpm lint`.
+
+## Tooling (Vite+)
+
+Every app's tooling runs through Vite+ (`vp`, the `vite-plus` package): `vp dev`/`vp build` (Vite), `vp test` (Vitest, imported as `vite-plus/test`), `vp lint` (Oxlint, type-aware via tsgolint, which also type-checks with TypeScript 7), `vp fmt` (Oxfmt). There is no ESLint, Prettier, Jest or Husky.
+
+- **Root `vite.config.ts`** holds the `fmt`, `lint` and `staged` blocks for the whole workspace. `vp check` always uses these root blocks, even run inside an app, so per-app differences are `overrides` there (e.g. the frontend keeps double quotes; backend + frontend get the type-aware rules). Don't add `lint`/`fmt` blocks to app configs.
+- **App `vite.config.ts`** files hold only that app's Vite/Vitest settings (backend: `unit` and `e2e` Vitest projects).
+- `vite` and `vite-plus` versions come from the `catalog` in `pnpm-workspace.yaml`; `vite` is an alias of `@voidzero-dev/vite-plus-core`. Upgrade with `pnpm dlx --package=vite-plus@<version> vp migrate --no-interactive`.
+- Oxfmt formats code and JSON only; Markdown, YAML, CSS and HTML are ignored on purpose (see `fmt.ignorePatterns`).

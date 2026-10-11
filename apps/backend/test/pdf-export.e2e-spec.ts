@@ -38,19 +38,17 @@ import { ExportProjectReportsPdfDto } from 'src/pdf-export/dto/export-project-re
  * the same pipes and filters as production.
  *
  * Puppeteer is stubbed and the HTML handed to `setContent` is captured. It
- * cannot be un-stubbed here: puppeteer v25 is ESM-only and Jest's CommonJS
- * loader cannot `requireActual` it, so proof that a real browser renders a real
- * PDF lives in `apps/e2e/tests/pdf-export.spec.ts`.
+ * stays stubbed so this suite needs no browser: proof that a real browser
+ * renders a real PDF lives in `apps/e2e/tests/pdf-export.spec.ts`.
  */
 
-// Jest hoists this factory above the imports, so anything it closes over must
-// be named `mock*`.
-const mockPuppeteerState = { html: '' };
+// Vitest hoists `vi.mock` above the imports, so the state its factory closes
+// over has to be hoisted with it.
+const mockPuppeteerState = vi.hoisted(() => ({ html: '' }));
 
 // Plain promise-returning functions rather than `async` ones: none of them
-// await anything, and `@typescript-eslint/require-await` rejects that.
-jest.mock('puppeteer', () => ({
-  __esModule: true,
+// await anything, and the `typescript/require-await` lint rule rejects that.
+vi.mock('puppeteer', () => ({
   default: {
     launch: () =>
       Promise.resolve({

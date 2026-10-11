@@ -12,21 +12,16 @@ pnpm start:dev          # Start with hot reload
 pnpm build              # Compile TypeScript via NestJS CLI
 pnpm start:prod         # Run compiled output
 
-# Code quality
-pnpm lint               # ESLint (auto-fix)
-pnpm lint:check         # ESLint (no fix, for CI)
-pnpm typecheck          # tsc --noEmit — run separately; the root `lint`/`lint:check` chain both
-pnpm format             # Prettier write
-pnpm format:check       # Prettier check (no write)
+# Code quality: run from the repo root (`pnpm check` / `pnpm lint` / `pnpm format`),
+# see the root CLAUDE.md → Tooling (Vite+)
 
-# Testing
-pnpm test               # Run all unit tests (jest, rootDir: src)
+# Testing (Vitest via `vp test`; projects defined in vite.config.ts)
+pnpm test               # Unit tests (`unit` project: src/**/*.spec.ts)
 pnpm test:watch         # Watch mode
-pnpm test:cov           # Coverage report
-pnpm test:e2e           # Integration tests (testcontainers, requires Docker)
+pnpm test:e2e           # Integration tests (`e2e` project: test/*.e2e-spec.ts, testcontainers, requires Docker)
 
 # Run a single test file
-pnpm test -- --testPathPattern=projects.service
+pnpm test src/projects/projects.service.spec.ts
 
 # Database
 pnpm db:sync                   # migrate deploy + generate + fail on any DB≠schema drift (runs before dev/start:dev/start:debug; CI runs it on an empty Postgres)
@@ -199,7 +194,8 @@ Filters are independent and combinable. Default view (no params) returns active 
 
 ### Testing approach
 
-- **Unit tests** (`*.spec.ts` in `src/`): mock `PrismaService` entirely using `jest.fn()`. No real DB.
+- **Unit tests** (`*.spec.ts` in `src/`): mock `PrismaService` entirely using `vi.fn()` (Vitest globals: `describe`/`it`/`vi` need no import). No real DB. Mocked modules (`vi.mock`) need a `default` key when the source uses a default import (e.g. `puppeteer`).
+- **Type-only imports**: tests run through Oxc, which compiles one file at a time and cannot tell a type-only import from a value — with `emitDecoratorMetadata` a plain `import { Response } from 'express'` used in a decorated signature becomes a runtime `require`. Use `import type` for type-only imports.
 - **Integration/e2e tests** (`test/*.e2e-spec.ts`): spin up a real PostgreSQL instance via `@testcontainers/postgresql`, run `prisma migrate deploy`, then test the service directly against the DB.
 
 Pagination defaults (`PAGINATION_DEFAULTS` in `src/common/constants.ts`): page 1, limit 10.

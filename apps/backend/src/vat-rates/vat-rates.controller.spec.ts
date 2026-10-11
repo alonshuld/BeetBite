@@ -7,9 +7,9 @@ describe('VatRatesController', () => {
   let controller: VatRatesController;
 
   const mockVatRatesService = {
-    upsertForMonth: jest.fn(),
-    findHistory: jest.fn(),
-    resolveForMonth: jest.fn(),
+    upsertForMonth: vi.fn(),
+    findHistory: vi.fn(),
+    resolveForMonth: vi.fn(),
   };
 
   const mockVatRate: VatRateResponseDto = {
@@ -26,7 +26,7 @@ describe('VatRatesController', () => {
     }).compile();
 
     controller = module.get<VatRatesController>(VatRatesController);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

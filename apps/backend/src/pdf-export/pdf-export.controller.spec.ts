@@ -3,19 +3,19 @@ import { PdfExportController } from './pdf-export.controller';
 import { PdfExportService } from './pdf-export.service';
 import { ExportProjectReportsPdfDto } from './dto/export-project-reports-pdf.dto';
 import { ExportClientSimulatedPdfDto } from './dto/export-client-simulated-pdf.dto';
-import { Response } from 'express';
+import type { Response } from 'express';
 
-// pdf-export.service.ts imports the real (ESM-only) puppeteer package at
-// module load time, regardless of the DI provider override below — stub it
-// so this controller-only spec doesn't need Jest to parse puppeteer's ESM.
-jest.mock('puppeteer', () => ({ launch: jest.fn() }));
+// pdf-export.service.ts imports the real puppeteer package at module load
+// time, regardless of the DI provider override below — stub it so this
+// controller-only spec never loads a browser driver.
+vi.mock('puppeteer', () => ({ default: { launch: vi.fn() } }));
 
 describe('PdfExportController', () => {
   let controller: PdfExportController;
 
   const mockPdfExportService = {
-    exportProjectReportsPdf: jest.fn(),
-    exportClientSimulatedPdf: jest.fn(),
+    exportProjectReportsPdf: vi.fn(),
+    exportClientSimulatedPdf: vi.fn(),
   };
 
   const dto: ExportProjectReportsPdfDto = {
@@ -24,9 +24,9 @@ describe('PdfExportController', () => {
   };
 
   const mockResponse = () => {
-    const setMock = jest.fn();
-    const statusMock = jest.fn();
-    const sendMock = jest.fn();
+    const setMock = vi.fn();
+    const statusMock = vi.fn();
+    const sendMock = vi.fn();
     const res = {
       set: setMock,
       status: statusMock,
@@ -47,7 +47,7 @@ describe('PdfExportController', () => {
     }).compile();
 
     controller = module.get<PdfExportController>(PdfExportController);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

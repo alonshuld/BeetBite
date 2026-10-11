@@ -2,6 +2,9 @@ FROM node:22-alpine
 # Corepack resolves pnpm from the root package.json "packageManager" field, so
 # the version stays in one place instead of drifting against a hardcoded pin.
 RUN corepack enable
+# The root `prepare` script installs git hooks (`vp config`); the image has no
+# git, and that step fails without it rather than skipping as Husky did.
+ENV VP_GIT_HOOKS=0
 # Puppeteer (PDF export) needs a system Chromium on Alpine — its own bundled
 # Chromium is glibc-only and won't run under musl. font-noto-hebrew is required
 # for Hebrew PDFs to render actual glyphs instead of tofu boxes.
