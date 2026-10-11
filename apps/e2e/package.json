@@ -9,11 +9,11 @@
     "test:report": "playwright show-report"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0",
-    "@prisma/adapter-pg": "^7.4.2",
+    "@playwright/test": "^1.64.0",
+    "@prisma/adapter-pg": "^7.10.0",
     "@testcontainers/postgresql": "^11.12.0",
     "@types/bcrypt": "^6.0.0",
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.20.5",
     "bcrypt": "^6.0.0",
     "typescript": "^5.9.3"
   }
