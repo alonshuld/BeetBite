@@ -391,7 +391,7 @@ export default function SubcontractorPaymentsPage() {
                   }}
                   className={`text-left p-4 rounded border transition-colors ${
                     isActive
-                      ? "bg-[var(--beet-glow)] border-beet"
+                      ? "bg-(--beet-glow) border-beet"
                       : "bg-surface border-border hover:bg-surface-2"
                   }`}
                 >
@@ -663,7 +663,7 @@ export default function SubcontractorPaymentsPage() {
                                         type="date"
                                         autoFocus
                                         aria-label={t("paymentDate")}
-                                        className="px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-none focus:border-beet"
+                                        className="px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
                                         defaultValue={
                                           payment.paymentDate?.slice(0, 10) ??
                                           todayISO()
@@ -714,7 +714,7 @@ export default function SubcontractorPaymentsPage() {
                                           maxLength={500}
                                           aria-label={t("description")}
                                           placeholder={t("description")}
-                                          className="min-w-0 flex-1 px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-none focus:border-beet"
+                                          className="min-w-0 flex-1 px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
                                           value={descriptionDrafts[payment.id]}
                                           onChange={(e) =>
                                             setDescriptionDrafts((prev) => ({

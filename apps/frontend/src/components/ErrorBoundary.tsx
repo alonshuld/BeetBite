@@ -6,7 +6,7 @@ import { Icon } from "@/components/atoms/Icon";
 export function ErrorFallback() {
   const { t } = useLang();
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-8 text-center bg-[var(--bg)]">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-8 text-center bg-(--bg)">
       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 text-text-dim">
         <Icon name="alert" size={26} />
       </div>

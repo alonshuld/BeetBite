@@ -63,7 +63,7 @@ export default function AppShell() {
           month={month}
           onMonthChange={setMonth}
         />
-        <main className="flex-1 overflow-auto bg-[var(--bg)]">
+        <main className="flex-1 overflow-auto bg-(--bg)">
           {/* Capped so a table on a wide monitor does not stretch its rows
               past a comfortable scan width. */}
           <div className="mx-auto w-full max-w-[1400px] px-7 py-6 max-[768px]:px-4 max-[768px]:py-5">

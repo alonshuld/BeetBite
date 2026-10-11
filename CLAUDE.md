@@ -30,7 +30,7 @@ pnpm workspace. Three apps under `apps/`:
 | App | Path | Description |
 | --- | --- | --- |
 | `backend` | `apps/backend/` | NestJS REST API + PostgreSQL (Prisma) |
-| `frontend` | `apps/frontend/` | Vite + React 18 + RTK Query SPA |
+| `frontend` | `apps/frontend/` | Vite + React 19 + RTK Query SPA |
 | `e2e` | `apps/e2e/` | Playwright end-to-end tests |
 
 Each app has its own `CLAUDE.md` with stack details, commands, and architecture. Read those for app-specific work.

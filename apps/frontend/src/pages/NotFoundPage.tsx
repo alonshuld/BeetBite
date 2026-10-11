@@ -7,7 +7,7 @@ export default function NotFoundPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--bg)] p-8 text-center">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-(--bg) p-8 text-center">
       {/* The number is the whole illustration — set large in the serif and
           left to carry the screen on its own. */}
       <span className="tnum select-none font-serif text-[104px] font-bold leading-none text-beet">

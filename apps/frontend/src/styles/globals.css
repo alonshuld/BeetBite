@@ -1,6 +1,113 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+/*
+ * Tailwind tokens. Each one points at a runtime CSS variable below, so the
+ * light/dark palettes swap without rebuilding; opacity modifiers such as
+ * `bg-success/12` work on them directly (v4 mixes them with color-mix).
+ */
+@theme {
+  --color-beet: var(--beet);
+  --color-beet-bright: var(--beet-bright);
+  --color-beet-dim: var(--beet-dim);
+  --color-beet-glow: var(--beet-glow);
+  --color-beet-tint: var(--beet-tint);
+
+  --color-rose: var(--rose);
+
+  --color-surface-2: var(--surface2);
+  --color-surface-3: var(--surface3);
+  --color-surface: var(--surface);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-dim: var(--text-dim);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --font-sans: Assistant, system-ui, sans-serif;
+  --font-serif: Frank Ruhl Libre, Georgia, serif;
+
+  --text-micro: 11px;
+  --text-micro--line-height: 1.45;
+  --text-label: 12px;
+  --text-label--line-height: 1.4;
+  --text-sm: 13px;
+  --text-sm--line-height: 1.5;
+  --text-base: 14px;
+  --text-base--line-height: 1.55;
+  --text-lead: 16px;
+  --text-lead--line-height: 1.5;
+  --text-title: 20px;
+  --text-title--line-height: 1.25;
+  --text-page: 26px;
+  --text-page--line-height: 1.18;
+  --text-hero: 34px;
+  --text-hero--line-height: 1.1;
+
+
+  --animate-sheetIn: sheetIn 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-fadeIn: fadeIn 140ms ease-out;
+
+  @keyframes sheetIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.99);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/*
+ * Radii and shadows share their names with the runtime variables in :root
+ * below. Inlined, `rounded-sm` compiles to `border-radius: var(--radius-sm)`
+ * and reads the app's value. (Tailwind still writes `--radius-sm:
+ * var(--radius-sm)` into its theme layer; the unlayered :root declaration
+ * below always wins over it.)
+ */
+@theme inline {
+  --radius-sm: var(--radius-sm);
+  --radius: var(--radius);
+  --radius-lg: var(--radius-lg);
+
+  --shadow-pop: var(--shadow-pop);
+  --shadow-modal: var(--shadow-modal);
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 /*
  * BeetBite tokens.
@@ -94,30 +201,90 @@
     0 2px 8px oklch(6% 0.02 350 / 0.42);
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/*
+ * Element-level base styles. They sit in Tailwind's `base` layer: v4 emits
+ * utilities in a native CSS layer, and unlayered CSS beats every layer
+ * regardless of specificity, so left unlayered this reset's
+ * `margin: 0; padding: 0` would override every spacing utility.
+ */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html,
+  body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Assistant", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    overflow: hidden;
+  }
+
+  /* Headings carry the serif; set here so every h1–h3 gets it without a class. */
+  h1,
+  h2,
+  h3 {
+    font-family: "Frank Ruhl Libre", Georgia, serif;
+    font-weight: 700;
+    line-height: 1.18;
+    letter-spacing: -0.005em;
+  }
+
+  ::selection {
+    background: var(--beet-glow);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-dim);
+    background-clip: content-box;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
-html,
-body {
-  height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: "Assistant", system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 1.55;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-body {
-  overflow: hidden;
-}
-
+/*
+ * Rules that must win over utilities (the focus ring over `outline-hidden`,
+ * RTL table alignment over per-cell `text-*`, native control sizing) stay
+ * unlayered, so they keep beating utilities as they did under Tailwind 3.
+ */
 #root {
   height: 100%;
 }
@@ -165,16 +332,6 @@ input[type="month"] {
   filter: invert(1);
 }
 
-/* Headings carry the serif; set here so every h1–h3 gets it without a class. */
-h1,
-h2,
-h3 {
-  font-family: "Frank Ruhl Libre", Georgia, serif;
-  font-weight: 700;
-  line-height: 1.18;
-  letter-spacing: -0.005em;
-}
-
 /*
  * A single visible focus treatment for the whole app, so keyboard users get
  * the same ring on a link, a button and a table row action.
@@ -183,32 +340,6 @@ h3 {
   outline: 2px solid var(--beet);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
-}
-
-::selection {
-  background: var(--beet-glow);
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border: 3px solid transparent;
-  background-clip: content-box;
-  border-radius: 999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-dim);
-  background-clip: content-box;
 }
 
 /* RTL — tables align to the reading edge. */
@@ -220,15 +351,4 @@ h3 {
 [dir="rtl"] th.text-end,
 [dir="rtl"] td.text-end {
   text-align: left;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
 }

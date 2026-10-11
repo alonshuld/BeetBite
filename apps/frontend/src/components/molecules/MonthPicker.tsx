@@ -135,7 +135,7 @@ export function MonthPicker({
             value={year}
             onChange={(e) => selectYear(Number(e.target.value))}
             aria-label={MONTH_NAMES[lang][month]}
-            className="tnum mb-2.5 w-full cursor-pointer appearance-none rounded-sm border border-border bg-surface-2 px-2.5 py-1.5 text-sm font-semibold text-text outline-none transition-colors hover:border-border-strong focus:border-beet"
+            className="tnum mb-2.5 w-full cursor-pointer appearance-none rounded-sm border border-border bg-surface-2 px-2.5 py-1.5 text-sm font-semibold text-text outline-hidden transition-colors hover:border-border-strong focus:border-beet"
           >
             {years.map((y) => (
               <option key={y} value={y}>
