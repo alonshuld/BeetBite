@@ -21,6 +21,9 @@ peerDependencyRules:
     - vite
   allowedVersions:
     vite: '*'
+    # openapi-typescript 7 declares typescript ^5.x but works on 6:
+    # `pnpm --filter frontend codegen` produces identical output.
+    openapi-typescript>typescript: '6'
 packageExtensions:
   # jest-dom's `declare module 'vitest'` matcher types resolve `vitest` from
   # jest-dom's own location. The workspace holds more than one vitest@5 copy
