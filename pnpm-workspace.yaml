@@ -1,14 +1,42 @@
 packages:
   - apps/*
 
-onlyBuiltDependencies:
-  - '@nestjs/core'
-  - '@prisma/engines'
-  - '@scarf/scarf'
-  - '@swc/core'
-  - bcrypt
-  - cpu-features
-  - prisma
-  - protobufjs
-  - puppeteer
-  - ssh2
+# Dependencies allowed to run install scripts (pnpm denies the rest).
+allowBuilds:
+  '@nestjs/core': true
+  '@prisma/engines': true
+  '@scarf/scarf': true
+  bcrypt: true
+  cpu-features: true
+  prisma: true
+  protobufjs: true
+  puppeteer: true
+  ssh2: true
+  # Optional peer of @nestjs/cli (only its swc/webpack builders use it; the
+  # backend builds with tsc). Its script just checks for its native binary.
+  '@swc/core': false
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@1.1.0
+  vite-plus: 1.1.0
+overrides:
+  vite@*: 'catalog:'
+peerDependencyRules:
+  allowAny:
+    - vite
+  allowedVersions:
+    vite: '*'
+    # openapi-typescript 7 declares typescript ^5.x but works on 6:
+    # `pnpm --filter frontend codegen` produces identical output.
+    openapi-typescript>typescript: '6'
+packageExtensions:
+  # jest-dom's `declare module 'vitest'` matcher types resolve `vitest` from
+  # jest-dom's own location. The workspace holds more than one vitest@5 copy
+  # (vite-plus peers differ per app), so without this peer it can augment a
+  # different copy than the frontend's `vite-plus/test`, and every jest-dom
+  # matcher stops type-checking.
+  '@testing-library/jest-dom':
+    peerDependencies:
+      vitest: '*'
+    peerDependenciesMeta:
+      vitest:
+        optional: true

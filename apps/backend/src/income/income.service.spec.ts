@@ -8,7 +8,7 @@ describe('IncomeService', () => {
 
   const mockPrismaService = {
     projectReport: {
-      findMany: jest.fn(),
+      findMany: vi.fn(),
     },
   };
 
@@ -19,8 +19,8 @@ describe('IncomeService', () => {
   // An empty map here makes the read paths fall back to the project's cached
   // client, which is the behaviour every assertion below was written against.
   const mockAssignmentsService = {
-    resolveClientsForMonth: jest.fn().mockResolvedValue(new Map()),
-    createInitialAssignment: jest.fn().mockResolvedValue(undefined),
+    resolveClientsForMonth: vi.fn().mockResolvedValue(new Map()),
+    createInitialAssignment: vi.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -39,7 +39,7 @@ describe('IncomeService', () => {
     }).compile();
 
     service = module.get<IncomeService>(IncomeService);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

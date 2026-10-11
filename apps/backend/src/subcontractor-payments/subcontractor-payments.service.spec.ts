@@ -12,26 +12,26 @@ describe('SubcontractorPaymentsService', () => {
   let service: SubcontractorPaymentsService;
 
   const mockPrismaService = {
-    $transaction: jest
+    $transaction: vi
       .fn()
       .mockImplementation(
         (callback: (tx: typeof mockPrismaService) => Promise<unknown>) =>
           callback(mockPrismaService),
       ),
     subcontractorPayment: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
     projectReport: {
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
     },
     subcontractor: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
     },
   };
 
@@ -39,8 +39,8 @@ describe('SubcontractorPaymentsService', () => {
   // An empty map here makes the read paths fall back to the project's cached
   // client, which is the behaviour every assertion below was written against.
   const mockAssignmentsService = {
-    resolveClientsForMonth: jest.fn().mockResolvedValue(new Map()),
-    createInitialAssignment: jest.fn().mockResolvedValue(undefined),
+    resolveClientsForMonth: vi.fn().mockResolvedValue(new Map()),
+    createInitialAssignment: vi.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -62,7 +62,7 @@ describe('SubcontractorPaymentsService', () => {
       SubcontractorPaymentsService,
     );
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

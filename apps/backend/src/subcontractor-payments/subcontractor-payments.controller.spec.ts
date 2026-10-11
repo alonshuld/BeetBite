@@ -9,12 +9,12 @@ describe('SubcontractorPaymentsController', () => {
   let controller: SubcontractorPaymentsController;
 
   const mockSubcontractorPaymentsService = {
-    create: jest.fn(),
-    findSubcontractorPaymentsInMonth: jest.fn(),
-    findSubcontractorMonthlyPayments: jest.fn(),
-    findByClient: jest.fn(),
-    update: jest.fn(),
-    remove: jest.fn(),
+    create: vi.fn(),
+    findSubcontractorPaymentsInMonth: vi.fn(),
+    findSubcontractorMonthlyPayments: vi.fn(),
+    findByClient: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -32,7 +32,7 @@ describe('SubcontractorPaymentsController', () => {
       SubcontractorPaymentsController,
     );
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -276,12 +276,12 @@ describe('SubcontractorPaymentsController', () => {
   describe('Integration Tests with Subcontractor Workflows', () => {
     let integrationController: SubcontractorPaymentsController;
     const integrationMockSubcontractorPaymentsService = {
-      create: jest.fn(),
-      findSubcontractorPaymentsInMonth: jest.fn(),
-      findSubcontractorMonthlyPayments: jest.fn(),
-      findByClient: jest.fn(),
-      update: jest.fn(),
-      remove: jest.fn(),
+      create: vi.fn(),
+      findSubcontractorPaymentsInMonth: vi.fn(),
+      findSubcontractorMonthlyPayments: vi.fn(),
+      findByClient: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
     };
 
     beforeEach(async () => {
@@ -300,7 +300,7 @@ describe('SubcontractorPaymentsController', () => {
           SubcontractorPaymentsController,
         );
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     describe('subcontractor payment creation workflows', () => {

@@ -69,7 +69,7 @@ function MarginSlider({
           step={0.1}
           value={value}
           onChange={(e) => commit(parseFloat(e.target.value), MARGIN_MAX)}
-          className="w-14 rounded border border-border bg-surface px-1 py-0.5 text-xs text-text text-end focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-14 rounded border border-border bg-surface px-1 py-0.5 text-xs text-text text-end focus:outline-hidden focus:ring-1 focus:ring-primary"
         />
         <span className="text-xs text-text-muted">%</span>
       </div>
@@ -152,8 +152,8 @@ export function ProfitSimulatorPanel({
       type="button"
       onClick={open ? onClose : onOpen}
       aria-expanded={open}
-      className={`fixed top-1/2 -translate-y-1/2 z-40 ltr:right-0 rtl:left-0 ltr:rounded-l-[var(--radius)] rtl:rounded-r-[var(--radius)] bg-beet text-white py-4 px-1.5 shadow-lg hover:bg-beet-bright transition-transform duration-200 ${
-        open ? "ltr:-translate-x-[340px] rtl:translate-x-[340px]" : ""
+      className={`fixed top-1/2 -translate-y-1/2 z-40 ltr:right-0 rtl:left-0 ltr:rounded-l-(--radius) rtl:rounded-r-(--radius) bg-beet text-white py-4 px-1.5 shadow-lg hover:bg-beet-bright transition-transform duration-200 ${
+        open ? "ltr:translate-x-[-340px] rtl:translate-x-[340px]" : ""
       }`}
     >
       <span

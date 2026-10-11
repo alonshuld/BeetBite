@@ -13,12 +13,12 @@ describe('SuppliersService', () => {
 
   const mockPrismaService = {
     supplier: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      count: jest.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
     },
   };
 
@@ -35,7 +35,7 @@ describe('SuppliersService', () => {
 
     service = module.get<SuppliersService>(SuppliersService);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

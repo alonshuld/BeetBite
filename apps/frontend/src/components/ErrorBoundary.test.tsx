@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vite-plus/test";
 import { render, screen } from "@testing-library/react";
 import { LangProvider } from "@/contexts/LangContext";
 import { ErrorBoundary, ErrorFallback } from "./ErrorBoundary";

@@ -8,9 +8,9 @@ describe('VatRatesService', () => {
 
   const mockPrismaService = {
     vatRate: {
-      upsert: jest.fn(),
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
+      upsert: vi.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
     },
   };
 
@@ -31,7 +31,7 @@ describe('VatRatesService', () => {
 
     service = module.get<VatRatesService>(VatRatesService);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

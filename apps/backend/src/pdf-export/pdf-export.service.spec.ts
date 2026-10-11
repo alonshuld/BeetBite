@@ -13,32 +13,40 @@ import { InitiatorIncomeTooLowError } from '../project-reports/errors/initiator-
 import { ExportProjectReportsPdfDto } from './dto/export-project-reports-pdf.dto';
 import { ExportClientSimulatedPdfDto } from './dto/export-client-simulated-pdf.dto';
 import { BadRequestException } from '@nestjs/common';
+import puppeteer from 'puppeteer';
 import { OPENING_BALANCE_TAG } from 'src/common/constants';
 
-jest.mock('puppeteer', () => ({
-  launch: jest.fn().mockResolvedValue({
-    newPage: jest.fn().mockResolvedValue({
-      setContent: jest.fn().mockResolvedValue(undefined),
-      pdf: jest.fn().mockResolvedValue(Uint8Array.from([1, 2, 3])),
+type Mock = ReturnType<typeof vi.fn>;
+
+vi.mock('puppeteer', () => ({
+  default: {
+    launch: vi.fn().mockResolvedValue({
+      newPage: vi.fn().mockResolvedValue({
+        setContent: vi.fn().mockResolvedValue(undefined),
+        pdf: vi.fn().mockResolvedValue(Uint8Array.from([1, 2, 3])),
+      }),
+      close: vi.fn().mockResolvedValue(undefined),
     }),
-    close: jest.fn().mockResolvedValue(undefined),
-  }),
+  },
 }));
+
+// The default export is the stub object from the factory above.
+const mockedPuppeteer = puppeteer as unknown as { launch: Mock };
 
 describe('PdfExportService', () => {
   let service: PdfExportService;
 
-  const mockCompanySettingsService = { findOne: jest.fn() };
-  const mockVatRatesService = { resolveForMonth: jest.fn() };
+  const mockCompanySettingsService = { findOne: vi.fn() };
+  const mockVatRatesService = { resolveForMonth: vi.fn() };
   const mockProjectReportsService = {
-    findOneForExport: jest.fn(),
-    findProjectReportsInMonth: jest.fn(),
+    findOneForExport: vi.fn(),
+    findProjectReportsInMonth: vi.fn(),
   };
   const mockSubcontractorTeamsService = {
-    findTeamOf: jest.fn(),
-    findTeamsOf: jest.fn(),
+    findTeamOf: vi.fn(),
+    findTeamsOf: vi.fn(),
   };
-  const mockProjectsService = { updateLastApprovedFor: jest.fn() };
+  const mockProjectsService = { updateLastApprovedFor: vi.fn() };
 
   const completeCompanySettings = {
     id: 'company-settings',
@@ -141,7 +149,7 @@ describe('PdfExportService', () => {
     }).compile();
 
     service = module.get<PdfExportService>(PdfExportService);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     mockCompanySettingsService.findOne.mockResolvedValue(
       completeCompanySettings,
@@ -157,14 +165,13 @@ describe('PdfExportService', () => {
   const renderHtml = async (
     overrides: Partial<ExportProjectReportsPdfDto> = {},
   ): Promise<string> => {
-    const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
     const mockPage = {
-      setContent: jest.fn<void, [string, unknown]>(),
-      pdf: jest.fn().mockResolvedValue(Uint8Array.from([1])),
+      setContent: vi.fn<(html: string, options: unknown) => void>(),
+      pdf: vi.fn().mockResolvedValue(Uint8Array.from([1])),
     };
-    puppeteer.launch.mockResolvedValue({
-      newPage: jest.fn().mockResolvedValue(mockPage),
-      close: jest.fn(),
+    mockedPuppeteer.launch.mockResolvedValue({
+      newPage: vi.fn().mockResolvedValue(mockPage),
+      close: vi.fn(),
     });
 
     await service.exportProjectReportsPdf({ ...dto, ...overrides });
@@ -460,13 +467,12 @@ describe('PdfExportService', () => {
   });
 
   it('should not persist approvedFor when PDF rendering itself fails', async () => {
-    const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
-    puppeteer.launch.mockResolvedValue({
-      newPage: jest.fn().mockResolvedValue({
-        setContent: jest.fn().mockResolvedValue(undefined),
-        pdf: jest.fn().mockRejectedValue(new Error('render failed')),
+    mockedPuppeteer.launch.mockResolvedValue({
+      newPage: vi.fn().mockResolvedValue({
+        setContent: vi.fn().mockResolvedValue(undefined),
+        pdf: vi.fn().mockRejectedValue(new Error('render failed')),
       }),
-      close: jest.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
     });
 
     await expect(service.exportProjectReportsPdf(dto)).rejects.toThrow(
@@ -545,14 +551,13 @@ describe('PdfExportService', () => {
     });
 
     it('renders the initiator block in English when lang is en', async () => {
-      const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
       const mockPage = {
-        setContent: jest.fn<void, [string, unknown]>(),
-        pdf: jest.fn().mockResolvedValue(Uint8Array.from([1])),
+        setContent: vi.fn<(html: string, options: unknown) => void>(),
+        pdf: vi.fn().mockResolvedValue(Uint8Array.from([1])),
       };
-      puppeteer.launch.mockResolvedValue({
-        newPage: jest.fn().mockResolvedValue(mockPage),
-        close: jest.fn(),
+      mockedPuppeteer.launch.mockResolvedValue({
+        newPage: vi.fn().mockResolvedValue(mockPage),
+        close: vi.fn(),
       });
       mockProjectReportsService.findOneForExport.mockResolvedValue({
         ...mockReport,
@@ -731,14 +736,13 @@ describe('PdfExportService', () => {
     const renderSimHtml = async (
       dto: ExportClientSimulatedPdfDto = simDto,
     ): Promise<string> => {
-      const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
       const mockPage = {
-        setContent: jest.fn<void, [string, unknown]>(),
-        pdf: jest.fn().mockResolvedValue(Uint8Array.from([1])),
+        setContent: vi.fn<(html: string, options: unknown) => void>(),
+        pdf: vi.fn().mockResolvedValue(Uint8Array.from([1])),
       };
-      puppeteer.launch.mockResolvedValue({
-        newPage: jest.fn().mockResolvedValue(mockPage),
-        close: jest.fn(),
+      mockedPuppeteer.launch.mockResolvedValue({
+        newPage: vi.fn().mockResolvedValue(mockPage),
+        close: vi.fn(),
       });
 
       await service.exportClientSimulatedPdf(dto);
@@ -838,14 +842,13 @@ describe('PdfExportService', () => {
     });
 
     it('renders in the requested language', async () => {
-      const puppeteer = jest.requireMock<{ launch: jest.Mock }>('puppeteer');
       const mockPage = {
-        setContent: jest.fn<void, [string, unknown]>(),
-        pdf: jest.fn().mockResolvedValue(Uint8Array.from([1])),
+        setContent: vi.fn<(html: string, options: unknown) => void>(),
+        pdf: vi.fn().mockResolvedValue(Uint8Array.from([1])),
       };
-      puppeteer.launch.mockResolvedValue({
-        newPage: jest.fn().mockResolvedValue(mockPage),
-        close: jest.fn(),
+      mockedPuppeteer.launch.mockResolvedValue({
+        newPage: vi.fn().mockResolvedValue(mockPage),
+        close: vi.fn(),
       });
 
       await service.exportClientSimulatedPdf({ ...simDto, lang: 'en' });

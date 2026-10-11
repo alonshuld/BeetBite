@@ -28,17 +28,17 @@ describe('ProjectClientAssignmentsService', () => {
 
   const mockPrismaService = {
     projectClientAssignment: {
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
     project: {
-      update: jest.fn(),
+      update: vi.fn(),
     },
-    $transaction: jest.fn(),
+    $transaction: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -52,7 +52,7 @@ describe('ProjectClientAssignmentsService', () => {
     service = module.get<ProjectClientAssignmentsService>(
       ProjectClientAssignmentsService,
     );
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Run transaction callbacks against the same mock.
     mockPrismaService.$transaction.mockImplementation(
       (callback: (tx: typeof mockPrismaService) => unknown) =>

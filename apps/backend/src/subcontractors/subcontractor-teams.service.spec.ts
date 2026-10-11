@@ -10,15 +10,15 @@ describe('SubcontractorTeamsService', () => {
   let service: SubcontractorTeamsService;
 
   const mockPrismaService = {
-    subcontractor: { findMany: jest.fn() },
+    subcontractor: { findMany: vi.fn() },
     subcontractorTeam: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
-    $transaction: jest.fn(),
+    $transaction: vi.fn(),
   };
 
   const moshe = { id: 'moshe', name: 'משה', companyNumber: '111111111' };
@@ -33,7 +33,7 @@ describe('SubcontractorTeamsService', () => {
     }).compile();
 
     service = module.get(SubcontractorTeamsService);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockPrismaService.$transaction.mockImplementation(
       (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
         cb(mockPrismaService),

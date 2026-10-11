@@ -1,7 +1,11 @@
 {
   "name": "BeetBite",
   "version": "1.0.0",
+  "private": true,
   "description": "",
+  "keywords": [],
+  "license": "ISC",
+  "author": "",
   "main": "index.js",
   "scripts": {
     "test": "pnpm -r test",
@@ -9,22 +13,19 @@
     "dev:demo": "docker compose --profile demo up db-demo -d --force-recreate --wait && export DATABASE_URL=postgresql://demo:demo@localhost:5433/beetbite_demo && pnpm --filter backend exec prisma migrate deploy && SEED_MOCK_DATA=true pnpm --filter backend exec prisma db seed && pnpm dev",
     "dev:demo:down": "docker compose --profile demo rm -sf db-demo",
     "build": "pnpm -r build",
-    "lint": "pnpm -r --workspace-concurrency=1 lint && pnpm -r --workspace-concurrency=1 typecheck",
-    "lint:check": "pnpm -r --workspace-concurrency=1 lint:check && pnpm -r --workspace-concurrency=1 typecheck",
-    "format": "pnpm -r --workspace-concurrency=1 format",
-    "format:check": "pnpm -r --workspace-concurrency=1 format:check",
-    "prepare": "pnpm exec husky",
+    "lint": "vp lint --fix",
+    "lint:check": "vp lint --deny-warnings",
+    "check": "vp check",
+    "format": "vp fmt",
+    "format:check": "vp fmt --check",
+    "prepare": "vp config --no-agent",
     "postinstall": "pnpm --filter backend exec prisma generate",
     "infra:up": "docker compose up db backend -d --build --force-recreate",
     "infra:down": "docker compose stop db backend",
     "test:e2e": "pnpm --filter e2e exec playwright test"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.28.0",
-  "private": true,
   "devDependencies": {
-    "husky": "^9.1.7"
-  }
+    "vite-plus": "catalog:"
+  },
+  "packageManager": "pnpm@12.11.2"
 }

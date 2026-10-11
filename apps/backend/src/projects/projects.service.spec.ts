@@ -18,39 +18,41 @@ import { ProjectsQueryDto } from './dto/projects-query.dto';
 import { Prisma } from 'src/generated/client';
 import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
 
+type Mock = ReturnType<typeof vi.fn>;
+
 describe('ProjectsService', () => {
   let service: ProjectsService;
 
   const mockPrismaService: {
     project: {
-      create: jest.Mock;
-      findMany: jest.Mock;
-      findUnique: jest.Mock;
-      update: jest.Mock;
-      delete: jest.Mock;
+      create: Mock;
+      findMany: Mock;
+      findUnique: Mock;
+      update: Mock;
+      delete: Mock;
     };
     projectReport: {
-      create: jest.Mock;
+      create: Mock;
     };
     subcontractor: {
-      findUnique: jest.Mock;
+      findUnique: Mock;
     };
-    $transaction: jest.Mock;
+    $transaction: Mock;
   } = {
     project: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
     projectReport: {
-      create: jest.fn(),
+      create: vi.fn(),
     },
     subcontractor: {
-      findUnique: jest.fn(),
+      findUnique: vi.fn(),
     },
-    $transaction: jest.fn(),
+    $transaction: vi.fn(),
   };
 
   // create() now writes the project and its first client assignment in one
@@ -66,8 +68,8 @@ describe('ProjectsService', () => {
   // An empty map here makes the read paths fall back to the project's cached
   // client, which is the behaviour every assertion below was written against.
   const mockAssignmentsService = {
-    resolveClientsForMonth: jest.fn().mockResolvedValue(new Map()),
-    createInitialAssignment: jest.fn().mockResolvedValue(undefined),
+    resolveClientsForMonth: vi.fn().mockResolvedValue(new Map()),
+    createInitialAssignment: vi.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -86,7 +88,7 @@ describe('ProjectsService', () => {
     }).compile();
 
     service = module.get<ProjectsService>(ProjectsService);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

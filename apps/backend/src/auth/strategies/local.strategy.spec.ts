@@ -17,7 +17,7 @@ describe('LocalStrategy', () => {
   };
 
   const mockAuthService = {
-    validateUser: jest.fn(),
+    validateUser: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -30,7 +30,7 @@ describe('LocalStrategy', () => {
 
     strategy = module.get<LocalStrategy>(LocalStrategy);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

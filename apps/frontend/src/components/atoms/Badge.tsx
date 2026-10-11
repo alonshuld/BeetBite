@@ -6,13 +6,15 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
 }
 
+// No background tint on the coloured variants. They were written as
+// `bg-success/12` etc., but Tailwind 3 had no /12 or /14 opacity step, so those
+// classes never rendered and the badges have always shipped without a fill.
+// Tailwind 4 would honour them, so they are omitted to keep the look as shipped.
 const variantClasses: Record<BadgeVariant, string> = {
-  green:
-    "bg-success/12 text-success [border-color:var(--badge-success-border)]",
-  red: "bg-danger/12 text-danger [border-color:var(--badge-danger-border)]",
-  yellow:
-    "bg-warning/14 text-warning [border-color:var(--badge-warning-border)]",
-  beet: "bg-beet/12 text-beet-bright [border-color:var(--badge-beet-border)]",
+  green: "text-success border-(color:--badge-success-border)",
+  red: "text-danger border-(color:--badge-danger-border)",
+  yellow: "text-warning border-(color:--badge-warning-border)",
+  beet: "text-beet-bright border-(color:--badge-beet-border)",
   muted: "bg-surface-3 text-text-muted border-border",
 };
 
