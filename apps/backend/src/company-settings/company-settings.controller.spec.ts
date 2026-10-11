@@ -8,8 +8,8 @@ describe('CompanySettingsController', () => {
   let controller: CompanySettingsController;
 
   const mockCompanySettingsService = {
-    findOne: jest.fn(),
-    upsert: jest.fn(),
+    findOne: vi.fn(),
+    upsert: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -27,7 +27,7 @@ describe('CompanySettingsController', () => {
       CompanySettingsController,
     );
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

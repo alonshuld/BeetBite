@@ -8,18 +8,23 @@ import { EntityNotFoundError } from '../errors/entity-not-found.error';
 import { ClientAlreadyExistsError } from '../../clients/errors/client-already-exists.exception';
 import { SubcontractorPaymentOverpaymentError } from '../../subcontractor-payments/errors/subcontractor-payment-overpayment.error';
 
+type Mock = ReturnType<typeof vi.fn>;
+type JsonMock = ReturnType<
+  typeof vi.fn<(body: Record<string, unknown>) => void>
+>;
+
 describe('EntityExceptionFilter', () => {
   let filter: EntityExceptionFilter;
 
-  let mockJson: jest.Mock<void, [Record<string, unknown>]>;
-  let mockStatus: jest.Mock;
+  let mockJson: JsonMock;
+  let mockStatus: Mock;
   let mockHost: ArgumentsHost;
 
   beforeEach(() => {
     filter = new EntityExceptionFilter();
 
-    mockJson = jest.fn<void, [Record<string, unknown>]>();
-    mockStatus = jest.fn().mockReturnValue({ json: mockJson });
+    mockJson = vi.fn<(body: Record<string, unknown>) => void>();
+    mockStatus = vi.fn().mockReturnValue({ json: mockJson });
 
     mockHost = {
       switchToHttp: () => ({

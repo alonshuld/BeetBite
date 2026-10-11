@@ -23,10 +23,10 @@ describe('ProjectClientAssignmentsController', () => {
   ];
 
   const mockService = {
-    findAllForProject: jest.fn(),
-    transfer: jest.fn(),
-    update: jest.fn(),
-    remove: jest.fn(),
+    findAllForProject: vi.fn(),
+    transfer: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -40,7 +40,7 @@ describe('ProjectClientAssignmentsController', () => {
     controller = module.get<ProjectClientAssignmentsController>(
       ProjectClientAssignmentsController,
     );
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

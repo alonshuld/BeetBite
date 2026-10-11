@@ -11,12 +11,12 @@ describe('SupplierPaymentsController', () => {
   let controller: SupplierPaymentsController;
 
   const mockSupplierPaymentsService = {
-    create: jest.fn(),
-    findSuppliersPaymentsInMonth: jest.fn(),
-    findSupplierMonthlyPayments: jest.fn(),
-    update: jest.fn(),
-    remove: jest.fn(),
-    setIncludesVat: jest.fn(),
+    create: vi.fn(),
+    findSuppliersPaymentsInMonth: vi.fn(),
+    findSupplierMonthlyPayments: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
+    setIncludesVat: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -34,7 +34,7 @@ describe('SupplierPaymentsController', () => {
       SupplierPaymentsController,
     );
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

@@ -9,17 +9,14 @@ Vite + React 18 + TypeScript (strict). State: Redux Toolkit + RTK Query. Routing
 ## Commands
 
 ```bash
-pnpm dev          # Vite dev server on :5173 (proxies /api → :3000)
-pnpm build        # tsc -b && vite build
-pnpm preview      # Preview production build
-pnpm typecheck    # tsc -b — checks src (tsconfig.json) and vite.config.ts (tsconfig.node.json)
-pnpm lint         # ESLint (auto-fix)
-pnpm lint:check   # ESLint (no fix, for CI)
-pnpm format       # Prettier write
-pnpm test         # Vitest (all files)
+pnpm dev          # vp dev — Vite dev server on :5173 (proxies /api → :3000)
+pnpm build        # vp build
+pnpm preview      # vp preview — preview production build
+pnpm test         # vp test run — Vitest (all files)
+# Format, lint and type check run from the repo root (`pnpm check`), see the root CLAUDE.md → Tooling (Vite+)
 
 # Run single test file
-pnpm vitest run src/components/atoms/Button.test.tsx
+pnpm exec vp test run src/components/atoms/Button.test.tsx
 
 # API type generation — requires backend running on :3000
 pnpm codegen

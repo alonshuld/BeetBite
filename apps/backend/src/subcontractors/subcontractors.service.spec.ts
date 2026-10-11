@@ -13,17 +13,17 @@ describe('SubcontractorsService', () => {
 
   const mockPrismaService = {
     subcontractor: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      count: jest.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
     },
     subcontractorTeam: {
-      delete: jest.fn(),
+      delete: vi.fn(),
     },
-    $transaction: jest.fn(),
+    $transaction: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -39,7 +39,7 @@ describe('SubcontractorsService', () => {
 
     service = module.get<SubcontractorsService>(SubcontractorsService);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -309,15 +309,15 @@ describe('SubcontractorsService', () => {
     let integrationService: SubcontractorsService;
     const integrationMockPrismaService = {
       subcontractor: {
-        create: jest.fn(),
-        findMany: jest.fn(),
-        findUnique: jest.fn(),
-        update: jest.fn(),
-        delete: jest.fn(),
+        create: vi.fn(),
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
       },
       subcontractorPayment: {
-        findMany: jest.fn(),
-        deleteMany: jest.fn(),
+        findMany: vi.fn(),
+        deleteMany: vi.fn(),
       },
     };
 
@@ -336,7 +336,7 @@ describe('SubcontractorsService', () => {
         SubcontractorsService,
       );
 
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     describe('subcontractor and payment relationship validation', () => {

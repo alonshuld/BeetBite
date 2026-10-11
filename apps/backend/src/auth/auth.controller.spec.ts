@@ -10,7 +10,7 @@ describe('AuthController', () => {
   let controller: AuthController;
 
   const mockAuthService = {
-    login: jest.fn(),
+    login: vi.fn(),
   };
 
   const mockUser: User = {
@@ -34,7 +34,7 @@ describe('AuthController', () => {
 
     controller = module.get<AuthController>(AuthController);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

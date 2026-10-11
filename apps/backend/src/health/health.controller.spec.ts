@@ -7,7 +7,7 @@ describe('HealthController', () => {
   let controller: HealthController;
 
   const mockPrisma = {
-    $queryRaw: jest.fn(),
+    $queryRaw: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -17,7 +17,7 @@ describe('HealthController', () => {
     }).compile();
 
     controller = module.get<HealthController>(HealthController);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should report ok when the database answers', async () => {

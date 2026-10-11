@@ -7,8 +7,8 @@ describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
 
   const mockConfigService = {
-    get: jest.fn().mockReturnValue('test-secret'),
-    getOrThrow: jest.fn().mockReturnValue('test-secret'),
+    get: vi.fn().mockReturnValue('test-secret'),
+    getOrThrow: vi.fn().mockReturnValue('test-secret'),
   };
 
   beforeEach(async () => {
@@ -21,7 +21,7 @@ describe('JwtStrategy', () => {
 
     strategy = module.get<JwtStrategy>(JwtStrategy);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

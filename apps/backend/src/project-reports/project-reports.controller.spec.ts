@@ -12,15 +12,15 @@ describe('ProjectReportsController', () => {
   let controller: ProjectReportsController;
 
   const mockProjectReportsService = {
-    create: jest.fn(),
-    findProjectReportsInMonth: jest.fn(),
-    findOne: jest.fn(),
-    findProjectReportForPreviousMonth: jest.fn(),
-    update: jest.fn(),
-    remove: jest.fn(),
-    addIncomeEntry: jest.fn(),
-    updateIncomeEntry: jest.fn(),
-    removeIncomeEntry: jest.fn(),
+    create: vi.fn(),
+    findProjectReportsInMonth: vi.fn(),
+    findOne: vi.fn(),
+    findProjectReportForPreviousMonth: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
+    addIncomeEntry: vi.fn(),
+    updateIncomeEntry: vi.fn(),
+    removeIncomeEntry: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -33,7 +33,7 @@ describe('ProjectReportsController', () => {
 
     controller = module.get<ProjectReportsController>(ProjectReportsController);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {

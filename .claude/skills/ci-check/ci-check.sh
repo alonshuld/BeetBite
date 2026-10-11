@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs what .husky/pre-commit and .github/workflows/ci.yml (+ e2e.yml on
+# Runs what .vite-hooks/pre-commit and .github/workflows/ci.yml (+ e2e.yml on
 # request) run, one step at a time, sized for the ~3.8 GB WSL dev box.
 #
 #   ci-check.sh                 all CI steps (no e2e)
@@ -10,7 +10,7 @@
 #
 # Safety rules (each one is here because breaking it has crashed WSL):
 #   - never two heavy steps at once; no `pnpm -r` without --workspace-concurrency=1
-#   - jest always --runInBand, vitest always --maxWorkers=1
+#   - vitest always --maxWorkers=1
 #   - every node process: capped heap, nice -n 19
 #   - each step waits for enough free RAM first, and aborts if it never comes
 set -uo pipefail
@@ -59,36 +59,27 @@ changed_files() {
   } | sort -u
 }
 
-# Same checks as .husky/pre-commit, but over every file this branch touches
-# rather than only the staged ones — so whatever gets staged later passes.
+# Same check as .vite-hooks/pre-commit (`vp check` on the staged files), but
+# over every file this branch touches rather than only the staged ones — so
+# whatever gets staged later passes.
 step_precommit() {
-  local files app app_files ts_files rc=0
-  files=$(changed_files)
-  for app in backend frontend e2e; do
-    app_files=$(echo "$files" | grep "^apps/$app/" | sed "s#^apps/$app/##" |
-      grep -E '\.(ts|tsx|js|mjs)$' || true)
-    # Deleted-in-worktree files can still show up in the diff list.
-    app_files=$(cd "apps/$app" && for f in $app_files; do [ -f "$f" ] && echo "$f"; done)
-    [ -z "$app_files" ] && continue
-    echo "-- $app ($(echo "$app_files" | wc -l) files)"
-    ts_files=$(echo "$app_files" | grep -E '\.(ts|tsx)$' || true)
-    if [ -n "$ts_files" ]; then
-      (cd "apps/$app" && echo "$ts_files" | xargs env NODE_OPTIONS="--max-old-space-size=1024" nice -n 19 pnpm exec prettier --check) || rc=1
-    fi
-    (cd "apps/$app" && echo "$app_files" | xargs env NODE_OPTIONS="--max-old-space-size=1024" nice -n 19 pnpm exec eslint --no-warn-ignored \
-      --cache --cache-location node_modules/.cache/eslint) || rc=1
-  done
-  return $rc
+  local files
+  files=$(changed_files | grep -E '\.(ts|tsx|js|mjs)$' || true)
+  # Deleted-in-worktree files can still show up in the diff list.
+  files=$(for f in $files; do [ -f "$f" ] && echo "$f"; done)
+  [ -z "$files" ] && return 0
+  echo "-- $(echo "$files" | wc -l) files"
+  echo "$files" | xargs env NODE_OPTIONS="--max-old-space-size=1024" nice -n 19 pnpm exec vp check
 }
 
 step_format() { run pnpm format:check; }
 
-# lint:check = eslint per app, then typecheck per app, concurrency 1.
+# lint:check = Oxlint over the whole workspace, type check included.
 step_lint() { run pnpm lint:check; }
 
-step_test-backend() { (cd apps/backend && run pnpm exec jest --runInBand); }
+step_test-backend() { (cd apps/backend && run pnpm exec vp test run --project unit --maxWorkers=1); }
 
-step_test-frontend() { (cd apps/frontend && run pnpm exec vitest run --passWithNoTests --maxWorkers=1); }
+step_test-frontend() { (cd apps/frontend && run pnpm exec vp test run --passWithNoTests --maxWorkers=1); }
 
 # CI replays every migration into an empty Postgres 17 and diffs against
 # schema.prisma. Do the same on a throwaway container — never the dev DB.
@@ -122,11 +113,11 @@ step_e2e() {
 }
 
 fix() {
-  echo "== fix: prettier --write, eslint --fix (one app at a time)"
+  echo "== fix: vp fmt, vp lint --fix"
   wait_for_ram || exit 1
   run pnpm format
   wait_for_ram || exit 1
-  # `pnpm lint` also typechecks; failures here are reported by the lint step.
+  # `pnpm lint` also type-checks; failures here are reported by the lint step.
   run pnpm lint >/dev/null 2>&1 || true
   git status --short
 }

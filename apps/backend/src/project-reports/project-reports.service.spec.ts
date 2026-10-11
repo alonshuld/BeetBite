@@ -22,31 +22,31 @@ describe('ProjectReportsService', () => {
 
   const mockTx = {
     projectReport: {
-      create: jest.fn(),
+      create: vi.fn(),
     },
   };
 
   const mockPrismaService = {
-    $transaction: jest
+    $transaction: vi
       .fn()
       .mockImplementation((cb: (tx: typeof mockTx) => Promise<unknown>) =>
         cb(mockTx),
       ),
     projectReport: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
     projectReportIncome: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      aggregate: jest.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      aggregate: vi.fn(),
     },
     project: {
-      findUnique: jest.fn(),
+      findUnique: vi.fn(),
     },
   };
 
@@ -54,15 +54,15 @@ describe('ProjectReportsService', () => {
   // An empty map here makes the read paths fall back to the project's cached
   // client, which is the behaviour every assertion below was written against.
   const mockAssignmentsService = {
-    resolveClientsForMonth: jest.fn().mockResolvedValue(new Map()),
-    createInitialAssignment: jest.fn().mockResolvedValue(undefined),
+    resolveClientsForMonth: vi.fn().mockResolvedValue(new Map()),
+    createInitialAssignment: vi.fn().mockResolvedValue(undefined),
   };
 
   // No rate history: every payment's VAT resolves to none, which is what the
   // assertions below were written against. Derivation is covered by the mapper
   // and payment-vat specs.
   const mockVatRatesService = {
-    findAllEntries: jest.fn().mockResolvedValue([]),
+    findAllEntries: vi.fn().mockResolvedValue([]),
   };
 
   beforeEach(async () => {
@@ -85,7 +85,7 @@ describe('ProjectReportsService', () => {
     }).compile();
 
     service = module.get<ProjectReportsService>(ProjectReportsService);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockPrismaService.$transaction.mockImplementation(
       (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx),
     );
@@ -1071,9 +1071,9 @@ describe('ProjectReportsService', () => {
 
   describe('changeSubcontractor', () => {
     const changeTx = {
-      projectReport: { findUnique: jest.fn(), update: jest.fn() },
-      subcontractor: { findUnique: jest.fn() },
-      subcontractorPayment: { count: jest.fn() },
+      projectReport: { findUnique: vi.fn(), update: vi.fn() },
+      subcontractor: { findUnique: vi.fn() },
+      subcontractorPayment: { count: vi.fn() },
     };
     const reportDate = new Date('2026-05-01');
 
