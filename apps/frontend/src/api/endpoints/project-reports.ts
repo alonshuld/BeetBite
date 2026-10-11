@@ -96,7 +96,10 @@ export interface UpdateIncomeEntryDto {
 export const projectReportsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getProjectReports: build.query<ProjectReport[], string>({
-      query: (month) => `/projects/reports?month=${month}-01`,
+      query: (month) => ({
+        url: "/projects/reports",
+        params: { month: `${month}-01`, limit: 1000 },
+      }),
       providesTags: ["ProjectReports"],
     }),
     getProjectReport: build.query<ProjectReportDetail, string>({
