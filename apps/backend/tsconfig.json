@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "types": [
-      "node",
-      "jest"
-    ],
+    // Vitest globals (describe/it/vi). Referenced by path: `module: commonjs`
+    // resolves like node10, which ignores package `exports`, so the
+    // `vite-plus/test/globals` subpath cannot be named here.
+    "types": ["node", "./node_modules/vite-plus/dist/test/globals.d.ts"],
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
@@ -13,7 +13,14 @@
     "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
+    // Explicit since TypeScript 6 (TS5011): without it the root is inferred
+    // from whichever files exist, and the backend image (src + prisma only)
+    // infers ./prisma, so the start command's `ts-node prisma/seed.ts` failed.
+    // tsconfig.build.json narrows it to src for nest build.
+    "rootDir": "./",
+    "paths": {
+      "src/*": ["./src/*"]
+    },
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,

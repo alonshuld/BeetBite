@@ -18,22 +18,22 @@ describe('SupplierPaymentsService', () => {
 
   const mockPrismaService = {
     supplierPayment: {
-      create: jest.fn(),
-      findSuppliersPaymentsInMonth: jest.fn(),
-      findSupplierMonthlyPayments: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      delete: jest.fn(),
+      create: vi.fn(),
+      findSuppliersPaymentsInMonth: vi.fn(),
+      findSupplierMonthlyPayments: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      delete: vi.fn(),
     },
     supplier: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
     },
-    $transaction: jest.fn(),
+    $transaction: vi.fn(),
   };
 
   const mockVatRatesService = {
-    findAllEntries: jest.fn(),
+    findAllEntries: vi.fn(),
   };
 
   const vatRate = (effectiveMonth: string, percentage: string) => ({
@@ -58,7 +58,7 @@ describe('SupplierPaymentsService', () => {
 
     service = module.get<SupplierPaymentsService>(SupplierPaymentsService);
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockVatRatesService.findAllEntries.mockResolvedValue([]);
     // Run transaction callbacks against the same mock.
     mockPrismaService.$transaction.mockImplementation(
@@ -1109,7 +1109,7 @@ describe('SupplierPaymentsService', () => {
 
   describe('paid flag', () => {
     /**
-     * `jest.fn().mock.calls` is `any[][]`, so reaching into it directly trips
+     * `vi.fn().mock.calls` is `any[][]`, so reaching into it directly trips
      * no-unsafe-member-access. Narrow once, here.
      */
     function firstUpdateManyArgs(): {

@@ -5,7 +5,7 @@
  */
 export const fieldChrome =
   "rounded-sm bg-surface border border-border text-text " +
-  "outline-none transition-[border-color,box-shadow] duration-150 " +
+  "outline-hidden transition-[border-color,box-shadow] duration-150 " +
   "placeholder:text-text-dim " +
   "hover:border-border-strong " +
   "focus:border-beet focus:shadow-[0_0_0_3px_var(--beet-glow)] " +

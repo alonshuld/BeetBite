@@ -561,7 +561,7 @@ export default function ProjectReportsPage() {
                       onChange={(e) => setEditEntryTag(e.target.value)}
                       className="flex-1"
                     />
-                    <div className="flex gap-1 mb-[1px]">
+                    <div className="flex gap-1 mb-px">
                       <ButtonPrimary
                         onClick={() => void saveEntryEdit(entry.id)}
                         className="text-xs py-1 px-3"
@@ -646,7 +646,7 @@ export default function ProjectReportsPage() {
                   onChange={(e) => setNewEntryTag(e.target.value)}
                   className="flex-1"
                 />
-                <div className="flex gap-1 mb-[1px]">
+                <div className="flex gap-1 mb-px">
                   <ButtonPrimary
                     onClick={() => void saveNewEntry()}
                     className="text-xs py-1 px-3"
@@ -729,7 +729,7 @@ export default function ProjectReportsPage() {
                       onChange={(e) => setEditCorpDate(e.target.value)}
                       className="w-36"
                     />
-                    <div className="flex gap-1 mb-[1px]">
+                    <div className="flex gap-1 mb-px">
                       <ButtonPrimary
                         onClick={() => void saveCorpEdit(cp.id)}
                         className="text-xs py-1 px-3"
@@ -815,7 +815,7 @@ export default function ProjectReportsPage() {
                   onChange={(e) => setNewCorpDate(e.target.value)}
                   className="w-36"
                 />
-                <div className="flex gap-1 mb-[1px]">
+                <div className="flex gap-1 mb-px">
                   <ButtonPrimary
                     onClick={() => void saveNewCorp()}
                     className="text-xs py-1 px-3"
@@ -862,7 +862,7 @@ export default function ProjectReportsPage() {
                       onChange={(e) => setEditInitiatorIncome(e.target.value)}
                       className="flex-1"
                     />
-                    <div className="flex gap-1 mb-[1px]">
+                    <div className="flex gap-1 mb-px">
                       <ButtonPrimary
                         onClick={() => void saveInitiatorIncomeEdit()}
                         className="text-xs py-1 px-3"
@@ -1034,7 +1034,7 @@ export default function ProjectReportsPage() {
                 {incomeEntries.length > 1 && (
                   <ButtonDanger
                     onClick={() => removeIncomeEntryDraft(i)}
-                    className="text-xs py-1 px-3 mb-[1px]"
+                    className="text-xs py-1 px-3 mb-px"
                   >
                     {t("remove")}
                   </ButtonDanger>

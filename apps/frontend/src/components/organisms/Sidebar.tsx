@@ -122,7 +122,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         className={`
           fixed top-0 bottom-0 z-40 flex w-[264px] flex-col border-border bg-surface transition-transform duration-200
           ltr:left-0 ltr:border-r rtl:right-0 rtl:border-l
-          lg:relative lg:w-[var(--sidebar-w)] lg:!translate-x-0 lg:z-auto
+          lg:relative lg:w-(--sidebar-w) lg:translate-x-0! lg:z-auto
           ${open ? "translate-x-0" : "ltr:-translate-x-full rtl:translate-x-full"}
         `}
       >

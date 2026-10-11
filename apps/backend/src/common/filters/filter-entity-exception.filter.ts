@@ -6,7 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { EntityAlreadyExistsError } from '../errors/entity-already-exists.error';
 import { EntityNotFoundError } from '../errors/entity-not-found.error';
 import { EntityError } from '../errors/entity.error';

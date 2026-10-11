@@ -1,0 +1,5 @@
+# Runs `vp check` (format + lint + type check) on the staged files, using the
+# `staged` block in vite.config.ts. Kept at the lowest CPU priority with a
+# capped Node heap: the dev box has ~3.8 GB RAM. Full-repo check: `pnpm check`.
+export NODE_OPTIONS="--max-old-space-size=1024 ${NODE_OPTIONS:-}"
+nice -n 19 vp staged

@@ -1,4 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+} from "vite-plus/test";
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { ToastProvider } from "./ToastContext";
 import { useToast } from "./useToast";

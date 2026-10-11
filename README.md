@@ -12,7 +12,7 @@ Track client projects, monthly income, subcontractor payouts and supplier invoic
 [![E2E Tests](https://github.com/alonshuld/BeetBite/actions/workflows/e2e.yml/badge.svg)](https://github.com/alonshuld/BeetBite/actions/workflows/e2e.yml)
 [![CD](https://github.com/alonshuld/BeetBite/actions/workflows/cd.yml/badge.svg)](https://github.com/alonshuld/BeetBite/actions/workflows/cd.yml)
 
-NestJS 11 · React 18 · PostgreSQL 17 · Prisma 7 · Playwright · Docker
+NestJS 12 · React 19 · PostgreSQL 17 · Prisma 7 · Playwright · Docker
 
 </div>
 
@@ -134,7 +134,7 @@ erDiagram
 
 ```mermaid
 flowchart LR
-    B["Browser<br/>React 18 SPA"]
+    B["Browser<br/>React 19 SPA"]
     F["Frontend<br/>Vite dev :5173 / nginx :80"]
     A["Backend<br/>NestJS :3000<br/>/api/v1"]
     D[("PostgreSQL 17")]
@@ -149,8 +149,8 @@ pnpm workspace with three apps:
 
 | App | Path | Stack |
 | --- | --- | --- |
-| `backend` | `apps/backend/` | NestJS 11, Prisma 7, PostgreSQL, Passport JWT, Swagger, Puppeteer (PDF) |
-| `frontend` | `apps/frontend/` | Vite, React 18, TypeScript strict, Redux Toolkit + RTK Query, Tailwind CSS v3, React Router v7 |
+| `backend` | `apps/backend/` | NestJS 12, Prisma 7, PostgreSQL, Passport JWT, Swagger, Puppeteer (PDF) |
+| `frontend` | `apps/frontend/` | Vite, React 19, TypeScript strict, Redux Toolkit + RTK Query, Tailwind CSS v4, React Router v7 |
 | `e2e` | `apps/e2e/` | Playwright, testcontainers-driven full-stack bootstrap |
 
 Notable choices:
@@ -237,10 +237,11 @@ Run from the repo root — these fan out across the workspace:
 ```bash
 pnpm dev            # backend + frontend dev servers
 pnpm build          # build all apps
-pnpm test           # backend Jest + frontend Vitest
-pnpm lint           # ESLint + tsc (auto-fix)
-pnpm lint:check     # ESLint + tsc, no fix (what CI and the pre-commit hook run)
-pnpm format         # Prettier write
+pnpm test           # backend + frontend unit tests (Vitest)
+pnpm check          # format + lint + type check in one pass (what CI and the pre-commit hook run)
+pnpm lint           # Oxlint + type check (auto-fix)
+pnpm lint:check     # Oxlint + type check, no fix
+pnpm format         # Oxfmt write
 pnpm test:e2e       # Playwright suite (requires Docker)
 pnpm infra:up       # docker compose up db backend -d
 pnpm infra:down     # stop them
@@ -250,14 +251,13 @@ Per app:
 
 ```bash
 pnpm --filter backend start:dev            # Nest watch mode
-pnpm --filter backend test:cov             # Jest coverage
 pnpm --filter backend exec prisma migrate dev
 pnpm --filter frontend codegen             # regenerate API types (backend must be running)
-pnpm --filter frontend vitest run src/pages/ReportsPage.test.tsx
+pnpm --filter frontend exec vp test run src/pages/ReportsPage.test.tsx
 pnpm --filter e2e exec playwright test --ui
 ```
 
-A Husky pre-commit hook runs `pnpm format:check` then `pnpm lint:check`.
+Tooling is [Vite+](https://viteplus.dev) (`vp`): Vite, Vitest, Oxlint and Oxfmt behind one CLI, configured in the root `vite.config.ts` (format and lint rules for every app) plus each app's own `vite.config.ts`. The pre-commit hook (`.vite-hooks/pre-commit`, installed by `pnpm install`) runs `vp check` on the staged files. Use Node 24 (what Docker and CI run) and pnpm 12 (`corepack enable`).
 
 ---
 
@@ -289,8 +289,8 @@ Validation is global and strict: unknown properties are rejected with 400 (`whit
 
 | Suite | Count | What it covers |
 | --- | --- | --- |
-| Backend unit (Jest) | 350 tests / 30 suites | Controllers and services with `PrismaService` fully mocked |
-| Backend integration (Jest) | `pnpm --filter backend test:e2e` | Services against a real PostgreSQL via testcontainers |
+| Backend unit (Vitest) | 350 tests / 30 suites | Controllers and services with `PrismaService` fully mocked |
+| Backend integration (Vitest) | `pnpm --filter backend test:e2e` | Services against a real PostgreSQL via testcontainers |
 | Frontend unit (Vitest) | 305 tests / 38 files | Components, pages and hooks in jsdom |
 | End-to-end (Playwright) | 60 tests / 9 suites | Auth, clients, projects, project reports, suppliers, supplier payments, subcontractors, subcontractor payments, income |
 
@@ -307,7 +307,7 @@ E2E_VERBOSE=1 pnpm test:e2e       # stream backend/frontend logs
 
 | Workflow | Trigger | Jobs |
 | --- | --- | --- |
-| `ci.yml` | push / PR on `main`, `dev`; callable | Format check, ESLint + `tsc`, backend Jest, frontend Vitest, full build |
+| `ci.yml` | push / PR on `main`, `dev`; callable | `vp check` (format, lint, type check), backend + frontend Vitest, full build |
 | `e2e.yml` | push / PR on `main`, `dev` | Playwright suite; uploads the HTML report on failure |
 | `cd.yml` | push to `main`, manual | Re-runs CI, builds both images, then publishes to GHCR |
 

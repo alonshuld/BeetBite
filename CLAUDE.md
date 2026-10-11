@@ -30,7 +30,7 @@ pnpm workspace. Three apps under `apps/`:
 | App | Path | Description |
 | --- | --- | --- |
 | `backend` | `apps/backend/` | NestJS REST API + PostgreSQL (Prisma) |
-| `frontend` | `apps/frontend/` | Vite + React 18 + RTK Query SPA |
+| `frontend` | `apps/frontend/` | Vite + React 19 + RTK Query SPA |
 | `e2e` | `apps/e2e/` | Playwright end-to-end tests |
 
 Each app has its own `CLAUDE.md` with stack details, commands, and architecture. Read those for app-specific work.
@@ -42,11 +42,12 @@ Run from the repo root — these delegate to each app via `pnpm -r`:
 ```bash
 pnpm dev            # Start backend + frontend dev servers (parallel)
 pnpm build          # Build all apps
-pnpm test           # Run all unit tests (backend Jest + frontend Vitest)
-pnpm lint           # ESLint + tsc across all apps (auto-fix)
-pnpm lint:check     # ESLint + tsc (no fix, used by pre-commit hook)
-pnpm format         # Prettier across all apps
-pnpm format:check   # Prettier check (no write)
+pnpm test           # Run all unit tests (backend + frontend Vitest)
+pnpm check          # vp check: format + lint + type check in one pass (what CI runs)
+pnpm lint           # vp lint --fix: Oxlint + type check across all apps
+pnpm lint:check     # vp lint --deny-warnings (no fix)
+pnpm format         # vp fmt: Oxfmt across all apps
+pnpm format:check   # vp fmt --check (no write)
 
 # E2E tests (requires Docker)
 pnpm test:e2e       # Run Playwright suite via apps/e2e
@@ -55,6 +56,16 @@ pnpm test:e2e       # Run Playwright suite via apps/e2e
 pnpm infra:up       # docker compose up db backend -d
 pnpm infra:down     # docker compose stop db backend
 ```
+
+## Runtime and package manager
+
+Node 24 everywhere: the Docker images (`node:24-alpine`), CI (`node-version: 24`) and `@types/node` 24. Use Node 24 locally too.
+
+pnpm 12 (pinned in `package.json` → `packageManager`). It is a native binary: install it with Corepack ≥ 0.36 (bundled with Node 24, and Node 22 from 22.23; older Corepack fails with `Cannot find module …/bin/pnpm.cjs`) or `npm i -g pnpm@12`. Things pnpm 12 enforces:
+
+- **Install scripts** run only for packages listed `true` under `allowBuilds` in `pnpm-workspace.yaml`; an unlisted package with a script fails the install (`ERR_PNPM_IGNORED_BUILDS`). List it as `true` or `false` deliberately.
+- **Release age:** versions published less than 24 h ago are refused (`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`). Wait, or re-resolve that package to an older version.
+- **Unknown keys** in `pnpm-workspace.yaml` fail the command instead of being ignored.
 
 ## Running locally (quick reference)
 
@@ -161,4 +172,14 @@ AWS, Tel Aviv (`il-central-1`): per customer, one EC2 `t3.small` runs `deploy/do
 
 ## Pre-commit hook
 
-Husky's pre-commit is deliberately light (the dev box has ~3.8 GB RAM and the full checks have crashed WSL): for each app with staged `.ts/.tsx/.js/.mjs` files it runs prettier `--check` and eslint on just those files, then that app's `typecheck` — one at a time, under `nice -n 19`, with a 1 GB Node heap. Apps with nothing staged are skipped. The full-repo checks (`pnpm format:check && pnpm lint:check`) are still available to run by hand. Fix with `pnpm format && pnpm lint`.
+`.vite-hooks/pre-commit` runs `vp staged`, which runs `vp check` (Oxfmt + Oxlint + type check, no auto-fix) on the staged `.ts/.tsx/.js/.mjs` files per the `staged` block in the root `vite.config.ts`, under `nice -n 19` with a 1 GB Node heap (the dev box has ~3.8 GB RAM). `pnpm install` installs the hook dispatcher (`prepare` → `vp config`); `vp hooks status` shows whether it is active. `vp staged` needs Git ≥ 2.32 (and Node ≥ 22.22.1, which Node 24 satisfies). Full-repo check: `pnpm check`. Fix with `pnpm format && pnpm lint`.
+
+## Tooling (Vite+)
+
+Every app's tooling runs through Vite+ (`vp`, the `vite-plus` package): `vp dev`/`vp build` (Vite), `vp test` (Vitest, imported as `vite-plus/test`), `vp lint` (Oxlint, type-aware via tsgolint, which also type-checks with TypeScript 7), `vp fmt` (Oxfmt). There is no ESLint, Prettier, Jest or Husky.
+
+- **Root `vite.config.ts`** holds the `fmt`, `lint` and `staged` blocks for the whole workspace. `vp check` always uses these root blocks, even run inside an app, so per-app differences are `overrides` there (e.g. the frontend keeps double quotes; backend + frontend get the type-aware rules). Don't add `lint`/`fmt` blocks to app configs.
+- **App `vite.config.ts`** files hold only that app's Vite/Vitest settings (backend: `unit` and `e2e` Vitest projects).
+- `vite` and `vite-plus` versions come from the `catalog` in `pnpm-workspace.yaml`; `vite` is an alias of `@voidzero-dev/vite-plus-core`. Upgrade with `pnpm dlx --package=vite-plus@<version> vp migrate --no-interactive`.
+- Zero lint warnings: every rule in the root config is `'error'` (`vp check` exits 0 on warnings, so a `'warn'` rule would never block CI or the hook). Add new rules as errors.
+- Oxfmt formats code and JSON only; Markdown, YAML, CSS and HTML are ignored on purpose (see `fmt.ignorePatterns`).
