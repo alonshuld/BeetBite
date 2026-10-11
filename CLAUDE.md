@@ -57,6 +57,14 @@ pnpm infra:up       # docker compose up db backend -d
 pnpm infra:down     # docker compose stop db backend
 ```
 
+## Package manager
+
+pnpm 12 (pinned in `package.json` → `packageManager`). It is a native binary: install it with Corepack ≥ 0.36 (bundled with Node ≥ 22.23; older Corepack fails with `Cannot find module …/bin/pnpm.cjs`) or `npm i -g pnpm@12`. Things pnpm 12 enforces:
+
+- **Install scripts** run only for packages listed `true` under `allowBuilds` in `pnpm-workspace.yaml`; an unlisted package with a script fails the install (`ERR_PNPM_IGNORED_BUILDS`). List it as `true` or `false` deliberately.
+- **Release age:** versions published less than 24 h ago are refused (`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`). Wait, or re-resolve that package to an older version.
+- **Unknown keys** in `pnpm-workspace.yaml` fail the command instead of being ignored.
+
 ## Running locally (quick reference)
 
 Usual dev setup: Postgres in Docker, backend + frontend from `pnpm dev` (hot reload).
