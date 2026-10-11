@@ -45,7 +45,7 @@ pnpm build          # Build all apps
 pnpm test           # Run all unit tests (backend + frontend Vitest)
 pnpm check          # vp check: format + lint + type check in one pass (what CI runs)
 pnpm lint           # vp lint --fix: Oxlint + type check across all apps
-pnpm lint:check     # vp lint (no fix)
+pnpm lint:check     # vp lint --deny-warnings (no fix)
 pnpm format         # vp fmt: Oxfmt across all apps
 pnpm format:check   # vp fmt --check (no write)
 
@@ -171,4 +171,5 @@ Every app's tooling runs through Vite+ (`vp`, the `vite-plus` package): `vp dev`
 - **Root `vite.config.ts`** holds the `fmt`, `lint` and `staged` blocks for the whole workspace. `vp check` always uses these root blocks, even run inside an app, so per-app differences are `overrides` there (e.g. the frontend keeps double quotes; backend + frontend get the type-aware rules). Don't add `lint`/`fmt` blocks to app configs.
 - **App `vite.config.ts`** files hold only that app's Vite/Vitest settings (backend: `unit` and `e2e` Vitest projects).
 - `vite` and `vite-plus` versions come from the `catalog` in `pnpm-workspace.yaml`; `vite` is an alias of `@voidzero-dev/vite-plus-core`. Upgrade with `pnpm dlx --package=vite-plus@<version> vp migrate --no-interactive`.
+- Zero lint warnings: every rule in the root config is `'error'` (`vp check` exits 0 on warnings, so a `'warn'` rule would never block CI or the hook). Add new rules as errors.
 - Oxfmt formats code and JSON only; Markdown, YAML, CSS and HTML are ignored on purpose (see `fmt.ignorePatterns`).
