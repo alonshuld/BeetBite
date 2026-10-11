@@ -1,16 +1,20 @@
 packages:
   - apps/*
 
-onlyBuiltDependencies:
-  - '@nestjs/core'
-  - '@prisma/engines'
-  - '@scarf/scarf'
-  - bcrypt
-  - cpu-features
-  - prisma
-  - protobufjs
-  - puppeteer
-  - ssh2
+# Dependencies allowed to run install scripts (pnpm denies the rest).
+allowBuilds:
+  '@nestjs/core': true
+  '@prisma/engines': true
+  '@scarf/scarf': true
+  bcrypt: true
+  cpu-features: true
+  prisma: true
+  protobufjs: true
+  puppeteer: true
+  ssh2: true
+  # Optional peer of @nestjs/cli (only its swc/webpack builders use it; the
+  # backend builds with tsc). Its script just checks for its native binary.
+  '@swc/core': false
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@1.1.0
   vite-plus: 1.1.0
