@@ -13,6 +13,11 @@
     "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
+    // Explicit since TypeScript 6 (TS5011): without it the root is inferred
+    // from whichever files exist, and the backend image (src + prisma only)
+    // infers ./prisma, so the start command's `ts-node prisma/seed.ts` failed.
+    // tsconfig.build.json narrows it to src for nest build.
+    "rootDir": "./",
     "paths": {
       "src/*": ["./src/*"]
     },
