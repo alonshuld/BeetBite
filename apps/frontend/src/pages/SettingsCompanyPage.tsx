@@ -8,10 +8,12 @@ import {
 } from "@/api/endpoints/companySettings";
 import {
   CompanySettingsForm,
-  DEFAULT_PDF_COLORS,
-  DEFAULT_PDF_FONT,
   type CompanySettingsFormValue,
 } from "@/components/organisms/CompanySettingsForm";
+import {
+  DEFAULT_PDF_COLORS,
+  DEFAULT_PDF_FONT,
+} from "@/components/organisms/companySettingsDefaults";
 import { LoadingState } from "@/components/molecules/LoadingState";
 
 const BLANK_VALUE: CompanySettingsFormValue = {

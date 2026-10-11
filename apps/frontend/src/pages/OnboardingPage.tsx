@@ -5,10 +5,12 @@ import { useLang } from "@/contexts/useLang";
 import { useUpsertCompanySettingsMutation } from "@/api/endpoints/companySettings";
 import {
   CompanySettingsForm,
-  DEFAULT_PDF_COLORS,
-  DEFAULT_PDF_FONT,
   type CompanySettingsFormValue,
 } from "@/components/organisms/CompanySettingsForm";
+import {
+  DEFAULT_PDF_COLORS,
+  DEFAULT_PDF_FONT,
+} from "@/components/organisms/companySettingsDefaults";
 
 const BLANK_VALUE: CompanySettingsFormValue = {
   name: "",

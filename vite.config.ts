@@ -114,9 +114,12 @@ const recommendedTypeChecked = {
     'typescript/restrict-plus-operands',
     'typescript/restrict-template-expressions',
     'typescript/unbound-method',
+    // Warnings in the old ESLint config. Every rule is an error here: `vp
+    // check` (CI and the pre-commit hook) only fails on errors, and the
+    // workspace is kept at zero warnings.
+    'typescript/no-floating-promises',
+    'typescript/no-unsafe-argument',
   ]),
-  'typescript/no-floating-promises': 'warn',
-  'typescript/no-unsafe-argument': 'warn',
 } as const;
 
 export default defineConfig({
@@ -211,9 +214,9 @@ export default defineConfig({
         env: { browser: true },
         rules: {
           'react/rules-of-hooks': 'error',
-          'react/exhaustive-deps': 'warn',
+          'react/exhaustive-deps': 'error',
           'react/only-export-components': [
-            'warn',
+            'error',
             { allowConstantExport: true },
           ],
         },
