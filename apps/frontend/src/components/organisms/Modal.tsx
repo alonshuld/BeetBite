@@ -37,7 +37,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center animate-fadeIn bg-[oklch(12%_0.03_350_/_0.6)] backdrop-blur-[2px] sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center animate-fadeIn bg-[oklch(12%_0.03_350/0.6)] backdrop-blur-[2px] sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div

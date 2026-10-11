@@ -26,7 +26,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           >
             {children}
           </select>
-          <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-text-dim">
+          <span className="pointer-events-none absolute inset-y-0 inset-e-3 flex items-center text-text-dim">
             <Icon name="chevronDown" size={14} />
           </span>
         </div>

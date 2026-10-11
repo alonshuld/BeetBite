@@ -583,7 +583,7 @@ export default function ReportsPage() {
                 {incomeEntries.length > 1 && (
                   <ButtonDanger
                     onClick={() => removeIncomeEntry(i)}
-                    className="text-xs py-1 px-3 mb-[1px]"
+                    className="text-xs py-1 px-3 mb-px"
                   >
                     {t("remove")}
                   </ButtonDanger>
@@ -934,7 +934,7 @@ function TileTagEditor({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={t("tagPlaceholder")}
-        className="w-24 rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-text focus:outline-none focus:ring-1 focus:ring-primary"
+        className="w-24 rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-text focus:outline-hidden focus:ring-1 focus:ring-primary"
       />
       <button
         onClick={() => void handleSave()}
