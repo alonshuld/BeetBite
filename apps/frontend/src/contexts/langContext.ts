@@ -253,6 +253,8 @@ export const translations = {
     exportPdf: "Export PDF",
     approvedForLabel: "Approved For",
     approvedForPlaceholder: "Optional — who is this project report for?",
+    projectClientViaTransfer:
+      "To change the client, use Transfer to another client in the projects list.",
     transferProject: "Transfer to another client",
     transferProjectHint:
       "Months before the chosen month keep their current client. Only that month onward moves.",
@@ -582,6 +584,8 @@ export const translations = {
     exportPdf: "ייצוא PDF",
     approvedForLabel: "חשבון מאושר עבור",
     approvedForPlaceholder: "רשות — עבור מי דוח הפרויקט הזה?",
+    projectClientViaTransfer:
+      "לשינוי הלקוח יש להשתמש ב״העבר ללקוח אחר״ ברשימת הפרויקטים.",
     transferProject: "העבר ללקוח אחר",
     transferProjectHint:
       "חודשים לפני החודש שנבחר נשארים אצל הלקוח הנוכחי. רק מאותו חודש ואילך עובר.",

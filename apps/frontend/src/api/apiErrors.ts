@@ -43,6 +43,8 @@ export const hebrewApiErrors: Record<string, string> = {
   // Projects
   PROJECT_ALREADY_EXISTS: "פרויקט בשם {name} כבר קיים.",
   PROJECT_NOT_FOUND: "הפרויקט לא נמצא.",
+  PROJECT_CLIENT_CHANGE_REQUIRES_TRANSFER:
+    "לא ניתן לשנות את הלקוח של פרויקט בעריכה. יש להשתמש ב״העבר ללקוח אחר״ ולבחור מאיזה חודש השינוי חל.",
   PROJECT_HAS_RELATED_RECORDS:
     "לא ניתן למחוק את הפרויקט כי יש לו דוחות או תשלומים. יש להסיר אותם תחילה.",
   // Project-client assignments
