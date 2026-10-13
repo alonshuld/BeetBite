@@ -403,6 +403,57 @@ describe('Projects Integration Tests', () => {
     });
   });
 
+  describe('DELETE /api/v1/projects/client-assignments/:id', () => {
+    const assignmentIdsOf = async (projectId: string) =>
+      (
+        await prisma.projectClientAssignment.findMany({
+          where: { projectId },
+          orderBy: { effectiveFrom: 'asc' },
+          select: { id: true },
+        })
+      ).map((a) => a.id);
+
+    it('should refuse to remove the first assignment with 400 and its code', async () => {
+      const project = await createProject('Trio 1B');
+      const [earliest] = await assignmentIdsOf(project.id);
+
+      const res = await http()
+        .delete(`/api/v1/projects/client-assignments/${earliest}`)
+        .set(auth())
+        .expect(400);
+
+      expect(res.body).toMatchObject({
+        code: 'CANNOT_REMOVE_EARLIEST_ASSIGNMENT',
+      });
+      expect(await assignmentsOf(project.id)).toEqual([
+        { clientId: clientA, effectiveFrom: EPOCH },
+      ]);
+    });
+
+    it('should still remove a later transfer and restore the earlier client', async () => {
+      const project = await createProject('Trio 1B');
+      await http()
+        .post(`/api/v1/projects/${project.id}/transfer`)
+        .set(auth())
+        .send({ clientId: clientB, effectiveFrom: '2026-09-01' })
+        .expect(201);
+      const [, transfer] = await assignmentIdsOf(project.id);
+
+      await http()
+        .delete(`/api/v1/projects/client-assignments/${transfer}`)
+        .set(auth())
+        .expect(200);
+
+      expect(await assignmentsOf(project.id)).toEqual([
+        { clientId: clientA, effectiveFrom: EPOCH },
+      ]);
+      const row = await prisma.project.findUniqueOrThrow({
+        where: { id: project.id },
+      });
+      expect(row.clientId).toBe(clientA);
+    });
+  });
+
   describe('GET /api/v1/projects/reports', () => {
     it('should keep its default page of 10 and return the whole month when asked', async () => {
       for (let i = 1; i <= 12; i++) {
