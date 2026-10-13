@@ -69,6 +69,77 @@ dbTest.describe('Projects CRUD', () => {
     await expect(page.getByText('Project To Edit')).not.toBeVisible();
   });
 
+  dbTest(
+    'edit project → client is locked, and the reports screen keeps showing the same client',
+    async ({ page, db }) => {
+      // The reported bug: changing the client in the edit form moved the
+      // project on this screen only, while its reports stayed under the old
+      // client. The client now changes only through a transfer.
+      const client = await db.client.findFirst({
+        where: { name: 'E2E Test Client' },
+      });
+      await db.client.create({ data: { name: 'Other Client' } });
+      const subcontractor = await db.subcontractor.create({
+        data: { name: 'Lock Worker', companyNumber: '515333010' },
+      });
+      const project = await db.project.create({
+        data: {
+          clientId: client.id,
+          name: 'Locked Client Project',
+          estimatedAmount: 50000,
+          description: 'Original',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
+          clientAssignments: {
+            create: { clientId: client.id, effectiveFrom: new Date(0) },
+          },
+        },
+      });
+      await db.projectReport.create({
+        data: {
+          projectId: project.id,
+          subcontractorId: subcontractor.id,
+          date: new Date('2026-05-01'),
+          profitMargin: 10,
+          incomeEntries: { create: [{ amount: 1000 }] },
+        },
+      });
+
+      await page.goto(`${BASE}/projects`);
+      await page.waitForLoadState('networkidle');
+      const row = page.getByText('Locked Client Project').locator('../..');
+      await row.getByTitle(/edit/i).click();
+
+      await expect(page.locator('#proj-client')).toBeDisabled();
+      await expect(page.locator('#proj-client')).toHaveValue(client.id);
+      await expect(
+        page.getByText(/to change the client, use transfer/i),
+      ).toBeVisible();
+
+      await page.fill('#proj-desc', 'Edited with the client locked');
+      await page.getByRole('button', { name: /save/i }).click();
+      await expect(page.locator('#proj-client')).toBeHidden({
+        timeout: 5000,
+      });
+
+      const saved = await db.project.findUnique({
+        where: { id: project.id },
+        include: { clientAssignments: true },
+      });
+      expect(saved.description).toBe('Edited with the client locked');
+      expect(saved.clientId).toBe(client.id);
+      expect(
+        saved.clientAssignments.map((a: { clientId: string }) => a.clientId),
+      ).toEqual([client.id]);
+
+      await page.goto(`${BASE}/reports`);
+      await page.waitForLoadState('networkidle');
+      await expect(page.getByText('Other Client')).toHaveCount(0);
+      await page.getByRole('button', { name: /E2E Test Client/ }).click();
+      await expect(page.getByText('Locked Client Project')).toBeVisible();
+    },
+  );
+
   dbTest('delete project → removed from list', async ({ page, db }) => {
     const client = await db.client.findFirst({
       where: { name: 'E2E Test Client' },

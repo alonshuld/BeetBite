@@ -98,6 +98,53 @@ dbTest.describe('Reports list', () => {
   );
 
   dbTest(
+    'lists every client in a month with more than ten reports',
+    async ({ page, db }) => {
+      // The list request once sent no limit and got the API's default page
+      // of 10, silently hiding the rest of a busy month.
+      const sub = await db.subcontractor.create({
+        data: { name: 'Busy Worker', companyNumber: '515222099' },
+      });
+      for (let i = 1; i <= 11; i++) {
+        const name = `Busy Client ${String(i).padStart(2, '0')}`;
+        const client = await db.client.create({ data: { name } });
+        const project = await db.project.create({
+          data: {
+            clientId: client.id,
+            name: `${name} Project`,
+            estimatedAmount: 1000,
+            description: 'Busy month',
+            requesterName: 'Test Requester',
+            location: 'Test Location',
+          },
+        });
+        await db.projectReport.create({
+          data: {
+            projectId: project.id,
+            subcontractorId: sub.id,
+            date: new Date(`${MONTH}-01`),
+            profitMargin: 10,
+            incomeEntries: { create: [{ amount: 1000 }] },
+          },
+        });
+      }
+
+      await page.goto(`${BASE}/reports`);
+      await page.waitForLoadState('networkidle');
+
+      // 12 reports in the month: the Grid Client's plus eleven more.
+      await expect(page.getByText('Grid Client')).toBeVisible();
+      for (let i = 1; i <= 11; i++) {
+        await expect(
+          page.getByText(`Busy Client ${String(i).padStart(2, '0')}`, {
+            exact: true,
+          }),
+        ).toBeVisible();
+      }
+    },
+  );
+
+  dbTest(
     'drilling into a client shows its project sheets',
     async ({ page, db }) => {
       void db;

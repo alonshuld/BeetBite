@@ -17,6 +17,8 @@ import { Prisma } from 'src/generated/client';
 import { ProjectsQueryDto } from './dto/projects-query.dto';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
 import { ProjectHasRelatedRecordsError } from './errors/project-has-related-records.error';
+import { ProjectClientChangeRequiresTransferError } from './errors/project-client-change-requires-transfer.error';
+import { InitiatorNotFoundError } from 'src/initiators/errors/initiator-not-found.error';
 import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
 import { OPENING_BALANCE_TAG } from 'src/common/constants';
@@ -233,13 +235,31 @@ export class ProjectsService {
     id: string,
     updateProjectDto: UpdateProjectDto,
   ): Promise<ProjectBasicResponseDto> {
+    // `Project.clientId` only caches the latest client assignment; every
+    // month-scoped screen reads the assignments. Writing it here would split
+    // the two, so it is never written. The form still sends the current client
+    // with every edit, which is accepted; a different one is refused, and the
+    // change has to go through a transfer.
+    const { clientId, ...fields } = updateProjectDto;
+
     try {
-      const project = await this.prismaService.project.update({
-        where: { id },
-        data: {
-          ...updateProjectDto,
-          estimatedAmount: new Prisma.Decimal(updateProjectDto.estimatedAmount),
-        },
+      const project = await this.prismaService.$transaction(async (tx) => {
+        const current = await tx.project.findUnique({
+          where: { id },
+          select: { clientId: true },
+        });
+        if (!current) throw new ProjectNotFoundError(id);
+        if (clientId !== current.clientId) {
+          throw new ProjectClientChangeRequiresTransferError();
+        }
+
+        return tx.project.update({
+          where: { id },
+          data: {
+            ...fields,
+            estimatedAmount: new Prisma.Decimal(fields.estimatedAmount),
+          },
+        });
       });
 
       this.logger.log(`Project updated: ${id}`);
@@ -250,7 +270,9 @@ export class ProjectsService {
           case PRISMA_ERROR_CODES.NOT_FOUND:
             throw new ProjectNotFoundError(id);
           case PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED:
-            throw new ClientNotFoundError(updateProjectDto.clientId);
+            // The client is not written, so the only foreign key left to fail
+            // is the initiator's.
+            throw new InitiatorNotFoundError(fields.initiatorId ?? undefined);
           case PRISMA_ERROR_CODES.UNIQUE_CONSTRAINT_FAILED:
             throw new ProjectAlreadyExistsError(updateProjectDto.name);
         }

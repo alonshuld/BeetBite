@@ -173,6 +173,12 @@ is derived from reports.
 The resulting report is a **real** report — it appears on the reports screen,
 in monthly income, in payment views and in totals. That is intended, not a leak.
 
+### Project client
+
+A project's client is a history of `ProjectClientAssignment` rows; `Project.clientId` only caches the latest one and is written solely by `ProjectClientAssignmentsService`. Every month-scoped read (reports, income, payments, PDFs) resolves the client from the assignments. `PUT /projects/:id` therefore never writes `clientId`: the body must carry the current client (the edit form and the done toggle always do), and a different one is refused with `PROJECT_CLIENT_CHANGE_REQUIRES_TRANSFER` (400). Change clients with `POST /projects/:id/transfer`. Writing the cache directly once left projects listed under one client while their reports showed another.
+
+`findProjectReportsInMonth` pages only when given a `limit` — over HTTP the DTO defaults it to 10. Direct callers (the client-simulated PDF export) pass none and get the whole month.
+
 ### Project payment progress
 
 `ProjectResponseDto` includes a `paymentProgress` field with a single field: `totalPaid` = sum of `ProjectReport.income` where `incomeDate IS NOT NULL`. The frontend derives `remainingAmount` and `percentagePaid` from `totalPaid` and the project's `estimatedAmount`.

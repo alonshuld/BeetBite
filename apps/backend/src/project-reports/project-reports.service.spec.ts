@@ -364,6 +364,19 @@ describe('ProjectReportsService', () => {
       );
     });
 
+    it('should return the whole month when no limit is given, as the client PDF export calls it', async () => {
+      mockPrismaService.projectReport.findMany.mockResolvedValue([]);
+
+      await service.findProjectReportsInMonth({
+        month: '2024-05-01T00:00:00.000Z',
+      });
+
+      const args = mockPrismaService.projectReport.findMany.mock
+        .calls[0][0] as Record<string, unknown>;
+      expect(args).not.toHaveProperty('skip');
+      expect(args).not.toHaveProperty('take');
+    });
+
     it('should return empty array when no reports found', async () => {
       mockPrismaService.projectReport.findMany.mockResolvedValue([]);
 

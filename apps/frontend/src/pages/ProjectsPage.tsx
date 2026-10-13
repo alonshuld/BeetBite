@@ -571,6 +571,9 @@ export default function ProjectsPage() {
               label={t("client")}
               value={form.clientId}
               onChange={(e) => setField("clientId", e.target.value)}
+              // The client is a history, changed only from a chosen month by a
+              // transfer; an edit that swapped it would desync that history.
+              disabled={!!editing}
               required
             >
               <option value="" disabled>
@@ -582,6 +585,11 @@ export default function ProjectsPage() {
                 </option>
               ))}
             </Select>
+            {editing && (
+              <p className="text-label text-text-muted">
+                {t("projectClientViaTransfer")}
+              </p>
+            )}
           </FormGroup>
         </FormRow>
         <FormRow>

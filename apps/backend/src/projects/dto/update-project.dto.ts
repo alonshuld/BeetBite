@@ -9,6 +9,11 @@ import { CreateProjectDto } from './create-project.dto';
  * Omitting it here is load-bearing, not tidiness. `update()` spreads this DTO
  * straight into `prisma.project.update`, so an inherited `openingBalance` would
  * reach Prisma as an unknown column and fail the request.
+ *
+ * `clientId` stays required but is never written: it must be the project's
+ * current client, and a different one is refused with
+ * `PROJECT_CLIENT_CHANGE_REQUIRES_TRANSFER`. Changing clients goes through
+ * `POST /projects/:id/transfer`, which keeps the client history in step.
  */
 export class UpdateProjectDto extends OmitType(CreateProjectDto, [
   'openingBalance',

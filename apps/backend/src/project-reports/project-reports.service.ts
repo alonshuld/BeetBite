@@ -277,13 +277,17 @@ export class ProjectReportsService {
   async findProjectReportsInMonth(
     paginatedMonthQueryDto: PaginatedMonthQueryDto,
   ): Promise<ProjectReportListItemDto[]> {
+    // Over HTTP the DTO always carries a limit (it defaults to 10 there). A
+    // direct caller that passes none — the client-wide PDF export — wants the
+    // whole month: paging it would silently drop that client's later projects.
+    const { limit } = paginatedMonthQueryDto;
     const page = paginatedMonthQueryDto.page ?? PAGINATION_DEFAULTS.PAGE;
-    const limit = paginatedMonthQueryDto.limit ?? PAGINATION_DEFAULTS.LIMIT;
 
     const projectReports = await this.prismaService.projectReport.findMany({
       where: { date: paginatedMonthQueryDto.month },
-      skip: Math.max(0, (page - 1) * limit),
-      take: Math.max(1, limit),
+      ...(limit === undefined
+        ? {}
+        : { skip: Math.max(0, (page - 1) * limit), take: Math.max(1, limit) }),
       include: REPORT_INCLUDE,
     });
 
