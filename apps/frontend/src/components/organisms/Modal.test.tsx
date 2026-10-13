@@ -95,6 +95,44 @@ describe("Modal", () => {
 });
 
 describe("ConfirmModal", () => {
+  it("uses a custom confirm label when given", async () => {
+    const onConfirm = vi.fn();
+    withLang(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+        message="Go ahead?"
+        confirmLabel="Save anyway"
+        tone="primary"
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Save anyway" }));
+    expect(onConfirm).toHaveBeenCalledOnce();
+  });
+
+  it("closes only the top dialog on Escape when stacked over another", async () => {
+    const onCloseBelow = vi.fn();
+    const onCloseTop = vi.fn();
+    withLang(
+      <>
+        <Modal open onClose={onCloseBelow} title="Form">
+          <p>Form</p>
+        </Modal>
+        <ConfirmModal
+          open
+          onClose={onCloseTop}
+          onConfirm={vi.fn()}
+          message="Sure?"
+        />
+      </>,
+    );
+    await userEvent.keyboard("{Escape}");
+    expect(onCloseTop).toHaveBeenCalledOnce();
+    expect(onCloseBelow).not.toHaveBeenCalled();
+  });
+
   it("does not render when closed", () => {
     withLang(
       <ConfirmModal

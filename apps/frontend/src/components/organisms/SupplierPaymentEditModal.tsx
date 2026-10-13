@@ -11,6 +11,8 @@ import { Toggle } from "@/components/atoms/Toggle";
 import { useLang } from "@/contexts/useLang";
 import { useFieldCheck } from "@/hooks/useFieldCheck";
 import { useToast } from "@/contexts/useToast";
+import { useOverIncomeConfirm } from "@/hooks/useOverIncomeConfirm";
+import { goesOverIncome, sumAmounts } from "@/utils/paymentsOverIncome";
 
 interface SupplierPaymentEditModalProps {
   /** The payment being corrected; null keeps the modal closed. */
@@ -41,6 +43,7 @@ export function SupplierPaymentEditModal({
   const { t } = useLang();
   const { toast } = useToast();
   const checkFields = useFieldCheck();
+  const { confirmOverIncome, overIncomeModal } = useOverIncomeConfirm();
   const { data: reports = [] } = useGetProjectReportsQuery(month);
   const [updatePayment, { isLoading: saving }] =
     useUpdateSupplierPaymentMutation();
@@ -60,7 +63,7 @@ export function SupplierPaymentEditModal({
     setIncludesVat(payment.includesVat);
   }, [payment]);
 
-  async function handleSubmit() {
+  function handleSubmit() {
     if (!payment || !supplier) return;
     if (
       !checkFields([
@@ -70,6 +73,29 @@ export function SupplierPaymentEditModal({
       ])
     )
       return;
+    // The line may move to another report: judge the report it lands on,
+    // without this line's old amount if it was already there.
+    const target = reports.find((report) => report.id === projectReportId);
+    let overIncome = false;
+    if (target) {
+      const before = sumAmounts(target.supplierPayments);
+      const others =
+        target.id === payment.projectReport.id
+          ? before - payment.amount
+          : before;
+      overIncome = goesOverIncome(
+        { income: target.totalIncome, payments: before },
+        { income: target.totalIncome, payments: others + Number(amount) },
+      );
+    }
+    confirmOverIncome(
+      overIncome && target ? [target.project.name] : [],
+      () => void submit(),
+    );
+  }
+
+  async function submit() {
+    if (!payment || !supplier) return;
     const result = await updatePayment({
       id: payment.id,
       supplierId: supplier.id,
@@ -88,70 +114,73 @@ export function SupplierPaymentEditModal({
   }
 
   return (
-    <FormModal
-      open={!!payment}
-      onClose={onClose}
-      onSubmit={() => void handleSubmit()}
-      title={
-        supplier
-          ? `${t("editSupplierPayment")} — ${supplier.name}`
-          : t("editSupplierPayment")
-      }
-      loading={saving}
-    >
-      <div className="grid grid-cols-2 gap-3 max-[640px]:grid-cols-1">
-        <Select
-          id="edit-payment-report"
-          label={t("project")}
-          value={projectReportId}
-          onChange={(e) => setProjectReportId(e.target.value)}
-          required
-        >
-          {/* The line's own report always stays selectable, even if the
+    <>
+      <FormModal
+        open={!!payment}
+        onClose={onClose}
+        onSubmit={handleSubmit}
+        title={
+          supplier
+            ? `${t("editSupplierPayment")} — ${supplier.name}`
+            : t("editSupplierPayment")
+        }
+        loading={saving}
+      >
+        <div className="grid grid-cols-2 gap-3 max-[640px]:grid-cols-1">
+          <Select
+            id="edit-payment-report"
+            label={t("project")}
+            value={projectReportId}
+            onChange={(e) => setProjectReportId(e.target.value)}
+            required
+          >
+            {/* The line's own report always stays selectable, even if the
               month's list has not loaded or no longer carries it. */}
-          {payment &&
-            !reports.some((r) => r.id === payment.projectReport.id) && (
-              <option value={payment.projectReport.id}>
-                {payment.projectReport.projectName}
+            {payment &&
+              !reports.some((r) => r.id === payment.projectReport.id) && (
+                <option value={payment.projectReport.id}>
+                  {payment.projectReport.projectName}
+                </option>
+              )}
+            {reports.map((report) => (
+              <option key={report.id} value={report.id}>
+                {report.project.name}
               </option>
-            )}
-          {reports.map((report) => (
-            <option key={report.id} value={report.id}>
-              {report.project.name}
-            </option>
-          ))}
-        </Select>
-        <Input
-          id="edit-payment-amount"
-          label={t("amountILS")}
-          type="number"
-          min={0}
-          step={0.01}
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          required
-        />
-        <Input
-          id="edit-payment-date"
-          label={t("date")}
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          required
-        />
-        <Input
-          id="edit-payment-desc"
-          label={t("description")}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-        <Toggle
-          id="edit-payment-vat"
-          label={t("includeVat")}
-          checked={includesVat}
-          onChange={(e) => setIncludesVat(e.target.checked)}
-        />
-      </div>
-    </FormModal>
+            ))}
+          </Select>
+          <Input
+            id="edit-payment-amount"
+            label={t("amountILS")}
+            type="number"
+            min={0}
+            step={0.01}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+          />
+          <Input
+            id="edit-payment-date"
+            label={t("date")}
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+          />
+          <Input
+            id="edit-payment-desc"
+            label={t("description")}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          <Toggle
+            id="edit-payment-vat"
+            label={t("includeVat")}
+            checked={includesVat}
+            onChange={(e) => setIncludesVat(e.target.checked)}
+          />
+        </div>
+      </FormModal>
+      {overIncomeModal}
+    </>
   );
 }
