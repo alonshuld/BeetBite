@@ -322,6 +322,13 @@ export const translations = {
       "Set this report's initiator income before exporting its PDF.",
     // Client-wide simulated export
     exportWithSimulator: "Export Simulation PDF",
+    // Supplier payments above a report's income
+    paymentsExceedIncomeTitle: "Payments exceed income",
+    paymentsExceedIncome:
+      "Supplier payments will exceed the report income for:",
+    paymentsExceedIncomeConsequence:
+      "The subcontractor's amount will be negative. Save anyway?",
+    saveAnyway: "Save anyway",
     // Subcontractor teams
     teams: "Teams",
     team: "Team",
@@ -653,6 +660,12 @@ export const translations = {
       "יש להגדיר הכנסה מיזם לדוח זה לפני ייצוא ה-PDF שלו.",
     // Client-wide simulated export
     exportWithSimulator: "ייצוא PDF של הסימולציה",
+    // Supplier payments above a report's income
+    paymentsExceedIncomeTitle: "התשלומים עולים על ההכנסה",
+    paymentsExceedIncome: "תשלומי הספקים יעלו על הכנסת הדוח עבור:",
+    paymentsExceedIncomeConsequence:
+      "הסכום לקבלן המשנה יהיה שלילי. לשמור בכל זאת?",
+    saveAnyway: "שמירה בכל זאת",
     // Subcontractor teams
     teams: "צוותים",
     team: "צוות",

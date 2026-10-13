@@ -679,6 +679,119 @@ describe("ReportsPage", () => {
     });
   });
 
+  describe("income and supplier payments in the add-report modal", () => {
+    async function openModalFor(projectId = "p1") {
+      renderPage();
+      await userEvent.click(
+        screen.getAllByRole("button", { name: "+ Add" })[0],
+      );
+      await userEvent.selectOptions(
+        screen.getByLabelText("Project"),
+        projectId,
+      );
+    }
+
+    async function addSupplierPayment(amount: string) {
+      const modal = screen.getByRole("dialog");
+      const addButtons = within(modal).getAllByRole("button", {
+        name: "+ Add",
+      });
+      await userEvent.click(addButtons[addButtons.length - 1]);
+      await userEvent.selectOptions(
+        within(modal).getByDisplayValue("— Manpower / Supplier —"),
+        "co1",
+      );
+      await userEvent.type(
+        within(modal).getByPlaceholderText("Amount (₪)"),
+        amount,
+      );
+    }
+
+    const sentDto = () =>
+      createSpy.mock.calls[0][0] as {
+        incomeEntries: { amount: number; tag: string | null }[];
+        supplierPayments: { amount: number }[];
+      };
+
+    it("saves a report with no income, which the server records as 0", async () => {
+      await openModalFor();
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      expect(sentDto().incomeEntries).toEqual([]);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("saves an income row with a tag but no amount as 0", async () => {
+      await openModalFor();
+      await userEvent.type(screen.getByLabelText("Work"), "Deposit");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(sentDto().incomeEntries).toEqual([
+        expect.objectContaining({ amount: 0, tag: "Deposit" }),
+      ]);
+    });
+
+    it("saves without asking when payments stay within the income", async () => {
+      await openModalFor();
+      await userEvent.type(screen.getByLabelText("Income (₪)"), "10000");
+      await addSupplierPayment("5000");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(screen.queryByText("Payments exceed income")).toBeNull();
+      expect(createSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("asks before saving payments above the income, then saves on confirm", async () => {
+      await openModalFor();
+      await userEvent.type(screen.getByLabelText("Income (₪)"), "1");
+      await addSupplierPayment("5000");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(createSpy).not.toHaveBeenCalled();
+      const warning = screen.getByRole("dialog", {
+        name: "Payments exceed income",
+      });
+      expect(warning).toHaveTextContent("Tower Block");
+
+      await userEvent.click(
+        within(warning).getByRole("button", { name: "Save anyway" }),
+      );
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      expect(sentDto().incomeEntries).toEqual([
+        expect.objectContaining({ amount: 1 }),
+      ]);
+      expect(sentDto().supplierPayments).toEqual([
+        expect.objectContaining({ amount: 5000 }),
+      ]);
+    });
+
+    it("keeps the form open and unsaved when the user backs out", async () => {
+      await openModalFor();
+      await addSupplierPayment("5000");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await userEvent.click(
+        within(
+          screen.getByRole("dialog", { name: "Payments exceed income" }),
+        ).getByRole("button", { name: "Cancel" }),
+      );
+
+      expect(createSpy).not.toHaveBeenCalled();
+      expect(screen.getByPlaceholderText("Amount (₪)")).toHaveValue(5000);
+    });
+
+    it("closes only the warning on Escape, leaving the form open", async () => {
+      await openModalFor();
+      await addSupplierPayment("5000");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await userEvent.keyboard("{Escape}");
+
+      expect(screen.queryByText("Payments exceed income")).toBeNull();
+      expect(screen.getByPlaceholderText("Amount (₪)")).toHaveValue(5000);
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+  });
+
   // Total income per client, beside the existing subcontractor total.
   describe("client income total", () => {
     it("shows total income beside total subcontractor payments in the header", async () => {

@@ -40,6 +40,17 @@ import { useToast } from "@/contexts/useToast";
 import { formatYM, formatISODate } from "@/utils/formatMonth";
 import { Icon } from "@/components/atoms/Icon";
 import { completionBarClass } from "@/utils/completion";
+import { useOverIncomeConfirm } from "@/hooks/useOverIncomeConfirm";
+import {
+  NEW_REPORT,
+  goesOverIncome,
+  sumAmounts,
+  type IncomeAndPayments,
+} from "@/utils/paymentsOverIncome";
+import {
+  draftIncomeAmount,
+  isBlankIncomeDraft,
+} from "@/utils/incomeEntryDraft";
 
 interface CorpPaymentDraft {
   supplierId: string;
@@ -108,6 +119,23 @@ export default function ProjectReportsPage() {
   );
 
   const [deleteReportOpen, setDeleteReportOpen] = useState(false);
+  const { confirmOverIncome, overIncomeModal } = useOverIncomeConfirm();
+
+  /** Where the report stands now, for judging a save that changes it. */
+  const currentStanding: IncomeAndPayments = currentReport
+    ? {
+        income: currentReport.totalIncome,
+        payments: sumAmounts(currentReport.supplierPayments),
+      }
+    : NEW_REPORT;
+
+  /** Runs `save`, first asking if it leaves payments above the income. */
+  function guardIncome(after: IncomeAndPayments, save: () => Promise<void>) {
+    confirmOverIncome(
+      goesOverIncome(currentStanding, after) ? [projectName] : [],
+      () => void save(),
+    );
+  }
   const [exportOpen, setExportOpen] = useState(false);
 
   function openExport() {
@@ -193,8 +221,13 @@ export default function ProjectReportsPage() {
     setModalOpen(true);
   }
 
-  async function handleSave() {
-    const validEntries = incomeEntries.filter((e) => e.amount !== "");
+  function handleSave() {
+    // Income is optional: a row left empty is dropped, an amount left empty
+    // is 0, and an existing row is kept even when emptied — removing one is
+    // what its Remove button is for.
+    const validEntries = incomeEntries.filter(
+      (e) => e.id !== undefined || !isBlankIncomeDraft(e),
+    );
     const corpPaymentsDto = corpPayments
       .filter((cp) => cp.supplierId !== "")
       .map((cp) => ({
@@ -202,76 +235,100 @@ export default function ProjectReportsPage() {
         amount: Number(cp.amount),
         date: cp.date,
       }));
+    const income = sumAmounts(
+      validEntries.map((e) => ({ amount: draftIncomeAmount(e.amount) })),
+    );
 
     if (editingId !== null) {
-      // Income entries are reconciled through the dedicated per-entry
-      // endpoints below, never through this DTO's `incomeEntries` field:
-      // the backend replaces that whole relation (deleteMany + createMany)
-      // on every write, which would churn row ids. Leaving the key out of
-      // the payload keeps untouched rows untouched.
-      const originalEntries = currentReport?.incomeEntries ?? [];
-      const keptIds = new Set(
-        validEntries.flatMap((e) => (e.id ? [e.id] : [])),
+      // Supplier rows are not editable here: the payments stay as they are.
+      guardIncome({ income, payments: currentStanding.payments }, () =>
+        saveEdit(editingId, validEntries),
       );
-      const removedEntries = originalEntries.filter((e) => !keptIds.has(e.id));
-
-      const entryResults = await Promise.all([
-        ...validEntries.map((e) =>
-          e.id
-            ? updateIncomeEntry({
-                id: e.id,
-                amount: Number(e.amount),
-                incomeDate: e.incomeDate || null,
-                tag: e.tag.trim() || null,
-              })
-            : addIncomeEntry({
-                reportId: editingId,
-                amount: Number(e.amount),
-                incomeDate: e.incomeDate || undefined,
-                tag: e.tag.trim() || undefined,
-              }),
-        ),
-        ...removedEntries.map((e) => deleteIncomeEntry(e.id)),
-      ]);
-      // A rejected write has already toasted its reason — keep the modal open
-      // so the edit isn't lost and doesn't look saved.
-      if (entryResults.some((r) => "error" in r)) return;
-
-      const dto: UpdateProjectReportDto = {
-        projectId,
-        subcontractorId: subcontractorId || undefined,
-        date: reportMonth + "-01",
-        profitMargin: Number(profitMarginPercent) || undefined,
-        // Supplier rows are only editable when creating; the backend replaces
-        // the whole list whenever the key is present, so an edit must leave
-        // it out or every existing payment is deleted.
-        // Emptying a stored initiator income clears it; left empty on a
-        // report that never had one, the field is simply not sent.
-        initiatorIncome: initiatorIncome
-          ? Number(initiatorIncome)
-          : currentReport?.initiatorIncome != null
-            ? null
-            : undefined,
-      };
-      const result = await updateReport({ id: editingId, ...dto });
-      if ("error" in result) return;
     } else {
-      const dto: CreateProjectReportDto = {
-        projectId,
-        subcontractorId: subcontractorId || undefined,
-        date: reportMonth + "-01",
-        incomeEntries: validEntries.map((e) => ({
-          amount: Number(e.amount),
-          incomeDate: e.incomeDate || undefined,
-          tag: e.tag.trim() || undefined,
-        })),
-        profitMargin: Number(profitMarginPercent) || undefined,
-        supplierPayments: corpPaymentsDto,
-        initiatorIncome: initiatorIncome ? Number(initiatorIncome) : undefined,
-      };
-      const result = await createReport(dto);
-      if ("error" in result) return;
+      confirmOverIncome(
+        goesOverIncome(NEW_REPORT, {
+          income,
+          payments: sumAmounts(corpPaymentsDto),
+        })
+          ? [projectName]
+          : [],
+        () => void saveNew(validEntries, corpPaymentsDto),
+      );
     }
+  }
+
+  async function saveEdit(reportId: string, validEntries: IncomeEntryDraft[]) {
+    // Income entries are reconciled through the dedicated per-entry
+    // endpoints below, never through this DTO's `incomeEntries` field:
+    // the backend replaces that whole relation (deleteMany + createMany)
+    // on every write, which would churn row ids. Leaving the key out of
+    // the payload keeps untouched rows untouched.
+    const originalEntries = currentReport?.incomeEntries ?? [];
+    const keptIds = new Set(validEntries.flatMap((e) => (e.id ? [e.id] : [])));
+    const removedEntries = originalEntries.filter((e) => !keptIds.has(e.id));
+
+    const entryResults = await Promise.all([
+      ...validEntries.map((e) =>
+        e.id
+          ? updateIncomeEntry({
+              id: e.id,
+              amount: draftIncomeAmount(e.amount),
+              incomeDate: e.incomeDate || null,
+              tag: e.tag.trim() || null,
+            })
+          : addIncomeEntry({
+              reportId,
+              amount: draftIncomeAmount(e.amount),
+              incomeDate: e.incomeDate || undefined,
+              tag: e.tag.trim() || undefined,
+            }),
+      ),
+      ...removedEntries.map((e) => deleteIncomeEntry(e.id)),
+    ]);
+    // A rejected write has already toasted its reason — keep the modal open
+    // so the edit isn't lost and doesn't look saved.
+    if (entryResults.some((r) => "error" in r)) return;
+
+    const dto: UpdateProjectReportDto = {
+      projectId,
+      subcontractorId: subcontractorId || undefined,
+      date: reportMonth + "-01",
+      profitMargin: Number(profitMarginPercent) || undefined,
+      // Supplier rows are only editable when creating; the backend replaces
+      // the whole list whenever the key is present, so an edit must leave
+      // it out or every existing payment is deleted.
+      // Emptying a stored initiator income clears it; left empty on a
+      // report that never had one, the field is simply not sent.
+      initiatorIncome: initiatorIncome
+        ? Number(initiatorIncome)
+        : currentReport?.initiatorIncome != null
+          ? null
+          : undefined,
+    };
+    const result = await updateReport({ id: reportId, ...dto });
+    if ("error" in result) return;
+    setModalOpen(false);
+  }
+
+  async function saveNew(
+    validEntries: IncomeEntryDraft[],
+    corpPaymentsDto: CreateProjectReportDto["supplierPayments"],
+  ) {
+    const dto: CreateProjectReportDto = {
+      projectId,
+      subcontractorId: subcontractorId || undefined,
+      date: reportMonth + "-01",
+      incomeEntries: validEntries.map((e) => ({
+        amount: draftIncomeAmount(e.amount),
+        incomeDate: e.incomeDate || undefined,
+        tag: e.tag.trim() || undefined,
+      })),
+      profitMargin: Number(profitMarginPercent) || undefined,
+      supplierPayments: corpPaymentsDto,
+      initiatorIncome: initiatorIncome ? Number(initiatorIncome) : undefined,
+    };
+    const result = await createReport(dto);
+    if ("error" in result) return;
     setModalOpen(false);
   }
 
@@ -319,10 +376,21 @@ export default function ProjectReportsPage() {
     setEditEntryTag(entry.tag ?? "");
   }
 
-  async function saveEntryEdit(entryId: string) {
+  function saveEntryEdit(entry: IncomeEntry) {
+    const amount = draftIncomeAmount(editEntryAmount);
+    guardIncome(
+      {
+        income: currentStanding.income - entry.amount + amount,
+        payments: currentStanding.payments,
+      },
+      () => commitEntryEdit(entry.id, amount),
+    );
+  }
+
+  async function commitEntryEdit(entryId: string, amount: number) {
     const result = await updateIncomeEntry({
       id: entryId,
-      amount: Number(editEntryAmount) || undefined,
+      amount,
       incomeDate: editEntryDate || null,
       tag: editEntryTag.trim() || null,
     });
@@ -356,13 +424,24 @@ export default function ProjectReportsPage() {
     setEditCorpDate(todayISO());
   }
 
-  async function saveCorpEdit(cpId: string) {
+  function saveCorpEdit(cp: { id: string; amount: number }) {
+    const amount = Number(editCorpAmount);
+    guardIncome(
+      {
+        income: currentStanding.income,
+        payments: currentStanding.payments - cp.amount + amount,
+      },
+      () => commitCorpEdit(cp.id, amount),
+    );
+  }
+
+  async function commitCorpEdit(cpId: string, amount: number) {
     if (!currentReport) return;
     const result = await updateCorp({
       id: cpId,
       projectReportId: currentReport.id,
       supplierId: editCorpCorpId,
-      amount: Number(editCorpAmount),
+      amount,
       date: editCorpDate,
       isFuture: false,
     });
@@ -370,12 +449,23 @@ export default function ProjectReportsPage() {
     setEditingCorpId(null);
   }
 
-  async function saveNewCorp() {
+  function saveNewCorp() {
     if (!currentReport || !newCorpCorpId || !newCorpAmount) return;
+    const amount = Number(newCorpAmount);
+    guardIncome(
+      {
+        income: currentStanding.income,
+        payments: currentStanding.payments + amount,
+      },
+      () => commitNewCorp(currentReport.id, amount),
+    );
+  }
+
+  async function commitNewCorp(reportId: string, amount: number) {
     const result = await createCorp({
-      projectReportId: currentReport.id,
+      projectReportId: reportId,
       supplierId: newCorpCorpId,
-      amount: Number(newCorpAmount),
+      amount,
       date: newCorpDate,
       isFuture: false,
     });
@@ -563,7 +653,7 @@ export default function ProjectReportsPage() {
                     />
                     <div className="flex gap-1 mb-px">
                       <ButtonPrimary
-                        onClick={() => void saveEntryEdit(entry.id)}
+                        onClick={() => saveEntryEdit(entry)}
                         className="text-xs py-1 px-3"
                         disabled={updatingEntry}
                       >
@@ -610,7 +700,17 @@ export default function ProjectReportsPage() {
                       {t("edit")}
                     </ButtonGhost>
                     <ButtonDanger
-                      onClick={() => void deleteIncomeEntry(entry.id)}
+                      onClick={() =>
+                        guardIncome(
+                          {
+                            income: currentStanding.income - entry.amount,
+                            payments: currentStanding.payments,
+                          },
+                          async () => {
+                            await deleteIncomeEntry(entry.id);
+                          },
+                        )
+                      }
                       className="text-xs py-0.5 px-2"
                     >
                       {t("remove")}
@@ -731,7 +831,7 @@ export default function ProjectReportsPage() {
                     />
                     <div className="flex gap-1 mb-px">
                       <ButtonPrimary
-                        onClick={() => void saveCorpEdit(cp.id)}
+                        onClick={() => saveCorpEdit(cp)}
                         className="text-xs py-1 px-3"
                         disabled={updatingCorp}
                       >
@@ -817,7 +917,7 @@ export default function ProjectReportsPage() {
                 />
                 <div className="flex gap-1 mb-px">
                   <ButtonPrimary
-                    onClick={() => void saveNewCorp()}
+                    onClick={saveNewCorp}
                     className="text-xs py-1 px-3"
                     disabled={addingCorp || !newCorpCorpId || !newCorpAmount}
                   >
@@ -933,7 +1033,7 @@ export default function ProjectReportsPage() {
       <FormModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        onSubmit={() => void handleSave()}
+        onSubmit={handleSave}
         title={
           editingId !== null
             ? `${t("edit")} ${t("projectReports")}`
@@ -1110,6 +1210,7 @@ export default function ProjectReportsPage() {
           )}
         </div>
       </FormModal>
+      {overIncomeModal}
 
       <ExportReportPdfModal
         report={exportOpen && currentReport ? currentReport : null}

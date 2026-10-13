@@ -1424,7 +1424,8 @@ export interface components {
     };
     CreateIncomeEntryDto: {
       /**
-       * @description Income amount for this entry
+       * @description Income amount for this entry. Omitted or null means 0
+       * @default 0
        * @example 50000
        */
       amount: number;
@@ -1462,8 +1463,8 @@ export interface components {
        * @example 15.5
        */
       profitMargin?: number;
-      /** @description Income entries for this report (at least one required) */
-      incomeEntries: components["schemas"]["CreateIncomeEntryDto"][];
+      /** @description Income entries for this report. Omitted or empty means a single entry of 0 */
+      incomeEntries?: components["schemas"]["CreateIncomeEntryDto"][];
       /** @description A list of the payments made to suppliers for their work on this project this month */
       supplierPayments: components["schemas"]["CreateSupplierPaymentDto"][];
       /**
@@ -1744,7 +1745,7 @@ export interface components {
        * @example 120000
        */
       initiatorIncome?: number | null;
-      /** @description Income entries for this report. Omit to leave existing income rows untouched; when provided, replaces all of them (at least one required). */
+      /** @description Income entries for this report. Omit to leave existing income rows untouched; when provided, replaces all of them (an empty list means a single entry of 0). */
       incomeEntries?: components["schemas"]["CreateIncomeEntryDto"][];
       /** @description Supplier payments for this report. Omit to leave existing payments untouched; when provided, replaces all of them. */
       supplierPayments?: components["schemas"]["CreateSupplierPaymentDto"][];

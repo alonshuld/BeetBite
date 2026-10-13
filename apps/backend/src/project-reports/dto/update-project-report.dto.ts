@@ -1,6 +1,5 @@
 import { ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import {
-  ArrayMinSize,
   IsArray,
   IsNumber,
   IsOptional,
@@ -17,11 +16,10 @@ import { CreateSupplierPaymentDto } from './create-supplier-payment.dto';
 /**
  * Represents the parameters required to update an existing project report.
  *
- * `incomeEntries` is the one field made optional relative to
- * `CreateProjectReportDto` (via `OmitType`, so its required declaration on
- * the base class does not conflict with the optional one here): the service
- * only replaces that relation (deleteMany + createMany) when the caller
- * actually sends it, so callers that reconcile income rows through the
+ * `incomeEntries` is redeclared (via `OmitType`) because omitting it means
+ * something different here than on create: the service only replaces that
+ * relation (deleteMany + createMany) when the caller actually sends it, so
+ * callers that reconcile income rows through the
  * dedicated per-entry endpoints can omit it here and leave existing rows —
  * ids and tags included — untouched. `supplierPayments` is optional for the
  * same reason: the service replaces the whole list whenever the key is
@@ -52,12 +50,11 @@ export class UpdateProjectReportDto extends OmitType(CreateProjectReportDto, [
 
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @Type(() => CreateIncomeEntryDto)
   @ValidateNested({ each: true })
   @ApiPropertyOptional({
     description:
-      'Income entries for this report. Omit to leave existing income rows untouched; when provided, replaces all of them (at least one required).',
+      'Income entries for this report. Omit to leave existing income rows untouched; when provided, replaces all of them (an empty list means a single entry of 0).',
     type: [CreateIncomeEntryDto],
   })
   incomeEntries?: CreateIncomeEntryDto[];

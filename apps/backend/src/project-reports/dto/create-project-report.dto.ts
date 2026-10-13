@@ -9,7 +9,6 @@ import {
   IsOptional,
   ValidateNested,
   IsArray,
-  ArrayMinSize,
 } from 'class-validator';
 import { CreateSupplierPaymentDto } from './create-supplier-payment.dto';
 import { CreateIncomeEntryDto } from './create-income-entry.dto';
@@ -57,15 +56,16 @@ export class CreateProjectReportDto {
   })
   profitMargin?: number;
 
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @Type(() => CreateIncomeEntryDto)
   @ValidateNested({ each: true })
-  @ApiProperty({
-    description: 'Income entries for this report (at least one required)',
+  @ApiPropertyOptional({
+    description:
+      'Income entries for this report. Omitted or empty means a single entry of 0',
     type: [CreateIncomeEntryDto],
   })
-  incomeEntries!: CreateIncomeEntryDto[];
+  incomeEntries?: CreateIncomeEntryDto[];
 
   @IsArray()
   @Type(() => CreateSupplierPaymentDto)
