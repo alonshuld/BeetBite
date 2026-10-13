@@ -674,6 +674,78 @@ describe('PDF Export Integration Tests', () => {
   // HTTP surface
   // ==========================================================================
 
+  // ==========================================================================
+  // Client-wide simulated export — must see the whole month, not a page of it
+  // ==========================================================================
+
+  describe('Client simulated export in a busy month', () => {
+    /**
+     * Creates a project owned by `ownerId` (with the client assignment every
+     * real project has) and a report on it in MONTH.
+     */
+    const seedOwnedReport = async (ownerId: string, name: string) => {
+      const project = await prisma.project.create({
+        data: {
+          clientId: ownerId,
+          name,
+          estimatedAmount: 100000,
+          description: `${name} description`,
+          requesterName: `${name} requester`,
+          location: `${name} location`,
+          clientAssignments: {
+            create: {
+              clientId: ownerId,
+              effectiveFrom: new Date('1970-01-01T00:00:00.000Z'),
+            },
+          },
+        },
+      });
+      await seedReport({ projectId: project.id, incomes: [{ amount: 1000 }] });
+      return project;
+    };
+
+    const renderSimulated = async (forClientId: string): Promise<string> => {
+      mockPuppeteerState.html = '';
+      await service.exportClientSimulatedPdf({
+        clientId: forClientId,
+        month: '2026-05-01',
+        overrides: [],
+        lang: 'en',
+      });
+      return mockPuppeteerState.html;
+    };
+
+    it('should include a client whose only report comes after ten others', async () => {
+      const busy = await prisma.client.create({ data: { name: 'Busy Corp' } });
+      for (let i = 1; i <= 11; i++) {
+        await seedOwnedReport(busy.id, `Busy Project ${i}`);
+      }
+      const late = await prisma.client.create({ data: { name: 'Late Ltd' } });
+      await seedOwnedReport(late.id, 'Late Tower');
+
+      const html = await renderSimulated(late.id);
+
+      expect(html).toContain('Late Tower');
+      expect(html).not.toContain('Busy Project');
+    });
+
+    it('should render every one of a client’s projects when it has more than ten', async () => {
+      const busy = await prisma.client.create({ data: { name: 'Busy Corp' } });
+      for (let i = 1; i <= 12; i++) {
+        await seedOwnedReport(
+          busy.id,
+          `Busy Project ${String(i).padStart(2, '0')}`,
+        );
+      }
+
+      const html = await renderSimulated(busy.id);
+
+      for (let i = 1; i <= 12; i++) {
+        expect(html).toContain(`Busy Project ${String(i).padStart(2, '0')}`);
+      }
+    });
+  });
+
   describe('POST /api/v1/projects/reports/export-pdf', () => {
     const url = '/api/v1/projects/reports/export-pdf';
 
