@@ -14,6 +14,8 @@ import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontrac
 import { ProjectNotFoundError } from './errors/project-not-found.exception';
 import { ProjectAlreadyExistsError } from './errors/project-already-exists.exception';
 import { ClientNotFoundError } from '../clients/errors/client-not-found.exception';
+import { ProjectClientChangeRequiresTransferError } from './errors/project-client-change-requires-transfer.error';
+import { InitiatorNotFoundError } from 'src/initiators/errors/initiator-not-found.error';
 import { ProjectsQueryDto } from './dto/projects-query.dto';
 import { Prisma } from 'src/generated/client';
 import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
@@ -507,6 +509,7 @@ describe('ProjectsService', () => {
   });
 
   describe('update', () => {
+    const projectId = 'clhp000000000000000000001';
     const updateDto: UpdateProjectDto = {
       clientId: 'client-2',
       name: 'Updated Project',
@@ -517,7 +520,7 @@ describe('ProjectsService', () => {
     };
 
     const mockUpdatedProject = {
-      id: 'clhp000000000000000000001',
+      id: projectId,
       clientId: updateDto.clientId,
       name: updateDto.name,
       estimatedAmount: new Prisma.Decimal(updateDto.estimatedAmount),
@@ -526,18 +529,73 @@ describe('ProjectsService', () => {
       location: updateDto.location,
     };
 
+    beforeEach(() => {
+      // The project's current client, as cached on the row.
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        clientId: 'client-2',
+      });
+    });
+
     it('should update a project', async () => {
       mockPrismaService.project.update.mockResolvedValue(mockUpdatedProject);
 
-      const result = await service.update(
-        'clhp000000000000000000001',
-        updateDto,
-      );
+      const result = await service.update(projectId, updateDto);
 
-      expect(result.id).toBe('clhp000000000000000000001');
+      expect(result.id).toBe(projectId);
+    });
+
+    it('should never write clientId, even when it matches the current client', async () => {
+      mockPrismaService.project.update.mockResolvedValue(mockUpdatedProject);
+
+      await service.update(projectId, { ...updateDto, isDone: true });
+
+      const args = mockPrismaService.project.update.mock.calls[0][0] as {
+        where: unknown;
+        data: Record<string, unknown>;
+      };
+      expect(args.where).toEqual({ id: projectId });
+      expect(args.data).not.toHaveProperty('clientId');
+      expect(args.data).toMatchObject({
+        name: updateDto.name,
+        description: updateDto.description,
+        requesterName: updateDto.requesterName,
+        location: updateDto.location,
+        isDone: true,
+      });
+      expect(args.data.estimatedAmount).toEqual(
+        new Prisma.Decimal(updateDto.estimatedAmount),
+      );
+    });
+
+    it('should refuse a different client and write nothing', async () => {
+      await expect(
+        service.update(projectId, { ...updateDto, clientId: 'client-3' }),
+      ).rejects.toThrow(ProjectClientChangeRequiresTransferError);
+
+      expect(mockPrismaService.project.update).not.toHaveBeenCalled();
+    });
+
+    it('should answer the refusal with a 400 and its own code', async () => {
+      const refusal = await service
+        .update(projectId, { ...updateDto, clientId: 'client-3' })
+        .catch((error: unknown) => error);
+
+      expect(refusal).toBeInstanceOf(ProjectClientChangeRequiresTransferError);
+      const error = refusal as ProjectClientChangeRequiresTransferError;
+      expect(error.getStatus()).toBe(400);
+      expect(error.code).toBe('PROJECT_CLIENT_CHANGE_REQUIRES_TRANSFER');
     });
 
     it('should throw ProjectNotFoundError when project does not exist', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
+
+      await expect(service.update(projectId, updateDto)).rejects.toThrow(
+        ProjectNotFoundError,
+      );
+      expect(mockPrismaService.project.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw ProjectNotFoundError when the project vanishes mid-update', async () => {
       const error = new PrismaClientKnownRequestError('', {
         code: PRISMA_ERROR_CODES.NOT_FOUND,
         clientVersion: '1.0.0',
@@ -545,12 +603,12 @@ describe('ProjectsService', () => {
 
       mockPrismaService.project.update.mockRejectedValue(error);
 
-      await expect(
-        service.update('clhp000000000000000000001', updateDto),
-      ).rejects.toThrow(ProjectNotFoundError);
+      await expect(service.update(projectId, updateDto)).rejects.toThrow(
+        ProjectNotFoundError,
+      );
     });
 
-    it('should throw ClientNotFoundError on invalid clientId', async () => {
+    it('should throw InitiatorNotFoundError on an invalid initiatorId, the only foreign key it writes', async () => {
       const error = new PrismaClientKnownRequestError('', {
         code: PRISMA_ERROR_CODES.FOREIGN_KEY_CONSTRAINT_FAILED,
         clientVersion: '1.0.0',
@@ -559,8 +617,8 @@ describe('ProjectsService', () => {
       mockPrismaService.project.update.mockRejectedValue(error);
 
       await expect(
-        service.update('clhp000000000000000000001', updateDto),
-      ).rejects.toThrow(ClientNotFoundError);
+        service.update(projectId, { ...updateDto, initiatorId: 'missing' }),
+      ).rejects.toThrow(InitiatorNotFoundError);
     });
 
     it('should throw ProjectAlreadyExistsError on duplicate project', async () => {
@@ -571,9 +629,9 @@ describe('ProjectsService', () => {
 
       mockPrismaService.project.update.mockRejectedValue(error);
 
-      await expect(
-        service.update('clhp000000000000000000001', updateDto),
-      ).rejects.toThrow(ProjectAlreadyExistsError);
+      await expect(service.update(projectId, updateDto)).rejects.toThrow(
+        ProjectAlreadyExistsError,
+      );
     });
   });
 
