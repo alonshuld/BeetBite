@@ -43,9 +43,19 @@ import { useProfitSimulation } from "@/features/simulator/useProfitSimulation";
 import { FormRow } from "@/components/molecules/FormGroup";
 import { useLang } from "@/contexts/useLang";
 import { useFieldCheck } from "@/hooks/useFieldCheck";
+import { useOverIncomeConfirm } from "@/hooks/useOverIncomeConfirm";
 import { useToast } from "@/contexts/useToast";
 import { formatISODate } from "@/utils/formatMonth";
 import { computeSubcontractorRemainder } from "@/utils/subcontractorPayment";
+import {
+  NEW_REPORT,
+  goesOverIncome,
+  sumAmounts,
+} from "@/utils/paymentsOverIncome";
+import {
+  draftIncomeAmount,
+  isBlankIncomeDraft,
+} from "@/utils/incomeEntryDraft";
 
 interface CorpPaymentDraft {
   supplierId: string;
@@ -83,6 +93,7 @@ export default function ReportsPage() {
   const { t, lang } = useLang();
   const { toast } = useToast();
   const checkFields = useFieldCheck();
+  const { confirmOverIncome, overIncomeModal } = useOverIncomeConfirm();
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
@@ -238,25 +249,27 @@ export default function ReportsPage() {
     setModalOpen(true);
   }
 
-  async function handleSave() {
-    const validEntries = incomeEntries.filter((e) => e.amount !== "");
+  function handleSave() {
     if (
       !checkFields([
         [t("client"), !clientId && "missing"],
         [t("project"), !projectId && "missing"],
-        [t("incomeILS"), validEntries.length === 0 && "missing"],
       ])
     )
       return;
+    // Income is optional: no row at all is saved as a single income of 0.
+    const incomeDto = incomeEntries
+      .filter((e) => !isBlankIncomeDraft(e))
+      .map((e) => ({
+        amount: draftIncomeAmount(e.amount),
+        incomeDate: e.incomeDate || undefined,
+        tag: e.tag.trim() || null,
+      }));
     const dto: CreateProjectReportDto = {
       projectId,
       subcontractorId: subcontractorId || undefined,
       date: reportMonth + "-01",
-      incomeEntries: validEntries.map((e) => ({
-        amount: Number(e.amount),
-        incomeDate: e.incomeDate || undefined,
-        tag: e.tag.trim() || null,
-      })),
+      incomeEntries: incomeDto,
       profitMargin: Number(profitMarginPercent) || undefined,
       supplierPayments: corpPayments
         .filter((cp) => cp.supplierId !== "")
@@ -267,6 +280,15 @@ export default function ReportsPage() {
         })),
       initiatorIncome: initiatorIncome ? Number(initiatorIncome) : undefined,
     };
+    const overIncome = goesOverIncome(NEW_REPORT, {
+      income: sumAmounts(incomeDto),
+      payments: sumAmounts(dto.supplierPayments),
+    });
+    const projectName = projects.find((p) => p.id === projectId)?.name ?? "";
+    confirmOverIncome(overIncome ? [projectName] : [], () => void submit(dto));
+  }
+
+  async function submit(dto: CreateProjectReportDto) {
     const result = await createReport(dto);
     // A rejected write has already toasted its reason — keep the form open
     // so the user can correct it instead of re-entering everything.
@@ -466,7 +488,7 @@ export default function ReportsPage() {
       <FormModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        onSubmit={() => void handleSave()}
+        onSubmit={handleSave}
         title={`${t("add")} ${t("projectReports")}`}
         loading={saving}
         large
@@ -671,6 +693,7 @@ export default function ReportsPage() {
           )}
         </div>
       </FormModal>
+      {overIncomeModal}
 
       <ExportReportPdfModal
         report={exportReport}

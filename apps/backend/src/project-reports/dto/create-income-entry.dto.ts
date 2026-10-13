@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsISO8601,
   IsNumber,
@@ -7,16 +7,22 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateIncomeEntryDto {
+  // Income is optional: a report can be opened before any amount is agreed
+  // for the month. Omitted or null means 0, never a missing value — every
+  // figure downstream sums these amounts.
+  @Transform(({ value }: { value: unknown }) => value ?? 0)
   @IsNumber()
   @Min(0)
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 50000,
-    description: 'Income amount for this entry',
+    description: 'Income amount for this entry. Omitted or null means 0',
     minimum: 0,
+    default: 0,
   })
-  amount!: number;
+  amount: number = 0;
 
   @IsOptional()
   @IsISO8601()
