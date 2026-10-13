@@ -823,6 +823,40 @@ describe('PdfExportService', () => {
       expect(html).toContain('₪4,000');
     });
 
+    // A report whose supplier payments outrun its income leaves the
+    // subcontractor a negative remainder. It is still that client's project
+    // for the month, so it keeps its card and counts towards the totals.
+    it('keeps a project whose subcontractor remainder is negative', async () => {
+      mockProjectReportsService.findProjectReportsInMonth.mockResolvedValue([
+        reportsForClient1[0],
+        {
+          ...reportsForClient1[1],
+          totalIncome: 1,
+          incomeEntries: [{ id: 'e2', amount: 1, incomeDate: null, tag: null }],
+          supplierPayments: [
+            {
+              id: 'sp2',
+              amount: 5000,
+              vatPercentage: null,
+              vatAmount: null,
+              effectiveTotal: 5000,
+              supplier: { id: 's2', name: 'Plumbing Ltd' },
+            },
+          ],
+        },
+      ]);
+
+      const html = await renderSimHtml({ ...simDto, lang: 'en' });
+
+      expect(html.split('class="card"').length - 1).toBe(2);
+      expect(html).toContain('Riverside');
+      expect(html).toContain('Plumbing Ltd');
+      // 1 - 1 × 20% - 5,000 = -4,999.2, printed in whole shekels.
+      expect(html).toContain('₪-4,999');
+      // Client total: 7,500 (project-1 at 15%) + (-4,999.2).
+      expect(html).toContain('₪2,501');
+    });
+
     it('renders one card per project and nothing else per project', async () => {
       const html = await renderSimHtml();
 
