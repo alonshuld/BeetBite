@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vite-plus/test";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import ProjectReportsPage from "./ProjectReportsPage";
@@ -339,10 +339,113 @@ describe("ProjectReportsPage", () => {
     expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
   });
 
-  it("fires delete when removing an income entry", async () => {
+  // Removing the only income entry leaves the 1,500 of supplier payments
+  // above an income of 0, so the removal asks first.
+  it("fires delete when removing an income entry, once the user confirms", async () => {
     renderPage();
     await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]);
+    expect(deleteEntrySpy).not.toHaveBeenCalled();
+    expect(screen.getByText("Payments exceed income")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Save anyway" }));
     expect(deleteEntrySpy).toHaveBeenCalledWith("ie1");
+  });
+
+  it("keeps the income entry when the user backs out of the warning", async () => {
+    renderPage();
+    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]);
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(deleteEntrySpy).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText("Payments exceed income"),
+    ).not.toBeInTheDocument();
+  });
+
+  // mockDetail: income 10,000, supplier payments 1,500.
+  describe("supplier payments above the report's income", () => {
+    async function addPayment(amount: string) {
+      await userEvent.click(
+        screen.getByRole("button", { name: "+ Manpower / Supplier Payments" }),
+      );
+      await userEvent.selectOptions(
+        screen.getByDisplayValue("— Manpower / Supplier —"),
+        "co1",
+      );
+      await userEvent.type(screen.getByLabelText("Amount (₪)"), amount);
+      await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    }
+
+    it("adds a payment that keeps within the income without asking", async () => {
+      const createCorpSpy = vi.fn().mockResolvedValue({ data: {} });
+      vi.mocked(useCreateSupplierPaymentMutation).mockReturnValue(
+        mut(createCorpSpy),
+      );
+      renderPage();
+      // 1,500 + 8,500 = 10,000: level with the income, not above it.
+      await addPayment("8500");
+
+      expect(screen.queryByText("Payments exceed income")).toBeNull();
+      expect(createCorpSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 8500, projectReportId: "r1" }),
+      );
+    });
+
+    it("asks before adding a payment that takes the report over", async () => {
+      const createCorpSpy = vi.fn().mockResolvedValue({ data: {} });
+      vi.mocked(useCreateSupplierPaymentMutation).mockReturnValue(
+        mut(createCorpSpy),
+      );
+      renderPage();
+      await addPayment("8501");
+
+      expect(createCorpSpy).not.toHaveBeenCalled();
+      const warning = screen.getByRole("dialog", {
+        name: "Payments exceed income",
+      });
+      expect(warning).toHaveTextContent("Tower Block");
+
+      await userEvent.click(
+        within(warning).getByRole("button", { name: "Save anyway" }),
+      );
+      expect(createCorpSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 8501 }),
+      );
+    });
+
+    it("asks before lowering the income below the payments in the edit modal", async () => {
+      renderPage();
+      await userEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+      const amount = screen.getByDisplayValue("10000");
+      await userEvent.clear(amount);
+      await userEvent.type(amount, "1000");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateEntrySpy).not.toHaveBeenCalled();
+      await userEvent.click(
+        within(
+          screen.getByRole("dialog", { name: "Payments exceed income" }),
+        ).getByRole("button", { name: "Save anyway" }),
+      );
+      expect(updateEntrySpy).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "ie1", amount: 1000 }),
+      );
+    });
+
+    it("saves an existing income emptied in the edit modal as 0, not deleted", async () => {
+      renderPage();
+      await userEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+      await userEvent.clear(screen.getByDisplayValue("10000"));
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Save anyway" }),
+      );
+
+      expect(deleteEntrySpy).not.toHaveBeenCalled();
+      expect(updateEntrySpy).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "ie1", amount: 0 }),
+      );
+    });
   });
 
   it("shows the entry's tag in place of the generic income label", () => {

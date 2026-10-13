@@ -82,6 +82,16 @@ function withFlattenedInitiator<
   } as WithFlattenedInitiator<T>;
 }
 
+/**
+ * Income is optional on a report: none given means a single entry of 0, so
+ * every report still carries one income row to show, edit and export.
+ */
+function withDefaultIncome(
+  entries: CreateIncomeEntryDto[] | undefined,
+): CreateIncomeEntryDto[] {
+  return entries?.length ? entries : [{ amount: 0 }];
+}
+
 @Injectable()
 export class ProjectReportsService {
   private readonly logger = new Logger(ProjectReportsService.name);
@@ -197,12 +207,13 @@ export class ProjectReportsService {
     const enriched = await this.enrichCreateProjectReportDto(
       createProjectReportDto,
     );
+    const incomeEntries = withDefaultIncome(enriched.incomeEntries);
 
     if (enriched.initiatorIncome !== undefined) {
       await this.validateInitiatorIncome(
         enriched.projectId,
         enriched.initiatorIncome,
-        enriched.incomeEntries.reduce((sum, e) => sum + e.amount, 0),
+        incomeEntries.reduce((sum, e) => sum + e.amount, 0),
       );
     }
 
@@ -220,7 +231,7 @@ export class ProjectReportsService {
             subcontractor: { connect: { id: enriched.subcontractorId } },
             incomeEntries: {
               createMany: {
-                data: enriched.incomeEntries.map((e) => ({
+                data: incomeEntries.map((e) => ({
                   amount: new Prisma.Decimal(e.amount),
                   incomeDate: e.incomeDate ? new Date(e.incomeDate) : null,
                   tag: e.tag?.trim() || null,
@@ -512,6 +523,11 @@ export class ProjectReportsService {
 
     if (!existing) throw new ProjectReportNotFoundError(id);
 
+    // Omitted leaves the stored rows alone; sent, even empty, replaces them.
+    const incomeEntries =
+      updateProjectReportDto.incomeEntries &&
+      withDefaultIncome(updateProjectReportDto.incomeEntries);
+
     const storedInitiatorIncome = existing.initiatorIncome?.toNumber() ?? null;
     // null clears the value: nothing left to validate against the income.
     const initiatorIncomeClearing =
@@ -525,16 +541,13 @@ export class ProjectReportsService {
       initiatorIncomeChanging ||
       (storedInitiatorIncome !== null &&
         !initiatorIncomeClearing &&
-        updateProjectReportDto.incomeEntries)
+        incomeEntries)
     ) {
       // incomeEntries may be omitted on an update that only touches other
       // fields — the current total then has to come from what's already
       // stored, not from an empty replacement list.
-      const totalIncome = updateProjectReportDto.incomeEntries
-        ? updateProjectReportDto.incomeEntries.reduce(
-            (sum, e) => sum + e.amount,
-            0,
-          )
+      const totalIncome = incomeEntries
+        ? incomeEntries.reduce((sum, e) => sum + e.amount, 0)
         : ((
             await this.prismaService.projectReportIncome.aggregate({
               where: { projectReportId: id },
@@ -560,7 +573,7 @@ export class ProjectReportsService {
       projectId: existing.projectId,
       date:
         updateProjectReportDto.date ?? existing.date.toISOString().slice(0, 10),
-      incomeEntries: updateProjectReportDto.incomeEntries ?? [],
+      incomeEntries: incomeEntries ?? [],
       supplierPayments: updateProjectReportDto.supplierPayments ?? [],
     });
 
@@ -575,11 +588,11 @@ export class ProjectReportsService {
               ? initiatorIncome
               : new Prisma.Decimal(initiatorIncome),
           subcontractor: { connect: { id: enriched.subcontractorId } },
-          incomeEntries: updateProjectReportDto.incomeEntries
+          incomeEntries: incomeEntries
             ? {
                 deleteMany: {},
                 createMany: {
-                  data: updateProjectReportDto.incomeEntries.map((e) => ({
+                  data: incomeEntries.map((e) => ({
                     amount: new Prisma.Decimal(e.amount),
                     incomeDate: e.incomeDate ? new Date(e.incomeDate) : null,
                     tag: e.tag?.trim() || null,

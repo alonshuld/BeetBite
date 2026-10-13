@@ -170,6 +170,27 @@ describe('ProjectReportsService Integration Tests', () => {
       expect(result.profitMargin).toBe(15.5);
     });
 
+    it('should store a single income entry of 0 when no income is given', async () => {
+      const result = await service.create({
+        projectId,
+        subcontractorId,
+        date: testDateStr,
+        profitMargin: 10,
+        supplierPayments: [{ supplierId: supplierIds[0], amount: 500 }],
+      });
+
+      expect(result.totalIncome).toBe(0);
+      const entries = await prismaService.projectReportIncome.findMany({
+        where: { projectReportId: result.id },
+      });
+      expect(entries).toHaveLength(1);
+      expect(entries[0].amount.toNumber()).toBe(0);
+      expect(entries[0].incomeDate).toBeNull();
+
+      const detail = await service.findOne(result.id);
+      expect(detail.subcontractor.payment).toBe(-500);
+    });
+
     it('should enrich project report with previous month data when fields are missing', async () => {
       const createDto: CreateProjectReportDto = {
         projectId,

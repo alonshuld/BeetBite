@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import {
   ButtonGhost,
   ButtonDanger,
@@ -24,10 +24,17 @@ export function Modal({
   large = false,
   footer,
 }: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      // A confirmation can open over a form; Escape closes only the dialog
+      // on top (the last one in the document), never the form beneath it.
+      const dialogs = document.querySelectorAll('[role="dialog"]');
+      if (dialogs[dialogs.length - 1] !== dialogRef.current) return;
+      onClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -41,6 +48,7 @@ export function Modal({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -79,6 +87,10 @@ interface ConfirmModalProps {
   message: string;
   title?: string;
   loading?: boolean;
+  /** Confirm button text. Defaults to "Delete". */
+  confirmLabel?: string;
+  /** "danger" for destructive actions (default), "primary" for a go-ahead. */
+  tone?: "danger" | "primary";
 }
 
 export function ConfirmModal({
@@ -88,8 +100,11 @@ export function ConfirmModal({
   message,
   title,
   loading,
+  confirmLabel,
+  tone = "danger",
 }: ConfirmModalProps) {
   const { t } = useLang();
+  const ConfirmButton = tone === "primary" ? ButtonPrimary : ButtonDanger;
   return (
     <Modal
       open={open}
@@ -100,9 +115,9 @@ export function ConfirmModal({
           <ButtonGhost onClick={onClose} disabled={loading}>
             {t("cancel")}
           </ButtonGhost>
-          <ButtonDanger onClick={onConfirm} disabled={loading}>
-            {loading ? "…" : t("delete")}
-          </ButtonDanger>
+          <ConfirmButton onClick={onConfirm} disabled={loading}>
+            {loading ? "…" : (confirmLabel ?? t("delete"))}
+          </ConfirmButton>
         </>
       }
     >

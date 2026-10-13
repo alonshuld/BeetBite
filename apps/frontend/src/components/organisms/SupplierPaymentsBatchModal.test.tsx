@@ -59,8 +59,18 @@ describe("SupplierPaymentsBatchModal", () => {
       ],
     } as unknown as ReturnType<typeof useGetSuppliersQuery>);
     setReports([
-      { id: "r1", project: { id: "p1", name: "Tower Block" } },
-      { id: "r2", project: { id: "p2", name: "Bridge" } },
+      {
+        id: "r1",
+        project: { id: "p1", name: "Tower Block" },
+        totalIncome: 100000,
+        supplierPayments: [],
+      },
+      {
+        id: "r2",
+        project: { id: "p2", name: "Bridge" },
+        totalIncome: 100000,
+        supplierPayments: [],
+      },
     ]);
     setVatRate(18);
   });
@@ -251,6 +261,92 @@ describe("SupplierPaymentsBatchModal", () => {
       await userEvent.click(screen.getByRole("button", { name: /save/i }));
 
       expect(sentVat()).toEqual([true, false]);
+    });
+  });
+
+  // Lines above a report's income leave its subcontractor a negative amount:
+  // allowed, but asked about first. Lines on one report are judged together.
+  describe("payments above a report's income", () => {
+    beforeEach(() => {
+      setReports([
+        {
+          id: "r1",
+          project: { id: "p1", name: "Tower Block" },
+          totalIncome: 1000,
+          supplierPayments: [{ amount: 400 }],
+        },
+        {
+          id: "r2",
+          project: { id: "p2", name: "Bridge" },
+          totalIncome: 100000,
+          supplierPayments: [],
+        },
+      ]);
+    });
+
+    async function fillLines(lines: [report: string, amount: string][]) {
+      await userEvent.selectOptions(screen.getByLabelText(/Supplier/), "s1");
+      for (const [i, [report, amount]] of lines.entries()) {
+        if (i > 0) {
+          await userEvent.click(
+            screen.getByRole("button", { name: /Add line/ }),
+          );
+        }
+        await userEvent.selectOptions(
+          screen.getAllByLabelText(/Project/)[i],
+          report,
+        );
+        await userEvent.type(screen.getAllByLabelText(/Amount/)[i], amount);
+      }
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    }
+
+    it("saves without asking while the report stays within its income", async () => {
+      renderModal();
+      await fillLines([["r1", "600"]]);
+
+      expect(screen.queryByText("Payments exceed income")).toBeNull();
+      expect(batchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("asks before saving lines that take a report over, naming it", async () => {
+      renderModal();
+      // 400 already recorded + 300 + 301 = 1,001 > 1,000.
+      await fillLines([
+        ["r1", "300"],
+        ["r2", "5000"],
+        ["r1", "301"],
+      ]);
+
+      expect(batchSpy).not.toHaveBeenCalled();
+      expect(screen.getByText("Payments exceed income")).toBeInTheDocument();
+      expect(
+        screen.getByText(/report income for: Tower Block\./),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/Bridge\./)).toBeNull();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Save anyway" }),
+      );
+      expect(batchSpy).toHaveBeenCalledTimes(1);
+      expect(
+        (batchSpy.mock.calls[0][0] as { payments: unknown[] }).payments,
+      ).toHaveLength(3);
+    });
+
+    it("sends nothing when the user backs out, and keeps the lines", async () => {
+      renderModal();
+      await fillLines([["r1", "601"]]);
+      const warning = screen.getByRole("dialog", {
+        name: "Payments exceed income",
+      });
+      await userEvent.click(
+        within(warning).getByRole("button", { name: "Cancel" }),
+      );
+
+      expect(batchSpy).not.toHaveBeenCalled();
+      expect(screen.queryByText("Payments exceed income")).toBeNull();
+      expect(screen.getByLabelText(/Amount/)).toHaveValue(601);
     });
   });
 });

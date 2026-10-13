@@ -116,6 +116,8 @@ dbTest.describe('Supplier Payments Page', () => {
             subcontractorId: subcontractor.id,
             date: new Date('2026-05-01'),
             profitMargin: 20,
+            // Income above the payments, so saving never stops to warn.
+            incomeEntries: { create: [{ amount: 50000 }] },
           },
         });
       }
@@ -416,6 +418,8 @@ dbTest.describe('Supplier Payments Page', () => {
           subcontractorId: subcontractor.id,
           date: new Date('2026-05-01'),
           profitMargin: 20,
+          // Income above the payments, so saving never stops to warn.
+          incomeEntries: { create: [{ amount: 50000 }] },
         },
       });
       reportIds.push(report.id);

@@ -144,6 +144,36 @@ describe('ProjectReportsService', () => {
       expect(mockTx.projectReport.create).toHaveBeenCalledTimes(1);
     });
 
+    it.each([
+      ['omitted', undefined],
+      ['empty', []],
+    ])(
+      'writes a single income entry of 0 when income is %s',
+      async (_, incomeEntries) => {
+        mockTx.projectReport.create.mockResolvedValue(makeProjectReport());
+
+        await service.create({ ...baseCreateDto, incomeEntries });
+
+        expect(mockTx.projectReport.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              incomeEntries: {
+                createMany: {
+                  data: [
+                    {
+                      amount: new Prisma.Decimal(0),
+                      incomeDate: null,
+                      tag: null,
+                    },
+                  ],
+                },
+              },
+            }) as Record<string, unknown>,
+          }),
+        );
+      },
+    );
+
     describe('initiatorIncome validation', () => {
       it('rejects initiatorIncome when the project has no initiator', async () => {
         mockPrismaService.project.findUnique.mockResolvedValue({
@@ -726,6 +756,40 @@ describe('ProjectReportsService', () => {
         ];
         expect(args.data.initiatorIncome).toBeUndefined();
       });
+    });
+
+    it('replaces income with a single entry of 0 when sent an empty list', async () => {
+      mockPrismaService.projectReport.update.mockResolvedValue(
+        makeProjectReport(),
+      );
+
+      await service.update('report-1', { ...updateDto, incomeEntries: [] });
+
+      const [[args]] = mockPrismaService.projectReport.update.mock.calls as [
+        [{ data: Record<string, unknown> }],
+      ];
+      expect(args.data.incomeEntries).toEqual({
+        deleteMany: {},
+        createMany: {
+          data: [
+            { amount: new Prisma.Decimal(0), incomeDate: null, tag: null },
+          ],
+        },
+      });
+    });
+
+    it('leaves income rows untouched when incomeEntries is omitted', async () => {
+      mockPrismaService.projectReport.update.mockResolvedValue(
+        makeProjectReport(),
+      );
+      const { incomeEntries: _, ...withoutIncome } = updateDto;
+
+      await service.update('report-1', withoutIncome);
+
+      const [[args]] = mockPrismaService.projectReport.update.mock.calls as [
+        [{ data: Record<string, unknown> }],
+      ];
+      expect(args.data.incomeEntries).toBeUndefined();
     });
 
     it('should update report and use deleteMany+createMany for supplier payments', async () => {

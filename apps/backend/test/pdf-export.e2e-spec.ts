@@ -744,6 +744,66 @@ describe('PDF Export Integration Tests', () => {
         expect(html).toContain(`Busy Project ${String(i).padStart(2, '0')}`);
       }
     });
+
+    // Reported from the field: a project whose supplier payments outran its
+    // income (1 ₪ against 5,000 ₪) was missing from the simulated PDF. It is
+    // still the client's project for the month and must keep its card.
+    it('should render a project whose subcontractor remainder is negative', async () => {
+      const busy = await prisma.client.create({ data: { name: 'Busy Corp' } });
+      for (let i = 1; i <= 11; i++) {
+        await seedOwnedReport(busy.id, `Busy Project ${i}`);
+      }
+      const owner = await prisma.client.create({ data: { name: 'Owner Ltd' } });
+      await seedOwnedReport(owner.id, 'Healthy Tower');
+      const negative = await seedOwnedReport(owner.id, 'Negative Tower');
+      const report = await prisma.projectReport.findFirstOrThrow({
+        where: { projectId: negative.id },
+        include: { incomeEntries: true },
+      });
+      const supplier = await prisma.supplier.create({
+        data: { name: 'Plumbing Ltd' },
+      });
+      // Income cut to 1 and a payment added afterwards, as the user did.
+      await prisma.projectReportIncome.update({
+        where: { id: report.incomeEntries[0].id },
+        data: { amount: 1 },
+      });
+      await prisma.supplierPayment.create({
+        data: {
+          projectReportId: report.id,
+          supplierId: supplier.id,
+          amount: 5000,
+          date: new Date(MONTH),
+        },
+      });
+
+      const html = await renderSimulated(owner.id);
+
+      expect(html.split('class="card"').length - 1).toBe(2);
+      expect(html).toContain('Healthy Tower');
+      expect(html).toContain('Negative Tower');
+      expect(html).toContain('Plumbing Ltd');
+      // 1 - 10% - 5,000 = -4,999.1, printed in whole shekels.
+      expect(html).toContain('₪-4,999');
+    });
+
+    it('should render a report saved with no income as 0', async () => {
+      const owner = await prisma.client.create({ data: { name: 'Owner Ltd' } });
+      const project = await seedOwnedReport(owner.id, 'Zero Tower');
+      const report = await prisma.projectReport.findFirstOrThrow({
+        where: { projectId: project.id },
+        include: { incomeEntries: true },
+      });
+      await prisma.projectReportIncome.update({
+        where: { id: report.incomeEntries[0].id },
+        data: { amount: 0 },
+      });
+
+      const html = await renderSimulated(owner.id);
+
+      expect(html).toContain('Zero Tower');
+      expect(html).toContain('₪0');
+    });
   });
 
   describe('POST /api/v1/projects/reports/export-pdf', () => {

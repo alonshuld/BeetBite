@@ -171,8 +171,18 @@ describe("SupplierPaymentsPage", () => {
     } as unknown as ReturnType<typeof useGetSuppliersQuery>);
     vi.mocked(useGetProjectReportsQuery).mockReturnValue({
       data: [
-        { id: "r1", project: { id: "p1", name: "Tower Block" } },
-        { id: "r2", project: { id: "p2", name: "Bridge" } },
+        {
+          id: "r1",
+          project: { id: "p1", name: "Tower Block" },
+          totalIncome: 100000,
+          supplierPayments: [],
+        },
+        {
+          id: "r2",
+          project: { id: "p2", name: "Bridge" },
+          totalIncome: 100000,
+          supplierPayments: [],
+        },
       ],
     } as unknown as ReturnType<typeof useGetProjectReportsQuery>);
   });
@@ -437,6 +447,50 @@ describe("SupplierPaymentsPage", () => {
         description: "Tiles",
         includesVat: false,
       });
+    });
+
+    // r1 carries only this 5,000 line against an income of 6,000.
+    it("asks before saving a corrected amount above the report's income", async () => {
+      vi.mocked(useGetProjectReportsQuery).mockReturnValue({
+        data: [
+          {
+            id: "r1",
+            project: { id: "p1", name: "Tower Block" },
+            totalIncome: 6000,
+            supplierPayments: [{ amount: 5000 }],
+          },
+        ],
+      } as unknown as ReturnType<typeof useGetProjectReportsQuery>);
+      renderSupplierPaymentsPage();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Edit — Tower Block" }),
+      );
+      const amount = screen.getByLabelText(/Amount/);
+      await userEvent.clear(amount);
+      await userEvent.type(amount, "6000");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      // Level with the income: saved straight away.
+      expect(updateSpy).toHaveBeenCalledTimes(1);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Edit — Tower Block" }),
+      );
+      await userEvent.clear(screen.getByLabelText(/Amount/));
+      await userEvent.type(screen.getByLabelText(/Amount/), "6001");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(updateSpy).toHaveBeenCalledTimes(1);
+      const warning = screen.getByRole("dialog", {
+        name: "Payments exceed income",
+      });
+      await userEvent.click(
+        within(warning).getByRole("button", { name: "Save anyway" }),
+      );
+      expect(updateSpy).toHaveBeenCalledTimes(2);
+      expect(updateSpy).toHaveBeenLastCalledWith(
+        expect.objectContaining({ amount: 6001 }),
+      );
     });
 
     it("deletes a payment only after confirming", async () => {
