@@ -476,6 +476,52 @@ describe("ProjectsPage", () => {
     ).toBeInTheDocument();
   });
 
+  // The client is a history of assignments, changed only by a transfer from a
+  // chosen month. Editing it here would move the cached client alone and leave
+  // every month-scoped screen on the old one.
+  describe("client on an existing project", () => {
+    it("leaves the client selectable when adding a project", async () => {
+      renderProjectsPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: /add project/i }),
+      );
+
+      expect(screen.getByLabelText("Client")).toBeEnabled();
+      expect(
+        screen.queryByText(/to change the client, use transfer/i),
+      ).not.toBeInTheDocument();
+    });
+
+    it("locks the client when editing and points to the transfer", async () => {
+      renderProjectsPage();
+      await userEvent.click(screen.getAllByTitle("Edit")[0]);
+
+      const select = screen.getByLabelText("Client");
+      expect(select).toBeDisabled();
+      expect(select).toHaveValue("c1");
+      expect(
+        screen.getByText(/to change the client, use transfer/i),
+      ).toBeInTheDocument();
+    });
+
+    it("saves an edit with the project's current client unchanged", async () => {
+      noopMutation.mockClear();
+      renderProjectsPage();
+      await userEvent.click(screen.getAllByTitle("Edit")[0]);
+      await userEvent.clear(screen.getByLabelText("Name"));
+      await userEvent.type(screen.getByLabelText("Name"), "Tower Block II");
+      await userEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      expect(noopMutation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "p1",
+          name: "Tower Block II",
+          clientId: "c1",
+        }),
+      );
+    });
+  });
+
   // Initiator link is optional; the select defaults to "none" and lists
   // every managed initiator.
   describe("initiator link", () => {
