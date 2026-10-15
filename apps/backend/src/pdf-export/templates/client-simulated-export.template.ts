@@ -39,16 +39,9 @@ export interface ClientSimulatedProjectCard {
 
 export interface ClientSimulatedExportData {
   lang: 'en' | 'he';
-  contractorName: string;
-  contractorCompanyNumber: string;
-  contractorDescription: string | null;
   clientName: string;
   month: string;
   cards: ClientSimulatedProjectCard[];
-  companyPhone: string | null;
-  companyEmail: string | null;
-  companyAddress: string | null;
-  logo: string | null;
   colors: PdfColors;
   font: PdfFont;
 }
@@ -58,7 +51,6 @@ const LABELS = {
   he: {
     subtitlePrefix: 'דוח פרויקטים – חודש',
     client: 'לקוח:',
-    companyNumberPrefix: 'ח.פ.',
     totalIncome: 'סך הכנסות',
     totalSubcontractorPayments: 'סה"כ תשלומי קבלן',
     income: 'הכנסה',
@@ -73,7 +65,6 @@ const LABELS = {
   en: {
     subtitlePrefix: 'Projects Report –',
     client: 'Client:',
-    companyNumberPrefix: 'Reg.',
     totalIncome: 'Total Income',
     totalSubcontractorPayments: 'Total Sub Payments',
     income: 'Income',
@@ -99,20 +90,13 @@ const formatReceivedDate = (iso: string, lang: 'en' | 'he'): string =>
     timeZone: 'UTC',
   }).format(new Date(iso));
 
-const styles = (
-  dir: 'rtl' | 'ltr',
-  colors: PdfColors,
-  font: PdfFont,
-): string => {
+const styles = (colors: PdfColors, font: PdfFont): string => {
   const theme = resolvePdfTheme(colors);
   const { fontFaces, fontFamily } = pdfFontCss(font);
-  const start = dir === 'rtl' ? 'right' : 'left';
   return `
   ${fontFaces}
-  /* Later pages get a top margin so a card never starts at the paper's edge;
-     the first opens on the full-bleed header band. */
+  /* No contractor header or footer: the page is just the client's sheets. */
   @page { size: A4; margin: 22px 0; }
-  @page :first { margin-top: 0; }
   * { box-sizing: border-box; }
   body {
     font-family: ${fontFamily};
@@ -122,26 +106,11 @@ const styles = (
   }
   .content { padding: 0 30px; }
 
-  .header {
-    background: ${theme.primary};
-    color: ${theme.onPrimary};
-    padding: 20px 30px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 4px solid ${theme.secondary};
-  }
-  .header .identity { text-align: ${start}; }
-  .header .contractor-name { font-size: 24px; font-weight: 700; line-height: 1.15; }
-  .header .contractor-desc { font-size: 12px; opacity: 0.8; margin-top: 3px; }
-  .header .company-number { font-size: 11px; opacity: 0.65; margin-top: 4px; }
-  .header .logo { max-height: 62px; max-width: 150px; }
-
   .title {
     text-align: center;
     font-size: 20px;
     font-weight: 700;
-    margin: 22px 0 18px;
+    margin: 0 0 18px;
   }
   .title span { border-bottom: 3px solid ${theme.secondary}; padding-bottom: 6px; }
 
@@ -210,16 +179,6 @@ const styles = (
     font-size: 10px;
   }
   .initiator .initiator-name { font-size: 9.5px; font-weight: 600; margin-bottom: 2px; }
-
-  .footer {
-    margin: 24px 30px 0;
-    padding-top: 10px;
-    border-top: 1px solid #e8eaef;
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    color: #667;
-  }
 `;
 };
 
@@ -312,18 +271,9 @@ export const renderClientSimulatedExportHtml = (
 <html dir="${dir}" lang="${data.lang}">
 <head>
 <meta charset="UTF-8" />
-<style>${styles(dir, data.colors, data.font)}</style>
+<style>${styles(data.colors, data.font)}</style>
 </head>
 <body>
-  <div class="header">
-    <div class="identity">
-      <div class="contractor-name">${escapeHtml(data.contractorName)}</div>
-      ${data.contractorDescription ? `<div class="contractor-desc">${escapeHtml(data.contractorDescription)}</div>` : ''}
-      <div class="company-number">${t.companyNumberPrefix} ${escapeHtml(data.contractorCompanyNumber)}</div>
-    </div>
-    ${data.logo ? `<img class="logo" src="${data.logo}" />` : ''}
-  </div>
-
   <div class="content">
     <div class="title"><span>${t.subtitlePrefix} ${monthLabel}</span></div>
 
@@ -349,13 +299,6 @@ export const renderClientSimulatedExportHtml = (
     </div>
   </div>
 
-  <div class="footer">
-    <div>${[data.companyAddress, data.companyPhone]
-      .filter((value): value is string => Boolean(value))
-      .map(escapeHtml)
-      .join(' • ')}</div>
-    <div>${data.companyEmail ? escapeHtml(data.companyEmail) : ''}</div>
-  </div>
 </body>
 </html>`;
 };
