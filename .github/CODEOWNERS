@@ -1,0 +1,4 @@
+# Changes to CI/CD, infrastructure and deploy scripts need the owner's review.
+/.github/   @alonshuld
+/infra/     @alonshuld
+/deploy/    @alonshuld

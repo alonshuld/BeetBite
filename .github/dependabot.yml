@@ -1,0 +1,32 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    target-branch: dev
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: dev
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: docker
+    directories: [/apps/backend, /apps/frontend]
+    schedule:
+      interval: weekly
+    target-branch: dev
+
+  - package-ecosystem: terraform
+    directories: [/infra/terraform/bootstrap, /infra/terraform/production]
+    schedule:
+      interval: weekly
+    target-branch: dev
