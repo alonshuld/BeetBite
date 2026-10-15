@@ -24,6 +24,10 @@ updates:
     schedule:
       interval: weekly
     target-branch: dev
+    ignore:
+      # Odd Node majors are short-lived and never reach LTS; bump to the next LTS by hand.
+      - dependency-name: node
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: terraform
     directories: [/infra/terraform/bootstrap, /infra/terraform/production]
