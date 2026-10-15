@@ -857,6 +857,29 @@ describe('PdfExportService', () => {
       expect(html).toContain('₪2,501');
     });
 
+    // Only the client's sheets: no contractor header, logo or contact footer.
+    it("prints none of the contractor's identity or contact details", async () => {
+      mockCompanySettingsService.findOne.mockResolvedValue({
+        ...completeCompanySettings,
+        logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==',
+      });
+
+      const html = await renderSimHtml({ ...simDto, lang: 'en' });
+
+      expect(html).not.toContain('<img');
+      for (const value of [
+        completeCompanySettings.name,
+        completeCompanySettings.description,
+        completeCompanySettings.companyNumber,
+        completeCompanySettings.phone,
+        completeCompanySettings.email,
+        completeCompanySettings.addressStreet,
+        completeCompanySettings.addressCity,
+      ]) {
+        expect(html).not.toContain(value);
+      }
+    });
+
     it('renders one card per project and nothing else per project', async () => {
       const html = await renderSimHtml();
 

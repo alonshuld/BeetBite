@@ -215,16 +215,9 @@ export class PdfExportService {
 
     const html = renderClientSimulatedExportHtml({
       lang,
-      contractorName: companySettings.name,
-      contractorCompanyNumber: companySettings.companyNumber,
-      contractorDescription: companySettings.description,
       clientName: clientReports[0].project.client.name,
       month,
       cards,
-      companyPhone: companySettings.phone,
-      companyEmail: companySettings.email,
-      companyAddress: this.formatCompanyAddress(companySettings),
-      logo: companySettings.logo,
       colors: this.pdfColors(companySettings),
       font: this.pdfFont(companySettings),
     });
