@@ -25,10 +25,7 @@ import { useToast } from "@/contexts/useToast";
 import { formatYM } from "@/utils/formatMonth";
 import { Icon } from "@/components/atoms/Icon";
 import { LoadingState } from "@/components/molecules/LoadingState";
-
-function formatILS(n: number): string {
-  return `₪${n.toLocaleString("he-IL")}`;
-}
+import { formatILS } from "@/utils/formatMoney";
 
 type Align = "start" | "center" | "end";
 

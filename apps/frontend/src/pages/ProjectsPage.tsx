@@ -30,10 +30,7 @@ import {
 } from "@/components/atoms";
 import { FormModal, ConfirmModal } from "@/components/organisms/Modal";
 import { ProjectTransferModal } from "@/components/organisms/ProjectTransferModal";
-
-function formatILS(amount: number): string {
-  return `₪${amount.toLocaleString("he-IL")}`;
-}
+import { formatILS } from "@/utils/formatMoney";
 
 function projectStatus(p: Project): "active" | "future" | "closed" {
   if (p.isDone) return "closed";

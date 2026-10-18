@@ -242,6 +242,33 @@ describe("SupplierPaymentsPage", () => {
     expect(screen.getAllByText(/₪/).length).toBeGreaterThan(0);
   });
 
+  it("shows fractional amounts with exactly two decimals", () => {
+    vi.mocked(useGetSupplierPaymentsByMonthQuery).mockReturnValue({
+      data: {
+        ...mockDataWithVat,
+        suppliersPayments: [
+          {
+            ...mockDataWithVat.suppliersPayments[0],
+            projectPayments: [
+              {
+                ...mockDataWithVat.suppliersPayments[0].projectPayments[0],
+                amount: 1234.5,
+                effectiveTotal: 1444.365,
+              },
+            ],
+            total: 1444.365,
+          },
+        ],
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useGetSupplierPaymentsByMonthQuery>);
+    renderSupplierPaymentsPage();
+
+    expect(screen.getByText("₪1,234.50")).toBeInTheDocument();
+    // The row total and the grand total both round to two places.
+    expect(screen.getAllByText("₪1,444.37").length).toBeGreaterThan(1);
+  });
+
   // The percentage is never typed: it is the global rate for the payment's
   // month. The user only chooses whether a payment carries VAT.
   describe("VAT toggle", () => {

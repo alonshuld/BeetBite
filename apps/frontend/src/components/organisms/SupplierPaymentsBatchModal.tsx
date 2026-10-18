@@ -17,6 +17,7 @@ import { useFieldCheck } from "@/hooks/useFieldCheck";
 import { useToast } from "@/contexts/useToast";
 import { useOverIncomeConfirm } from "@/hooks/useOverIncomeConfirm";
 import { goesOverIncome, sumAmounts } from "@/utils/paymentsOverIncome";
+import { formatNumber } from "@/utils/formatMoney";
 
 interface DraftRow {
   projectReportId: string;
@@ -277,7 +278,7 @@ export function SupplierPaymentsBatchModal({
             <div className="text-sm text-text-muted">
               {t("runningTotal")}:{" "}
               <span className="text-text font-semibold">
-                ₪{runningTotal.toLocaleString("he-IL")}
+                ₪{formatNumber(runningTotal)}
               </span>
             </div>
           </div>
