@@ -98,6 +98,58 @@ describe("MonthlyIncomePage", () => {
     ).toBeInTheDocument();
   });
 
+  describe("alphabetical order", () => {
+    /** A client with one minimal project per name, each received in full. */
+    function client(id: string, name: string, projects: string[]) {
+      return {
+        ...mockItems[0],
+        clientId: id,
+        clientName: name,
+        projects: projects.map((projectName, i) => ({
+          ...mockItems[0].projects[0],
+          projectId: `${id}-p${i}`,
+          projectName,
+          incomeEntries: [
+            { ...mockItems[0].projects[0].incomeEntries[0], id: `${id}-e${i}` },
+          ],
+        })),
+      };
+    }
+
+    beforeEach(() => {
+      setQuery({
+        data: [
+          client("c3", "Zeta Homes", ["Z1"]),
+          client("c1", "Acme Corp", ["Tower Block", "Apartments", "Mall"]),
+          client("c2", "Beta Build", ["B1"]),
+        ],
+        isLoading: false,
+      });
+    });
+
+    it("lists the clients by name", () => {
+      renderPage();
+
+      expect(
+        screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+      ).toEqual(["Acme Corp", "Beta Build", "Zeta Homes"]);
+    });
+
+    it("lists each client's projects by name", () => {
+      renderPage();
+
+      const acme = screen
+        .getByRole("heading", { name: "Acme Corp" })
+        .closest("div.rounded-lg") as HTMLElement;
+      const rows = within(acme).getAllByRole("row").slice(1);
+      expect(rows.map((r) => r.firstElementChild?.textContent)).toEqual([
+        "Apartments",
+        "Mall",
+        "Tower Block",
+      ]);
+    });
+  });
+
   it("renders a card per client", () => {
     renderPage();
     expect(

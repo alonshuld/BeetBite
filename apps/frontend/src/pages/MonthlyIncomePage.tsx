@@ -152,6 +152,16 @@ export default function MonthlyIncomePage() {
     );
   }
 
+  // Clients by name, and each client's projects by name.
+  const sortedItems = [...items]
+    .sort((a, b) => a.clientName.localeCompare(b.clientName))
+    .map((item) => ({
+      ...item,
+      projects: [...item.projects].sort((a, b) =>
+        a.projectName.localeCompare(b.projectName),
+      ),
+    }));
+
   const grandTotalIncome = items.reduce((sum, i) => sum + i.totalIncome, 0);
   const grandTotalProfit = items.reduce((sum, i) => sum + i.totalProfit, 0);
 
@@ -188,7 +198,7 @@ export default function MonthlyIncomePage() {
         />
       ) : (
         <div className="flex flex-col gap-4">
-          {items.map((item) => (
+          {sortedItems.map((item) => (
             <div
               key={item.clientId}
               className="rounded-lg border border-border bg-surface p-4"
