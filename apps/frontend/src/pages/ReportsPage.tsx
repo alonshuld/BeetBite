@@ -157,7 +157,9 @@ export default function ReportsPage() {
     reports.forEach((r) => {
       map.set(r.project.client.id, r.project.client);
     });
-    return Array.from(map.values());
+    return Array.from(map.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
   }, [reports]);
 
   useEffect(() => {
@@ -172,7 +174,9 @@ export default function ReportsPage() {
   const selectedClientReports = useMemo(
     () =>
       selectedClientId
-        ? reports.filter((r) => r.project.client.id === selectedClientId)
+        ? reports
+            .filter((r) => r.project.client.id === selectedClientId)
+            .sort((a, b) => a.project.name.localeCompare(b.project.name))
         : [],
     [reports, selectedClientId],
   );

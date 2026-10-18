@@ -165,6 +165,58 @@ describe("ReportsPage", () => {
     expect(screen.getByText("Acme Corp")).toBeInTheDocument();
   });
 
+  describe("alphabetical order", () => {
+    /** One report per (client, project), in deliberately unsorted order. */
+    function reportsFor(pairs: [client: string, project: string][]) {
+      return pairs.map(([client, project], i) => ({
+        ...mockReports[0],
+        id: `r${i}`,
+        project: {
+          ...mockReports[0].project,
+          id: `p-${project}`,
+          name: project,
+          client: { id: `c-${client}`, name: client },
+        },
+      }));
+    }
+
+    const clientNames = ["Acme Corp", "Beta Build", "Zeta Homes"];
+    const projectNames = ["Apartments", "Mall", "Tower Block"];
+
+    beforeEach(() => {
+      setReports(
+        reportsFor([
+          ["Zeta Homes", "Z1"],
+          ["Acme Corp", "Tower Block"],
+          ["Beta Build", "B1"],
+          ["Acme Corp", "Apartments"],
+          ["Acme Corp", "Mall"],
+        ]),
+      );
+    });
+
+    it("lists the client cards by name", () => {
+      renderPage();
+
+      const cards = screen
+        .getAllByRole("button")
+        .map((b) => clientNames.find((n) => b.textContent?.startsWith(n)))
+        .filter(Boolean);
+      expect(cards).toEqual(clientNames);
+    });
+
+    it("lists a client's project sheets by project name", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+
+      const sheets = screen
+        .getAllByRole("button")
+        .map((b) => b.textContent)
+        .filter((text) => projectNames.includes(text ?? ""));
+      expect(sheets).toEqual(projectNames);
+    });
+  });
+
   it("shows the empty state when there are no reports", () => {
     setReports([]);
     renderPage();
@@ -209,7 +261,7 @@ describe("ReportsPage", () => {
       date: "2025-03-01",
       project: {
         id: "p2",
-        name: "Riverside",
+        name: "Westside",
         description: "Low-rise block",
         location: "2 River Rd",
         requesterName: "Jane Doe",
