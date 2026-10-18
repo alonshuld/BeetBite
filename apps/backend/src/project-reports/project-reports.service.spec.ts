@@ -23,6 +23,7 @@ describe('ProjectReportsService', () => {
   const mockTx = {
     projectReport: {
       create: vi.fn(),
+      findFirst: vi.fn(),
     },
   };
 
@@ -142,6 +143,46 @@ describe('ProjectReportsService', () => {
         profitMargin: 10,
       });
       expect(mockTx.projectReport.create).toHaveBeenCalledTimes(1);
+    });
+
+    it("carries VAT over from the project's latest earlier report", async () => {
+      mockTx.projectReport.findFirst.mockResolvedValue({
+        incomeIncludesVat: true,
+      });
+      mockTx.projectReport.create.mockResolvedValue(makeProjectReport());
+
+      await service.create(baseCreateDto);
+
+      expect(mockTx.projectReport.findFirst).toHaveBeenCalledWith({
+        where: {
+          projectId: baseCreateDto.projectId,
+          date: { lt: new Date(baseCreateDto.date) },
+        },
+        orderBy: { date: 'desc' },
+        select: { incomeIncludesVat: true },
+      });
+      expect(mockTx.projectReport.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            incomeIncludesVat: true,
+          }) as Record<string, unknown>,
+        }),
+      );
+    });
+
+    it("starts without VAT on a project's first report", async () => {
+      mockTx.projectReport.findFirst.mockResolvedValue(null);
+      mockTx.projectReport.create.mockResolvedValue(makeProjectReport());
+
+      await service.create(baseCreateDto);
+
+      expect(mockTx.projectReport.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            incomeIncludesVat: false,
+          }) as Record<string, unknown>,
+        }),
+      );
     });
 
     it.each([

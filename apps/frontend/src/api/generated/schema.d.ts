@@ -601,6 +601,58 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/income/payments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Record a partial payment from the client */
+    post: operations["ClientPaymentsController_create"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/income/payments/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Correct a client payment's amount or date */
+    put: operations["ClientPaymentsController_update"];
+    post?: never;
+    /** Delete a client payment */
+    delete: operations["ClientPaymentsController_remove"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/income/reports/{id}/vat": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Set whether the client pays VAT on this month's income */
+    patch: operations["ClientPaymentsController_setVat"];
+    trace?: never;
+  };
   "/api/v1/company-settings": {
     parameters: {
       query?: never;
@@ -1993,22 +2045,84 @@ export interface components {
        */
       initiatorId?: Record<string, never> | null;
     };
+    ClientPaymentResponseDto: {
+      id: string;
+      projectReportId: string;
+      amount: number;
+      /** @example 2026-01-17T00:00:00.000Z */
+      paymentDate: string;
+    };
     MonthlyIncomeProjectDto: {
+      /** @description The project's report for the month */
+      reportId: string;
       projectId: string;
       projectName: string;
+      /** @description Who ordered the project (מזמין) */
+      requesterName: string;
+      /** @description Income for the month, excluding VAT */
       totalIncome: number;
+      /** @description Whether the client pays VAT on top this month */
+      incomeIncludesVat: boolean;
+      /** @description VAT rate for the month when VAT is on; null when off or no rate is configured for the month */
+      vatPercentage: number | null;
+      vatAmount: number;
+      /** @description What the client pays: income plus VAT */
+      totalWithVat: number;
+      /** @description Sum of the client's payments for the month */
       receivedIncome: number;
+      /** @description totalWithVat still unpaid, never below zero */
       pendingIncome: number;
       profit: number;
-      /** @description The individual income entries behind totalIncome, each received or pending by its incomeDate */
+      /** @description The individual income entries behind totalIncome */
       incomeEntries: components["schemas"]["IncomeEntryResponseDto"][];
+      /** @description The client's partial payments, oldest payment date first */
+      payments: components["schemas"]["ClientPaymentResponseDto"][];
     };
     MonthlyIncomeItemDto: {
       clientId: string;
       clientName: string;
       projects: components["schemas"]["MonthlyIncomeProjectDto"][];
       totalIncome: number;
+      totalVat: number;
+      totalWithVat: number;
+      totalReceived: number;
       totalProfit: number;
+    };
+    CreateClientPaymentDto: {
+      /**
+       * @description ID of the project report (project + month) the payment settles
+       * @example 123e4567-e89b-12d3-a456-426614174000
+       */
+      projectReportId: string;
+      /**
+       * @description The amount the client paid
+       * @example 1000
+       */
+      amount: number;
+      /**
+       * @description The day the money arrived
+       * @example 2026-01-17
+       */
+      paymentDate: string;
+    };
+    UpdateClientPaymentDto: {
+      /**
+       * @description The amount the client paid
+       * @example 1000
+       */
+      amount?: number;
+      /**
+       * @description The day the money arrived
+       * @example 2026-01-17
+       */
+      paymentDate?: string;
+    };
+    SetIncomeVatDto: {
+      /**
+       * @description Whether the client pays VAT on top of this month's income
+       * @example true
+       */
+      incomeIncludesVat: boolean;
     };
     CompanySettingsResponseDto: {
       /**
@@ -4190,6 +4304,148 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["MonthlyIncomeItemDto"][];
         };
+      };
+    };
+  };
+  ClientPaymentsController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateClientPaymentDto"];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientPaymentResponseDto"];
+        };
+      };
+      /** @description Invalid input, or the payment exceeds the amount owed */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Project report not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ClientPaymentsController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Client payment ID */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateClientPaymentDto"];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientPaymentResponseDto"];
+        };
+      };
+      /** @description Invalid input, or the payment exceeds the amount owed */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Client payment not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ClientPaymentsController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Client payment ID */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Client payment not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ClientPaymentsController_setVat: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Project report ID */
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetIncomeVatDto"];
+      };
+    };
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Turning VAT off would leave recorded payments above the income */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Project report not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

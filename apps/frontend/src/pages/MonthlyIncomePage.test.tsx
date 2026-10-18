@@ -3,72 +3,138 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import MonthlyIncomePage from "./MonthlyIncomePage";
+import type {
+  MonthlyIncomeItem,
+  MonthlyIncomeProject,
+} from "@/api/endpoints/income";
 
 vi.mock("react-router-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router-dom")>();
   return { ...actual, useOutletContext: vi.fn(() => ({ month: "2025-03" })) };
 });
 
+const createPayment = vi.fn();
+const updatePayment = vi.fn();
+const deletePayment = vi.fn();
+const setIncomeVat = vi.fn();
 vi.mock("@/api/endpoints/income", () => ({
   useGetMonthlyIncomeQuery: vi.fn(),
-}));
-
-const updateIncomeEntry = vi.fn();
-vi.mock("@/api/endpoints/project-reports", () => ({
-  useUpdateIncomeEntryMutation: () => [updateIncomeEntry, { isLoading: false }],
+  useCreateClientPaymentMutation: () => [createPayment, {}],
+  useUpdateClientPaymentMutation: () => [updatePayment, {}],
+  useDeleteClientPaymentMutation: () => [deletePayment, {}],
+  useSetIncomeVatMutation: () => [setIncomeVat, { isLoading: false }],
 }));
 
 import { useGetMonthlyIncomeQuery } from "@/api/endpoints/income";
 
-const mockItems = [
+function project(
+  overrides: Partial<MonthlyIncomeProject> &
+    Pick<MonthlyIncomeProject, "projectId" | "projectName">,
+): MonthlyIncomeProject {
+  const totalIncome = overrides.totalIncome ?? 1000;
+  return {
+    reportId: `r-${overrides.projectId}`,
+    requesterName: "Dana",
+    totalIncome,
+    incomeIncludesVat: false,
+    vatPercentage: null,
+    vatAmount: 0,
+    totalWithVat: totalIncome,
+    receivedIncome: 0,
+    pendingIncome: totalIncome,
+    profit: totalIncome / 10,
+    incomeEntries: [
+      {
+        id: `e-${overrides.projectId}`,
+        amount: totalIncome,
+        incomeDate: null,
+        tag: null,
+      },
+    ],
+    payments: [],
+    ...overrides,
+  };
+}
+
+// Tower Block: 5,000 + 18% VAT = 5,900, paid in full in two payments.
+// Bridge: 3,000, no VAT, 1,000 paid. Annex: 2,000, nothing paid.
+const tower = project({
+  projectId: "p1",
+  projectName: "Tower Block",
+  requesterName: "Dana",
+  totalIncome: 5000,
+  incomeIncludesVat: true,
+  vatPercentage: 18,
+  vatAmount: 900,
+  totalWithVat: 5900,
+  receivedIncome: 5900,
+  pendingIncome: 0,
+  profit: 1000,
+  payments: [
+    {
+      id: "pay-1",
+      projectReportId: "r-p1",
+      amount: 3000,
+      paymentDate: "2025-03-05T00:00:00.000Z",
+    },
+    {
+      id: "pay-2",
+      projectReportId: "r-p1",
+      amount: 2900,
+      paymentDate: "2025-03-19T00:00:00.000Z",
+    },
+  ],
+});
+const bridge = project({
+  projectId: "p2",
+  projectName: "Bridge",
+  requesterName: "Eli",
+  totalIncome: 3000,
+  receivedIncome: 1000,
+  pendingIncome: 2000,
+  profit: 600,
+  incomeEntries: [
+    { id: "e2", amount: 1000, incomeDate: null, tag: "Frame" },
+    { id: "e3", amount: 2000, incomeDate: null, tag: null },
+  ],
+  payments: [
+    {
+      id: "pay-3",
+      projectReportId: "r-p2",
+      amount: 1000,
+      paymentDate: "2025-03-10T00:00:00.000Z",
+    },
+  ],
+});
+// Typed with stray spaces and different case — still the same requester.
+const annex = project({
+  projectId: "p3",
+  projectName: "Annex",
+  requesterName: " dana ",
+  totalIncome: 2000,
+  profit: 400,
+});
+
+const mockItems: MonthlyIncomeItem[] = [
   {
     clientId: "c1",
     clientName: "Acme Corp",
     totalIncome: 5000,
+    totalVat: 900,
+    totalWithVat: 5900,
+    totalReceived: 5900,
     totalProfit: 1000,
-    projects: [
-      {
-        projectId: "p1",
-        projectName: "Tower Block",
-        totalIncome: 5000,
-        receivedIncome: 5000,
-        pendingIncome: 0,
-        profit: 1000,
-        incomeEntries: [
-          {
-            id: "e1",
-            amount: 5000,
-            incomeDate: "2025-03-12T00:00:00.000Z",
-            tag: null,
-          },
-        ],
-      },
-    ],
+    projects: [tower],
   },
   {
     clientId: "c2",
     clientName: "Globex",
-    totalIncome: 3000,
-    totalProfit: 600,
-    projects: [
-      {
-        projectId: "p2",
-        projectName: "Bridge",
-        totalIncome: 3000,
-        receivedIncome: 0,
-        pendingIncome: 3000,
-        profit: 600,
-        incomeEntries: [
-          { id: "e2", amount: 1000, incomeDate: null, tag: "Frame" },
-          {
-            id: "e3",
-            amount: 2000,
-            incomeDate: "2025-03-20T00:00:00.000Z",
-            tag: null,
-          },
-        ],
-      },
-    ],
+    totalIncome: 5000,
+    totalVat: 0,
+    totalWithVat: 5000,
+    totalReceived: 1000,
+    totalProfit: 1000,
+    projects: [bridge, annex],
   },
 ];
 
@@ -81,39 +147,55 @@ function setQuery(value: Partial<ReturnType<typeof useGetMonthlyIncomeQuery>>) {
 function renderPage() {
   return renderWithProviders(<MonthlyIncomePage />, {
     preloadedState: { auth: { token: "test-token" } },
-    initialEntries: ["/monthly-income"],
+    initialEntries: ["/income"],
   });
+}
+
+function groupHeadings() {
+  return screen
+    .queryAllByRole("heading", { level: 2 })
+    .map((h) => h.textContent);
+}
+
+function rowOf(projectName: string) {
+  return screen.getByText(projectName).closest("tr") as HTMLElement;
+}
+
+function cardOf(heading: string) {
+  return screen
+    .getByRole("heading", { name: heading })
+    .closest("div.rounded-lg") as HTMLElement;
 }
 
 describe("MonthlyIncomePage", () => {
   beforeEach(() => {
     setQuery({ data: mockItems, isLoading: false });
-    updateIncomeEntry.mockReset();
-    updateIncomeEntry.mockReturnValue({ unwrap: () => Promise.resolve({}) });
+    for (const fn of [
+      createPayment,
+      updatePayment,
+      deletePayment,
+      setIncomeVat,
+    ])
+      fn.mockReset().mockResolvedValue({ data: {} });
   });
 
-  it("renders the page title", () => {
+  it("is titled Turnover Summary", () => {
     renderPage();
     expect(
-      screen.getByRole("heading", { name: "Monthly Income" }),
+      screen.getByRole("heading", { name: "Turnover Summary" }),
     ).toBeInTheDocument();
   });
 
   describe("alphabetical order", () => {
-    /** A client with one minimal project per name, each received in full. */
+    /** A client with one minimal project per name. */
     function client(id: string, name: string, projects: string[]) {
       return {
-        ...mockItems[0],
+        ...mockItems[1],
         clientId: id,
         clientName: name,
-        projects: projects.map((projectName, i) => ({
-          ...mockItems[0].projects[0],
-          projectId: `${id}-p${i}`,
-          projectName,
-          incomeEntries: [
-            { ...mockItems[0].projects[0].incomeEntries[0], id: `${id}-e${i}` },
-          ],
-        })),
+        projects: projects.map((projectName, i) =>
+          project({ projectId: `${id}-p${i}`, projectName }),
+        ),
       };
     }
 
@@ -130,19 +212,16 @@ describe("MonthlyIncomePage", () => {
 
     it("lists the clients by name", () => {
       renderPage();
-
-      expect(
-        screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-      ).toEqual(["Acme Corp", "Beta Build", "Zeta Homes"]);
+      expect(groupHeadings()).toEqual([
+        "Acme Corp",
+        "Beta Build",
+        "Zeta Homes",
+      ]);
     });
 
     it("lists each client's projects by name", () => {
       renderPage();
-
-      const acme = screen
-        .getByRole("heading", { name: "Acme Corp" })
-        .closest("div.rounded-lg") as HTMLElement;
-      const rows = within(acme).getAllByRole("row").slice(1);
+      const rows = within(cardOf("Acme Corp")).getAllByRole("row").slice(1);
       expect(rows.map((r) => r.firstElementChild?.textContent)).toEqual([
         "Apartments",
         "Mall",
@@ -152,27 +231,30 @@ describe("MonthlyIncomePage", () => {
   });
 
   describe("search", () => {
-    function clientHeadings() {
-      return screen
-        .queryAllByRole("heading", { level: 2 })
-        .map((h) => h.textContent);
-    }
-
-    it("filters by client name, keeping all its projects", async () => {
+    it("filters by group name, keeping all its projects", async () => {
       renderPage();
       await userEvent.type(screen.getByRole("searchbox"), "  GLOBEX ");
 
-      expect(clientHeadings()).toEqual(["Globex"]);
+      expect(groupHeadings()).toEqual(["Globex"]);
       expect(screen.getByText("Bridge")).toBeInTheDocument();
+      expect(screen.getByText("Annex")).toBeInTheDocument();
     });
 
     it("filters by project name", async () => {
       renderPage();
       await userEvent.type(screen.getByRole("searchbox"), "tower");
 
-      expect(clientHeadings()).toEqual(["Acme Corp"]);
-      expect(screen.getByText("Tower Block")).toBeInTheDocument();
+      expect(groupHeadings()).toEqual(["Acme Corp"]);
       expect(screen.queryByText("Bridge")).toBeNull();
+    });
+
+    it("finds a project by who ordered it", async () => {
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "eli");
+
+      expect(groupHeadings()).toEqual(["Globex"]);
+      expect(screen.getByText("Bridge")).toBeInTheDocument();
+      expect(screen.queryByText("Annex")).toBeNull();
     });
 
     it("says so when nothing matches, and restores everything when cleared", async () => {
@@ -180,50 +262,41 @@ describe("MonthlyIncomePage", () => {
       const box = screen.getByRole("searchbox");
       await userEvent.type(box, "zzz");
 
-      expect(clientHeadings()).toEqual([]);
+      expect(groupHeadings()).toEqual([]);
       expect(screen.getByText("No results")).toBeInTheDocument();
 
       await userEvent.clear(box);
-      expect(clientHeadings()).toEqual(["Acme Corp", "Globex"]);
+      expect(groupHeadings()).toEqual(["Acme Corp", "Globex"]);
     });
 
     it("keeps the month's grand total while filtering", async () => {
       renderPage();
       await userEvent.type(screen.getByRole("searchbox"), "bridge");
 
-      // 5,000 + 3,000 across both clients.
-      expect(screen.getByText("₪8,000")).toBeInTheDocument();
+      const total = screen
+        .getByText("Grand Total")
+        .closest("div") as HTMLElement;
+      expect(within(total).getByText("₪10,900")).toBeInTheDocument();
     });
   });
 
-  it("renders a card per client", () => {
+  it("renders the month's grand totals: price, VAT, total, received and profit", () => {
     renderPage();
-    expect(
-      screen.getByRole("heading", { name: "Acme Corp" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Globex" })).toBeInTheDocument();
+    const total = screen.getByText("Grand Total").closest("div") as HTMLElement;
+    const figure = (label: string) =>
+      within(total).getByText(label).nextElementSibling?.textContent;
+
+    expect(figure("Price")).toBe("₪10,000");
+    expect(figure("VAT")).toBe("₪900");
+    expect(figure("Total incl. VAT")).toBe("₪10,900");
+    expect(figure("Received")).toBe("₪6,900");
+    expect(figure("Profit")).toBe("₪2,000");
   });
 
-  it("renders each project row inside its client card", () => {
-    renderPage();
-    expect(screen.getByText("Tower Block")).toBeInTheDocument();
-    expect(screen.getByText("Bridge")).toBeInTheDocument();
-  });
-
-  it("renders the grand total summing all clients (income 8,000 / profit 1,600)", () => {
-    renderPage();
-    const totalRow = screen
-      .getByText("Grand Total")
-      .closest("div") as HTMLElement;
-    expect(within(totalRow).getByText("₪8,000")).toBeInTheDocument();
-    expect(within(totalRow).getByText("₪1,600")).toBeInTheDocument();
-  });
-
-  it("puts the grand total above the client list", () => {
+  it("puts the grand total above the groups", () => {
     renderPage();
     const total = screen.getByText("Grand Total");
     const firstClient = screen.getByText("Acme Corp");
-    // The month's totals lead the page, ahead of the per-client breakdown.
     expect(
       total.compareDocumentPosition(firstClient) &
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -245,60 +318,267 @@ describe("MonthlyIncomePage", () => {
     expect(screen.queryByText("Grand Total")).not.toBeInTheDocument();
   });
 
-  it("shows a single-entry project's status and date on the project row", () => {
-    renderPage();
-    const row = screen.getByText("Tower Block").closest("tr") as HTMLElement;
-    expect(within(row).getByText("Received")).toBeInTheDocument();
-    expect(within(row).getByLabelText("Income Date – Tower Block")).toHaveValue(
-      "2025-03-12",
-    );
-  });
+  describe("requester", () => {
+    it("shows who ordered each project next to its name", () => {
+      renderPage();
+      const header = within(cardOf("Acme Corp")).getAllByRole("columnheader");
+      expect(header.slice(0, 2).map((h) => h.textContent)).toEqual([
+        "Project",
+        "Requester",
+      ]);
+      const cells = within(rowOf("Tower Block")).getAllByRole("cell");
+      expect(cells[1]).toHaveTextContent("Dana");
+    });
 
-  it("lists each entry of a multi-entry project with its own status", () => {
-    renderPage();
-    const projectRow = screen.getByText("Bridge").closest("tr") as HTMLElement;
-    // The project row sums what is still outstanding.
-    expect(within(projectRow).getByText(/Pending/)).toHaveTextContent("₪3,000");
+    it("groups by requester on demand, merging names typed differently", async () => {
+      renderPage();
+      await userEvent.click(screen.getByRole("button", { name: "Requester" }));
 
-    const tagged = screen.getByText("Frame").closest("tr") as HTMLElement;
-    expect(within(tagged).getByText("Pending")).toBeInTheDocument();
-    expect(
-      within(tagged).getByLabelText("Income Date – Bridge – Frame"),
-    ).toHaveValue("");
+      expect(screen.getByRole("button", { name: "Requester" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(groupHeadings()).toEqual(["Dana", "Eli"]);
 
-    const untagged = screen
-      .getByText("Client Income")
-      .closest("tr") as HTMLElement;
-    expect(within(untagged).getByText("Received")).toBeInTheDocument();
-    expect(within(untagged).getByText("₪2,000")).toBeInTheDocument();
-  });
+      // Tower Block (Acme) and Annex (Globex) both belong to Dana.
+      const dana = cardOf("Dana");
+      expect(
+        within(dana)
+          .getAllByRole("checkbox")
+          .map((box) => box.getAttribute("aria-label")),
+      ).toEqual(["Include VAT — Annex", "Include VAT — Tower Block"]);
+      // The second column now names the client instead.
+      expect(within(dana).getAllByRole("columnheader")[1]).toHaveTextContent(
+        "Client",
+      );
+      expect(within(rowOf("Annex")).getAllByRole("cell")[1]).toHaveTextContent(
+        "Globex",
+      );
 
-  it("saves a new payment date on blur", () => {
-    renderPage();
-    const input = screen.getByLabelText("Income Date – Bridge – Frame");
-    fireEvent.change(input, { target: { value: "2025-03-25" } });
-    expect(updateIncomeEntry).not.toHaveBeenCalled();
-    fireEvent.blur(input);
-    expect(updateIncomeEntry).toHaveBeenCalledWith({
-      id: "e2",
-      incomeDate: "2025-03-25",
+      // Group totals: 5,900 + 2,000 owed, 5,900 received.
+      expect(within(dana).getByText("₪7,900")).toBeInTheDocument();
+    });
+
+    it("goes back to clients", async () => {
+      renderPage();
+      await userEvent.click(screen.getByRole("button", { name: "Requester" }));
+      await userEvent.click(screen.getByRole("button", { name: "Client" }));
+
+      expect(groupHeadings()).toEqual(["Acme Corp", "Globex"]);
     });
   });
 
-  it("marks income pending again when its date is cleared", () => {
-    renderPage();
-    const input = screen.getByLabelText("Income Date – Tower Block");
-    fireEvent.change(input, { target: { value: "" } });
-    fireEvent.keyDown(input, { key: "Enter" });
-    expect(updateIncomeEntry).toHaveBeenCalledWith({
-      id: "e1",
-      incomeDate: null,
+  describe("VAT", () => {
+    it("shows price, VAT and the total the client pays on the row", () => {
+      renderPage();
+      const cells = within(rowOf("Tower Block")).getAllByRole("cell");
+      expect(cells[2]).toHaveTextContent("₪5,000");
+      expect(cells[3]).toHaveTextContent("₪900");
+      expect(cells[4]).toHaveTextContent("₪5,900");
+    });
+
+    it("ticks the box for a month that carries VAT", () => {
+      renderPage();
+      expect(
+        screen.getByRole("checkbox", { name: "Include VAT — Tower Block" }),
+      ).toBeChecked();
+      expect(
+        screen.getByRole("checkbox", { name: "Include VAT — Bridge" }),
+      ).not.toBeChecked();
+    });
+
+    it("saves the choice when the box is toggled", async () => {
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: "Include VAT — Bridge" }),
+      );
+      expect(setIncomeVat).toHaveBeenCalledWith({
+        reportId: "r-p2",
+        incomeIncludesVat: true,
+      });
+
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: "Include VAT — Tower Block" }),
+      );
+      expect(setIncomeVat).toHaveBeenCalledWith({
+        reportId: "r-p1",
+        incomeIncludesVat: false,
+      });
+    });
+
+    it("warns when VAT is on but the month has no rate yet", () => {
+      setQuery({
+        data: [
+          {
+            ...mockItems[0],
+            projects: [
+              {
+                ...tower,
+                vatPercentage: null,
+                vatAmount: 0,
+                totalWithVat: 5000,
+              },
+            ],
+          },
+        ],
+        isLoading: false,
+      });
+      renderPage();
+      expect(
+        within(rowOf("Tower Block")).getByRole("img", {
+          name: /No VAT rate is set for this month/,
+        }),
+      ).toBeInTheDocument();
     });
   });
 
-  it("does not save when the date is left unchanged", () => {
-    renderPage();
-    fireEvent.blur(screen.getByLabelText("Income Date – Tower Block"));
-    expect(updateIncomeEntry).not.toHaveBeenCalled();
+  describe("payments", () => {
+    it("marks each row's status", () => {
+      renderPage();
+      expect(
+        screen.getByRole("button", { name: "Paid — Tower Block" }),
+      ).toHaveAttribute("aria-pressed", "true");
+      expect(
+        screen.getByRole("button", { name: "Partial — Bridge" }),
+      ).toHaveAttribute("aria-pressed", "true");
+      expect(
+        screen.getByRole("button", { name: "Unpaid — Annex" }),
+      ).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("lists each payment with its date and amount", () => {
+      renderPage();
+      const list = screen.getByRole("list", { name: "Payments — Tower Block" });
+      const items = within(list).getAllByRole("listitem");
+      expect(items).toHaveLength(2);
+      expect(items[0]).toHaveTextContent("5 Mar 2025");
+      expect(items[0]).toHaveTextContent("₪3,000");
+      expect(items[1]).toHaveTextContent("19 Mar 2025");
+      expect(items[1]).toHaveTextContent("₪2,900");
+    });
+
+    it("lists each income entry of a multi-entry project under it", () => {
+      renderPage();
+      expect(
+        (screen.getByText("Frame").closest("tr") as HTMLElement).textContent,
+      ).toContain("₪1,000");
+      expect(
+        (screen.getByText("Client Income").closest("tr") as HTMLElement)
+          .textContent,
+      ).toContain("₪2,000");
+    });
+
+    it("records the outstanding balance in full with the date chosen", async () => {
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: "Paid — Bridge" }),
+      );
+
+      const amount = screen.getByLabelText("Amount (₪) — Bridge");
+      expect(amount).toHaveValue(2000);
+      const date = screen.getByLabelText("Payment date — Bridge");
+      fireEvent.change(date, { target: { value: "2025-03-28" } });
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(createPayment).toHaveBeenCalledWith({
+        projectReportId: "r-p2",
+        amount: 2000,
+        paymentDate: "2025-03-28",
+      });
+      expect(screen.queryByLabelText("Amount (₪) — Bridge")).toBeNull();
+    });
+
+    it("records a partial payment typed by the user", async () => {
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: "Partial — Annex" }),
+      );
+      await userEvent.type(
+        screen.getByLabelText("Amount (₪) — Annex"),
+        "750.5",
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(createPayment).toHaveBeenCalledWith(
+        expect.objectContaining({ projectReportId: "r-p3", amount: 750.5 }),
+      );
+    });
+
+    it("does not save without an amount", async () => {
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: "Partial — Annex" }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(createPayment).not.toHaveBeenCalled();
+    });
+
+    it("keeps the row open when the server refuses the payment", async () => {
+      createPayment.mockResolvedValue({ error: { status: 400 } });
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: "Partial — Annex" }),
+      );
+      await userEvent.type(screen.getByLabelText("Amount (₪) — Annex"), "9999");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(screen.getByLabelText("Amount (₪) — Annex")).toHaveValue(9999);
+    });
+
+    it("offers no full payment once the month is settled", () => {
+      renderPage();
+      expect(
+        screen.getByRole("button", { name: "Paid — Tower Block" }),
+      ).toBeDisabled();
+    });
+
+    it("deletes one payment", async () => {
+      renderPage();
+      const list = screen.getByRole("list", { name: "Payments — Tower Block" });
+      await userEvent.click(
+        within(within(list).getAllByRole("listitem")[1]).getByRole("button", {
+          name: "Delete",
+        }),
+      );
+      expect(deletePayment).toHaveBeenCalledWith("pay-2");
+    });
+
+    it("marking a month unpaid removes all its payments", async () => {
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", { name: "Unpaid — Tower Block" }),
+      );
+      expect(deletePayment.mock.calls).toEqual([["pay-1"], ["pay-2"]]);
+    });
+
+    it("corrects a payment's date when the picker loses focus", async () => {
+      renderPage();
+      const list = screen.getByRole("list", { name: "Payments — Bridge" });
+      await userEvent.click(
+        within(list).getByRole("button", { name: "10 Mar 2025" }),
+      );
+
+      const input = within(list).getByLabelText("Payment date");
+      fireEvent.change(input, { target: { value: "2025-03-12" } });
+      expect(updatePayment).not.toHaveBeenCalled();
+      fireEvent.blur(input);
+
+      expect(updatePayment).toHaveBeenCalledWith({
+        id: "pay-3",
+        paymentDate: "2025-03-12",
+      });
+    });
+
+    it("does not save a date left unchanged", async () => {
+      renderPage();
+      const list = screen.getByRole("list", { name: "Payments — Bridge" });
+      await userEvent.click(
+        within(list).getByRole("button", { name: "10 Mar 2025" }),
+      );
+      fireEvent.blur(within(list).getByLabelText("Payment date"));
+
+      expect(updatePayment).not.toHaveBeenCalled();
+    });
   });
 });

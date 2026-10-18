@@ -3,7 +3,7 @@ import { test as dbTest, expect } from '../fixtures/db.fixture';
 const BASE = 'http://localhost:5174';
 
 // The global month is pinned to 2026-05 by the db fixture, so all seeds use it.
-dbTest.describe('Monthly Income', () => {
+dbTest.describe('Turnover summary (ריכוז מחזורי)', () => {
   dbTest(
     'shows per-client / per-project income and profit breakdown',
     async ({ page, db }) => {
@@ -97,18 +97,18 @@ dbTest.describe('Monthly Income', () => {
   );
 
   dbTest(
-    'shows each income as received or pending and edits its payment date in place',
+    'records partial payments with their dates until the month is paid',
     async ({ page, db }) => {
-      const client = await db.client.create({ data: { name: 'Date Client' } });
+      const client = await db.client.create({ data: { name: 'Pay Client' } });
       const sub = await db.subcontractor.create({
-        data: { name: 'Date Worker', companyNumber: '515222007' },
+        data: { name: 'Pay Worker', companyNumber: '515222007' },
       });
       const project = await db.project.create({
         data: {
           clientId: client.id,
-          name: 'Date Project',
+          name: 'Pay Project',
           estimatedAmount: 300000,
-          description: 'income date edit',
+          description: 'client payments',
           requesterName: 'Test Requester',
           location: 'Test Location',
         },
@@ -119,53 +119,186 @@ dbTest.describe('Monthly Income', () => {
           subcontractorId: sub.id,
           date: new Date('2026-05-01'),
           profitMargin: 10,
-          incomeEntries: {
-            create: [
-              { amount: 20000, incomeDate: null, tag: 'Frame' },
-              { amount: 30000, incomeDate: new Date('2026-05-10') },
-            ],
-          },
+          incomeEntries: { create: [{ amount: 50000 }] },
         },
-        include: { incomeEntries: true },
       });
-      const pending = report.incomeEntries.find(
-        (e: { tag: string | null }) => e.tag === 'Frame',
-      )!;
 
       await page.goto(`${BASE}/income`);
       await page.waitForLoadState('networkidle');
 
-      const frameRow = page.getByRole('row', { name: /Frame/ });
-      await expect(frameRow.getByText('Pending')).toBeVisible();
       await expect(
-        page.getByRole('row', { name: /Client Income/ }).getByText('Received'),
+        page.getByRole('button', { name: 'Unpaid — Pay Project' }),
+      ).toHaveAttribute('aria-pressed', 'true');
+
+      // A first, partial payment.
+      await page.getByRole('button', { name: 'Partial — Pay Project' }).click();
+      await page.getByLabel('Amount (₪) — Pay Project').fill('20000');
+      await page.getByLabel('Payment date — Pay Project').fill('2026-05-12');
+      await page.getByRole('button', { name: 'Save' }).click();
+
+      await expect(
+        page.getByRole('button', { name: 'Partial — Pay Project' }),
+      ).toHaveAttribute('aria-pressed', 'true');
+      const list = page.getByRole('list', { name: 'Payments — Pay Project' });
+      await expect(list.getByRole('listitem')).toHaveCount(1);
+      await expect(list).toContainText('12 May 2026');
+
+      // More than what is left is refused by the server.
+      await page.getByRole('button', { name: 'Partial — Pay Project' }).click();
+      await page.getByLabel('Amount (₪) — Pay Project').fill('30001');
+      await page.getByRole('button', { name: 'Save' }).click();
+      await expect(
+        page.getByText(/would exceed the amount owed/i),
       ).toBeVisible();
+      await page.getByRole('button', { name: 'Cancel' }).click();
 
-      // Set the pending entry's payment date right here.
-      const dateInput = page.getByLabel('Income Date – Date Project – Frame');
-      await dateInput.fill('2026-05-20');
-      await dateInput.press('Enter');
-      await expect(frameRow.getByText('Received')).toBeVisible();
+      // The ✓ fills in the 30,000 still owed.
+      await page
+        .getByRole('button', { name: 'Paid — Pay Project', exact: true })
+        .click();
+      await expect(page.getByLabel('Amount (₪) — Pay Project')).toHaveValue(
+        '30000',
+      );
+      await page.getByLabel('Payment date — Pay Project').fill('2026-05-25');
+      await page.getByRole('button', { name: 'Save' }).click();
 
-      const saved = await db.projectReportIncome.findUniqueOrThrow({
-        where: { id: pending.id },
+      await expect(
+        page.getByRole('button', { name: 'Paid — Pay Project', exact: true }),
+      ).toHaveAttribute('aria-pressed', 'true');
+      await expect(list.getByRole('listitem')).toHaveCount(2);
+
+      const payments = await db.clientPayment.findMany({
+        where: { projectReportId: report.id },
+        orderBy: { paymentDate: 'asc' },
       });
-      expect(saved.incomeDate?.toISOString().slice(0, 10)).toBe('2026-05-20');
+      expect(
+        payments.map(
+          (p: { amount: unknown; paymentDate: Date }) =>
+            `${Number(p.amount)}@${p.paymentDate.toISOString().slice(0, 10)}`,
+        ),
+      ).toEqual(['20000@2026-05-12', '30000@2026-05-25']);
 
-      // Clearing the date marks it pending again.
-      await page.getByLabel('Income Date – Date Project – Frame').fill('');
-      await page.getByLabel('Income Date – Date Project – Frame').blur();
-      await expect(frameRow.getByText('Pending')).toBeVisible();
+      // ✕ takes the month back to unpaid.
+      await page.getByRole('button', { name: 'Unpaid — Pay Project' }).click();
+      await expect(list).toHaveCount(0);
+      await expect
+        .poll(() =>
+          db.clientPayment.count({ where: { projectReportId: report.id } }),
+        )
+        .toBe(0);
+    },
+  );
+
+  dbTest(
+    'adds VAT on a ticked row and carries it in the total',
+    async ({ page, db }) => {
+      const client = await db.client.create({ data: { name: 'Vat Client' } });
+      const sub = await db.subcontractor.create({
+        data: { name: 'Vat Worker', companyNumber: '515222008' },
+      });
+      const project = await db.project.create({
+        data: {
+          clientId: client.id,
+          name: 'Vat Project',
+          estimatedAmount: 300000,
+          description: 'income vat',
+          requesterName: 'Test Requester',
+          location: 'Test Location',
+        },
+      });
+      const report = await db.projectReport.create({
+        data: {
+          projectId: project.id,
+          subcontractorId: sub.id,
+          date: new Date('2026-05-01'),
+          profitMargin: 10,
+          incomeEntries: { create: [{ amount: 10000 }] },
+        },
+      });
+      const rate = await db.vatRate.findFirst({
+        where: { effectiveMonth: { lte: new Date('2026-05-01') } },
+        orderBy: { effectiveMonth: 'desc' },
+      });
+      const vat = (10000 * Number(rate.percentage)) / 100;
+      const fmt = (n: number) => `₪${n.toLocaleString('en-US')}`;
+
+      await page.goto(`${BASE}/income`);
+      await page.waitForLoadState('networkidle');
+
+      const row = page.getByRole('row', { name: /Vat Project/ });
+      const box = page.getByRole('checkbox', {
+        name: 'Include VAT — Vat Project',
+      });
+      await expect(box).not.toBeChecked();
+      await expect(row).toContainText(fmt(10000));
+
+      // The box shows the saved choice, so it ticks once the server has it.
+      await box.click();
+      await expect(box).toBeChecked();
+      await expect(row).toContainText(fmt(vat));
+      await expect(row).toContainText(fmt(10000 + vat));
+
       await expect
         .poll(
           async () =>
             (
-              await db.projectReportIncome.findUniqueOrThrow({
-                where: { id: pending.id },
+              await db.projectReport.findUniqueOrThrow({
+                where: { id: report.id },
               })
-            ).incomeDate,
+            ).incomeIncludesVat,
         )
-        .toBeNull();
+        .toBe(true);
+    },
+  );
+
+  dbTest(
+    'shows who ordered each project and groups by them',
+    async ({ page, db }) => {
+      const sub = await db.subcontractor.create({
+        data: { name: 'Req Worker', companyNumber: '515222009' },
+      });
+      for (const [clientName, projectName, requesterName] of [
+        ['Req Client A', 'Req Project 1', 'Moshe'],
+        ['Req Client B', 'Req Project 2', 'Moshe'],
+        ['Req Client B', 'Req Project 3', 'Ruth'],
+      ] as const) {
+        const client =
+          (await db.client.findFirst({ where: { name: clientName } })) ??
+          (await db.client.create({ data: { name: clientName } }));
+        const project = await db.project.create({
+          data: {
+            clientId: client.id,
+            name: projectName,
+            estimatedAmount: 100000,
+            description: 'requester',
+            requesterName,
+            location: 'Test Location',
+          },
+        });
+        await db.projectReport.create({
+          data: {
+            projectId: project.id,
+            subcontractorId: sub.id,
+            date: new Date('2026-05-01'),
+            profitMargin: 10,
+            incomeEntries: { create: [{ amount: 1000 }] },
+          },
+        });
+      }
+
+      await page.goto(`${BASE}/income`);
+      await page.waitForLoadState('networkidle');
+
+      await expect(
+        page.getByRole('row', { name: /Req Project 3/ }),
+      ).toContainText('Ruth');
+
+      await page.getByRole('button', { name: 'Requester' }).click();
+      const headings = page.getByRole('heading', { level: 2 });
+      await expect(headings).toHaveText(['Moshe', 'Ruth']);
+      await expect(
+        page.getByRole('row', { name: /Req Project 1/ }),
+      ).toContainText('Req Client A');
     },
   );
 

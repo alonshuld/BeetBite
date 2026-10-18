@@ -6,7 +6,7 @@ export const translations = {
   en: {
     // Nav
     projectReports: "Project Reports",
-    monthlyIncome: "Monthly Income",
+    monthlyIncome: "Turnover Summary",
     supplierPayments: "Manpower / Supplier Payments",
     subcontractorPayments: "Subcontractor Payments",
     incomePerMonth: "Income Per Month",
@@ -299,6 +299,12 @@ export const translations = {
       "No project has a report for this month yet, so there is nothing to record a payment against.",
     // Requester + Location
     requester: "Requester",
+    groupBy: "Group by",
+    price: "Price",
+    vat: "VAT",
+    noRequester: "No requester",
+    addClientPayment: "Record a payment",
+    payments: "Payments",
     requesterPlaceholder: "Who commissioned this project?",
     location: "Location",
     projectLocationPlaceholder: "Project location",
@@ -637,6 +643,12 @@ export const translations = {
       "לאף פרוייקט אין דוח לחודש זה, אז אין מול מה לתעד תשלום.",
     // Requester + Location
     requester: "מזמין",
+    groupBy: "הצג לפי",
+    price: "מחיר",
+    vat: 'מע"מ',
+    noRequester: "ללא מזמין",
+    addClientPayment: "רישום תשלום",
+    payments: "תשלומים",
     requesterPlaceholder: "מי הזמין את הפרויקט?",
     location: "מיקום",
     projectLocationPlaceholder: "מיקום הפרויקט",

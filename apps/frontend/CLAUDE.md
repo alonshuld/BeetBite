@@ -159,7 +159,7 @@ Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`, `setLang`) is provided at 
 
 ## Sidebar nav sections
 
-**Overview** (use global month picker in TopHeader): Project Reports, Monthly Income, Supplier Payments, Subcontractors, Income Per Month\*
+**Overview** (use global month picker in TopHeader): Project Reports, Turnover Summary (ריכוז מחזורי), Supplier Payments, Subcontractors, Income Per Month\*
 
 **Management**: Projects, Clients, Subcontractors, Suppliers
 
@@ -172,6 +172,7 @@ Bilingual EN/HE. `LangContext` (`lang`, `t`, `isRTL`, `setLang`) is provided at 
 - **Project completion %**: `sum of reports with incomeDate ÷ project.estimatedAmount`. Shown as 6px progress bar across Projects page, Project Detail, and Income Per Month.
 - **Subcontractor overpay guard**: block save in AddInstalmentModal if `totalPaid + newAmount > subcontractor.agreedAmount`.
 - **Subcontractor teams**: managed in `components/organisms/TeamsModal` (one modal that swaps between the team list and the member picker — no stacked modals), opened by a "Teams" button on both `SubcontractorsPage` and `SubcontractorPaymentsPage`. `utils/subcontractorTeams.ts` has `teamLabel` (members joined with " + ") and `teamsByMember`. `SubcontractorPaymentsPage` groups a team's members onto one card keyed by team id, adds a "Taken by" select per project (`useChangeReportSubcontractorMutation`, disabled once that project has instalments), and its footer shows per-member owed/paid plus the team total. Payments are always recorded to the project's member (the report's subcontractor).
+- **Turnover summary (ריכוז מחזורי, `MonthlyIncomePage`, `/income`)**: groups the month by client or by requester (segmented "Group by" control; requester names are matched trimmed and case-insensitively). Each project row: project, requester (client when grouped by requester), price, VAT checkbox + amount (`useSetIncomeVatMutation`; ⚠ when the month has no VAT rate), total incl. VAT, received, the same ✕ / ✓ / 〜 status circles as subcontractor payments, profit. Payments are dated lines under the row (date editable on blur, deletable); ✓ pre-fills the outstanding balance, 〜 opens an empty amount, ✕ deletes all of the month's payments. Endpoints in `api/endpoints/income.ts`; payment mutations also invalidate `Projects` (payment progress).
 - **Subcontractor company number**: required, unique, exactly 9 digits (Israeli company registration number). `SubcontractorsPage` strips non-digits and caps input length at 9 on change (`value.replace(/\D/g, "").slice(0, 9)`) rather than only relying on `pattern`/`maxLength`.
 - **Supplier payment fields**: `amount`, `description`, `date`, `isFuture` (bool), `includesVat` (bool).
 - **Supplier payment VAT**: the user only chooses *whether* a payment carries VAT — a checkbox per row on `SupplierPaymentsPage` (`PATCH /suppliers/payments/:id/vat` via `useSetSupplierPaymentIncludesVatMutation`) and a per-line switch in `SupplierPaymentsBatchModal` (default on). The percentage is never typed: the backend derives it from the global VAT rate for the report's month and returns it read-only as `vatPercentage`. The page shows it beside the checkbox (⚠ when VAT is on but that month has no rate yet); the modal shows the rate that will apply to its month.

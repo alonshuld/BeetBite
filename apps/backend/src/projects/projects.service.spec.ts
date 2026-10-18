@@ -19,6 +19,7 @@ import { InitiatorNotFoundError } from 'src/initiators/errors/initiator-not-foun
 import { ProjectsQueryDto } from './dto/projects-query.dto';
 import { Prisma } from 'src/generated/client';
 import { EntityHasRelatedRecordsError } from 'src/common/errors/entity-has-related-records.error';
+import { VatRatesService } from 'src/vat-rates/vat-rates.service';
 
 type Mock = ReturnType<typeof vi.fn>;
 
@@ -74,6 +75,22 @@ describe('ProjectsService', () => {
     createInitialAssignment: vi.fn().mockResolvedValue(undefined),
   };
 
+  const mockVatRatesService = { findAllEntries: vi.fn() };
+
+  /** A month's report as payment progress reads it: income and client payments. */
+  const paidReport = (
+    income: string,
+    payments: string[],
+    options: { incomeIncludesVat?: boolean; date?: Date } = {},
+  ) => ({
+    date: options.date ?? new Date('2026-05-01'),
+    incomeIncludesVat: options.incomeIncludesVat ?? false,
+    incomeEntries: [{ amount: new Prisma.Decimal(income) }],
+    clientPayments: payments.map((amount) => ({
+      amount: new Prisma.Decimal(amount),
+    })),
+  });
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -86,11 +103,13 @@ describe('ProjectsService', () => {
           provide: ProjectClientAssignmentsService,
           useValue: mockAssignmentsService,
         },
+        { provide: VatRatesService, useValue: mockVatRatesService },
       ],
     }).compile();
 
     service = module.get<ProjectsService>(ProjectsService);
     vi.clearAllMocks();
+    mockVatRatesService.findAllEntries.mockResolvedValue([]);
   });
 
   it('should be defined', () => {
@@ -253,6 +272,33 @@ describe('ProjectsService', () => {
         expect(call.data.incomeEntries.create.incomeDate).not.toBeNull();
       });
 
+      // Payment progress counts client payments, so money already in hand has
+      // to be one — or the opening balance would no longer move the project.
+      it('records the amount as one client payment dated the month', async () => {
+        mockPrismaService.project.create.mockResolvedValue(mockProject);
+        mockPrismaService.projectReport.create.mockResolvedValue({
+          id: 'report-1',
+        });
+
+        await service.create({ ...createDto, openingBalance });
+
+        const call = (
+          mockPrismaService.projectReport.create.mock.calls as unknown[][]
+        )[0][0] as {
+          data: {
+            clientPayments: {
+              create: { amount: Prisma.Decimal; paymentDate: Date };
+            };
+          };
+        };
+        expect(call.data.clientPayments.create.amount.toNumber()).toBe(
+          openingBalance.amount,
+        );
+        expect(call.data.clientPayments.create.paymentDate.toISOString()).toBe(
+          '2026-03-01T00:00:00.000Z',
+        );
+      });
+
       it('tags the income entry so the synthetic origin is visible', async () => {
         mockPrismaService.project.create.mockResolvedValue(mockProject);
         mockPrismaService.projectReport.create.mockResolvedValue({
@@ -353,9 +399,7 @@ describe('ProjectsService', () => {
             '5000',
             'Description 1',
           ),
-          reports: [
-            { incomeEntries: [{ amount: new Prisma.Decimal('2000') }] },
-          ],
+          reports: [paidReport('2000', ['2000'])],
           _count: { reports: 1 },
         },
         {
@@ -366,9 +410,7 @@ describe('ProjectsService', () => {
             '10000',
             'Description 2',
           ),
-          reports: [
-            { incomeEntries: [{ amount: new Prisma.Decimal('5000') }] },
-          ],
+          reports: [paidReport('5000', ['5000'])],
           _count: { reports: 1 },
         },
       ];
@@ -385,10 +427,10 @@ describe('ProjectsService', () => {
             client: { select: { id: true, name: true } },
             reports: {
               select: {
-                incomeEntries: {
-                  where: { incomeDate: { not: null } },
-                  select: { amount: true },
-                },
+                date: true,
+                incomeIncludesVat: true,
+                incomeEntries: { select: { amount: true } },
+                clientPayments: { select: { amount: true } },
               },
             },
             _count: {
@@ -401,7 +443,7 @@ describe('ProjectsService', () => {
       expect(result[1].paymentProgress).toEqual({ totalPaid: 5000 });
     });
 
-    it('should apply pagination params and correctly filter paid incomes', async () => {
+    it('should apply pagination params and sum client payments', async () => {
       const projects = [
         {
           ...baseProject(
@@ -411,9 +453,7 @@ describe('ProjectsService', () => {
             '5000',
             'Description 1',
           ),
-          reports: [
-            { incomeEntries: [{ amount: new Prisma.Decimal('5000') }] },
-          ],
+          reports: [paidReport('5000', ['5000'])],
           _count: { reports: 1 },
         },
       ];
@@ -432,10 +472,10 @@ describe('ProjectsService', () => {
             client: { select: { id: true, name: true } },
             reports: {
               select: {
-                incomeEntries: {
-                  where: { incomeDate: { not: null } },
-                  select: { amount: true },
-                },
+                date: true,
+                incomeIncludesVat: true,
+                incomeEntries: { select: { amount: true } },
+                clientPayments: { select: { amount: true } },
               },
             },
             _count: {
@@ -480,7 +520,7 @@ describe('ProjectsService', () => {
     it('should return correct totalPaid when project reports exist', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         ...baseProject,
-        reports: [{ incomeEntries: [{ amount: new Prisma.Decimal('500') }] }],
+        reports: [paidReport('800', ['300', '200'])],
         _count: { reports: 1 },
       });
       const result = await service.findOne('clhp000000000000000000001');
@@ -490,14 +530,38 @@ describe('ProjectsService', () => {
     it('should sum multiple reports for totalPaid', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         ...baseProject,
-        reports: [
-          { incomeEntries: [{ amount: new Prisma.Decimal('400') }] },
-          { incomeEntries: [{ amount: new Prisma.Decimal('600') }] },
-        ],
+        reports: [paidReport('400', ['400']), paidReport('900', ['600'])],
         _count: { reports: 2 },
       });
       const result = await service.findOne('clhp000000000000000000001');
       expect(result.paymentProgress).toEqual({ totalPaid: 1000 });
+    });
+
+    it('should count only the price share of payments on a month with VAT', async () => {
+      mockVatRatesService.findAllEntries.mockResolvedValue([
+        {
+          effectiveMonth: new Date('2025-01-01'),
+          percentage: new Prisma.Decimal('18'),
+        },
+      ]);
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...baseProject,
+        // 1000 + 18% VAT = 1180 owed; 590 paid is half the month, so half the price.
+        reports: [paidReport('1000', ['590'], { incomeIncludesVat: true })],
+        _count: { reports: 1 },
+      });
+      const result = await service.findOne('clhp000000000000000000001');
+      expect(result.paymentProgress.totalPaid).toBeCloseTo(500, 6);
+    });
+
+    it('should ignore income with no client payment, received date or not', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...baseProject,
+        reports: [paidReport('1000', [])],
+        _count: { reports: 1 },
+      });
+      const result = await service.findOne('clhp000000000000000000001');
+      expect(result.paymentProgress).toEqual({ totalPaid: 0 });
     });
 
     it('should throw ProjectNotFoundError when project not found', async () => {

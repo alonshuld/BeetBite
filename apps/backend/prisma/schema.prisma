@@ -125,11 +125,17 @@ model ProjectReport {
   /// project has an initiator, and it must always exceed the report's own
   /// income.
   initiatorIncome Decimal? @db.Decimal(12, 2)
+  /// Whether the client pays VAT on top of this month's income. Only the choice
+  /// is stored — the percentage comes from the VatRate history for the report's
+  /// month. A new report inherits it from the project's latest earlier report.
+  /// Profit and the subcontractor remainder stay on the income excluding VAT.
+  incomeIncludesVat Boolean @default(false)
 
   project          Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
   subcontractor    Subcontractor         @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
   supplierPayments SupplierPayment[]
   incomeEntries    ProjectReportIncome[]
+  clientPayments   ClientPayment[]
 
   @@unique([projectId, date])
   @@map("project_reports")
@@ -145,6 +151,22 @@ model ProjectReportIncome {
   projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
 
   @@map("project_report_incomes")
+}
+
+/// A partial payment the client made towards one month of one project (its
+/// report). Several per report are allowed; together they may not exceed the
+/// report's income plus VAT when the report carries VAT.
+model ClientPayment {
+  id              String   @id @default(cuid())
+  projectReportId String
+  amount          Decimal  @db.Decimal(12, 2)
+  /// The day the money arrived, chosen by the user.
+  paymentDate     DateTime @db.Date
+
+  projectReport ProjectReport @relation(fields: [projectReportId], references: [id], onDelete: Cascade)
+
+  @@index([projectReportId])
+  @@map("client_payments")
 }
 
 model SupplierPayment {

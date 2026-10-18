@@ -219,10 +219,21 @@ export class ProjectReportsService {
 
     try {
       const created = await this.prismaService.$transaction(async (tx) => {
+        // Whether the client pays VAT carries over from the project's latest
+        // earlier month; the turnover summary screen changes it per month.
+        const previous = await tx.projectReport.findFirst({
+          where: {
+            projectId: enriched.projectId,
+            date: { lt: new Date(enriched.date) },
+          },
+          orderBy: { date: 'desc' },
+          select: { incomeIncludesVat: true },
+        });
         const report = await tx.projectReport.create({
           data: {
             date: new Date(enriched.date),
             profitMargin: new Prisma.Decimal(enriched.profitMargin),
+            incomeIncludesVat: previous?.incomeIncludesVat ?? false,
             initiatorIncome:
               enriched.initiatorIncome !== undefined
                 ? new Prisma.Decimal(enriched.initiatorIncome)

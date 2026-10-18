@@ -2,141 +2,503 @@ import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
   useGetMonthlyIncomeQuery,
+  useCreateClientPaymentMutation,
+  useUpdateClientPaymentMutation,
+  useDeleteClientPaymentMutation,
+  useSetIncomeVatMutation,
+  type MonthlyIncomeItem,
   type MonthlyIncomeProject,
 } from "@/api/endpoints/income";
-import {
-  useUpdateIncomeEntryMutation,
-  type IncomeEntry,
-} from "@/api/endpoints/project-reports";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { SearchInput } from "@/components/molecules/SearchInput";
-import { Badge, EmptyState } from "@/components/atoms";
-import { fieldChrome } from "@/components/atoms/field";
+import { EmptyState } from "@/components/atoms";
+import { Input } from "@/components/atoms/Input";
+import { Icon } from "@/components/atoms/Icon";
 import { useLang } from "@/contexts/useLang";
-import { formatYM } from "@/utils/formatMonth";
+import { useFieldCheck } from "@/hooks/useFieldCheck";
+import { formatISODate, formatYM } from "@/utils/formatMonth";
 import { formatILS } from "@/utils/formatMoney";
 
-function toDateInput(iso: string | null): string {
-  return iso ? iso.slice(0, 10) : "";
+type GroupBy = "client" | "requester";
+
+type PaymentStatus = "Paid" | "Partial" | "Unpaid";
+
+// Red / amber / green, read as a traffic light — the same as subcontractor payments.
+const STATUS_COLOR: Record<PaymentStatus, string> = {
+  Paid: "var(--success)",
+  Partial: "var(--warning)",
+  Unpaid: "var(--danger)",
+};
+
+const CHECKBOX = "block h-4 w-4 shrink-0 cursor-pointer accent-beet";
+
+const TH =
+  "py-2 px-3 text-label font-semibold text-text-muted whitespace-nowrap";
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
-/*
- * Received/pending badge plus the entry's payment date, editable in place.
- * Saves on blur or Enter rather than on every change: a native date input
- * reports a valid date after each typed year digit (0002, 0020, 0202…), so
- * saving on change would write those intermediate years. Clearing the date
- * marks the income pending again.
- */
-function IncomeDateCell({
-  entry,
-  label,
-}: {
-  entry: IncomeEntry;
-  label: string;
-}) {
-  const { t } = useLang();
-  const [updateIncomeEntry, { isLoading }] = useUpdateIncomeEntryMutation();
-  const saved = toDateInput(entry.incomeDate);
-  const [draft, setDraft] = useState(saved);
+/** Compared in agorot, so float noise cannot leave a settled month "Partial". */
+function paymentStatus(paid: number, owed: number): PaymentStatus {
+  if (paid <= 0) return "Unpaid";
+  if (Math.round(paid * 100) >= Math.round(owed * 100)) return "Paid";
+  return "Partial";
+}
 
-  async function commit() {
-    if (draft === saved) return;
-    try {
-      await updateIncomeEntry({
-        id: entry.id,
-        incomeDate: draft || null,
-      }).unwrap();
-    } catch {
-      // AppShell already toasts the API error; put the saved date back.
-      setDraft(saved);
+/** A project row plus the name of the group it is listed under. */
+interface Row {
+  project: MonthlyIncomeProject;
+  clientName: string;
+}
+
+interface Group {
+  key: string;
+  name: string;
+  rows: Row[];
+  totalWithVat: number;
+  totalReceived: number;
+  totalProfit: number;
+}
+
+/**
+ * Regroups the month's projects by client (as the API returns them) or by who
+ * ordered them. Requester names are typed freely on each project, so they are
+ * matched ignoring surrounding spaces and case — "Dana " and "dana" are one
+ * person.
+ */
+function groupRows(
+  items: MonthlyIncomeItem[],
+  groupBy: GroupBy,
+  noRequester: string,
+): Group[] {
+  const groups = new Map<string, Group>();
+  for (const item of items) {
+    for (const project of item.projects) {
+      const requester = project.requesterName.trim();
+      const key =
+        groupBy === "client"
+          ? item.clientId
+          : requester.toLocaleLowerCase() || "\u0000";
+      const name =
+        groupBy === "client" ? item.clientName : requester || noRequester;
+      let group = groups.get(key);
+      if (!group) {
+        group = {
+          key,
+          name,
+          rows: [],
+          totalWithVat: 0,
+          totalReceived: 0,
+          totalProfit: 0,
+        };
+        groups.set(key, group);
+      }
+      group.rows.push({ project, clientName: item.clientName });
+      group.totalWithVat += project.totalWithVat;
+      group.totalReceived += project.receivedIncome;
+      group.totalProfit += project.profit;
     }
   }
+  return [...groups.values()]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((g) => ({
+      ...g,
+      rows: [...g.rows].sort((a, b) =>
+        a.project.projectName.localeCompare(b.project.projectName),
+      ),
+    }));
+}
 
+/** The status circles of one row — the same three as subcontractor payments. */
+function StatusButton({
+  status,
+  active,
+  icon,
+  title,
+  disabled,
+  onClick,
+}: {
+  status: PaymentStatus;
+  active: boolean;
+  icon: "close" | "check" | "wave";
+  title: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
   return (
-    <div className="flex items-center justify-end gap-2">
-      {entry.incomeDate ? (
-        <Badge variant="green">{t("received")}</Badge>
-      ) : (
-        <Badge variant="yellow">{t("pending")}</Badge>
-      )}
-      <input
-        type="date"
-        aria-label={`${t("incomeDate")} – ${label}`}
-        value={draft}
-        disabled={isLoading}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => void commit()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") void commit();
-        }}
-        className={`${fieldChrome} tnum px-1.5 py-0.5 text-label`}
-      />
-    </div>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      aria-pressed={active}
+      className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
+      style={
+        active
+          ? {
+              background: STATUS_COLOR[status],
+              borderColor: STATUS_COLOR[status],
+              color: "white",
+            }
+          : {
+              background: "transparent",
+              borderColor: "var(--border)",
+              color: "var(--text-muted)",
+            }
+      }
+    >
+      <Icon name={icon} size={14} />
+    </button>
   );
 }
 
-/*
- * A project with several income entries summarises them on its own row and
- * lists each entry beneath; with a single entry the project row carries it.
+/**
+ * One project's month: price, the VAT choice and the total the client pays,
+ * then what they have paid so far. Payments are recorded like subcontractor
+ * instalments — each its own dated line, never one row rewritten.
  */
-function ProjectIncomeRows({ proj }: { proj: MonthlyIncomeProject }) {
-  const { t } = useLang();
+function ProjectRows({
+  row,
+  groupBy,
+  colCount,
+}: {
+  row: Row;
+  groupBy: GroupBy;
+  colCount: number;
+}) {
+  const { t, lang } = useLang();
+  const checkFields = useFieldCheck();
+  const [createPayment] = useCreateClientPaymentMutation();
+  const [updatePayment] = useUpdateClientPaymentMutation();
+  const [deletePayment] = useDeleteClientPaymentMutation();
+  const [setIncomeVat, { isLoading: vatSaving }] = useSetIncomeVatMutation();
+
+  const [entryOpen, setEntryOpen] = useState(false);
+  const [entryAmount, setEntryAmount] = useState("");
+  // Defaults to today; paperwork is often entered days after the transfer.
+  const [entryDate, setEntryDate] = useState(todayISO);
+  const [pending, setPending] = useState(false);
+  const [editingDate, setEditingDate] = useState<string | null>(null);
+
+  const proj = row.project;
+  const label = proj.projectName;
+  const otherColumn =
+    groupBy === "client"
+      ? proj.requesterName.trim() || t("noRequester")
+      : row.clientName;
+  const status = paymentStatus(proj.receivedIncome, proj.totalWithVat);
+  const remaining =
+    Math.max(0, Math.round((proj.totalWithVat - proj.receivedIncome) * 100)) /
+    100;
   const entries = proj.incomeEntries;
-  const single = entries.length === 1 ? entries[0] : null;
+
+  function openEntry(amount: string) {
+    setEntryAmount(amount);
+    setEntryOpen(true);
+  }
+
+  function closeEntry() {
+    setEntryOpen(false);
+    setEntryAmount("");
+  }
+
+  async function handleAddPayment() {
+    const amount = parseFloat(entryAmount);
+    if (
+      !checkFields([
+        [
+          t("amountILS"),
+          entryAmount.trim() === ""
+            ? "missing"
+            : (isNaN(amount) || amount <= 0) && "invalid",
+        ],
+        [t("paymentDate"), !entryDate && "missing"],
+      ])
+    )
+      return;
+    setPending(true);
+    const result = await createPayment({
+      projectReportId: proj.reportId,
+      amount,
+      paymentDate: entryDate,
+    });
+    setPending(false);
+    // A refused payment (over what is owed) has already toasted its reason —
+    // keep the row open with what the user typed.
+    if ("error" in result) return;
+    closeEntry();
+  }
+
+  /** The red ✕: the month goes back to unpaid, so its payments are removed. */
+  async function handleSetUnpaid() {
+    if (proj.payments.length === 0) return;
+    setPending(true);
+    for (const payment of proj.payments) {
+      if ("error" in (await deletePayment(payment.id))) break;
+    }
+    setPending(false);
+    closeEntry();
+  }
+
+  async function handleDeletePayment(id: string) {
+    setPending(true);
+    await deletePayment(id);
+    setPending(false);
+  }
 
   return (
     <>
       <tr className="border-b border-border last:border-0">
-        <td className="py-2 px-3 text-text">{proj.projectName}</td>
-        <td className="py-2 px-3 text-end text-success font-medium">
+        <td className="py-2 px-3 text-text">{label}</td>
+        <td className="py-2 px-3 text-text-muted">{otherColumn}</td>
+        <td className="py-2 px-3 text-end text-text">
           {formatILS(proj.totalIncome)}
         </td>
         <td className="py-2 px-3">
-          {single ? (
-            <IncomeDateCell
-              key={`${single.id}:${single.incomeDate}`}
-              entry={single}
-              label={proj.projectName}
+          <div className="flex items-center justify-end gap-2">
+            <input
+              type="checkbox"
+              checked={proj.incomeIncludesVat}
+              disabled={vatSaving}
+              onChange={() =>
+                void setIncomeVat({
+                  reportId: proj.reportId,
+                  incomeIncludesVat: !proj.incomeIncludesVat,
+                })
+              }
+              aria-label={`${t("includeVat")} — ${label}`}
+              className={CHECKBOX}
             />
-          ) : entries.length > 1 ? (
-            <div className="flex justify-end">
-              {proj.pendingIncome === 0 ? (
-                <Badge variant="green">{t("received")}</Badge>
-              ) : (
-                <Badge variant="yellow">
-                  {t("pending")} {formatILS(proj.pendingIncome)}
-                </Badge>
-              )}
-            </div>
-          ) : null}
+            {proj.incomeIncludesVat && proj.vatPercentage == null ? (
+              // VAT is on but the month has no rate yet, so none is added.
+              <span
+                role="img"
+                aria-label={t("vatRateMissing")}
+                title={t("vatRateMissing")}
+                className="text-warning"
+              >
+                <Icon name="alert" size={14} />
+              </span>
+            ) : (
+              <span
+                className={
+                  proj.incomeIncludesVat ? "text-text" : "text-text-dim"
+                }
+                title={
+                  proj.vatPercentage != null
+                    ? `${proj.vatPercentage}%`
+                    : undefined
+                }
+              >
+                {formatILS(proj.vatAmount)}
+              </span>
+            )}
+          </div>
+        </td>
+        <td className="py-2 px-3 text-end font-semibold text-text">
+          {formatILS(proj.totalWithVat)}
+        </td>
+        <td
+          className="py-2 px-3 text-end font-medium"
+          style={{ color: STATUS_COLOR[status] }}
+        >
+          {formatILS(proj.receivedIncome)}
+        </td>
+        <td className="py-2 px-3">
+          <div className="flex items-center justify-center gap-1.5">
+            <StatusButton
+              status="Unpaid"
+              active={status === "Unpaid"}
+              icon="close"
+              title={`${t("unpaid")} — ${label}`}
+              disabled={pending}
+              onClick={() => void handleSetUnpaid()}
+            />
+            {/* Paid in full: opens the row with the outstanding balance, so
+                the day it was paid is still stated before it is saved. */}
+            <StatusButton
+              status="Paid"
+              active={status === "Paid"}
+              icon="check"
+              title={`${t("paid")} — ${label}`}
+              disabled={pending || remaining <= 0}
+              onClick={() => openEntry(String(remaining))}
+            />
+            <StatusButton
+              status="Partial"
+              active={status === "Partial"}
+              icon="wave"
+              title={`${t("partial")} — ${label}`}
+              disabled={pending || (remaining <= 0 && !entryOpen)}
+              onClick={() => (entryOpen ? closeEntry() : openEntry(""))}
+            />
+          </div>
         </td>
         <td className="py-2 px-3 text-end text-beet-bright font-medium">
           {formatILS(proj.profit)}
         </td>
       </tr>
+
+      {/* Several income entries: each listed beneath with its share of the price. */}
       {entries.length > 1 &&
-        entries.map((entry) => {
-          const label = entry.tag || t("clientIncome");
-          return (
-            <tr key={entry.id} className="border-b border-border last:border-0">
-              <td className="py-1.5 pe-3 ps-6 text-xs text-text-muted">
-                {label}
-              </td>
-              <td className="py-1.5 px-3 text-end text-text">
-                {formatILS(entry.amount)}
-              </td>
-              <td className="py-1.5 px-3">
-                <IncomeDateCell
-                  key={`${entry.id}:${entry.incomeDate}`}
-                  entry={entry}
-                  label={`${proj.projectName} – ${label}`}
+        entries.map((entry) => (
+          <tr key={entry.id} className="border-b border-border">
+            <td
+              colSpan={2}
+              className="py-1.5 pe-3 ps-6 text-xs text-text-muted"
+            >
+              {entry.tag || t("clientIncome")}
+            </td>
+            <td className="py-1.5 px-3 text-end text-xs text-text-muted">
+              {formatILS(entry.amount)}
+            </td>
+            <td colSpan={colCount - 3} />
+          </tr>
+        ))}
+
+      {/* Each payment as its own dated line, its date correctable by clicking it. */}
+      {proj.payments.length > 0 && (
+        <tr className="border-b border-border">
+          <td colSpan={colCount} className="px-3 py-1">
+            <ul
+              className="flex flex-col gap-0.5"
+              aria-label={`${t("payments")} — ${label}`}
+            >
+              {proj.payments.map((payment) => (
+                <li
+                  key={payment.id}
+                  className="flex items-center justify-between gap-2 text-xs text-text-muted"
+                >
+                  {editingDate === payment.id ? (
+                    <input
+                      type="date"
+                      autoFocus
+                      aria-label={t("paymentDate")}
+                      className="px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
+                      defaultValue={payment.paymentDate.slice(0, 10)}
+                      // Saved on blur: a date picker reports each half-typed
+                      // year as a valid date, which must not be written.
+                      onBlur={(e) => {
+                        const date = e.target.value;
+                        setEditingDate(null);
+                        if (date && date !== payment.paymentDate.slice(0, 10))
+                          void updatePayment({
+                            id: payment.id,
+                            paymentDate: date,
+                          });
+                      }}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setEditingDate(payment.id)}
+                      title={t("paymentDate")}
+                      className="underline decoration-dotted underline-offset-2 hover:text-text transition-colors"
+                    >
+                      {formatISODate(payment.paymentDate, lang, {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </button>
+                  )}
+                  <span className="flex items-center gap-2">
+                    <span className="text-text font-medium">
+                      {formatILS(payment.amount)}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => void handleDeletePayment(payment.id)}
+                      title={t("delete")}
+                      aria-label={t("delete")}
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-sm border border-border text-text-dim transition-colors hover:border-danger hover:text-danger disabled:opacity-40"
+                    >
+                      <Icon name="close" size={14} />
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </td>
+        </tr>
+      )}
+
+      {entryOpen && (
+        <tr className="border-b border-border bg-surface">
+          <td colSpan={colCount} className="px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="w-40">
+                <Input
+                  id={`client-payment-${proj.reportId}`}
+                  label=""
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  max={remaining}
+                  aria-label={`${t("amountILS")} — ${label}`}
+                  value={entryAmount}
+                  onChange={(e) => setEntryAmount(e.target.value)}
+                  placeholder={`0 – ${remaining}`}
                 />
-              </td>
-              <td />
-            </tr>
-          );
-        })}
+              </div>
+              <div className="w-44">
+                <Input
+                  id={`client-payment-date-${proj.reportId}`}
+                  label=""
+                  type="date"
+                  aria-label={`${t("paymentDate")} — ${label}`}
+                  value={entryDate}
+                  onChange={(e) => setEntryDate(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => void handleAddPayment()}
+                title={t("addClientPayment")}
+                className="inline-flex h-8 items-center justify-center gap-1 rounded bg-beet px-3 text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+              >
+                <Icon name="check" size={14} />
+                {t("save")}
+              </button>
+              <button
+                type="button"
+                onClick={closeEntry}
+                className="inline-flex h-8 items-center rounded border border-border px-3 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
+              >
+                {t("cancel")}
+              </button>
+            </div>
+          </td>
+        </tr>
+      )}
     </>
+  );
+}
+
+function Figure({
+  label,
+  value,
+  className,
+  large = false,
+}: {
+  label: string;
+  value: number;
+  className: string;
+  large?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5 text-end">
+      <span className="text-label text-text-muted">{label}</span>
+      <span
+        className={`font-bold leading-none ${large ? "text-title" : ""} ${className}`}
+      >
+        {formatILS(value)}
+      </span>
+    </div>
   );
 }
 
@@ -145,6 +507,7 @@ export default function MonthlyIncomePage() {
   const { data: items = [], isLoading } = useGetMonthlyIncomeQuery(month);
   const { t, lang } = useLang();
   const [search, setSearch] = useState("");
+  const [groupBy, setGroupBy] = useState<GroupBy>("client");
 
   if (isLoading) {
     return (
@@ -154,32 +517,30 @@ export default function MonthlyIncomePage() {
     );
   }
 
-  // Clients by name, and each client's projects by name.
-  const sortedItems = [...items]
-    .sort((a, b) => a.clientName.localeCompare(b.clientName))
-    .map((item) => ({
-      ...item,
-      projects: [...item.projects].sort((a, b) =>
-        a.projectName.localeCompare(b.projectName),
-      ),
-    }));
+  const groups = groupRows(items, groupBy, t("noRequester"));
 
-  // A client whose name matches keeps all its projects; otherwise only the
-  // matching projects stay and clients left empty drop. The totals stay
-  // those of the whole month and of each whole client.
+  // A group whose name matches keeps all its projects; otherwise only the
+  // projects matching by name (or by the other column — requester or client)
+  // stay, and groups left empty drop. The totals stay those of the whole month
+  // and of each whole group.
   const query = search.trim().toLowerCase();
-  const visibleItems = query
-    ? sortedItems.flatMap((item) => {
-        if (item.clientName.toLowerCase().includes(query)) return [item];
-        const projects = item.projects.filter((p) =>
-          p.projectName.toLowerCase().includes(query),
+  const visibleGroups = query
+    ? groups.flatMap((group) => {
+        if (group.name.toLowerCase().includes(query)) return [group];
+        const rows = group.rows.filter((r) =>
+          [
+            r.project.projectName,
+            groupBy === "client" ? r.project.requesterName : r.clientName,
+          ].some((text) => text.toLowerCase().includes(query)),
         );
-        return projects.length > 0 ? [{ ...item, projects }] : [];
+        return rows.length > 0 ? [{ ...group, rows }] : [];
       })
-    : sortedItems;
+    : groups;
 
-  const grandTotalIncome = items.reduce((sum, i) => sum + i.totalIncome, 0);
-  const grandTotalProfit = items.reduce((sum, i) => sum + i.totalProfit, 0);
+  const sum = (pick: (i: MonthlyIncomeItem) => number) =>
+    items.reduce((total, i) => total + pick(i), 0);
+
+  const colCount = 8;
 
   return (
     <div className="flex flex-col gap-5">
@@ -190,19 +551,37 @@ export default function MonthlyIncomePage() {
           <span className="text-lead font-semibold text-text">
             {t("grandTotal")}
           </span>
-          <div className="tnum flex items-end gap-5">
-            <div className="flex flex-col gap-0.5 text-end">
-              <span className="text-label text-text-muted">{t("income")}</span>
-              <span className="text-title font-bold leading-none text-success">
-                {formatILS(grandTotalIncome)}
-              </span>
-            </div>
-            <div className="flex flex-col gap-0.5 text-end">
-              <span className="text-label text-text-muted">{t("profit")}</span>
-              <span className="text-title font-bold leading-none text-beet-bright">
-                {formatILS(grandTotalProfit)}
-              </span>
-            </div>
+          <div className="tnum flex flex-wrap items-end gap-5">
+            <Figure
+              large
+              label={t("price")}
+              value={sum((i) => i.totalIncome)}
+              className="text-text"
+            />
+            <Figure
+              large
+              label={t("vat")}
+              value={sum((i) => i.totalVat)}
+              className="text-text"
+            />
+            <Figure
+              large
+              label={t("totalInclVat")}
+              value={sum((i) => i.totalWithVat)}
+              className="text-text"
+            />
+            <Figure
+              large
+              label={t("received")}
+              value={sum((i) => i.totalReceived)}
+              className="text-success"
+            />
+            <Figure
+              large
+              label={t("profit")}
+              value={sum((i) => i.totalProfit)}
+              className="text-beet-bright"
+            />
           </div>
         </div>
       )}
@@ -214,38 +593,63 @@ export default function MonthlyIncomePage() {
         />
       ) : (
         <div className="flex flex-col gap-4">
-          <SearchInput
-            placeholder={t("search")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {visibleItems.length === 0 && <EmptyState title={t("noResults")} />}
-          {visibleItems.map((item) => (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <SearchInput
+                placeholder={t("search")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-label text-text-muted">{t("groupBy")}</span>
+              <div
+                role="group"
+                aria-label={t("groupBy")}
+                className="inline-flex h-9 items-center gap-0.5 rounded border border-border bg-surface-2 p-0.5"
+              >
+                {(["client", "requester"] as const).map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setGroupBy(g)}
+                    aria-pressed={groupBy === g}
+                    className={`h-full rounded-sm px-2.5 text-label font-semibold transition-colors duration-150 ${
+                      groupBy === g
+                        ? "bg-surface text-text shadow-xs"
+                        : "text-text-dim hover:text-text"
+                    }`}
+                  >
+                    {t(g)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          {visibleGroups.length === 0 && <EmptyState title={t("noResults")} />}
+          {visibleGroups.map((group) => (
             <div
-              key={item.clientId}
+              key={group.key}
               className="rounded-lg border border-border bg-surface p-4"
             >
               <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-                <h2 className="font-serif text-lead text-text">
-                  {item.clientName}
-                </h2>
+                <h2 className="font-serif text-lead text-text">{group.name}</h2>
                 <div className="tnum flex items-end gap-5">
-                  <div className="flex flex-col gap-0.5 text-end">
-                    <span className="text-label text-text-muted">
-                      {t("income")}
-                    </span>
-                    <span className="font-bold leading-none text-success">
-                      {formatILS(item.totalIncome)}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-0.5 text-end">
-                    <span className="text-label text-text-muted">
-                      {t("profit")}
-                    </span>
-                    <span className="font-bold leading-none text-beet-bright">
-                      {formatILS(item.totalProfit)}
-                    </span>
-                  </div>
+                  <Figure
+                    label={t("totalInclVat")}
+                    value={group.totalWithVat}
+                    className="text-text"
+                  />
+                  <Figure
+                    label={t("received")}
+                    value={group.totalReceived}
+                    className="text-success"
+                  />
+                  <Figure
+                    label={t("profit")}
+                    value={group.totalProfit}
+                    className="text-beet-bright"
+                  />
                 </div>
               </div>
 
@@ -253,23 +657,26 @@ export default function MonthlyIncomePage() {
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-border bg-surface-2">
-                      <th className="text-left py-2 px-3 text-label font-semibold text-text-muted rtl:text-right">
-                        {t("project")}
+                      <th className={`${TH} text-start`}>{t("project")}</th>
+                      <th className={`${TH} text-start`}>
+                        {groupBy === "client" ? t("requester") : t("client")}
                       </th>
-                      <th className="text-end py-2 px-3 text-label font-semibold text-text-muted">
-                        {t("income")}
-                      </th>
-                      <th className="text-end py-2 px-3 text-label font-semibold text-text-muted">
-                        {t("incomeDate")}
-                      </th>
-                      <th className="text-end py-2 px-3 text-label font-semibold text-text-muted">
-                        {t("profit")}
-                      </th>
+                      <th className={`${TH} text-end`}>{t("price")}</th>
+                      <th className={`${TH} text-end`}>{t("vat")}</th>
+                      <th className={`${TH} text-end`}>{t("totalInclVat")}</th>
+                      <th className={`${TH} text-end`}>{t("received")}</th>
+                      <th className={`${TH} text-center`}>{t("status")}</th>
+                      <th className={`${TH} text-end`}>{t("profit")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {item.projects.map((proj) => (
-                      <ProjectIncomeRows key={proj.projectId} proj={proj} />
+                    {group.rows.map((row) => (
+                      <ProjectRows
+                        key={row.project.reportId}
+                        row={row}
+                        groupBy={groupBy}
+                        colCount={colCount}
+                      />
                     ))}
                   </tbody>
                 </table>

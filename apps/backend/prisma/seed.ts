@@ -127,6 +127,13 @@ async function report(r: ReportInput) {
           tag: e.tag ?? oneOf(WORK_TAGS),
         })),
       },
+      // Income marked received was paid by the client on that day — the
+      // turnover summary and payment progress read these payments.
+      clientPayments: {
+        create: r.incomeEntries
+          .filter((e) => e.incomeDate && e.amount > 0)
+          .map((e) => ({ amount: e.amount, paymentDate: d(e.incomeDate!) })),
+      },
     },
   });
 }
@@ -138,6 +145,7 @@ async function seedMockData(): Promise<void> {
 
   await prisma.subcontractorPayment.deleteMany({});
   await prisma.supplierPayment.deleteMany({});
+  await prisma.clientPayment.deleteMany({});
   await prisma.projectReportIncome.deleteMany({});
   await prisma.projectReport.deleteMany({});
   await prisma.projectClientAssignment.deleteMany({});

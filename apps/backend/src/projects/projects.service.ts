@@ -22,14 +22,55 @@ import { InitiatorNotFoundError } from 'src/initiators/errors/initiator-not-foun
 import { ProjectClientAssignmentsService } from 'src/project-client-assignments/project-client-assignments.service';
 import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontractor-not-found';
 import { OPENING_BALANCE_TAG } from 'src/common/constants';
+import { VatRatesService } from 'src/vat-rates/vat-rates.service';
+import type { VatRateEntry } from 'src/vat-rates/utils/payment-vat';
+import {
+  deriveIncomeTotals,
+  paidTowardsIncome,
+} from 'src/income/utils/income-totals';
+
+type PaidReport = {
+  date: Date;
+  incomeIncludesVat: boolean;
+  incomeEntries: { amount: Prisma.Decimal }[];
+  clientPayments: { amount: Prisma.Decimal }[];
+};
+
+/**
+ * What the client has paid towards a project's price: the sum of their
+ * payments, each month's VAT share taken off, since the estimated amount the
+ * progress is measured against carries no VAT.
+ */
+const sumPaidTowardsPrice = (
+  reports: PaidReport[],
+  vatRates: VatRateEntry[],
+): number =>
+  reports.reduce((total, report) => {
+    const paid = report.clientPayments.reduce(
+      (sum, p) => sum + p.amount.toNumber(),
+      0,
+    );
+    if (paid === 0) return total;
+    const income = report.incomeEntries.reduce(
+      (sum, e) => sum + e.amount.toNumber(),
+      0,
+    );
+    const { totalWithVat } = deriveIncomeTotals(
+      income,
+      report.incomeIncludesVat,
+      vatRates,
+      report.date,
+    );
+    return total + paidTowardsIncome(paid, income, totalWithVat);
+  }, 0);
 
 const PAID_REPORTS_INCLUDE = {
   reports: {
     select: {
-      incomeEntries: {
-        where: { incomeDate: { not: null } },
-        select: { amount: true },
-      },
+      date: true,
+      incomeIncludesVat: true,
+      incomeEntries: { select: { amount: true } },
+      clientPayments: { select: { amount: true } },
     },
   },
   _count: {
@@ -51,6 +92,7 @@ export class ProjectsService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly assignmentsService: ProjectClientAssignmentsService,
+    private readonly vatRatesService: VatRatesService,
   ) {}
 
   /**
@@ -118,6 +160,14 @@ export class ProjectsService {
                     tag: OPENING_BALANCE_TAG,
                   },
                 },
+                // Payment progress counts the client's payments, so the money
+                // already in hand is also recorded as one payment.
+                clientPayments: {
+                  create: {
+                    amount: new Prisma.Decimal(openingBalance.amount),
+                    paymentDate: month,
+                  },
+                },
               },
             });
           }
@@ -170,12 +220,15 @@ export class ProjectsService {
     if (closed) statusConditions.push({ isDone: true });
     if (statusConditions.length > 0) where.OR = statusConditions;
 
-    const projectsWithReports = await this.prismaService.project.findMany({
-      skip: Math.max(0, (page - 1) * limit),
-      take: Math.max(1, limit),
-      where,
-      include: PAID_REPORTS_INCLUDE,
-    });
+    const [projectsWithReports, vatRates] = await Promise.all([
+      this.prismaService.project.findMany({
+        skip: Math.max(0, (page - 1) * limit),
+        take: Math.max(1, limit),
+        where,
+        include: PAID_REPORTS_INCLUDE,
+      }),
+      this.vatRatesService.findAllEntries(),
+    ]);
 
     const projectIdToIncomesSumMap = new Map<string, number>();
     const projectIdToHasReportsMap = new Map<string, boolean>();
@@ -183,9 +236,7 @@ export class ProjectsService {
       ({ reports, _count, ...project }) => {
         projectIdToIncomesSumMap.set(
           project.id,
-          reports
-            .flatMap((r) => r.incomeEntries)
-            .reduce((sum, e) => sum + Number(e.amount), 0),
+          sumPaidTowardsPrice(reports, vatRates),
         );
         projectIdToHasReportsMap.set(project.id, _count.reports > 0);
         return project;
@@ -207,19 +258,20 @@ export class ProjectsService {
    * @returns The found project.
    */
   async findOne(id: string): Promise<ProjectResponseDto> {
-    const projectWithReports = await this.prismaService.project.findUnique({
-      where: { id },
-      include: PAID_REPORTS_INCLUDE,
-    });
+    const [projectWithReports, vatRates] = await Promise.all([
+      this.prismaService.project.findUnique({
+        where: { id },
+        include: PAID_REPORTS_INCLUDE,
+      }),
+      this.vatRatesService.findAllEntries(),
+    ]);
 
     if (!projectWithReports) {
       throw new ProjectNotFoundError(id);
     }
 
     const { reports, _count, ...project } = projectWithReports;
-    const incomesSum = reports
-      .flatMap((r) => r.incomeEntries)
-      .reduce((sum, e) => sum + Number(e.amount), 0);
+    const incomesSum = sumPaidTowardsPrice(reports, vatRates);
 
     this.logger.log(`Project retrieved: ${id}`);
     return toProjectResponse(project, incomesSum, _count.reports > 0);
