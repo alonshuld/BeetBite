@@ -353,7 +353,7 @@ export const translations = {
   he: {
     // Nav
     projectReports: "דוחות פרויקט",
-    monthlyIncome: "הכנסה חודשית",
+    monthlyIncome: "ריכוז מחזורי",
     supplierPayments: "תשלומי כוח אדם / ספקים",
     subcontractorPayments: "תשלומי קבלן משנה",
     incomePerMonth: "הכנסה לפי חודש",
