@@ -217,6 +217,107 @@ describe("ReportsPage", () => {
     });
   });
 
+  describe("search", () => {
+    // Acme has Tower Block (Bob) and Mall (Dana); Zeta Homes has Harbour Flats.
+    beforeEach(() => {
+      setReports([
+        mockReports[0],
+        {
+          ...mockReports[0],
+          id: "r2",
+          project: { ...mockReports[0].project, id: "p2", name: "Mall" },
+          subcontractor: { id: "s2", name: "Dana Works" },
+        },
+        {
+          ...mockReports[0],
+          id: "r3",
+          project: {
+            ...mockReports[0].project,
+            id: "p3",
+            name: "Harbour Flats",
+            client: { id: "c2", name: "Zeta Homes" },
+          },
+        },
+      ]);
+    });
+
+    function clientCards() {
+      return screen
+        .getAllByRole("button")
+        .map((b) => b.textContent ?? "")
+        .filter((text) => /project reports/.test(text))
+        .map((text) => text.replace(/\d+ project reports$/, ""));
+    }
+
+    it("filters the client cards by client name", async () => {
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "  zeta ");
+
+      expect(clientCards()).toEqual(["Zeta Homes"]);
+    });
+
+    it("finds a client by one of its projects", async () => {
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "tower");
+
+      expect(clientCards()).toEqual(["Acme Corp"]);
+    });
+
+    it("says so when no client matches, and restores them when cleared", async () => {
+      renderPage();
+      const box = screen.getByRole("searchbox");
+      await userEvent.type(box, "zzz");
+
+      expect(clientCards()).toEqual([]);
+      expect(screen.getByText("No results")).toBeInTheDocument();
+
+      await userEvent.clear(box);
+      expect(clientCards()).toEqual(["Acme Corp", "Zeta Homes"]);
+    });
+
+    it("filters a client's project sheets by project name", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+      await userEvent.type(screen.getByRole("searchbox"), "mall");
+
+      expect(screen.getByRole("button", { name: "Mall" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Tower Block" })).toBeNull();
+    });
+
+    it("filters a client's project sheets by subcontractor", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+      await userEvent.type(screen.getByRole("searchbox"), "bob");
+
+      expect(
+        screen.getByRole("button", { name: "Tower Block" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Mall" })).toBeNull();
+    });
+
+    it("keeps the client's totals over every project while filtering", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+      await userEvent.type(screen.getByRole("searchbox"), "mall");
+
+      // Two reports of 10,000 each: the header still shows ₪20,000 income.
+      expect(screen.getByText("₪20,000")).toBeInTheDocument();
+    });
+
+    it("starts each client with an empty project search", async () => {
+      renderPage();
+      await userEvent.click(screen.getByText("Acme Corp"));
+      await userEvent.type(screen.getByRole("searchbox"), "mall");
+      await userEvent.click(screen.getByRole("button", { name: "Clients" }));
+      await userEvent.click(screen.getByText("Zeta Homes"));
+
+      expect(screen.getByRole("searchbox")).toHaveValue("");
+      expect(
+        screen.getByRole("button", { name: "Harbour Flats" }),
+      ).toBeInTheDocument();
+    });
+  });
+
   it("shows the empty state when there are no reports", () => {
     setReports([]);
     renderPage();

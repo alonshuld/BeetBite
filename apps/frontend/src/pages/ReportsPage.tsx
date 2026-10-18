@@ -18,6 +18,7 @@ import { useGetProjectsQuery } from "@/api/endpoints/projects";
 import { SubcontractorSelect } from "@/components/molecules/SubcontractorSelect";
 import { useGetSuppliersQuery } from "@/api/endpoints/suppliers";
 import { PageHeader } from "@/components/molecules/PageHeader";
+import { SearchInput } from "@/components/molecules/SearchInput";
 import {
   ButtonPrimary,
   ButtonGhost,
@@ -97,6 +98,8 @@ export default function ReportsPage() {
   const { confirmOverIncome, overIncomeModal } = useOverIncomeConfirm();
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [clientSearch, setClientSearch] = useState("");
+  const [projectSearch, setProjectSearch] = useState("");
 
   const { data: reports = [], isLoading } = useGetProjectReportsQuery(month);
   const { data: prevReports = [] } = useGetProjectReportsQuery(
@@ -202,7 +205,33 @@ export default function ReportsPage() {
 
   useEffect(() => {
     setSimulatorOpen(false);
+    setProjectSearch("");
   }, [selectedClientId, month]);
+
+  // The client screen matches a client by its own name or any of its
+  // projects'; a client's screen matches a sheet by project or subcontractor.
+  // Only what is listed narrows: the client totals and the simulator still
+  // cover every project of the client.
+  const clientQuery = clientSearch.trim().toLowerCase();
+  const visibleClients = clientQuery
+    ? clientsInReports.filter(
+        (client) =>
+          client.name.toLowerCase().includes(clientQuery) ||
+          reports.some(
+            (r) =>
+              r.project.client.id === client.id &&
+              r.project.name.toLowerCase().includes(clientQuery),
+          ),
+      )
+    : clientsInReports;
+  const projectQuery = projectSearch.trim().toLowerCase();
+  const visibleClientReports = projectQuery
+    ? selectedClientReports.filter((r) =>
+        [r.project.name, r.subcontractor.name].some((text) =>
+          text.toLowerCase().includes(projectQuery),
+        ),
+      )
+    : selectedClientReports;
 
   // The income side of the same figure, for the selected month only.
   // Income is never simulated: only the margin split moves.
@@ -374,19 +403,29 @@ export default function ReportsPage() {
               }
             />
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {clientsInReports.map((client) => (
-                <ClientCard
-                  key={client.id}
-                  client={client}
-                  reportCount={
-                    reports.filter((r) => r.project.client.id === client.id)
-                      .length
-                  }
-                  onClick={() => setSelectedClientId(client.id)}
-                />
-              ))}
-            </div>
+            <>
+              <SearchInput
+                placeholder={t("search")}
+                value={clientSearch}
+                onChange={(e) => setClientSearch(e.target.value)}
+              />
+              {visibleClients.length === 0 && (
+                <EmptyState title={t("noResults")} />
+              )}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {visibleClients.map((client) => (
+                  <ClientCard
+                    key={client.id}
+                    client={client}
+                    reportCount={
+                      reports.filter((r) => r.project.client.id === client.id)
+                        .length
+                    }
+                    onClick={() => setSelectedClientId(client.id)}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </>
       ) : (
@@ -444,12 +483,20 @@ export default function ReportsPage() {
             />
           ) : (
             <>
+              <SearchInput
+                placeholder={t("search")}
+                value={projectSearch}
+                onChange={(e) => setProjectSearch(e.target.value)}
+              />
+              {visibleClientReports.length === 0 && (
+                <EmptyState title={t("noResults")} />
+              )}
               <div
                 className={`grid grid-cols-1 gap-4 ${
                   simulatorOpen ? "xl:grid-cols-2" : "sm:grid-cols-2"
                 }`}
               >
-                {selectedClientReports.map((report) => (
+                {visibleClientReports.map((report) => (
                   <ProjectSheet
                     key={report.id}
                     report={report}
