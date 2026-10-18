@@ -269,6 +269,37 @@ describe("SupplierPaymentsPage", () => {
     expect(screen.getAllByText("₪1,444.37").length).toBeGreaterThan(1);
   });
 
+  it("lists each supplier's projects in alphabetical order", () => {
+    const base = mockData.suppliersPayments[0].projectPayments[0];
+    vi.mocked(useGetSupplierPaymentsByMonthQuery).mockReturnValue({
+      data: {
+        suppliersPayments: [
+          {
+            ...mockData.suppliersPayments[0],
+            projectPayments: ["Tower Block", "Apartments", "Mall"].map(
+              (projectName, i) => ({
+                ...base,
+                id: `pp${i}`,
+                projectReport: { ...base.projectReport, projectName },
+              }),
+            ),
+          },
+        ],
+        total: 15000,
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useGetSupplierPaymentsByMonthQuery>);
+    renderSupplierPaymentsPage();
+
+    const rows = within(screen.getByRole("table")).getAllByRole("row");
+    // The first row is the header.
+    expect(rows.slice(1).map((r) => r.firstElementChild?.textContent)).toEqual([
+      "Apartments",
+      "Mall",
+      "Tower Block",
+    ]);
+  });
+
   // The percentage is never typed: it is the global rate for the payment's
   // month. The user only chooses whether a payment carries VAT.
   describe("VAT toggle", () => {
