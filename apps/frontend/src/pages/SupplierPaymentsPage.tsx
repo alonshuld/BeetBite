@@ -154,6 +154,9 @@ function SupplierGroup({
   const [setPaid] = useSetSupplierPaymentPaidMutation();
   const [setAllPaid] = useSetSupplierPaymentsPaidMutation();
 
+  const payments = [...group.projectPayments].sort((a, b) =>
+    a.projectReport.projectName.localeCompare(b.projectReport.projectName),
+  );
   const outstanding = group.total - group.totalPaid;
   const allPaid = outstanding <= 0 && group.projectPayments.length > 0;
 
@@ -216,7 +219,7 @@ function SupplierGroup({
             </tr>
           </thead>
           <tbody>
-            {group.projectPayments.map((payment) => (
+            {payments.map((payment) => (
               <tr
                 key={payment.id}
                 className={`border-b border-border transition-colors last:border-0 hover:bg-surface-2 ${
