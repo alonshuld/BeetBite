@@ -10,6 +10,7 @@ import {
   type SupplierPaymentsGroup,
 } from "@/api/endpoints/supplier-payments";
 import { PageHeader } from "@/components/molecules/PageHeader";
+import { SearchInput } from "@/components/molecules/SearchInput";
 import {
   ButtonPrimary,
   ButtonGhost,
@@ -296,6 +297,7 @@ export default function SupplierPaymentsPage() {
   const { t, lang } = useLang();
   const { toast } = useToast();
   const [batchOpen, setBatchOpen] = useState(false);
+  const [search, setSearch] = useState("");
   // The supplier travels with the payment: the entry itself does not carry it.
   const [editTarget, setEditTarget] = useState<{
     payment: SupplierPaymentEntry;
@@ -328,6 +330,23 @@ export default function SupplierPaymentsPage() {
       ),
     0,
   );
+
+  // A supplier whose name matches keeps its whole stack; otherwise only the
+  // payments whose project or description match stay, and empty groups drop.
+  const query = search.trim().toLowerCase();
+  const visibleGroups = query
+    ? groups.flatMap((group) => {
+        if (group.supplier.name.toLowerCase().includes(query)) return [group];
+        const projectPayments = group.projectPayments.filter(
+          (payment) =>
+            payment.projectReport.projectName.toLowerCase().includes(query) ||
+            (payment.description ?? "").toLowerCase().includes(query),
+        );
+        return projectPayments.length > 0
+          ? [{ ...group, projectPayments }]
+          : [];
+      })
+    : groups;
 
   return (
     <div className="flex flex-col gap-5">
@@ -367,8 +386,20 @@ export default function SupplierPaymentsPage() {
         />
       ) : (
         <>
+          <SearchInput
+            placeholder={t("search")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
+          />
+          {visibleGroups.length === 0 && (
+            <EmptyState
+              icon={<Icon name="search" size={22} />}
+              title={t("noResults")}
+            />
+          )}
           <div className="flex flex-col">
-            {groups.map((group, i) => (
+            {visibleGroups.map((group, i) => (
               <div
                 key={group.supplier.id}
                 /* A heavy rule between suppliers — the hairline used inside a

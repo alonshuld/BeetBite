@@ -300,6 +300,74 @@ describe("SupplierPaymentsPage", () => {
     ]);
   });
 
+  describe("search", () => {
+    it("filters suppliers by name, keeping their whole stack", async () => {
+      renderSupplierPaymentsPage();
+      await userEvent.type(screen.getByRole("searchbox"), "  local ");
+
+      expect(
+        screen.getByRole("heading", { name: "Local Ltd" }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Bridge")).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Global Inc" })).toBeNull();
+    });
+
+    it("filters payments by project name", async () => {
+      renderSupplierPaymentsPage();
+      await userEvent.type(screen.getByRole("searchbox"), "tower");
+
+      expect(screen.getByText("Tower Block")).toBeInTheDocument();
+      expect(screen.queryByText("Bridge")).toBeNull();
+      expect(screen.queryByRole("heading", { name: "Local Ltd" })).toBeNull();
+    });
+
+    it("filters payments by description", async () => {
+      vi.mocked(useGetSupplierPaymentsByMonthQuery).mockReturnValue({
+        data: {
+          ...mockData,
+          suppliersPayments: [
+            {
+              ...mockData.suppliersPayments[0],
+              projectPayments: [
+                {
+                  ...mockData.suppliersPayments[0].projectPayments[0],
+                  description: "Floor tiles",
+                },
+              ],
+            },
+            mockData.suppliersPayments[1],
+          ],
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useGetSupplierPaymentsByMonthQuery>);
+      renderSupplierPaymentsPage();
+      await userEvent.type(screen.getByRole("searchbox"), "tiles");
+
+      expect(screen.getByText("Tower Block")).toBeInTheDocument();
+      expect(screen.queryByText("Bridge")).toBeNull();
+    });
+
+    it("says so when nothing matches, and restores everything when cleared", async () => {
+      renderSupplierPaymentsPage();
+      const box = screen.getByRole("searchbox");
+      await userEvent.type(box, "zzz");
+
+      expect(screen.getByText("No results")).toBeInTheDocument();
+      expect(screen.queryByText("Tower Block")).toBeNull();
+
+      await userEvent.clear(box);
+      expect(screen.getByText("Tower Block")).toBeInTheDocument();
+      expect(screen.getByText("Bridge")).toBeInTheDocument();
+    });
+
+    it("keeps the month's grand total while filtering", async () => {
+      renderSupplierPaymentsPage();
+      await userEvent.type(screen.getByRole("searchbox"), "bridge");
+
+      expect(screen.getByText("₪8,000")).toBeInTheDocument();
+    });
+  });
+
   // The percentage is never typed: it is the global rate for the payment's
   // month. The user only chooses whether a payment carries VAT.
   describe("VAT toggle", () => {
