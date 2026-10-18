@@ -315,6 +315,90 @@ describe("SubcontractorPaymentsPage", () => {
     });
   });
 
+  describe("search", () => {
+    // Avi took Tower Block for Acme; Bob the Builder took Harbour Flats for Zeta.
+    beforeEach(() => {
+      vi.mocked(useGetProjectReportsQuery).mockReturnValue({
+        data: [
+          {
+            ...mockReports[0],
+            subcontractor: { id: "s2", name: "Avi" },
+          },
+          {
+            ...mockReports[0],
+            id: "r2",
+            project: {
+              id: "p2",
+              name: "Harbour Flats",
+              client: { id: "c2", name: "Zeta Homes" },
+            },
+          },
+        ],
+      } as unknown as ReturnType<typeof useGetProjectReportsQuery>);
+    });
+
+    function cardButtons() {
+      return screen.queryAllByRole("button", { name: /Owed/ });
+    }
+
+    it("filters cards by subcontractor name, ignoring case and spaces", async () => {
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "  AVI ");
+
+      expect(cardButtons()).toHaveLength(1);
+      expect(cardButtons()[0]).toHaveTextContent("Avi");
+    });
+
+    it("filters cards by project name", async () => {
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "harbour");
+
+      expect(cardButtons()).toHaveLength(1);
+      expect(cardButtons()[0]).toHaveTextContent("Bob the Builder");
+    });
+
+    it("filters cards by client name", async () => {
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "acme");
+
+      expect(cardButtons()).toHaveLength(1);
+      expect(cardButtons()[0]).toHaveTextContent("Avi");
+    });
+
+    it("says so when nothing matches, and restores the cards when cleared", async () => {
+      renderPage();
+      const box = screen.getByRole("searchbox");
+      await userEvent.type(box, "zzz");
+
+      expect(cardButtons()).toHaveLength(0);
+      expect(screen.getByText("No results")).toBeInTheDocument();
+
+      await userEvent.clear(box);
+      expect(cardButtons()).toHaveLength(2);
+    });
+
+    it("matches a team by any of its members", async () => {
+      vi.mocked(useGetSubcontractorTeamsQuery).mockReturnValue({
+        data: [
+          {
+            id: "team-1",
+            members: [
+              { id: "s1", name: "Bob the Builder", companyNumber: "1" },
+              { id: "s3", name: "Dana Works", companyNumber: "3" },
+            ],
+          },
+        ],
+      } as unknown as ReturnType<typeof useGetSubcontractorTeamsQuery>);
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "dana");
+
+      expect(cardButtons()).toHaveLength(1);
+      expect(cardButtons()[0]).toHaveTextContent(
+        "Bob the Builder + Dana Works",
+      );
+    });
+  });
+
   describe("payment dates and balance", () => {
     it("shows the balance beside owed and paid", () => {
       setPayments(makePayments([makePayment({ amount: 3000 })], 3000));

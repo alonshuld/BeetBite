@@ -12,6 +12,7 @@ import {
   useDeleteSubcontractorPaymentMutation,
 } from "@/api/endpoints/subcontractor-payments";
 import { PageHeader } from "@/components/molecules/PageHeader";
+import { SearchInput } from "@/components/molecules/SearchInput";
 import { Input } from "@/components/atoms/Input";
 import { Select } from "@/components/atoms/Select";
 import { Badge, ButtonGhost, EmptyState } from "@/components/atoms";
@@ -59,6 +60,7 @@ export default function SubcontractorPaymentsPage() {
   // A card is one subcontractor working alone, or one whole team.
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [teamsOpen, setTeamsOpen] = useState(false);
+  const [search, setSearch] = useState("");
   // The inline row that records one instalment: which project it is open for,
   // the amount typed into it, the day that money moved and an optional note.
   const [entryOpen, setEntryOpen] = useState<Record<string, boolean>>({});
@@ -204,6 +206,22 @@ export default function SubcontractorPaymentsPage() {
     .map(({ card }) => card);
 
   const selectedCard = cards.find((c) => c.key === selectedKey) ?? null;
+
+  // A card matches by its subcontractor (or any team member) or by any of its
+  // projects or their clients. The open card stays open while filtering.
+  const query = search.trim().toLowerCase();
+  const visibleCards = query
+    ? cards.filter((card) =>
+        [
+          card.label,
+          ...card.members.map((m) => m.name),
+          ...card.projectBreakdown.flatMap((pb) => [
+            pb.projectName,
+            pb.clientName,
+          ]),
+        ].some((text) => text.toLowerCase().includes(query)),
+      )
+    : cards;
 
   /** Owed and paid for each member of a card, for the per-member totals. */
   function memberTotals(card: SubCard) {
@@ -381,622 +399,642 @@ export default function SubcontractorPaymentsPage() {
           description={t("subcontractorsNote")}
         />
       ) : (
-        <div className="flex gap-5 max-[768px]:flex-col">
-          {/* Sidebar */}
-          <div className="flex flex-col gap-2 w-72 shrink-0 max-[768px]:w-full">
-            {cards.map((card) => {
-              const cardStatus = cardStatusOf(card);
-              const isActive = selectedKey === card.key;
-              return (
-                <button
-                  key={card.key}
-                  onClick={() => {
-                    setSelectedKey(card.key);
-                  }}
-                  className={`text-left p-4 rounded border transition-colors ${
-                    isActive
-                      ? "bg-(--beet-glow) border-beet"
-                      : "bg-surface border-border hover:bg-surface-2"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <span className="font-medium text-text text-sm">
-                      {card.label}
-                    </span>
-                    <Badge variant={STATUS_VARIANT[cardStatus]}>
-                      {t(
-                        cardStatus.toLowerCase() as
-                          | "paid"
-                          | "partial"
-                          | "unpaid",
-                      )}
-                    </Badge>
-                  </div>
-                  <p className="text-[11px] text-text-muted mb-1">
-                    {card.projectBreakdown.length}{" "}
-                    {card.projectBreakdown.length === 1
-                      ? t("project")
-                      : t("projects")}
-                  </p>
-                  <p className="tnum text-sm font-semibold text-danger">
-                    {t("owed")}: {formatILS(card.totalOwed)}
-                  </p>
-                  <p className="tnum text-sm font-semibold text-success">
-                    {t("paid")}: {formatILS(card.totalPaid)}
-                  </p>
-                  {/* The balance is the number actually acted on, so it
-                      is styled to stand out and coloured like the statuses:
-                      settled at zero, outstanding above it. */}
-                  <p
-                    className={`tnum text-sm font-bold ${
-                      card.totalOwed - card.totalPaid <= 0
-                        ? "text-success"
-                        : "text-warning"
+        <>
+          <SearchInput
+            placeholder={t("search")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="flex gap-5 max-[768px]:flex-col">
+            {/* Sidebar */}
+            <div className="flex flex-col gap-2 w-72 shrink-0 max-[768px]:w-full">
+              {visibleCards.length === 0 && (
+                <p className="rounded border border-border bg-surface p-4 text-sm text-text-muted">
+                  {t("noResults")}
+                </p>
+              )}
+              {visibleCards.map((card) => {
+                const cardStatus = cardStatusOf(card);
+                const isActive = selectedKey === card.key;
+                return (
+                  <button
+                    key={card.key}
+                    onClick={() => {
+                      setSelectedKey(card.key);
+                    }}
+                    className={`text-left p-4 rounded border transition-colors ${
+                      isActive
+                        ? "bg-(--beet-glow) border-beet"
+                        : "bg-surface border-border hover:bg-surface-2"
                     }`}
                   >
-                    {t("balance")}: {formatILS(card.totalOwed - card.totalPaid)}
-                  </p>
-                  {card.isTeam && (
-                    <ul className="mt-2 flex flex-col gap-0.5 border-t border-border pt-2 text-[11px] text-text-muted">
-                      {memberTotals(card).map((m) => (
-                        <li
-                          key={m.id}
-                          className="tnum flex justify-between gap-2"
-                        >
-                          <span>{m.name}</span>
-                          <span>
-                            {formatILS(m.paid)} / {formatILS(m.owed)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Main panel */}
-          {selectedCard ? (
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-serif text-xl text-text">
-                  {selectedCard.label}
-                </h2>
-              </div>
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-surface-2">
-                    <th className="text-left py-2 px-3 text-label font-semibold text-text-muted rtl:text-right">
-                      {t("project")}
-                    </th>
-                    {selectedCard.isTeam && (
-                      <th className="text-left py-2 px-3 text-label font-semibold text-text-muted rtl:text-right">
-                        {t("takenBy")}
-                      </th>
-                    )}
-                    <th className="text-right py-2 px-3 text-label font-semibold text-text-muted rtl:text-left">
-                      {t("amountOwed")}
-                    </th>
-                    <th className="text-right py-2 px-3 text-label font-semibold text-text-muted rtl:text-left">
-                      {t("amountPaid")}
-                    </th>
-                    <th className="py-2 px-3 text-label font-semibold text-text-muted text-center">
-                      {t("paid")}?
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedCard.projectBreakdown.map((pb) => {
-                    const projectPayments = paymentsFor(pb.projectId, pb.subId);
-                    const paid = projectPayments.reduce(
-                      (s, p) => s + p.amount,
-                      0,
-                    );
-                    const status = projectStatus(paid, pb.owed);
-                    const remaining = pb.owed - paid;
-                    const isPending = pendingProject[pb.projectId] ?? false;
-                    const isEntryOpen = entryOpen[pb.projectId] ?? false;
-
-                    return (
-                      <>
-                        <tr
-                          key={pb.projectId}
-                          className="border-b border-border"
-                        >
-                          <td className="py-3 px-3 text-text">
-                            <div>{pb.projectName}</div>
-                            {status === "Partial" && (
-                              <div
-                                className="text-[11px] mt-0.5"
-                                style={{ color: "var(--warning)" }}
-                              >
-                                {t("remaining")}: {formatILS(remaining)}
-                              </div>
-                            )}
-                          </td>
-                          {selectedCard.isTeam && (
-                            <td className="py-3 px-3">
-                              {/* Who took the project this month. Locked once
-                                  instalments are recorded to that member. */}
-                              <Select
-                                aria-label={`${t("takenBy")} — ${pb.projectName}`}
-                                value={pb.subId}
-                                disabled={projectPayments.length > 0}
-                                title={
-                                  projectPayments.length > 0
-                                    ? t("changeMemberBlocked")
-                                    : undefined
-                                }
-                                onChange={(e) =>
-                                  void handleChangeMember(
-                                    pb.reportId,
-                                    e.target.value,
-                                  )
-                                }
-                              >
-                                {selectedCard.members.map((m) => (
-                                  <option key={m.id} value={m.id}>
-                                    {m.name}
-                                  </option>
-                                ))}
-                              </Select>
-                            </td>
-                          )}
-                          <td className="py-3 px-3 text-right font-medium rtl:text-left">
-                            <span
-                              style={{
-                                color:
-                                  status === "Paid"
-                                    ? "var(--success)"
-                                    : status === "Partial"
-                                      ? "var(--warning)"
-                                      : "var(--danger)",
-                              }}
-                            >
-                              {formatILS(pb.owed)}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="font-medium text-text text-sm">
+                        {card.label}
+                      </span>
+                      <Badge variant={STATUS_VARIANT[cardStatus]}>
+                        {t(
+                          cardStatus.toLowerCase() as
+                            | "paid"
+                            | "partial"
+                            | "unpaid",
+                        )}
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-text-muted mb-1">
+                      {card.projectBreakdown.length}{" "}
+                      {card.projectBreakdown.length === 1
+                        ? t("project")
+                        : t("projects")}
+                    </p>
+                    <p className="tnum text-sm font-semibold text-danger">
+                      {t("owed")}: {formatILS(card.totalOwed)}
+                    </p>
+                    <p className="tnum text-sm font-semibold text-success">
+                      {t("paid")}: {formatILS(card.totalPaid)}
+                    </p>
+                    {/* The balance is the number actually acted on, so it
+                      is styled to stand out and coloured like the statuses:
+                      settled at zero, outstanding above it. */}
+                    <p
+                      className={`tnum text-sm font-bold ${
+                        card.totalOwed - card.totalPaid <= 0
+                          ? "text-success"
+                          : "text-warning"
+                      }`}
+                    >
+                      {t("balance")}:{" "}
+                      {formatILS(card.totalOwed - card.totalPaid)}
+                    </p>
+                    {card.isTeam && (
+                      <ul className="mt-2 flex flex-col gap-0.5 border-t border-border pt-2 text-[11px] text-text-muted">
+                        {memberTotals(card).map((m) => (
+                          <li
+                            key={m.id}
+                            className="tnum flex justify-between gap-2"
+                          >
+                            <span>{m.name}</span>
+                            <span>
+                              {formatILS(m.paid)} / {formatILS(m.owed)}
                             </span>
-                          </td>
-                          <td className="py-3 px-3 text-right font-medium text-success rtl:text-left">
-                            {formatILS(paid)}
-                          </td>
-                          <td className="py-3 px-3">
-                            <div className="flex items-center justify-center gap-1.5">
-                              {/* Red X — Unpaid */}
-                              <button
-                                disabled={isPending}
-                                onClick={() =>
-                                  void handleSetUnpaid(pb.projectId, pb.subId)
-                                }
-                                title={t("unpaid")}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
-                                style={
-                                  status === "Unpaid"
-                                    ? {
-                                        background: "var(--danger)",
-                                        borderColor: "var(--danger)",
-                                        color: "white",
-                                      }
-                                    : {
-                                        background: "transparent",
-                                        borderColor: "var(--border)",
-                                        color: "var(--text-muted)",
-                                      }
-                                }
-                              >
-                                <Icon name="close" size={14} />
-                              </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
-                              {/* Green V — Paid in full: opens the row with the
+            {/* Main panel */}
+            {selectedCard ? (
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-serif text-xl text-text">
+                    {selectedCard.label}
+                  </h2>
+                </div>
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-surface-2">
+                      <th className="text-left py-2 px-3 text-label font-semibold text-text-muted rtl:text-right">
+                        {t("project")}
+                      </th>
+                      {selectedCard.isTeam && (
+                        <th className="text-left py-2 px-3 text-label font-semibold text-text-muted rtl:text-right">
+                          {t("takenBy")}
+                        </th>
+                      )}
+                      <th className="text-right py-2 px-3 text-label font-semibold text-text-muted rtl:text-left">
+                        {t("amountOwed")}
+                      </th>
+                      <th className="text-right py-2 px-3 text-label font-semibold text-text-muted rtl:text-left">
+                        {t("amountPaid")}
+                      </th>
+                      <th className="py-2 px-3 text-label font-semibold text-text-muted text-center">
+                        {t("paid")}?
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedCard.projectBreakdown.map((pb) => {
+                      const projectPayments = paymentsFor(
+                        pb.projectId,
+                        pb.subId,
+                      );
+                      const paid = projectPayments.reduce(
+                        (s, p) => s + p.amount,
+                        0,
+                      );
+                      const status = projectStatus(paid, pb.owed);
+                      const remaining = pb.owed - paid;
+                      const isPending = pendingProject[pb.projectId] ?? false;
+                      const isEntryOpen = entryOpen[pb.projectId] ?? false;
+
+                      return (
+                        <>
+                          <tr
+                            key={pb.projectId}
+                            className="border-b border-border"
+                          >
+                            <td className="py-3 px-3 text-text">
+                              <div>{pb.projectName}</div>
+                              {status === "Partial" && (
+                                <div
+                                  className="text-[11px] mt-0.5"
+                                  style={{ color: "var(--warning)" }}
+                                >
+                                  {t("remaining")}: {formatILS(remaining)}
+                                </div>
+                              )}
+                            </td>
+                            {selectedCard.isTeam && (
+                              <td className="py-3 px-3">
+                                {/* Who took the project this month. Locked once
+                                  instalments are recorded to that member. */}
+                                <Select
+                                  aria-label={`${t("takenBy")} — ${pb.projectName}`}
+                                  value={pb.subId}
+                                  disabled={projectPayments.length > 0}
+                                  title={
+                                    projectPayments.length > 0
+                                      ? t("changeMemberBlocked")
+                                      : undefined
+                                  }
+                                  onChange={(e) =>
+                                    void handleChangeMember(
+                                      pb.reportId,
+                                      e.target.value,
+                                    )
+                                  }
+                                >
+                                  {selectedCard.members.map((m) => (
+                                    <option key={m.id} value={m.id}>
+                                      {m.name}
+                                    </option>
+                                  ))}
+                                </Select>
+                              </td>
+                            )}
+                            <td className="py-3 px-3 text-right font-medium rtl:text-left">
+                              <span
+                                style={{
+                                  color:
+                                    status === "Paid"
+                                      ? "var(--success)"
+                                      : status === "Partial"
+                                        ? "var(--warning)"
+                                        : "var(--danger)",
+                                }}
+                              >
+                                {formatILS(pb.owed)}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-right font-medium text-success rtl:text-left">
+                              {formatILS(paid)}
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="flex items-center justify-center gap-1.5">
+                                {/* Red X — Unpaid */}
+                                <button
+                                  disabled={isPending}
+                                  onClick={() =>
+                                    void handleSetUnpaid(pb.projectId, pb.subId)
+                                  }
+                                  title={t("unpaid")}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
+                                  style={
+                                    status === "Unpaid"
+                                      ? {
+                                          background: "var(--danger)",
+                                          borderColor: "var(--danger)",
+                                          color: "white",
+                                        }
+                                      : {
+                                          background: "transparent",
+                                          borderColor: "var(--border)",
+                                          color: "var(--text-muted)",
+                                        }
+                                  }
+                                >
+                                  <Icon name="close" size={14} />
+                                </button>
+
+                                {/* Green V — Paid in full: opens the row with the
                                   outstanding balance filled in, so the day it
                                   was paid is still stated before it is saved. */}
-                              <button
-                                disabled={isPending || remaining <= 0}
-                                onClick={() =>
-                                  openEntry(pb.projectId, String(remaining))
-                                }
-                                title={t("paid")}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
-                                style={
-                                  status === "Paid"
-                                    ? {
-                                        background: "var(--success)",
-                                        borderColor: "var(--success)",
-                                        color: "white",
-                                      }
-                                    : {
-                                        background: "transparent",
-                                        borderColor: "var(--border)",
-                                        color: "var(--text-muted)",
-                                      }
-                                }
-                              >
-                                <Icon name="check" size={14} />
-                              </button>
+                                <button
+                                  disabled={isPending || remaining <= 0}
+                                  onClick={() =>
+                                    openEntry(pb.projectId, String(remaining))
+                                  }
+                                  title={t("paid")}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
+                                  style={
+                                    status === "Paid"
+                                      ? {
+                                          background: "var(--success)",
+                                          borderColor: "var(--success)",
+                                          color: "white",
+                                        }
+                                      : {
+                                          background: "transparent",
+                                          borderColor: "var(--border)",
+                                          color: "var(--text-muted)",
+                                        }
+                                  }
+                                >
+                                  <Icon name="check" size={14} />
+                                </button>
 
-                              {/* Yellow ~ — Partial: one instalment, amount
+                                {/* Yellow ~ — Partial: one instalment, amount
                                   and date both typed by the user. */}
-                              <button
-                                disabled={isPending}
-                                onClick={() =>
-                                  isEntryOpen
-                                    ? closeEntry(pb.projectId)
-                                    : openEntry(pb.projectId, "")
-                                }
-                                title={t("partial")}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
-                                style={
-                                  status === "Partial"
-                                    ? {
-                                        background: "var(--warning)",
-                                        borderColor: "var(--warning)",
-                                        color: "white",
-                                      }
-                                    : {
-                                        background: "transparent",
-                                        borderColor: "var(--border)",
-                                        color: "var(--text-muted)",
-                                      }
-                                }
-                              >
-                                <Icon name="wave" size={14} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
+                                <button
+                                  disabled={isPending}
+                                  onClick={() =>
+                                    isEntryOpen
+                                      ? closeEntry(pb.projectId)
+                                      : openEntry(pb.projectId, "")
+                                  }
+                                  title={t("partial")}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-50"
+                                  style={
+                                    status === "Partial"
+                                      ? {
+                                          background: "var(--warning)",
+                                          borderColor: "var(--warning)",
+                                          color: "white",
+                                        }
+                                      : {
+                                          background: "transparent",
+                                          borderColor: "var(--border)",
+                                          color: "var(--text-muted)",
+                                        }
+                                  }
+                                >
+                                  <Icon name="wave" size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
 
-                        {/* Each recorded payment as its own line: the
+                          {/* Each recorded payment as its own line: the
                             day the money moved on one side, the amount on the
                             other. A month settled in three instalments shows
                             three dated lines, each removable and each with its
                             own date, correctable by clicking it. */}
-                        {projectPayments.length > 0 && (
-                          <tr
-                            key={`${pb.projectId}-payments`}
-                            className="border-b border-border"
-                          >
-                            <td colSpan={colCount} className="px-3 py-1">
-                              <ul className="flex flex-col gap-0.5">
-                                {projectPayments.map((payment) => (
-                                  <li
-                                    key={payment.id}
-                                    className="flex items-center justify-between gap-2 text-xs text-text-muted"
-                                  >
-                                    {editingDate[payment.id] ? (
-                                      <input
-                                        type="date"
-                                        autoFocus
-                                        aria-label={t("paymentDate")}
-                                        className="px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
-                                        defaultValue={
-                                          payment.paymentDate?.slice(0, 10) ??
-                                          todayISO()
-                                        }
-                                        onChange={(e) =>
-                                          void handleChangePaymentDate(
-                                            payment.id,
-                                            e.target.value,
-                                          )
-                                        }
-                                        onBlur={() =>
-                                          setEditingDate((prev) => ({
-                                            ...prev,
-                                            [payment.id]: false,
-                                          }))
-                                        }
-                                      />
-                                    ) : (
-                                      <button
-                                        onClick={() =>
-                                          setEditingDate((prev) => ({
-                                            ...prev,
-                                            [payment.id]: true,
-                                          }))
-                                        }
-                                        title={t("paymentDate")}
-                                        className="underline decoration-dotted underline-offset-2 hover:text-text transition-colors"
-                                      >
-                                        {payment.paymentDate
-                                          ? formatISODate(
-                                              payment.paymentDate,
-                                              lang,
-                                              {
-                                                day: "numeric",
-                                                month: "short",
-                                                year: "numeric",
-                                              },
-                                            )
-                                          : t("noDateRecorded")}
-                                      </button>
-                                    )}
-                                    {descriptionDrafts[payment.id] !==
-                                    undefined ? (
-                                      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                          {projectPayments.length > 0 && (
+                            <tr
+                              key={`${pb.projectId}-payments`}
+                              className="border-b border-border"
+                            >
+                              <td colSpan={colCount} className="px-3 py-1">
+                                <ul className="flex flex-col gap-0.5">
+                                  {projectPayments.map((payment) => (
+                                    <li
+                                      key={payment.id}
+                                      className="flex items-center justify-between gap-2 text-xs text-text-muted"
+                                    >
+                                      {editingDate[payment.id] ? (
                                         <input
-                                          type="text"
+                                          type="date"
                                           autoFocus
-                                          maxLength={500}
-                                          aria-label={t("description")}
-                                          placeholder={t("description")}
-                                          className="min-w-0 flex-1 px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
-                                          value={descriptionDrafts[payment.id]}
+                                          aria-label={t("paymentDate")}
+                                          className="px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
+                                          defaultValue={
+                                            payment.paymentDate?.slice(0, 10) ??
+                                            todayISO()
+                                          }
                                           onChange={(e) =>
-                                            setDescriptionDrafts((prev) => ({
+                                            void handleChangePaymentDate(
+                                              payment.id,
+                                              e.target.value,
+                                            )
+                                          }
+                                          onBlur={() =>
+                                            setEditingDate((prev) => ({
                                               ...prev,
-                                              [payment.id]: e.target.value,
+                                              [payment.id]: false,
                                             }))
                                           }
-                                          onKeyDown={(e) => {
-                                            if (e.key === "Enter")
+                                        />
+                                      ) : (
+                                        <button
+                                          onClick={() =>
+                                            setEditingDate((prev) => ({
+                                              ...prev,
+                                              [payment.id]: true,
+                                            }))
+                                          }
+                                          title={t("paymentDate")}
+                                          className="underline decoration-dotted underline-offset-2 hover:text-text transition-colors"
+                                        >
+                                          {payment.paymentDate
+                                            ? formatISODate(
+                                                payment.paymentDate,
+                                                lang,
+                                                {
+                                                  day: "numeric",
+                                                  month: "short",
+                                                  year: "numeric",
+                                                },
+                                              )
+                                            : t("noDateRecorded")}
+                                        </button>
+                                      )}
+                                      {descriptionDrafts[payment.id] !==
+                                      undefined ? (
+                                        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                                          <input
+                                            type="text"
+                                            autoFocus
+                                            maxLength={500}
+                                            aria-label={t("description")}
+                                            placeholder={t("description")}
+                                            className="min-w-0 flex-1 px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
+                                            value={
+                                              descriptionDrafts[payment.id]
+                                            }
+                                            onChange={(e) =>
+                                              setDescriptionDrafts((prev) => ({
+                                                ...prev,
+                                                [payment.id]: e.target.value,
+                                              }))
+                                            }
+                                            onKeyDown={(e) => {
+                                              if (e.key === "Enter")
+                                                void handleSaveDescription(
+                                                  payment.id,
+                                                  payment.description,
+                                                );
+                                              if (e.key === "Escape")
+                                                closeDescriptionEditor(
+                                                  payment.id,
+                                                );
+                                            }}
+                                          />
+                                          <button
+                                            onClick={() =>
                                               void handleSaveDescription(
                                                 payment.id,
                                                 payment.description,
-                                              );
-                                            if (e.key === "Escape")
-                                              closeDescriptionEditor(
-                                                payment.id,
-                                              );
-                                          }}
-                                        />
-                                        <button
-                                          onClick={() =>
-                                            void handleSaveDescription(
-                                              payment.id,
-                                              payment.description,
-                                            )
-                                          }
-                                          className="inline-flex h-6 items-center gap-1 rounded-sm border border-beet bg-beet px-2 font-semibold text-white transition-opacity hover:opacity-90"
-                                        >
-                                          <Icon name="check" size={12} />
-                                          {t("save")}
-                                        </button>
-                                        <button
-                                          onClick={() =>
-                                            closeDescriptionEditor(payment.id)
-                                          }
-                                          className="inline-flex h-6 items-center rounded-sm border border-border px-2 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
-                                        >
-                                          {t("cancel")}
-                                        </button>
-                                      </span>
-                                    ) : (
-                                      <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                                        {payment.description && (
-                                          <span
-                                            className="min-w-0 truncate text-text"
-                                            title={payment.description}
-                                          >
-                                            {payment.description}
-                                          </span>
-                                        )}
-                                        <button
-                                          disabled={isPending}
-                                          onClick={() =>
-                                            openDescriptionEditor(
-                                              payment.id,
-                                              payment.description,
-                                            )
-                                          }
-                                          title={
-                                            payment.description
-                                              ? t("editDescription")
-                                              : t("addDescription")
-                                          }
-                                          aria-label={
-                                            payment.description
-                                              ? t("editDescription")
-                                              : t("addDescription")
-                                          }
-                                          className="inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-sm border border-border px-1.5 text-text-dim transition-colors hover:border-beet hover:text-beet disabled:opacity-40"
-                                        >
-                                          <Icon
-                                            name={
-                                              payment.description
-                                                ? "edit"
-                                                : "plus"
+                                              )
                                             }
-                                            size={12}
-                                          />
-                                          {!payment.description &&
-                                            t("addDescription")}
-                                        </button>
-                                        {payment.description && (
+                                            className="inline-flex h-6 items-center gap-1 rounded-sm border border-beet bg-beet px-2 font-semibold text-white transition-opacity hover:opacity-90"
+                                          >
+                                            <Icon name="check" size={12} />
+                                            {t("save")}
+                                          </button>
+                                          <button
+                                            onClick={() =>
+                                              closeDescriptionEditor(payment.id)
+                                            }
+                                            className="inline-flex h-6 items-center rounded-sm border border-border px-2 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
+                                          >
+                                            {t("cancel")}
+                                          </button>
+                                        </span>
+                                      ) : (
+                                        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                                          {payment.description && (
+                                            <span
+                                              className="min-w-0 truncate text-text"
+                                              title={payment.description}
+                                            >
+                                              {payment.description}
+                                            </span>
+                                          )}
                                           <button
                                             disabled={isPending}
                                             onClick={() =>
-                                              void handleDeleteDescription(
+                                              openDescriptionEditor(
                                                 payment.id,
+                                                payment.description,
                                               )
                                             }
-                                            title={t("deleteDescription")}
-                                            aria-label={t("deleteDescription")}
-                                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-border text-text-dim transition-colors hover:border-danger hover:text-danger disabled:opacity-40"
+                                            title={
+                                              payment.description
+                                                ? t("editDescription")
+                                                : t("addDescription")
+                                            }
+                                            aria-label={
+                                              payment.description
+                                                ? t("editDescription")
+                                                : t("addDescription")
+                                            }
+                                            className="inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-sm border border-border px-1.5 text-text-dim transition-colors hover:border-beet hover:text-beet disabled:opacity-40"
                                           >
-                                            <Icon name="trash" size={12} />
+                                            <Icon
+                                              name={
+                                                payment.description
+                                                  ? "edit"
+                                                  : "plus"
+                                              }
+                                              size={12}
+                                            />
+                                            {!payment.description &&
+                                              t("addDescription")}
                                           </button>
-                                        )}
+                                          {payment.description && (
+                                            <button
+                                              disabled={isPending}
+                                              onClick={() =>
+                                                void handleDeleteDescription(
+                                                  payment.id,
+                                                )
+                                              }
+                                              title={t("deleteDescription")}
+                                              aria-label={t(
+                                                "deleteDescription",
+                                              )}
+                                              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-border text-text-dim transition-colors hover:border-danger hover:text-danger disabled:opacity-40"
+                                            >
+                                              <Icon name="trash" size={12} />
+                                            </button>
+                                          )}
+                                        </span>
+                                      )}
+                                      <span className="flex items-center gap-2">
+                                        <span className="text-text font-medium">
+                                          {formatILS(payment.amount)}
+                                        </span>
+                                        <button
+                                          disabled={isPending}
+                                          onClick={() =>
+                                            void handleDeletePayment(
+                                              pb.projectId,
+                                              payment.id,
+                                            )
+                                          }
+                                          title={t("delete")}
+                                          className="inline-flex h-6 w-6 items-center justify-center rounded-sm border border-border text-text-dim transition-colors hover:border-danger hover:text-danger disabled:opacity-40"
+                                        >
+                                          <Icon name="close" size={14} />
+                                        </button>
                                       </span>
-                                    )}
-                                    <span className="flex items-center gap-2">
-                                      <span className="text-text font-medium">
-                                        {formatILS(payment.amount)}
-                                      </span>
-                                      <button
-                                        disabled={isPending}
-                                        onClick={() =>
-                                          void handleDeletePayment(
-                                            pb.projectId,
-                                            payment.id,
-                                          )
-                                        }
-                                        title={t("delete")}
-                                        className="inline-flex h-6 w-6 items-center justify-center rounded-sm border border-border text-text-dim transition-colors hover:border-danger hover:text-danger disabled:opacity-40"
-                                      >
-                                        <Icon name="close" size={14} />
-                                      </button>
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </td>
-                          </tr>
-                        )}
-
-                        {/* Instalment entry row — amount, the day it moved and
-                            an optional description */}
-                        {isEntryOpen && (
-                          <tr
-                            key={`${pb.projectId}-partial`}
-                            className="border-b border-border bg-surface"
-                          >
-                            <td colSpan={colCount} className="px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <div className="w-40">
-                                  <Input
-                                    id={`partial-${pb.projectId}`}
-                                    label=""
-                                    type="number"
-                                    min="0.01"
-                                    step="0.01"
-                                    max={remaining}
-                                    value={entryAmounts[pb.projectId] ?? ""}
-                                    onChange={(e) =>
-                                      setEntryAmounts((prev) => ({
-                                        ...prev,
-                                        [pb.projectId]: e.target.value,
-                                      }))
-                                    }
-                                    placeholder={`0 – ${remaining}`}
-                                  />
-                                </div>
-                                <div className="w-44">
-                                  <Input
-                                    id={`payment-date-${pb.projectId}`}
-                                    label=""
-                                    type="date"
-                                    aria-label={t("paymentDate")}
-                                    value={paymentDateFor(pb.projectId)}
-                                    onChange={(e) =>
-                                      setPaymentDates((prev) => ({
-                                        ...prev,
-                                        [pb.projectId]: e.target.value,
-                                      }))
-                                    }
-                                  />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <Input
-                                    id={`payment-description-${pb.projectId}`}
-                                    label=""
-                                    type="text"
-                                    maxLength={500}
-                                    aria-label={t("description")}
-                                    placeholder={t("descriptionOptional")}
-                                    value={
-                                      entryDescriptions[pb.projectId] ?? ""
-                                    }
-                                    onChange={(e) =>
-                                      setEntryDescriptions((prev) => ({
-                                        ...prev,
-                                        [pb.projectId]: e.target.value,
-                                      }))
-                                    }
-                                  />
-                                </div>
-                                <button
-                                  disabled={
-                                    isPending ||
-                                    !(
-                                      parseFloat(
-                                        entryAmounts[pb.projectId] ?? "",
-                                      ) > 0
-                                    )
-                                  }
-                                  onClick={() =>
-                                    void handleAddPayment(
-                                      pb.projectId,
-                                      pb.subId,
-                                    )
-                                  }
-                                  title={t("save")}
-                                  className="inline-flex h-8 items-center justify-center rounded bg-beet px-3 text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-                                >
-                                  <Icon name="check" size={14} />
-                                </button>
-                                <button
-                                  onClick={() => closeEntry(pb.projectId)}
-                                  title={t("cancel")}
-                                  className="inline-flex h-8 items-center justify-center rounded border border-border px-2.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
-                                >
-                                  <Icon name="close" size={14} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  {selectedCard.isTeam &&
-                    memberTotals(selectedCard).map((m, i) => (
-                      <tr
-                        key={m.id}
-                        className={
-                          i === 0 ? "border-t-2 border-border" : undefined
-                        }
-                      >
-                        <td className="py-1.5 px-3 text-text-muted">
-                          {i === 0 && (
-                            <span className="block text-label">
-                              {t("memberTotals")}
-                            </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                        <td className="py-1.5 px-3 text-text">{m.name}</td>
-                        <td className="py-1.5 px-3 text-right font-medium text-text rtl:text-left">
-                          {formatILS(m.owed)}
-                        </td>
-                        <td className="py-1.5 px-3 text-right font-medium text-success rtl:text-left">
-                          {formatILS(m.paid)}
-                        </td>
-                        <td />
-                      </tr>
-                    ))}
-                  <tr className="border-t-2 border-border">
-                    <td
-                      colSpan={selectedCard.isTeam ? 2 : 1}
-                      className="py-2 px-3 font-semibold text-text"
-                    >
-                      {selectedCard.isTeam ? t("teamTotal") : t("totalOwed")}
-                    </td>
-                    <td
-                      className={`py-2 px-3 text-right font-bold rtl:text-left ${totalAmountClass}`}
-                    >
-                      {formatILS(selectedCard.totalOwed)}
-                    </td>
-                    <td className="py-2 px-3 text-right font-bold text-success rtl:text-left">
-                      {formatILS(selectedCard.totalPaid)}
-                    </td>
-                    <td />
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          ) : (
-            <div className="flex flex-1 items-center justify-center">
-              <div className="flex flex-col items-center gap-3 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-text-dim">
-                  <Icon name="subcontractors" size={22} />
-                </div>
-                <p className="max-w-[32ch] text-sm text-text-muted">
-                  {t("selectSubcontractor")}
-                </p>
+
+                          {/* Instalment entry row — amount, the day it moved and
+                            an optional description */}
+                          {isEntryOpen && (
+                            <tr
+                              key={`${pb.projectId}-partial`}
+                              className="border-b border-border bg-surface"
+                            >
+                              <td colSpan={colCount} className="px-3 py-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-40">
+                                    <Input
+                                      id={`partial-${pb.projectId}`}
+                                      label=""
+                                      type="number"
+                                      min="0.01"
+                                      step="0.01"
+                                      max={remaining}
+                                      value={entryAmounts[pb.projectId] ?? ""}
+                                      onChange={(e) =>
+                                        setEntryAmounts((prev) => ({
+                                          ...prev,
+                                          [pb.projectId]: e.target.value,
+                                        }))
+                                      }
+                                      placeholder={`0 – ${remaining}`}
+                                    />
+                                  </div>
+                                  <div className="w-44">
+                                    <Input
+                                      id={`payment-date-${pb.projectId}`}
+                                      label=""
+                                      type="date"
+                                      aria-label={t("paymentDate")}
+                                      value={paymentDateFor(pb.projectId)}
+                                      onChange={(e) =>
+                                        setPaymentDates((prev) => ({
+                                          ...prev,
+                                          [pb.projectId]: e.target.value,
+                                        }))
+                                      }
+                                    />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <Input
+                                      id={`payment-description-${pb.projectId}`}
+                                      label=""
+                                      type="text"
+                                      maxLength={500}
+                                      aria-label={t("description")}
+                                      placeholder={t("descriptionOptional")}
+                                      value={
+                                        entryDescriptions[pb.projectId] ?? ""
+                                      }
+                                      onChange={(e) =>
+                                        setEntryDescriptions((prev) => ({
+                                          ...prev,
+                                          [pb.projectId]: e.target.value,
+                                        }))
+                                      }
+                                    />
+                                  </div>
+                                  <button
+                                    disabled={
+                                      isPending ||
+                                      !(
+                                        parseFloat(
+                                          entryAmounts[pb.projectId] ?? "",
+                                        ) > 0
+                                      )
+                                    }
+                                    onClick={() =>
+                                      void handleAddPayment(
+                                        pb.projectId,
+                                        pb.subId,
+                                      )
+                                    }
+                                    title={t("save")}
+                                    className="inline-flex h-8 items-center justify-center rounded bg-beet px-3 text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                                  >
+                                    <Icon name="check" size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => closeEntry(pb.projectId)}
+                                    title={t("cancel")}
+                                    className="inline-flex h-8 items-center justify-center rounded border border-border px-2.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
+                                  >
+                                    <Icon name="close" size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    {selectedCard.isTeam &&
+                      memberTotals(selectedCard).map((m, i) => (
+                        <tr
+                          key={m.id}
+                          className={
+                            i === 0 ? "border-t-2 border-border" : undefined
+                          }
+                        >
+                          <td className="py-1.5 px-3 text-text-muted">
+                            {i === 0 && (
+                              <span className="block text-label">
+                                {t("memberTotals")}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-1.5 px-3 text-text">{m.name}</td>
+                          <td className="py-1.5 px-3 text-right font-medium text-text rtl:text-left">
+                            {formatILS(m.owed)}
+                          </td>
+                          <td className="py-1.5 px-3 text-right font-medium text-success rtl:text-left">
+                            {formatILS(m.paid)}
+                          </td>
+                          <td />
+                        </tr>
+                      ))}
+                    <tr className="border-t-2 border-border">
+                      <td
+                        colSpan={selectedCard.isTeam ? 2 : 1}
+                        className="py-2 px-3 font-semibold text-text"
+                      >
+                        {selectedCard.isTeam ? t("teamTotal") : t("totalOwed")}
+                      </td>
+                      <td
+                        className={`py-2 px-3 text-right font-bold rtl:text-left ${totalAmountClass}`}
+                      >
+                        {formatILS(selectedCard.totalOwed)}
+                      </td>
+                      <td className="py-2 px-3 text-right font-bold text-success rtl:text-left">
+                        {formatILS(selectedCard.totalPaid)}
+                      </td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="flex flex-1 items-center justify-center">
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-text-dim">
+                    <Icon name="subcontractors" size={22} />
+                  </div>
+                  <p className="max-w-[32ch] text-sm text-text-muted">
+                    {t("selectSubcontractor")}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

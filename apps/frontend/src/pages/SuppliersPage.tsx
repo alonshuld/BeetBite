@@ -87,7 +87,6 @@ export default function SuppliersPage() {
         placeholder={t("search")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="max-w-xs"
       />
 
       {isLoading ? (

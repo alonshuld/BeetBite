@@ -6,7 +6,9 @@ type SearchInputProps = InputHTMLAttributes<HTMLInputElement>;
 export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
   ({ className = "", ...props }, ref) => {
     return (
-      <div className={`relative w-full ${className}`}>
+      // Full width on a phone so it lines up with the content below; a
+      // comfortable fixed width from the small breakpoint up.
+      <div className={`relative w-full sm:max-w-xs ${className}`}>
         <span className="pointer-events-none absolute inset-y-0 inset-s-3 flex items-center text-text-dim">
           <Icon name="search" size={16} />
         </span>

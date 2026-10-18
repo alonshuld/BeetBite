@@ -42,4 +42,13 @@ describe("SearchInput", () => {
     const { container } = render(<SearchInput className="w-64" />);
     expect(container.firstChild).toHaveClass("w-64");
   });
+
+  // Full width on a phone, a fixed width from the small breakpoint up, so no
+  // page has to size it (and none leaves a gap beside it on a phone).
+  it("spans the full width on a phone and caps it on wider screens", () => {
+    render(<SearchInput />);
+    const wrapper = screen.getByRole("searchbox").parentElement;
+    expect(wrapper).toHaveClass("w-full", "sm:max-w-xs");
+    expect(wrapper).not.toHaveClass("max-w-xs");
+  });
 });
