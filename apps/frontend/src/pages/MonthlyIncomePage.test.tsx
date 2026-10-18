@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vite-plus/test";
 import { fireEvent, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import MonthlyIncomePage from "./MonthlyIncomePage";
 
@@ -147,6 +148,51 @@ describe("MonthlyIncomePage", () => {
         "Mall",
         "Tower Block",
       ]);
+    });
+  });
+
+  describe("search", () => {
+    function clientHeadings() {
+      return screen
+        .queryAllByRole("heading", { level: 2 })
+        .map((h) => h.textContent);
+    }
+
+    it("filters by client name, keeping all its projects", async () => {
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "  GLOBEX ");
+
+      expect(clientHeadings()).toEqual(["Globex"]);
+      expect(screen.getByText("Bridge")).toBeInTheDocument();
+    });
+
+    it("filters by project name", async () => {
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "tower");
+
+      expect(clientHeadings()).toEqual(["Acme Corp"]);
+      expect(screen.getByText("Tower Block")).toBeInTheDocument();
+      expect(screen.queryByText("Bridge")).toBeNull();
+    });
+
+    it("says so when nothing matches, and restores everything when cleared", async () => {
+      renderPage();
+      const box = screen.getByRole("searchbox");
+      await userEvent.type(box, "zzz");
+
+      expect(clientHeadings()).toEqual([]);
+      expect(screen.getByText("No results")).toBeInTheDocument();
+
+      await userEvent.clear(box);
+      expect(clientHeadings()).toEqual(["Acme Corp", "Globex"]);
+    });
+
+    it("keeps the month's grand total while filtering", async () => {
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "bridge");
+
+      // 5,000 + 3,000 across both clients.
+      expect(screen.getByText("₪8,000")).toBeInTheDocument();
     });
   });
 
