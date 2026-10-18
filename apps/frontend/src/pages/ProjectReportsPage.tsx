@@ -51,6 +51,7 @@ import {
   draftIncomeAmount,
   isBlankIncomeDraft,
 } from "@/utils/incomeEntryDraft";
+import { formatNumber } from "@/utils/formatMoney";
 
 interface CorpPaymentDraft {
   supplierId: string;
@@ -552,11 +553,11 @@ export default function ProjectReportsPage() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard
           label={t("estimatedAmount")}
-          value={`₪${estimatedAmount.toLocaleString("he-IL")}`}
+          value={`₪${formatNumber(estimatedAmount)}`}
         />
         <StatCard
           label={t("totalPaidByClient")}
-          value={`₪${totalPaid.toLocaleString("he-IL")}`}
+          value={`₪${formatNumber(totalPaid)}`}
           tone="positive"
         />
         <div className="flex flex-col justify-between gap-2 rounded-lg border border-border bg-surface p-4">
@@ -691,7 +692,7 @@ export default function ProjectReportsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-text font-semibold">
-                      ₪{entry.amount.toLocaleString("he-IL")}
+                      ₪{formatNumber(entry.amount)}
                     </span>
                     <ButtonGhost
                       onClick={() => startEditEntry(entry)}
@@ -783,7 +784,7 @@ export default function ProjectReportsPage() {
                   {t("totalIncome")}
                 </span>
                 <span className="text-text font-semibold">
-                  ₪{currentReport.totalIncome.toLocaleString("he-IL")}
+                  ₪{formatNumber(currentReport.totalIncome)}
                 </span>
               </div>
             )}
@@ -793,7 +794,7 @@ export default function ProjectReportsPage() {
                 {t("profit")} ({currentReport.profitMargin}%)
               </span>
               <span className="text-success font-semibold">
-                ₪{currentReport.profit.toLocaleString("he-IL")}
+                ₪{formatNumber(currentReport.profit)}
               </span>
             </div>
 
@@ -856,17 +857,14 @@ export default function ProjectReportsPage() {
                     </span>
                     {cp.vatPercentage != null && cp.vatPercentage > 0 && (
                       <span className="text-[11px] text-text-muted">
-                        ₪{cp.amount.toLocaleString("he-IL")} +{" "}
-                        {cp.vatPercentage}% VAT = ₪
-                        {(cp.effectiveTotal ?? cp.amount).toLocaleString(
-                          "he-IL",
-                        )}
+                        ₪{formatNumber(cp.amount)} + {cp.vatPercentage}% VAT = ₪
+                        {formatNumber(cp.effectiveTotal ?? cp.amount)}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-warning font-medium">
-                      − ₪{cp.amount.toLocaleString("he-IL")}
+                      − ₪{formatNumber(cp.amount)}
                     </span>
                     <ButtonGhost
                       onClick={() => startEditCorp(cp)}
@@ -984,7 +982,7 @@ export default function ProjectReportsPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium">
                         {currentReport.initiatorIncome != null
-                          ? `₪${currentReport.initiatorIncome.toLocaleString("he-IL")}`
+                          ? `₪${formatNumber(currentReport.initiatorIncome)}`
                           : t("notConfigured")}
                       </span>
                       <ButtonGhost
@@ -1023,7 +1021,7 @@ export default function ProjectReportsPage() {
                 </span>
               </div>
               <span className="text-success font-bold text-lg">
-                ₪{currentReport.subcontractor.payment.toLocaleString("he-IL")}
+                ₪{formatNumber(currentReport.subcontractor.payment)}
               </span>
             </div>
           </div>

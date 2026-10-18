@@ -251,6 +251,70 @@ describe("SubcontractorPaymentsPage", () => {
   });
 
   // The day the money moved, and what is still outstanding.
+  describe("card order", () => {
+    // Three subcontractors, each owed 8,000 on one project.
+    const reports = ["Avi", "Bob the Builder", "Carmel"].map((name, i) => ({
+      ...mockReports[0],
+      id: `r${i + 1}`,
+      project: { ...mockReports[0].project, id: `p${i + 1}`, name: `P${i}` },
+      subcontractor: { id: `s${i + 1}`, name },
+    }));
+
+    function paidInFull(i: number, name: string) {
+      return {
+        subcontractor: { id: `s${i + 1}`, name },
+        amountPaid: 8000,
+        payments: [makePayment({ id: `i${i + 1}`, projectId: `p${i + 1}` })],
+      };
+    }
+
+    function cardNames() {
+      return screen
+        .getAllByRole("button", { name: /Owed/ })
+        .map((b) => b.textContent ?? "")
+        .map(
+          (text) =>
+            reports.find((r) => text.startsWith(r.subcontractor.name))
+              ?.subcontractor.name,
+        );
+    }
+
+    beforeEach(() => {
+      vi.mocked(useGetProjectReportsQuery).mockReturnValue({
+        data: reports,
+      } as unknown as ReturnType<typeof useGetProjectReportsQuery>);
+    });
+
+    it("lists cards by name when none is fully paid", () => {
+      setPayments([]);
+      renderPage();
+
+      expect(cardNames()).toEqual(["Avi", "Bob the Builder", "Carmel"]);
+    });
+
+    it("moves fully paid subcontractors to the bottom", () => {
+      // Avi is paid in full, Bob partly, Carmel not at all.
+      setPayments([
+        paidInFull(0, "Avi"),
+        {
+          subcontractor: { id: "s2", name: "Bob the Builder" },
+          amountPaid: 1000,
+          payments: [makePayment({ id: "i2", projectId: "p2", amount: 1000 })],
+        },
+      ]);
+      renderPage();
+
+      expect(cardNames()).toEqual(["Bob the Builder", "Carmel", "Avi"]);
+    });
+
+    it("keeps several fully paid cards in name order at the bottom", () => {
+      setPayments([paidInFull(2, "Carmel"), paidInFull(0, "Avi")]);
+      renderPage();
+
+      expect(cardNames()).toEqual(["Bob the Builder", "Avi", "Carmel"]);
+    });
+  });
+
   describe("payment dates and balance", () => {
     it("shows the balance beside owed and paid", () => {
       setPayments(makePayments([makePayment({ amount: 3000 })], 3000));
