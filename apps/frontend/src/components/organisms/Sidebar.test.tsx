@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vite-plus/test";
+import { describe, it, expect, vi, afterEach } from "vite-plus/test";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
@@ -89,5 +89,18 @@ describe("Sidebar", () => {
   it("falls back to Admin when token is invalid", () => {
     renderSidebar({ token: "invalid-token" });
     expect(screen.getAllByText("Admin").length).toBeGreaterThanOrEqual(1);
+  });
+
+  describe("in Hebrew", () => {
+    afterEach(() => localStorage.removeItem("beetbite.lang"));
+
+    it("names the monthly income tab ריכוז מחזורי", () => {
+      localStorage.setItem("beetbite.lang", "he");
+      renderSidebar();
+      expect(
+        screen.getByRole("link", { name: /ריכוז מחזורי/ }),
+      ).toHaveAttribute("href", "/income");
+      expect(screen.queryByText("הכנסה חודשית")).toBeNull();
+    });
   });
 });
