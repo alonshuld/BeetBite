@@ -9,6 +9,7 @@ import {
   type IncomeEntry,
 } from "@/api/endpoints/project-reports";
 import { PageHeader } from "@/components/molecules/PageHeader";
+import { SearchInput } from "@/components/molecules/SearchInput";
 import { Badge, EmptyState } from "@/components/atoms";
 import { fieldChrome } from "@/components/atoms/field";
 import { useLang } from "@/contexts/useLang";
@@ -143,6 +144,7 @@ export default function MonthlyIncomePage() {
   const { month } = useOutletContext<{ month: string }>();
   const { data: items = [], isLoading } = useGetMonthlyIncomeQuery(month);
   const { t, lang } = useLang();
+  const [search, setSearch] = useState("");
 
   if (isLoading) {
     return (
@@ -151,6 +153,30 @@ export default function MonthlyIncomePage() {
       </div>
     );
   }
+
+  // Clients by name, and each client's projects by name.
+  const sortedItems = [...items]
+    .sort((a, b) => a.clientName.localeCompare(b.clientName))
+    .map((item) => ({
+      ...item,
+      projects: [...item.projects].sort((a, b) =>
+        a.projectName.localeCompare(b.projectName),
+      ),
+    }));
+
+  // A client whose name matches keeps all its projects; otherwise only the
+  // matching projects stay and clients left empty drop. The totals stay
+  // those of the whole month and of each whole client.
+  const query = search.trim().toLowerCase();
+  const visibleItems = query
+    ? sortedItems.flatMap((item) => {
+        if (item.clientName.toLowerCase().includes(query)) return [item];
+        const projects = item.projects.filter((p) =>
+          p.projectName.toLowerCase().includes(query),
+        );
+        return projects.length > 0 ? [{ ...item, projects }] : [];
+      })
+    : sortedItems;
 
   const grandTotalIncome = items.reduce((sum, i) => sum + i.totalIncome, 0);
   const grandTotalProfit = items.reduce((sum, i) => sum + i.totalProfit, 0);
@@ -188,7 +214,13 @@ export default function MonthlyIncomePage() {
         />
       ) : (
         <div className="flex flex-col gap-4">
-          {items.map((item) => (
+          <SearchInput
+            placeholder={t("search")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {visibleItems.length === 0 && <EmptyState title={t("noResults")} />}
+          {visibleItems.map((item) => (
             <div
               key={item.clientId}
               className="rounded-lg border border-border bg-surface p-4"

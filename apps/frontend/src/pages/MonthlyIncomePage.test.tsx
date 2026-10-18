@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vite-plus/test";
 import { fireEvent, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import MonthlyIncomePage from "./MonthlyIncomePage";
 
@@ -96,6 +97,103 @@ describe("MonthlyIncomePage", () => {
     expect(
       screen.getByRole("heading", { name: "Monthly Income" }),
     ).toBeInTheDocument();
+  });
+
+  describe("alphabetical order", () => {
+    /** A client with one minimal project per name, each received in full. */
+    function client(id: string, name: string, projects: string[]) {
+      return {
+        ...mockItems[0],
+        clientId: id,
+        clientName: name,
+        projects: projects.map((projectName, i) => ({
+          ...mockItems[0].projects[0],
+          projectId: `${id}-p${i}`,
+          projectName,
+          incomeEntries: [
+            { ...mockItems[0].projects[0].incomeEntries[0], id: `${id}-e${i}` },
+          ],
+        })),
+      };
+    }
+
+    beforeEach(() => {
+      setQuery({
+        data: [
+          client("c3", "Zeta Homes", ["Z1"]),
+          client("c1", "Acme Corp", ["Tower Block", "Apartments", "Mall"]),
+          client("c2", "Beta Build", ["B1"]),
+        ],
+        isLoading: false,
+      });
+    });
+
+    it("lists the clients by name", () => {
+      renderPage();
+
+      expect(
+        screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+      ).toEqual(["Acme Corp", "Beta Build", "Zeta Homes"]);
+    });
+
+    it("lists each client's projects by name", () => {
+      renderPage();
+
+      const acme = screen
+        .getByRole("heading", { name: "Acme Corp" })
+        .closest("div.rounded-lg") as HTMLElement;
+      const rows = within(acme).getAllByRole("row").slice(1);
+      expect(rows.map((r) => r.firstElementChild?.textContent)).toEqual([
+        "Apartments",
+        "Mall",
+        "Tower Block",
+      ]);
+    });
+  });
+
+  describe("search", () => {
+    function clientHeadings() {
+      return screen
+        .queryAllByRole("heading", { level: 2 })
+        .map((h) => h.textContent);
+    }
+
+    it("filters by client name, keeping all its projects", async () => {
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "  GLOBEX ");
+
+      expect(clientHeadings()).toEqual(["Globex"]);
+      expect(screen.getByText("Bridge")).toBeInTheDocument();
+    });
+
+    it("filters by project name", async () => {
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "tower");
+
+      expect(clientHeadings()).toEqual(["Acme Corp"]);
+      expect(screen.getByText("Tower Block")).toBeInTheDocument();
+      expect(screen.queryByText("Bridge")).toBeNull();
+    });
+
+    it("says so when nothing matches, and restores everything when cleared", async () => {
+      renderPage();
+      const box = screen.getByRole("searchbox");
+      await userEvent.type(box, "zzz");
+
+      expect(clientHeadings()).toEqual([]);
+      expect(screen.getByText("No results")).toBeInTheDocument();
+
+      await userEvent.clear(box);
+      expect(clientHeadings()).toEqual(["Acme Corp", "Globex"]);
+    });
+
+    it("keeps the month's grand total while filtering", async () => {
+      renderPage();
+      await userEvent.type(screen.getByRole("searchbox"), "bridge");
+
+      // 5,000 + 3,000 across both clients.
+      expect(screen.getByText("₪8,000")).toBeInTheDocument();
+    });
   });
 
   it("renders a card per client", () => {

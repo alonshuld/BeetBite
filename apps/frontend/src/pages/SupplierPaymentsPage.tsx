@@ -505,7 +505,6 @@ export default function SupplierPaymentsPage() {
             placeholder={t("search")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="sm:max-w-xs"
           />
           {visibleGroups.length === 0 && (
             <EmptyState

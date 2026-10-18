@@ -90,7 +90,6 @@ export default function InitiatorsPage() {
         placeholder={t("search")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="max-w-xs"
       />
 
       {isLoading ? (
