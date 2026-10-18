@@ -172,12 +172,6 @@ export default function SubcontractorPaymentsPage() {
     );
   }
 
-  const cards = Array.from(cardMap.values()).sort((a, b) =>
-    a.label.localeCompare(b.label),
-  );
-
-  const selectedCard = cards.find((c) => c.key === selectedKey) ?? null;
-
   /** A project's instalments, counting only those to the member who took it. */
   function paymentsFor(projectId: string, subId: string) {
     return allPayments.filter(
@@ -197,6 +191,19 @@ export default function SubcontractorPaymentsPage() {
     if (statuses.every((s) => s === "Unpaid")) return "Unpaid";
     return "Partial";
   }
+
+  // Who still needs paying comes first; fully paid cards sink to the bottom,
+  // each half in name order.
+  const cards = Array.from(cardMap.values())
+    .map((card) => ({ card, settled: cardStatusOf(card) === "Paid" }))
+    .sort(
+      (a, b) =>
+        Number(a.settled) - Number(b.settled) ||
+        a.card.label.localeCompare(b.card.label),
+    )
+    .map(({ card }) => card);
+
+  const selectedCard = cards.find((c) => c.key === selectedKey) ?? null;
 
   /** Owed and paid for each member of a card, for the per-member totals. */
   function memberTotals(card: SubCard) {
