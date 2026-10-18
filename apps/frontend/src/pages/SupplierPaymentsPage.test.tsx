@@ -1,4 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vite-plus/test";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+} from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/renderWithProviders";
@@ -298,6 +305,84 @@ describe("SupplierPaymentsPage", () => {
       "Mall",
       "Tower Block",
     ]);
+  });
+
+  // A phone cannot fit the seven-column table, so each payment stacks.
+  describe("on a phone", () => {
+    beforeEach(() => {
+      vi.stubGlobal(
+        "matchMedia",
+        vi.fn((query: string) => ({
+          matches: query === "(max-width: 639px)",
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        })),
+      );
+      setPaidSpy.mockClear();
+      setIncludesVatSpy.mockClear();
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("lists payments as stacked rows instead of a table", () => {
+      renderSupplierPaymentsPage();
+
+      expect(screen.queryByRole("table")).toBeNull();
+      const items = screen.getAllByRole("listitem");
+      expect(items).toHaveLength(2);
+      expect(within(items[0]).getByText("Tower Block")).toBeInTheDocument();
+      expect(within(items[1]).getByText("Bridge")).toBeInTheDocument();
+    });
+
+    it("keeps every control of a payment reachable", async () => {
+      renderSupplierPaymentsPage();
+
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: "Paid — Tower Block" }),
+      );
+      expect(setPaidSpy).toHaveBeenCalledWith({ id: "pp1", isPaid: true });
+
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: "Include VAT — Tower Block" }),
+      );
+      expect(setIncludesVatSpy).toHaveBeenCalledWith({
+        id: "pp1",
+        includesVat: true,
+      });
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Edit — Tower Block" }),
+      );
+      expect(
+        screen.getByRole("dialog", { name: /Edit payment — Global Inc/ }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the description, amount and total on the row", () => {
+      vi.mocked(useGetSupplierPaymentsByMonthQuery).mockReturnValue({
+        data: {
+          ...mockDataWithVat,
+          suppliersPayments: [
+            {
+              ...mockDataWithVat.suppliersPayments[0],
+              projectPayments: [
+                {
+                  ...mockDataWithVat.suppliersPayments[0].projectPayments[0],
+                  description: "Floor tiles",
+                },
+              ],
+            },
+          ],
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useGetSupplierPaymentsByMonthQuery>);
+      renderSupplierPaymentsPage();
+
+      const [item] = screen.getAllByRole("listitem");
+      expect(within(item).getByText("Floor tiles")).toBeInTheDocument();
+      expect(within(item).getByText(/₪5,000$/)).toBeInTheDocument();
+      expect(within(item).getByText("₪5,850")).toBeInTheDocument();
+      expect(within(item).getByText("17%")).toBeInTheDocument();
+    });
   });
 
   describe("search", () => {
