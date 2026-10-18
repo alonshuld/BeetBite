@@ -56,6 +56,7 @@ import {
   draftIncomeAmount,
   isBlankIncomeDraft,
 } from "@/utils/incomeEntryDraft";
+import { formatNumber } from "@/utils/formatMoney";
 
 interface CorpPaymentDraft {
   supplierId: string;
@@ -408,7 +409,7 @@ export default function ReportsPage() {
                   {t("totalIncome")}
                 </span>
                 <span className="text-title font-semibold leading-none text-text">
-                  ₪{Math.round(totalClientIncome).toLocaleString("he-IL")}
+                  ₪{formatNumber(totalClientIncome)}
                 </span>
               </div>
               <div className="tnum flex flex-col gap-0.5">
@@ -423,10 +424,7 @@ export default function ReportsPage() {
                     simulation.isDirty ? "text-beet-bright" : "text-text"
                   }`}
                 >
-                  ₪
-                  {Math.round(totalSubcontractorPayments).toLocaleString(
-                    "he-IL",
-                  )}
+                  ₪{formatNumber(totalSubcontractorPayments)}
                 </span>
               </div>
               <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
@@ -837,7 +835,7 @@ function ProjectSheet({
                     : t("pending")}
                 </Badge>
               }
-              amount={`₪${entry.amount.toLocaleString("he-IL")}`}
+              amount={`₪${formatNumber(entry.amount)}`}
             />
           );
         })}
@@ -847,7 +845,7 @@ function ProjectSheet({
             <StatementRule />
             <StatementRow
               label={t("totalIncome")}
-              amount={`₪${report.totalIncome.toLocaleString("he-IL")}`}
+              amount={`₪${formatNumber(report.totalIncome)}`}
               tone="total"
             />
           </>
@@ -857,14 +855,14 @@ function ProjectSheet({
 
         <StatementRow
           label={`${t("profit")} (${effectiveMargin}%)`}
-          amount={`₪${Math.round(profit).toLocaleString("he-IL")}`}
+          amount={`₪${formatNumber(profit)}`}
           tone={isSimulated ? "default" : "positive"}
           className={isSimulated ? "text-beet-bright" : ""}
         />
         {isSimulated && (
           <StatementRow
             label={`${t("savedMarginLabel")} ${report.profitMargin}%`}
-            amount={`₪${Math.round(savedProfit).toLocaleString("he-IL")}`}
+            amount={`₪${formatNumber(savedProfit)}`}
             tone="muted"
             className="text-micro"
           />
@@ -874,7 +872,7 @@ function ProjectSheet({
           <StatementRow
             key={cp.id}
             label={cp.supplier.name}
-            amount={`− ₪${cp.amount.toLocaleString("he-IL")}`}
+            amount={`− ₪${formatNumber(cp.amount)}`}
             tone="deduction"
           />
         ))}
@@ -883,7 +881,7 @@ function ProjectSheet({
 
         <StatementRow
           label={report.subcontractor.name}
-          amount={`₪${Math.round(subPayment).toLocaleString("he-IL")}`}
+          amount={`₪${formatNumber(subPayment)}`}
           tone="total"
           emphasis
           className={isSimulated ? "text-beet-bright" : ""}
@@ -902,7 +900,7 @@ function ProjectSheet({
             <span className="truncate">{t("initiatorIncome")}</span>
             <span className="shrink-0">
               {report.initiatorIncome != null
-                ? `₪${report.initiatorIncome.toLocaleString("he-IL")}`
+                ? `₪${formatNumber(report.initiatorIncome)}`
                 : t("notConfigured")}
             </span>
           </div>

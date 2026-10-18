@@ -21,10 +21,7 @@ import { useLang } from "@/contexts/useLang";
 import { useFieldCheck } from "@/hooks/useFieldCheck";
 import { formatYM, formatISODate } from "@/utils/formatMonth";
 import { Icon } from "@/components/atoms/Icon";
-
-function formatILS(n: number): string {
-  return `₪${n.toLocaleString("he-IL")}`;
-}
+import { formatILS } from "@/utils/formatMoney";
 
 type PaymentStatus = "Paid" | "Partial" | "Unpaid";
 
