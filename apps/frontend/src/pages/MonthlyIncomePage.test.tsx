@@ -347,12 +347,12 @@ describe("MonthlyIncomePage", () => {
           .getAllByRole("checkbox")
           .map((box) => box.getAttribute("aria-label")),
       ).toEqual(["Include VAT — Annex", "Include VAT — Tower Block"]);
-      // The second column now names the client instead.
+      // The column next to the project stays the requester.
       expect(within(dana).getAllByRole("columnheader")[1]).toHaveTextContent(
-        "Client",
+        "Requester",
       );
       expect(within(rowOf("Annex")).getAllByRole("cell")[1]).toHaveTextContent(
-        "Globex",
+        "dana",
       );
 
       // Group totals: 5,900 + 2,000 owed, 5,900 received.

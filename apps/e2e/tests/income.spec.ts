@@ -296,9 +296,10 @@ dbTest.describe('Turnover summary (ריכוז מחזורי)', () => {
       await page.getByRole('button', { name: 'Requester' }).click();
       const headings = page.getByRole('heading', { level: 2 });
       await expect(headings).toHaveText(['Moshe', 'Ruth']);
+      // The column next to the project stays the requester.
       await expect(
         page.getByRole('row', { name: /Req Project 1/ }),
-      ).toContainText('Req Client A');
+      ).toContainText('Moshe');
     },
   );
 

@@ -46,16 +46,10 @@ function paymentStatus(paid: number, owed: number): PaymentStatus {
   return "Partial";
 }
 
-/** A project row plus the name of the group it is listed under. */
-interface Row {
-  project: MonthlyIncomeProject;
-  clientName: string;
-}
-
 interface Group {
   key: string;
   name: string;
-  rows: Row[];
+  rows: MonthlyIncomeProject[];
   totalWithVat: number;
   totalReceived: number;
   totalProfit: number;
@@ -94,7 +88,7 @@ function groupRows(
         };
         groups.set(key, group);
       }
-      group.rows.push({ project, clientName: item.clientName });
+      group.rows.push(project);
       group.totalWithVat += project.totalWithVat;
       group.totalReceived += project.receivedIncome;
       group.totalProfit += project.profit;
@@ -105,7 +99,7 @@ function groupRows(
     .map((g) => ({
       ...g,
       rows: [...g.rows].sort((a, b) =>
-        a.project.projectName.localeCompare(b.project.projectName),
+        a.projectName.localeCompare(b.projectName),
       ),
     }));
 }
@@ -160,12 +154,10 @@ function StatusButton({
  * instalments — each its own dated line, never one row rewritten.
  */
 function ProjectRows({
-  row,
-  groupBy,
+  proj,
   colCount,
 }: {
-  row: Row;
-  groupBy: GroupBy;
+  proj: MonthlyIncomeProject;
   colCount: number;
 }) {
   const { t, lang } = useLang();
@@ -182,12 +174,7 @@ function ProjectRows({
   const [pending, setPending] = useState(false);
   const [editingDate, setEditingDate] = useState<string | null>(null);
 
-  const proj = row.project;
   const label = proj.projectName;
-  const otherColumn =
-    groupBy === "client"
-      ? proj.requesterName.trim() || t("noRequester")
-      : row.clientName;
   const status = paymentStatus(proj.receivedIncome, proj.totalWithVat);
   const remaining =
     Math.max(0, Math.round((proj.totalWithVat - proj.receivedIncome) * 100)) /
@@ -252,7 +239,9 @@ function ProjectRows({
     <>
       <tr className="border-b border-border last:border-0">
         <td className="py-2 px-3 text-text">{label}</td>
-        <td className="py-2 px-3 text-text-muted">{otherColumn}</td>
+        <td className="py-2 px-3 text-text-muted">
+          {proj.requesterName.trim() || t("noRequester")}
+        </td>
         <td className="py-2 px-3 text-end text-text">
           {formatILS(proj.totalIncome)}
         </td>
@@ -520,18 +509,16 @@ export default function MonthlyIncomePage() {
   const groups = groupRows(items, groupBy, t("noRequester"));
 
   // A group whose name matches keeps all its projects; otherwise only the
-  // projects matching by name (or by the other column — requester or client)
-  // stay, and groups left empty drop. The totals stay those of the whole month
+  // projects matching by name or requester stay, and groups left empty drop. The totals stay those of the whole month
   // and of each whole group.
   const query = search.trim().toLowerCase();
   const visibleGroups = query
     ? groups.flatMap((group) => {
         if (group.name.toLowerCase().includes(query)) return [group];
-        const rows = group.rows.filter((r) =>
-          [
-            r.project.projectName,
-            groupBy === "client" ? r.project.requesterName : r.clientName,
-          ].some((text) => text.toLowerCase().includes(query)),
+        const rows = group.rows.filter((p) =>
+          [p.projectName, p.requesterName].some((text) =>
+            text.toLowerCase().includes(query),
+          ),
         );
         return rows.length > 0 ? [{ ...group, rows }] : [];
       })
@@ -658,9 +645,7 @@ export default function MonthlyIncomePage() {
                   <thead>
                     <tr className="border-b border-border bg-surface-2">
                       <th className={`${TH} text-start`}>{t("project")}</th>
-                      <th className={`${TH} text-start`}>
-                        {groupBy === "client" ? t("requester") : t("client")}
-                      </th>
+                      <th className={`${TH} text-start`}>{t("requester")}</th>
                       <th className={`${TH} text-end`}>{t("price")}</th>
                       <th className={`${TH} text-end`}>{t("vat")}</th>
                       <th className={`${TH} text-end`}>{t("totalInclVat")}</th>
@@ -670,11 +655,10 @@ export default function MonthlyIncomePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {group.rows.map((row) => (
+                    {group.rows.map((proj) => (
                       <ProjectRows
-                        key={row.project.reportId}
-                        row={row}
-                        groupBy={groupBy}
+                        key={proj.reportId}
+                        proj={proj}
                         colCount={colCount}
                       />
                     ))}
