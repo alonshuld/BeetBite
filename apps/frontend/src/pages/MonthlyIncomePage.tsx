@@ -13,10 +13,7 @@ import { Badge, EmptyState } from "@/components/atoms";
 import { fieldChrome } from "@/components/atoms/field";
 import { useLang } from "@/contexts/useLang";
 import { formatYM } from "@/utils/formatMonth";
-
-function formatILS(n: number): string {
-  return `₪${n.toLocaleString("he-IL")}`;
-}
+import { formatILS } from "@/utils/formatMoney";
 
 function toDateInput(iso: string | null): string {
   return iso ? iso.slice(0, 10) : "";

@@ -1,4 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from "vite-plus/test";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+} from "vite-plus/test";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/renderWithProviders";
@@ -240,6 +247,210 @@ describe("SupplierPaymentsPage", () => {
     renderSupplierPaymentsPage();
     // grandTotal = 5000 + 3000 = 8000; ₪ appears on each row + total
     expect(screen.getAllByText(/₪/).length).toBeGreaterThan(0);
+  });
+
+  it("shows fractional amounts with exactly two decimals", () => {
+    vi.mocked(useGetSupplierPaymentsByMonthQuery).mockReturnValue({
+      data: {
+        ...mockDataWithVat,
+        suppliersPayments: [
+          {
+            ...mockDataWithVat.suppliersPayments[0],
+            projectPayments: [
+              {
+                ...mockDataWithVat.suppliersPayments[0].projectPayments[0],
+                amount: 1234.5,
+                effectiveTotal: 1444.365,
+              },
+            ],
+            total: 1444.365,
+          },
+        ],
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useGetSupplierPaymentsByMonthQuery>);
+    renderSupplierPaymentsPage();
+
+    expect(screen.getByText("₪1,234.50")).toBeInTheDocument();
+    // The row total and the grand total both round to two places.
+    expect(screen.getAllByText("₪1,444.37").length).toBeGreaterThan(1);
+  });
+
+  it("lists each supplier's projects in alphabetical order", () => {
+    const base = mockData.suppliersPayments[0].projectPayments[0];
+    vi.mocked(useGetSupplierPaymentsByMonthQuery).mockReturnValue({
+      data: {
+        suppliersPayments: [
+          {
+            ...mockData.suppliersPayments[0],
+            projectPayments: ["Tower Block", "Apartments", "Mall"].map(
+              (projectName, i) => ({
+                ...base,
+                id: `pp${i}`,
+                projectReport: { ...base.projectReport, projectName },
+              }),
+            ),
+          },
+        ],
+        total: 15000,
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useGetSupplierPaymentsByMonthQuery>);
+    renderSupplierPaymentsPage();
+
+    const rows = within(screen.getByRole("table")).getAllByRole("row");
+    // The first row is the header.
+    expect(rows.slice(1).map((r) => r.firstElementChild?.textContent)).toEqual([
+      "Apartments",
+      "Mall",
+      "Tower Block",
+    ]);
+  });
+
+  // A phone cannot fit the seven-column table, so each payment stacks.
+  describe("on a phone", () => {
+    beforeEach(() => {
+      vi.stubGlobal(
+        "matchMedia",
+        vi.fn((query: string) => ({
+          matches: query === "(max-width: 639px)",
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        })),
+      );
+      setPaidSpy.mockClear();
+      setIncludesVatSpy.mockClear();
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("lists payments as stacked rows instead of a table", () => {
+      renderSupplierPaymentsPage();
+
+      expect(screen.queryByRole("table")).toBeNull();
+      const items = screen.getAllByRole("listitem");
+      expect(items).toHaveLength(2);
+      expect(within(items[0]).getByText("Tower Block")).toBeInTheDocument();
+      expect(within(items[1]).getByText("Bridge")).toBeInTheDocument();
+    });
+
+    it("keeps every control of a payment reachable", async () => {
+      renderSupplierPaymentsPage();
+
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: "Paid — Tower Block" }),
+      );
+      expect(setPaidSpy).toHaveBeenCalledWith({ id: "pp1", isPaid: true });
+
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: "Include VAT — Tower Block" }),
+      );
+      expect(setIncludesVatSpy).toHaveBeenCalledWith({
+        id: "pp1",
+        includesVat: true,
+      });
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Edit — Tower Block" }),
+      );
+      expect(
+        screen.getByRole("dialog", { name: /Edit payment — Global Inc/ }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the description, amount and total on the row", () => {
+      vi.mocked(useGetSupplierPaymentsByMonthQuery).mockReturnValue({
+        data: {
+          ...mockDataWithVat,
+          suppliersPayments: [
+            {
+              ...mockDataWithVat.suppliersPayments[0],
+              projectPayments: [
+                {
+                  ...mockDataWithVat.suppliersPayments[0].projectPayments[0],
+                  description: "Floor tiles",
+                },
+              ],
+            },
+          ],
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useGetSupplierPaymentsByMonthQuery>);
+      renderSupplierPaymentsPage();
+
+      const [item] = screen.getAllByRole("listitem");
+      expect(within(item).getByText("Floor tiles")).toBeInTheDocument();
+      expect(within(item).getByText(/₪5,000$/)).toBeInTheDocument();
+      expect(within(item).getByText("₪5,850")).toBeInTheDocument();
+      expect(within(item).getByText("17%")).toBeInTheDocument();
+    });
+  });
+
+  describe("search", () => {
+    it("filters suppliers by name, keeping their whole stack", async () => {
+      renderSupplierPaymentsPage();
+      await userEvent.type(screen.getByRole("searchbox"), "  local ");
+
+      expect(
+        screen.getByRole("heading", { name: "Local Ltd" }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Bridge")).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Global Inc" })).toBeNull();
+    });
+
+    it("filters payments by project name", async () => {
+      renderSupplierPaymentsPage();
+      await userEvent.type(screen.getByRole("searchbox"), "tower");
+
+      expect(screen.getByText("Tower Block")).toBeInTheDocument();
+      expect(screen.queryByText("Bridge")).toBeNull();
+      expect(screen.queryByRole("heading", { name: "Local Ltd" })).toBeNull();
+    });
+
+    it("filters payments by description", async () => {
+      vi.mocked(useGetSupplierPaymentsByMonthQuery).mockReturnValue({
+        data: {
+          ...mockData,
+          suppliersPayments: [
+            {
+              ...mockData.suppliersPayments[0],
+              projectPayments: [
+                {
+                  ...mockData.suppliersPayments[0].projectPayments[0],
+                  description: "Floor tiles",
+                },
+              ],
+            },
+            mockData.suppliersPayments[1],
+          ],
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useGetSupplierPaymentsByMonthQuery>);
+      renderSupplierPaymentsPage();
+      await userEvent.type(screen.getByRole("searchbox"), "tiles");
+
+      expect(screen.getByText("Tower Block")).toBeInTheDocument();
+      expect(screen.queryByText("Bridge")).toBeNull();
+    });
+
+    it("says so when nothing matches, and restores everything when cleared", async () => {
+      renderSupplierPaymentsPage();
+      const box = screen.getByRole("searchbox");
+      await userEvent.type(box, "zzz");
+
+      expect(screen.getByText("No results")).toBeInTheDocument();
+      expect(screen.queryByText("Tower Block")).toBeNull();
+
+      await userEvent.clear(box);
+      expect(screen.getByText("Tower Block")).toBeInTheDocument();
+      expect(screen.getByText("Bridge")).toBeInTheDocument();
+    });
+
+    it("keeps the month's grand total while filtering", async () => {
+      renderSupplierPaymentsPage();
+      await userEvent.type(screen.getByRole("searchbox"), "bridge");
+
+      expect(screen.getByText("₪8,000")).toBeInTheDocument();
+    });
   });
 
   // The percentage is never typed: it is the global rate for the payment's

@@ -3,6 +3,7 @@ import { ButtonGhost } from "@/components/atoms";
 import { useLang } from "@/contexts/useLang";
 import type { ProfitSimulation } from "@/features/simulator/useProfitSimulation";
 import { Icon } from "@/components/atoms/Icon";
+import { formatNumber } from "@/utils/formatMoney";
 
 /**
  * Slide duration, matched to the `duration-200` on the drawer and on the
@@ -20,7 +21,7 @@ const SLIDER_MAX = 20;
 const MARGIN_MAX = 100;
 
 function shekels(amount: number): string {
-  return `₪${Math.round(amount).toLocaleString("he-IL")}`;
+  return `₪${formatNumber(amount)}`;
 }
 
 interface MarginSliderProps {
