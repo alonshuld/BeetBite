@@ -1,17 +1,8 @@
 import { baseApi } from "@/api/baseApi";
 import type { IncomeEntry } from "@/api/endpoints/project-reports";
 
-/** One partial payment the client made towards a month of a project. */
-export interface ClientPayment {
-  id: string;
-  projectReportId: string;
-  amount: number;
-  /** The day the money arrived. */
-  paymentDate: string;
-}
-
 export interface MonthlyIncomeProject {
-  /** The project's report for the month — what payments and VAT attach to. */
+  /** The project's report for the month — what the paid marks are stored on. */
   reportId: string;
   projectId: string;
   projectName: string;
@@ -19,19 +10,16 @@ export interface MonthlyIncomeProject {
   requesterName: string;
   /** Income excluding VAT. */
   totalIncome: number;
-  incomeIncludesVat: boolean;
-  /** Null when VAT is off, or on but no rate is configured for the month. */
+  /** Null when no VAT rate is configured for the month yet. */
   vatPercentage: number | null;
   vatAmount: number;
-  /** What the client pays: income plus VAT. */
   totalWithVat: number;
-  /** Sum of the client's payments. */
-  receivedIncome: number;
-  pendingIncome: number;
-  profit: number;
+  /** The day the income was paid; null while unpaid. */
+  incomePaidAt: string | null;
+  /** The day the VAT was paid; null while unpaid. */
+  vatPaidAt: string | null;
   /** The entries behind totalIncome. */
   incomeEntries: IncomeEntry[];
-  payments: ClientPayment[];
 }
 
 export interface MonthlyIncomeItem {
@@ -39,14 +27,11 @@ export interface MonthlyIncomeItem {
   clientName: string;
   projects: MonthlyIncomeProject[];
   totalIncome: number;
+  incomePaid: number;
   totalVat: number;
+  vatPaid: number;
   totalWithVat: number;
-  totalReceived: number;
-  totalProfit: number;
 }
-
-// Payments move project payment progress, so they refresh projects too.
-const PAYMENT_TAGS = ["Incomes", "Projects"] as const;
 
 export const incomeApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
@@ -54,46 +39,25 @@ export const incomeApi = baseApi.injectEndpoints({
       query: (month) => `/income?month=${month}-01`,
       providesTags: ["Incomes"],
     }),
-    createClientPayment: build.mutation<
-      ClientPayment,
-      { projectReportId: string; amount: number; paymentDate: string }
+    /** A date marks it paid, null unpaid; a field left out stays as it is. */
+    setReportPayment: build.mutation<
+      void,
+      {
+        reportId: string;
+        incomePaidAt?: string | null;
+        vatPaidAt?: string | null;
+      }
     >({
-      query: (body) => ({ url: "/income/payments", method: "POST", body }),
-      invalidatesTags: [...PAYMENT_TAGS],
-    }),
-    updateClientPayment: build.mutation<
-      ClientPayment,
-      { id: string; amount?: number; paymentDate?: string }
-    >({
-      query: ({ id, ...body }) => ({
-        url: `/income/payments/${id}`,
-        method: "PUT",
+      query: ({ reportId, ...body }) => ({
+        url: `/income/reports/${reportId}/payment`,
+        method: "PATCH",
         body,
       }),
-      invalidatesTags: [...PAYMENT_TAGS],
-    }),
-    deleteClientPayment: build.mutation<void, string>({
-      query: (id) => ({ url: `/income/payments/${id}`, method: "DELETE" }),
-      invalidatesTags: [...PAYMENT_TAGS],
-    }),
-    setIncomeVat: build.mutation<
-      void,
-      { reportId: string; incomeIncludesVat: boolean }
-    >({
-      query: ({ reportId, incomeIncludesVat }) => ({
-        url: `/income/reports/${reportId}/vat`,
-        method: "PATCH",
-        body: { incomeIncludesVat },
-      }),
-      invalidatesTags: [...PAYMENT_TAGS],
+      // A paid month moves the project's payment progress.
+      invalidatesTags: ["Incomes", "Projects"],
     }),
   }),
 });
 
-export const {
-  useGetMonthlyIncomeQuery,
-  useCreateClientPaymentMutation,
-  useUpdateClientPaymentMutation,
-  useDeleteClientPaymentMutation,
-  useSetIncomeVatMutation,
-} = incomeApi;
+export const { useGetMonthlyIncomeQuery, useSetReportPaymentMutation } =
+  incomeApi;

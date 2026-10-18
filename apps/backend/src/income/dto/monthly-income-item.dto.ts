@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IncomeEntryResponseDto } from 'src/project-reports/dto/income-entry-response.dto';
-import { ClientPaymentResponseDto } from './client-payment-response.dto';
 
 export class MonthlyIncomeProjectDto {
   @ApiProperty({ description: "The project's report for the month" })
@@ -11,33 +10,33 @@ export class MonthlyIncomeProjectDto {
   requesterName!: string;
   @ApiProperty({ description: 'Income for the month, excluding VAT' })
   totalIncome!: number;
-  @ApiProperty({ description: 'Whether the client pays VAT on top this month' })
-  incomeIncludesVat!: boolean;
   @ApiProperty({
     type: Number,
     nullable: true,
     description:
-      'VAT rate for the month when VAT is on; null when off or no rate is configured for the month',
+      'VAT rate for the month; null when no rate is configured for it yet',
   })
   vatPercentage!: number | null;
   @ApiProperty() vatAmount!: number;
-  @ApiProperty({ description: 'What the client pays: income plus VAT' })
+  @ApiProperty({ description: 'Income plus VAT' })
   totalWithVat!: number;
-  @ApiProperty({ description: "Sum of the client's payments for the month" })
-  receivedIncome!: number;
-  @ApiProperty({ description: 'totalWithVat still unpaid, never below zero' })
-  pendingIncome!: number;
-  @ApiProperty() profit!: number;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'The day the income was paid; null while unpaid',
+  })
+  incomePaidAt!: string | null;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'The day the VAT was paid; null while unpaid',
+  })
+  vatPaidAt!: string | null;
   @ApiProperty({
     type: [IncomeEntryResponseDto],
     description: 'The individual income entries behind totalIncome',
   })
   incomeEntries!: IncomeEntryResponseDto[];
-  @ApiProperty({
-    type: [ClientPaymentResponseDto],
-    description: "The client's partial payments, oldest payment date first",
-  })
-  payments!: ClientPaymentResponseDto[];
 }
 
 export class MonthlyIncomeItemDto {
@@ -46,8 +45,10 @@ export class MonthlyIncomeItemDto {
   @ApiProperty({ type: [MonthlyIncomeProjectDto] })
   projects!: MonthlyIncomeProjectDto[];
   @ApiProperty() totalIncome!: number;
+  @ApiProperty({ description: 'Income already marked paid' })
+  incomePaid!: number;
   @ApiProperty() totalVat!: number;
+  @ApiProperty({ description: 'VAT already marked paid' })
+  vatPaid!: number;
   @ApiProperty() totalWithVat!: number;
-  @ApiProperty() totalReceived!: number;
-  @ApiProperty() totalProfit!: number;
 }

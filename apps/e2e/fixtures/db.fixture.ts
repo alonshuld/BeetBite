@@ -35,7 +35,6 @@ const testWithDb = base.extend<DbFixture>({
     // Truncate in FK-safe order after each test
     await prisma.subcontractorPayment.deleteMany();
     await prisma.supplierPayment.deleteMany();
-    await prisma.clientPayment.deleteMany();
     await prisma.projectReport.deleteMany();
     await prisma.project.deleteMany();
     await prisma.client.deleteMany();

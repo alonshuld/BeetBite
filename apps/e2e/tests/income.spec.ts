@@ -5,7 +5,7 @@ const BASE = 'http://localhost:5174';
 // The global month is pinned to 2026-05 by the db fixture, so all seeds use it.
 dbTest.describe('Turnover summary (ריכוז מחזורי)', () => {
   dbTest(
-    'shows per-client / per-project income and profit breakdown',
+    'shows per-client / per-project income, VAT and total',
     async ({ page, db }) => {
       const client = await db.client.create({
         data: { name: 'Income Client' },
@@ -44,14 +44,15 @@ dbTest.describe('Turnover summary (ריכוז מחזורי)', () => {
       ).toBeVisible();
       await expect(page.getByText('Income Project')).toBeVisible();
 
-      // Income 50,000 and profit (20% = 10,000) appear.
-      await expect(page.getByText(/50,000/).first()).toBeVisible();
-      await expect(page.getByText(/10,000/).first()).toBeVisible();
+      // Income 50,000 excl. VAT appears on the project row.
+      await expect(
+        page.getByRole('row', { name: /Income Project/ }),
+      ).toContainText('₪50,000');
     },
   );
 
   dbTest(
-    'grand total sums every client for the month',
+    'the income control row sums every client for the month',
     async ({ page, db }) => {
       const sub = await db.subcontractor.create({
         data: { name: 'GT Worker', companyNumber: '515222006' },
@@ -87,167 +88,133 @@ dbTest.describe('Turnover summary (ריכוז מחזורי)', () => {
       await page.goto(`${BASE}/income`);
       await page.waitForLoadState('networkidle');
 
-      // Grand total income = 40,000 + 60,000 = 100,000.
-      const grandTotalRow = page
-        .locator('div', { hasText: 'Grand Total' })
-        .last();
-      await expect(grandTotalRow).toBeVisible();
-      await expect(page.getByText(/100,000/).first()).toBeVisible();
+      // The income control row sums both clients: 40,000 + 60,000.
+      await expect(page.getByRole('group', { name: 'Income' })).toContainText(
+        '₪100,000',
+      );
     },
   );
 
   dbTest(
-    'records partial payments with their dates until the month is paid',
+    'marks income and VAT paid on their own days, or both at once',
     async ({ page, db }) => {
       const client = await db.client.create({ data: { name: 'Pay Client' } });
       const sub = await db.subcontractor.create({
         data: { name: 'Pay Worker', companyNumber: '515222007' },
       });
-      const project = await db.project.create({
-        data: {
-          clientId: client.id,
-          name: 'Pay Project',
-          estimatedAmount: 300000,
-          description: 'client payments',
-          requesterName: 'Test Requester',
-          location: 'Test Location',
-        },
-      });
-      const report = await db.projectReport.create({
-        data: {
-          projectId: project.id,
-          subcontractorId: sub.id,
-          date: new Date('2026-05-01'),
-          profitMargin: 10,
-          incomeEntries: { create: [{ amount: 50000 }] },
-        },
-      });
-
-      await page.goto(`${BASE}/income`);
-      await page.waitForLoadState('networkidle');
-
-      await expect(
-        page.getByRole('button', { name: 'Unpaid — Pay Project' }),
-      ).toHaveAttribute('aria-pressed', 'true');
-
-      // A first, partial payment.
-      await page.getByRole('button', { name: 'Partial — Pay Project' }).click();
-      await page.getByLabel('Amount (₪) — Pay Project').fill('20000');
-      await page.getByLabel('Payment date — Pay Project').fill('2026-05-12');
-      await page.getByRole('button', { name: 'Save' }).click();
-
-      await expect(
-        page.getByRole('button', { name: 'Partial — Pay Project' }),
-      ).toHaveAttribute('aria-pressed', 'true');
-      const list = page.getByRole('list', { name: 'Payments — Pay Project' });
-      await expect(list.getByRole('listitem')).toHaveCount(1);
-      await expect(list).toContainText('12 May 2026');
-
-      // More than what is left is refused by the server.
-      await page.getByRole('button', { name: 'Partial — Pay Project' }).click();
-      await page.getByLabel('Amount (₪) — Pay Project').fill('30001');
-      await page.getByRole('button', { name: 'Save' }).click();
-      await expect(
-        page.getByText(/would exceed the amount owed/i),
-      ).toBeVisible();
-      await page.getByRole('button', { name: 'Cancel' }).click();
-
-      // The ✓ fills in the 30,000 still owed.
-      await page
-        .getByRole('button', { name: 'Paid — Pay Project', exact: true })
-        .click();
-      await expect(page.getByLabel('Amount (₪) — Pay Project')).toHaveValue(
-        '30000',
-      );
-      await page.getByLabel('Payment date — Pay Project').fill('2026-05-25');
-      await page.getByRole('button', { name: 'Save' }).click();
-
-      await expect(
-        page.getByRole('button', { name: 'Paid — Pay Project', exact: true }),
-      ).toHaveAttribute('aria-pressed', 'true');
-      await expect(list.getByRole('listitem')).toHaveCount(2);
-
-      const payments = await db.clientPayment.findMany({
-        where: { projectReportId: report.id },
-        orderBy: { paymentDate: 'asc' },
-      });
-      expect(
-        payments.map(
-          (p: { amount: unknown; paymentDate: Date }) =>
-            `${Number(p.amount)}@${p.paymentDate.toISOString().slice(0, 10)}`,
-        ),
-      ).toEqual(['20000@2026-05-12', '30000@2026-05-25']);
-
-      // ✕ takes the month back to unpaid.
-      await page.getByRole('button', { name: 'Unpaid — Pay Project' }).click();
-      await expect(list).toHaveCount(0);
-      await expect
-        .poll(() =>
-          db.clientPayment.count({ where: { projectReportId: report.id } }),
-        )
-        .toBe(0);
-    },
-  );
-
-  dbTest(
-    'adds VAT on a ticked row and carries it in the total',
-    async ({ page, db }) => {
-      const client = await db.client.create({ data: { name: 'Vat Client' } });
-      const sub = await db.subcontractor.create({
-        data: { name: 'Vat Worker', companyNumber: '515222008' },
-      });
-      const project = await db.project.create({
-        data: {
-          clientId: client.id,
-          name: 'Vat Project',
-          estimatedAmount: 300000,
-          description: 'income vat',
-          requesterName: 'Test Requester',
-          location: 'Test Location',
-        },
-      });
-      const report = await db.projectReport.create({
-        data: {
-          projectId: project.id,
-          subcontractorId: sub.id,
-          date: new Date('2026-05-01'),
-          profitMargin: 10,
-          incomeEntries: { create: [{ amount: 10000 }] },
-        },
-      });
+      const reports: Record<string, string> = {};
+      for (const name of ['Split Project', 'Full Project']) {
+        const project = await db.project.create({
+          data: {
+            clientId: client.id,
+            name,
+            estimatedAmount: 300000,
+            description: 'paid marks',
+            requesterName: 'Test Requester',
+            location: 'Test Location',
+          },
+        });
+        const report = await db.projectReport.create({
+          data: {
+            projectId: project.id,
+            subcontractorId: sub.id,
+            date: new Date('2026-05-01'),
+            profitMargin: 10,
+            incomeEntries: { create: [{ amount: 10000 }] },
+          },
+        });
+        reports[name] = report.id;
+      }
       const rate = await db.vatRate.findFirst({
         where: { effectiveMonth: { lte: new Date('2026-05-01') } },
         orderBy: { effectiveMonth: 'desc' },
       });
       const vat = (10000 * Number(rate.percentage)) / 100;
       const fmt = (n: number) => `₪${n.toLocaleString('en-US')}`;
+      const paidAt = async (name: string) => {
+        const r = await db.projectReport.findUniqueOrThrow({
+          where: { id: reports[name] },
+        });
+        return [r.incomePaidAt, r.vatPaidAt].map(
+          (d: Date | null) => d?.toISOString().slice(0, 10) ?? null,
+        );
+      };
 
       await page.goto(`${BASE}/income`);
       await page.waitForLoadState('networkidle');
 
-      const row = page.getByRole('row', { name: /Vat Project/ });
-      const box = page.getByRole('checkbox', {
-        name: 'Include VAT — Vat Project',
-      });
-      await expect(box).not.toBeChecked();
-      await expect(row).toContainText(fmt(10000));
+      const income = page.getByRole('group', { name: 'Income' });
+      const vatRow = page.getByRole('group', { name: 'VAT' });
+      await expect(income).toContainText(fmt(20000));
+      await expect(vatRow).toContainText(fmt(2 * vat));
 
-      // The box shows the saved choice, so it ticks once the server has it.
-      await box.click();
-      await expect(box).toBeChecked();
-      await expect(row).toContainText(fmt(vat));
-      await expect(row).toContainText(fmt(10000 + vat));
-
+      // The income now…
+      await page
+        .getByRole('button', {
+          name: 'Mark paid — Income excl. VAT — Split Project',
+        })
+        .click();
+      await page
+        .getByLabel('Payment date — Income excl. VAT — Split Project')
+        .fill('2026-05-12');
+      await page
+        .getByRole('button', {
+          name: 'Mark paid — Income excl. VAT — Split Project',
+        })
+        .click();
       await expect
-        .poll(
-          async () =>
-            (
-              await db.projectReport.findUniqueOrThrow({
-                where: { id: report.id },
-              })
-            ).incomeIncludesVat,
-        )
-        .toBe(true);
+        .poll(() => paidAt('Split Project'))
+        .toEqual(['2026-05-12', null]);
+
+      // …and its VAT a month later, still on May's row.
+      await page
+        .getByRole('button', { name: 'Mark paid — VAT — Split Project' })
+        .click();
+      await page
+        .getByLabel('Payment date — VAT — Split Project')
+        .fill('2026-06-10');
+      await page
+        .getByRole('button', { name: 'Mark paid — VAT — Split Project' })
+        .click();
+      await expect
+        .poll(() => paidAt('Split Project'))
+        .toEqual(['2026-05-12', '2026-06-10']);
+
+      // The other client paid everything at once.
+      await page
+        .getByRole('button', { name: 'Paid in full incl. VAT — Full Project' })
+        .click();
+      await page.getByLabel('Payment date — Full Project').fill('2026-05-20');
+      await page
+        .getByRole('button', { name: 'Paid in full incl. VAT — Full Project' })
+        .click();
+      await expect
+        .poll(() => paidAt('Full Project'))
+        .toEqual(['2026-05-20', '2026-05-20']);
+      await expect(
+        page.getByRole('button', {
+          name: 'Paid in full incl. VAT — Full Project',
+        }),
+      ).toBeDisabled();
+
+      // Everything is in: nothing left on either control row.
+      await expect(income).toContainText(fmt(20000));
+      await expect(
+        vatRow.getByText('Remaining').locator('xpath=following-sibling::*'),
+      ).toHaveText('₪0');
+
+      // A mistake is undone by clicking the green ✓.
+      await page
+        .getByRole('button', {
+          name: 'Mark unpaid — VAT — Split Project',
+        })
+        .click();
+      await expect
+        .poll(() => paidAt('Split Project'))
+        .toEqual(['2026-05-12', null]);
+      await expect(
+        vatRow.getByText('Remaining').locator('xpath=following-sibling::*'),
+      ).toHaveText(fmt(vat));
     },
   );
 
@@ -313,7 +280,7 @@ dbTest.describe('Turnover summary (ריכוז מחזורי)', () => {
       await expect(
         page.getByText(/no income recorded this month/i),
       ).toBeVisible();
-      await expect(page.getByText('Grand Total')).not.toBeVisible();
+      await expect(page.getByRole('group', { name: 'Income' })).toHaveCount(0);
     },
   );
 });

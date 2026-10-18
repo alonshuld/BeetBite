@@ -3,6 +3,9 @@ import { IncomeService } from './income.service';
 import { ProjectClientAssignmentsService } from '../project-client-assignments/project-client-assignments.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
+import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
+import { PRISMA_ERROR_CODES } from 'src/common/constants';
+import { ProjectReportNotFoundError } from 'src/project-reports/errors/project-report-not-found.exception';
 
 describe('IncomeService', () => {
   let service: IncomeService;
@@ -10,6 +13,7 @@ describe('IncomeService', () => {
   const mockPrismaService = {
     projectReport: {
       findMany: vi.fn(),
+      update: vi.fn(),
     },
   };
 
@@ -34,46 +38,33 @@ describe('IncomeService', () => {
       name?: string;
       requesterName?: string;
       client?: { id: string; name: string };
-      profitMargin?: number | null;
-      incomeIncludesVat?: boolean;
+      incomePaidAt?: Date | null;
+      vatPaidAt?: Date | null;
       incomeEntries?: {
         id?: string;
         amount: number;
         incomeDate?: Date | null;
         tag?: string | null;
       }[];
-      payments?: { id: string; amount: number; paymentDate: Date }[];
     } = {},
-  ) => {
-    const id = overrides.id ?? 'report-1';
-    return {
-      id,
-      date: new Date('2024-05-01'),
-      projectId: overrides.projectId ?? 'project-1',
-      incomeIncludesVat: overrides.incomeIncludesVat ?? false,
-      project: {
-        name: overrides.name ?? 'Project 1',
-        requesterName: overrides.requesterName ?? 'Dana',
-        client: overrides.client ?? { id: 'client-1', name: 'Client A' },
-      },
-      profitMargin:
-        overrides.profitMargin === null
-          ? null
-          : decimal(overrides.profitMargin ?? 10),
-      incomeEntries: (overrides.incomeEntries ?? []).map((e, i) => ({
-        id: e.id ?? `entry-${i + 1}`,
-        amount: decimal(e.amount),
-        incomeDate: e.incomeDate ?? null,
-        tag: e.tag ?? null,
-      })),
-      clientPayments: (overrides.payments ?? []).map((p) => ({
-        id: p.id,
-        projectReportId: id,
-        amount: decimal(p.amount),
-        paymentDate: p.paymentDate,
-      })),
-    };
-  };
+  ) => ({
+    id: overrides.id ?? 'report-1',
+    date: new Date('2024-05-01'),
+    projectId: overrides.projectId ?? 'project-1',
+    incomePaidAt: overrides.incomePaidAt ?? null,
+    vatPaidAt: overrides.vatPaidAt ?? null,
+    project: {
+      name: overrides.name ?? 'Project 1',
+      requesterName: overrides.requesterName ?? 'Dana',
+      client: overrides.client ?? { id: 'client-1', name: 'Client A' },
+    },
+    incomeEntries: (overrides.incomeEntries ?? []).map((e, i) => ({
+      id: e.id ?? `entry-${i + 1}`,
+      amount: decimal(e.amount),
+      incomeDate: e.incomeDate ?? null,
+      tag: e.tag ?? null,
+    })),
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -120,9 +111,10 @@ describe('IncomeService', () => {
       );
     });
 
-    it('should compute received/pending income from client payments and profit from margin', async () => {
+    it("should add the month's VAT to every project and return its paid dates", async () => {
       mockPrismaService.projectReport.findMany.mockResolvedValue([
         report({
+          incomePaidAt: new Date('2024-05-12'),
           incomeEntries: [
             {
               id: 'entry-1',
@@ -132,149 +124,76 @@ describe('IncomeService', () => {
             },
             { id: 'entry-2', amount: 4000 },
           ],
-          payments: [
-            {
-              id: 'payment-1',
-              amount: 2500,
-              paymentDate: new Date('2024-05-03'),
-            },
-            {
-              id: 'payment-2',
-              amount: 1000,
-              paymentDate: new Date('2024-05-20'),
-            },
-          ],
         }),
       ]);
 
       const result = await service.getMonthlyIncome('2024-05-01T00:00:00.000Z');
 
-      expect(result).toHaveLength(1);
-      expect(result[0]).toMatchObject({
-        clientId: 'client-1',
-        clientName: 'Client A',
-        totalIncome: 10000,
-        totalVat: 0,
-        totalWithVat: 10000,
-        totalReceived: 3500,
-        totalProfit: 1000, // 10000 * 10%
-      });
-      expect(result[0].projects).toEqual([
+      expect(result).toEqual([
         {
-          reportId: 'report-1',
-          projectId: 'project-1',
-          projectName: 'Project 1',
-          requesterName: 'Dana',
+          clientId: 'client-1',
+          clientName: 'Client A',
           totalIncome: 10000,
-          incomeIncludesVat: false,
-          vatPercentage: null,
-          vatAmount: 0,
-          totalWithVat: 10000,
-          // The payments decide it — entry-1's received date does not.
-          receivedIncome: 3500,
-          pendingIncome: 6500,
-          profit: 1000,
-          incomeEntries: [
+          incomePaid: 10000,
+          totalVat: 1700,
+          vatPaid: 0,
+          totalWithVat: 11700,
+          projects: [
             {
-              id: 'entry-1',
-              amount: 6000,
-              incomeDate: '2024-05-10T00:00:00.000Z',
-              tag: 'שלד',
-            },
-            { id: 'entry-2', amount: 4000, incomeDate: null, tag: null },
-          ],
-          payments: [
-            {
-              id: 'payment-1',
-              projectReportId: 'report-1',
-              amount: 2500,
-              paymentDate: '2024-05-03T00:00:00.000Z',
-            },
-            {
-              id: 'payment-2',
-              projectReportId: 'report-1',
-              amount: 1000,
-              paymentDate: '2024-05-20T00:00:00.000Z',
+              reportId: 'report-1',
+              projectId: 'project-1',
+              projectName: 'Project 1',
+              requesterName: 'Dana',
+              totalIncome: 10000,
+              vatPercentage: 17,
+              vatAmount: 1700,
+              totalWithVat: 11700,
+              incomePaidAt: '2024-05-12T00:00:00.000Z',
+              vatPaidAt: null,
+              incomeEntries: [
+                {
+                  id: 'entry-1',
+                  amount: 6000,
+                  incomeDate: '2024-05-10T00:00:00.000Z',
+                  tag: 'שלד',
+                },
+                { id: 'entry-2', amount: 4000, incomeDate: null, tag: null },
+              ],
             },
           ],
         },
       ]);
     });
 
-    it("should add the month's VAT on top of the income when the report carries it", async () => {
-      mockPrismaService.projectReport.findMany.mockResolvedValue([
-        report({
-          incomeIncludesVat: true,
-          incomeEntries: [{ amount: 1000 }],
-          payments: [
-            { id: 'p', amount: 170, paymentDate: new Date('2024-05-03') },
-          ],
-        }),
-      ]);
-
-      const result = await service.getMonthlyIncome('2024-05-01T00:00:00.000Z');
-
-      expect(result[0].projects[0]).toMatchObject({
-        totalIncome: 1000,
-        incomeIncludesVat: true,
-        vatPercentage: 17,
-        vatAmount: 170,
-        totalWithVat: 1170,
-        receivedIncome: 170,
-        pendingIncome: 1000,
-        // Profit stays on the income without VAT.
-        profit: 100,
-      });
-      expect(result[0]).toMatchObject({ totalVat: 170, totalWithVat: 1170 });
-    });
-
     it('should add no VAT when the month has no rate configured yet', async () => {
       mockVatRatesService.findAllEntries.mockResolvedValue([]);
       mockPrismaService.projectReport.findMany.mockResolvedValue([
-        report({ incomeIncludesVat: true, incomeEntries: [{ amount: 1000 }] }),
+        report({ incomeEntries: [{ amount: 1000 }] }),
       ]);
 
       const result = await service.getMonthlyIncome('2024-05-01T00:00:00.000Z');
 
       expect(result[0].projects[0]).toMatchObject({
-        incomeIncludesVat: true,
         vatPercentage: null,
         vatAmount: 0,
         totalWithVat: 1000,
       });
     });
 
-    it('should never report a negative pending amount', async () => {
-      // Income lowered after the client already paid more.
+    it('should count income and VAT as paid independently', async () => {
       mockPrismaService.projectReport.findMany.mockResolvedValue([
-        report({
-          incomeEntries: [{ amount: 500 }],
-          payments: [
-            { id: 'p', amount: 800, paymentDate: new Date('2024-05-03') },
-          ],
-        }),
-      ]);
-
-      const result = await service.getMonthlyIncome('2024-05-01T00:00:00.000Z');
-
-      expect(result[0].projects[0].pendingIncome).toBe(0);
-    });
-
-    it('should group multiple projects under the same client and sum client totals', async () => {
-      mockPrismaService.projectReport.findMany.mockResolvedValue([
+        // Income paid, VAT still owed.
         report({
           id: 'report-1',
+          incomePaidAt: new Date('2024-05-10'),
           incomeEntries: [{ amount: 5000 }],
-          payments: [
-            { id: 'p1', amount: 5000, paymentDate: new Date('2024-05-10') },
-          ],
         }),
+        // VAT paid on its own (e.g. a month later), income still owed.
         report({
           id: 'report-2',
           projectId: 'project-2',
           name: 'Project 2',
-          profitMargin: 20,
-          incomeIncludesVat: true,
+          vatPaidAt: new Date('2024-06-03'),
           incomeEntries: [{ amount: 2000 }],
         }),
       ]);
@@ -282,13 +201,13 @@ describe('IncomeService', () => {
       const result = await service.getMonthlyIncome('2024-05-01T00:00:00.000Z');
 
       expect(result).toHaveLength(1);
-      const client = result[0];
-      expect(client.projects).toHaveLength(2);
-      expect(client.totalIncome).toBe(7000); // 5000 + 2000
-      expect(client.totalVat).toBe(340); // VAT on project 2 only
-      expect(client.totalWithVat).toBe(7340);
-      expect(client.totalReceived).toBe(5000);
-      expect(client.totalProfit).toBe(900); // 500 + 400
+      expect(result[0]).toMatchObject({
+        totalIncome: 7000,
+        incomePaid: 5000,
+        totalVat: 1190, // 17% of 7000
+        vatPaid: 340, // 17% of 2000
+        totalWithVat: 8190,
+      });
     });
 
     it('should keep different clients in separate entries', async () => {
@@ -320,53 +239,29 @@ describe('IncomeService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should treat a report with no income entries as zero income and zero profit', async () => {
-      mockPrismaService.projectReport.findMany.mockResolvedValue([
-        report({ profitMargin: 15 }),
-      ]);
+    it('should treat a report with no income entries as zero income', async () => {
+      mockPrismaService.projectReport.findMany.mockResolvedValue([report()]);
 
       const result = await service.getMonthlyIncome('2024-05-01T00:00:00.000Z');
 
       expect(result[0].projects[0]).toMatchObject({
         totalIncome: 0,
-        receivedIncome: 0,
-        pendingIncome: 0,
-        profit: 0,
+        vatAmount: 0,
+        totalWithVat: 0,
       });
-      expect(result[0].totalIncome).toBe(0);
-      expect(result[0].totalProfit).toBe(0);
     });
 
-    it('should treat all income as pending when the client has paid nothing', async () => {
+    it('should not count a received date on an income entry as paid', async () => {
       mockPrismaService.projectReport.findMany.mockResolvedValue([
         report({
-          incomeEntries: [
-            // A received date alone no longer counts as payment.
-            { amount: 2500, incomeDate: new Date('2024-05-10') },
-            { amount: 1500 },
-          ],
+          incomeEntries: [{ amount: 2500, incomeDate: new Date('2024-05-10') }],
         }),
       ]);
 
       const result = await service.getMonthlyIncome('2024-05-01T00:00:00.000Z');
 
-      expect(result[0].projects[0]).toMatchObject({
-        totalIncome: 4000,
-        receivedIncome: 0,
-        pendingIncome: 4000,
-        payments: [],
-      });
-    });
-
-    it('should default profit to zero when profitMargin is null', async () => {
-      mockPrismaService.projectReport.findMany.mockResolvedValue([
-        report({ profitMargin: null, incomeEntries: [{ amount: 1000 }] }),
-      ]);
-
-      const result = await service.getMonthlyIncome('2024-05-01T00:00:00.000Z');
-
-      expect(result[0].projects[0].profit).toBe(0);
-      expect(result[0].totalProfit).toBe(0);
+      expect(result[0].incomePaid).toBe(0);
+      expect(result[0].projects[0].incomePaidAt).toBeNull();
     });
 
     it('should handle a December reference month rolling over to the next year', async () => {
@@ -384,6 +279,54 @@ describe('IncomeService', () => {
           },
         }),
       );
+    });
+  });
+
+  describe('setReportPayment', () => {
+    it('marks both paid on one date ("paid in full incl. VAT")', async () => {
+      await service.setReportPayment('report-1', {
+        incomePaidAt: '2024-05-12',
+        vatPaidAt: '2024-05-12',
+      });
+
+      expect(mockPrismaService.projectReport.update).toHaveBeenCalledWith({
+        where: { id: 'report-1' },
+        data: {
+          incomePaidAt: new Date('2024-05-12'),
+          vatPaidAt: new Date('2024-05-12'),
+        },
+      });
+    });
+
+    it('marks only the VAT, leaving the income as it is', async () => {
+      await service.setReportPayment('report-1', { vatPaidAt: '2024-06-03' });
+
+      expect(mockPrismaService.projectReport.update).toHaveBeenCalledWith({
+        where: { id: 'report-1' },
+        data: { incomePaidAt: undefined, vatPaidAt: new Date('2024-06-03') },
+      });
+    });
+
+    it('marks the income unpaid again with null', async () => {
+      await service.setReportPayment('report-1', { incomePaidAt: null });
+
+      expect(mockPrismaService.projectReport.update).toHaveBeenCalledWith({
+        where: { id: 'report-1' },
+        data: { incomePaidAt: null, vatPaidAt: undefined },
+      });
+    });
+
+    it('fails with not found for an unknown report', async () => {
+      mockPrismaService.projectReport.update.mockRejectedValue(
+        new PrismaClientKnownRequestError('not found', {
+          code: PRISMA_ERROR_CODES.NOT_FOUND,
+          clientVersion: 'x',
+        }),
+      );
+
+      await expect(
+        service.setReportPayment('missing', { incomePaidAt: '2024-05-12' }),
+      ).rejects.toBeInstanceOf(ProjectReportNotFoundError);
     });
   });
 });
