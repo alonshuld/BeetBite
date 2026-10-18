@@ -344,12 +344,11 @@ export default function ProjectsPage() {
       />
 
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <SearchInput
             placeholder={t("search")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="max-w-xs"
           />
           <div className="flex items-center gap-1.5">
             <FilterToggle
