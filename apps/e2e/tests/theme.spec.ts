@@ -67,4 +67,27 @@ dbTest.describe('Theme and the browser bars', () => {
       expect(await browserChrome(page)).toEqual(dark);
     },
   );
+
+  dbTest(
+    'a language switch does not slide the closed phone menu across the screen',
+    async ({ page, db }) => {
+      void db;
+      // The menu is a drawer only below lg.
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(`${BASE}/clients`);
+      await page.waitForLoadState('networkidle');
+
+      // Switching flips the side the drawer parks on. It used to slide across
+      // the screen on its way there, and Safari kept its colour for its bars.
+      const menu = page.locator('aside');
+      await expect(menu).toBeHidden();
+      await page.getByRole('button', { name: 'עב' }).click();
+      await expect(menu).toBeHidden();
+      await page.getByRole('button', { name: 'EN', exact: true }).click();
+      await expect(menu).toBeHidden();
+
+      await page.getByRole('button', { name: 'Open menu' }).click();
+      await expect(menu).toBeVisible();
+    },
+  );
 });

@@ -118,12 +118,15 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         />
       )}
 
+      {/* Closed, the phone drawer is also invisible, not just parked off-screen: a
+          language switch flips the side it parks on, and its slide across the
+          screen left Safari tinting its bars with the drawer's colour. */}
       <aside
         className={`
-          fixed top-0 bottom-0 z-40 flex w-[272px] flex-col border-border bg-surface transition-transform duration-200
+          fixed top-0 bottom-0 z-40 flex w-[272px] flex-col border-border bg-surface transition-[translate,visibility] duration-200
           ltr:left-0 ltr:rounded-r-[22px] ltr:border-r rtl:right-0 rtl:rounded-l-[22px] rtl:border-l
           lg:relative lg:m-3 lg:w-(--sidebar-w) lg:translate-x-0! lg:z-auto lg:rounded-[22px] lg:border lg:shadow-(--shadow-card)
-          ${open ? "translate-x-0" : "ltr:-translate-x-full rtl:translate-x-full"}
+          ${open ? "translate-x-0" : "max-lg:invisible ltr:-translate-x-full rtl:translate-x-full"}
         `}
       >
         <Link
