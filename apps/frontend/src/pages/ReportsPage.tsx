@@ -1014,7 +1014,7 @@ function TileTagEditor({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={t("tagPlaceholder")}
-        className="w-24 rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-text outline-hidden focus:border-beet"
+        className="w-24 rounded-field border border-border bg-surface px-2 py-0.5 text-xs text-text outline-hidden focus:border-beet"
       />
       <button
         onClick={() => void handleSave()}

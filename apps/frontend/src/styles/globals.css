@@ -38,6 +38,10 @@
   --font-sans: Heebo, system-ui, sans-serif;
   --font-display: Heebo, system-ui, sans-serif;
 
+  /* Every field you type into or pick from shares this one radius; things you
+     press are pills (`rounded-full`). */
+  --radius-field: 10px;
+
   --text-micro: 11px;
   --text-micro--line-height: 1.45;
   --text-label: 12px;
@@ -324,7 +328,42 @@ input[type="number"] {
  * heavily here and cannot be restyled wholesale, so they are at least tinted
  * to the brand and given the same focus ring as everything else.
  */
-input[type="checkbox"],
+/*
+ * Checkboxes are drawn rather than left to the browser, so their corners
+ * follow the field radius (scaled to their size) instead of each OS's own
+ * near-square box: a soft square, filled with the accent and a white tick.
+ */
+input[type="checkbox"]:not(.sr-only) {
+  appearance: none;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    background-color 120ms,
+    border-color 120ms;
+}
+
+input[type="checkbox"]:not(.sr-only):hover:not(:disabled) {
+  border-color: var(--text-dim);
+}
+
+input[type="checkbox"]:not(.sr-only):checked {
+  border-color: var(--beet);
+  background: var(--beet)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5'/%3E%3C/svg%3E")
+    center / 12px no-repeat;
+}
+
+input[type="checkbox"]:not(.sr-only):disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 input[type="radio"] {
   accent-color: var(--beet);
   width: 16px;

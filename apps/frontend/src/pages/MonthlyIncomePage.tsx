@@ -26,7 +26,7 @@ const TH =
   "py-2 px-3 text-label font-semibold text-text-muted whitespace-nowrap";
 
 const DATE_INPUT =
-  "px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-hidden focus:border-beet";
+  "px-2 py-0.5 rounded-field border border-border bg-surface text-text text-xs outline-hidden focus:border-beet";
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);

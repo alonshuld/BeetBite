@@ -4,7 +4,7 @@
  * rather than being retyped three times and drifting.
  */
 export const fieldChrome =
-  "rounded-[10px] bg-surface border border-border-strong/70 text-text " +
+  "rounded-field bg-surface border border-border-strong/70 text-text " +
   "outline-hidden transition-[border-color,box-shadow] duration-150 " +
   "placeholder:text-text-dim " +
   "hover:border-border-strong " +

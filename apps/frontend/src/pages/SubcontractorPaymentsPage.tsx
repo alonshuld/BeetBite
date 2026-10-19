@@ -707,7 +707,7 @@ export default function SubcontractorPaymentsPage() {
                                           type="date"
                                           autoFocus
                                           aria-label={t("paymentDate")}
-                                          className="px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
+                                          className="px-2 py-0.5 rounded-field border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
                                           defaultValue={
                                             payment.paymentDate?.slice(0, 10) ??
                                             todayISO()
@@ -758,7 +758,7 @@ export default function SubcontractorPaymentsPage() {
                                             maxLength={500}
                                             aria-label={t("description")}
                                             placeholder={t("description")}
-                                            className="min-w-0 flex-1 px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
+                                            className="min-w-0 flex-1 px-2 py-0.5 rounded-field border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
                                             value={
                                               descriptionDrafts[payment.id]
                                             }
