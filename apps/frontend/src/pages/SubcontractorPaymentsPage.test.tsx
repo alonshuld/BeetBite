@@ -243,6 +243,57 @@ describe("SubcontractorPaymentsPage", () => {
     expect(screen.getByPlaceholderText("0 – 5000")).toHaveValue(5000);
   });
 
+  describe("amounts with agorot", () => {
+    // Income 9,985.75 at 20% leaves 7,988.60 owed — not a whole shekel.
+    beforeEach(() => {
+      vi.mocked(useGetProjectReportsQuery).mockReturnValue({
+        data: [{ ...mockReports[0], totalIncome: 9985.75 }],
+      } as unknown as ReturnType<typeof useGetProjectReportsQuery>);
+    });
+
+    it("shows the amount owed to the agora", () => {
+      renderPage();
+      expect(screen.getAllByText(/7,988\.60/).length).toBeGreaterThan(0);
+      expect(screen.queryByText(/7,989/)).toBeNull();
+    });
+
+    it("fills in the exact balance, agorot included, and records it", async () => {
+      renderPage();
+      await openPanel();
+      await userEvent.click(screen.getByTitle("Paid"));
+
+      // Rounded to 7,989 this was refused as more than the 7,988.60 owed.
+      expect(screen.getByPlaceholderText("0 – 7988.6")).toHaveValue(7988.6);
+      await userEvent.click(screen.getByTitle("Save"));
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 7988.6 }),
+      );
+    });
+
+    it("offers what is left without float noise after a payment with agorot", async () => {
+      // 7,988.60 − 0.60 in floats is 7,987.999…; the offer must be 7,988.
+      setPayments(makePayments([makePayment({ amount: 0.6 })], 0.6));
+      renderPage();
+      await openPanel();
+      await userEvent.click(screen.getByTitle("Paid"));
+
+      expect(screen.getByPlaceholderText("0 – 7988")).toHaveValue(7988);
+    });
+
+    it("counts the project paid once the agorot are paid too", async () => {
+      setPayments(makePayments([makePayment({ amount: 7988 })], 7988));
+      const { unmount } = renderPage();
+      await openPanel();
+      expect(screen.getByTitle("Paid")).not.toBeDisabled();
+      unmount();
+
+      setPayments(makePayments([makePayment({ amount: 7988.6 })], 7988.6));
+      renderPage();
+      await openPanel();
+      expect(screen.getByTitle("Paid")).toBeDisabled();
+    });
+  });
+
   it("opens the inline partial-amount row", async () => {
     renderPage();
     await openPanel();

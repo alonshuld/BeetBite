@@ -253,6 +253,37 @@ describe('ProjectsService', () => {
         expect(call.data.incomeEntries.create.incomeDate).not.toBeNull();
       });
 
+      // Payment progress counts client payments, so the money already in hand
+      // is one; it was received VAT included, so the VAT is marked paid too.
+      it('records the amount as one client payment and marks the VAT paid', async () => {
+        mockPrismaService.project.create.mockResolvedValue(mockProject);
+        mockPrismaService.projectReport.create.mockResolvedValue({
+          id: 'report-1',
+        });
+
+        await service.create({ ...createDto, openingBalance });
+
+        const call = (
+          mockPrismaService.projectReport.create.mock.calls as unknown[][]
+        )[0][0] as {
+          data: {
+            vatPaidAt: Date;
+            clientPayments: {
+              create: { amount: Prisma.Decimal; paymentDate: Date };
+            };
+          };
+        };
+        expect(call.data.clientPayments.create.amount.toNumber()).toBe(
+          openingBalance.amount,
+        );
+        expect(call.data.clientPayments.create.paymentDate.toISOString()).toBe(
+          '2026-03-01T00:00:00.000Z',
+        );
+        expect(call.data.vatPaidAt.toISOString()).toBe(
+          '2026-03-01T00:00:00.000Z',
+        );
+      });
+
       it('tags the income entry so the synthetic origin is visible', async () => {
         mockPrismaService.project.create.mockResolvedValue(mockProject);
         mockPrismaService.projectReport.create.mockResolvedValue({
@@ -354,7 +385,7 @@ describe('ProjectsService', () => {
             'Description 1',
           ),
           reports: [
-            { incomeEntries: [{ amount: new Prisma.Decimal('2000') }] },
+            { clientPayments: [{ amount: new Prisma.Decimal('2000') }] },
           ],
           _count: { reports: 1 },
         },
@@ -367,7 +398,7 @@ describe('ProjectsService', () => {
             'Description 2',
           ),
           reports: [
-            { incomeEntries: [{ amount: new Prisma.Decimal('5000') }] },
+            { clientPayments: [{ amount: new Prisma.Decimal('5000') }] },
           ],
           _count: { reports: 1 },
         },
@@ -385,10 +416,7 @@ describe('ProjectsService', () => {
             client: { select: { id: true, name: true } },
             reports: {
               select: {
-                incomeEntries: {
-                  where: { incomeDate: { not: null } },
-                  select: { amount: true },
-                },
+                clientPayments: { select: { amount: true } },
               },
             },
             _count: {
@@ -401,7 +429,7 @@ describe('ProjectsService', () => {
       expect(result[1].paymentProgress).toEqual({ totalPaid: 5000 });
     });
 
-    it('should apply pagination params and correctly filter paid incomes', async () => {
+    it('should apply pagination params and sum client payments', async () => {
       const projects = [
         {
           ...baseProject(
@@ -412,7 +440,7 @@ describe('ProjectsService', () => {
             'Description 1',
           ),
           reports: [
-            { incomeEntries: [{ amount: new Prisma.Decimal('5000') }] },
+            { clientPayments: [{ amount: new Prisma.Decimal('5000') }] },
           ],
           _count: { reports: 1 },
         },
@@ -432,10 +460,7 @@ describe('ProjectsService', () => {
             client: { select: { id: true, name: true } },
             reports: {
               select: {
-                incomeEntries: {
-                  where: { incomeDate: { not: null } },
-                  select: { amount: true },
-                },
+                clientPayments: { select: { amount: true } },
               },
             },
             _count: {
@@ -480,7 +505,7 @@ describe('ProjectsService', () => {
     it('should return correct totalPaid when project reports exist', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         ...baseProject,
-        reports: [{ incomeEntries: [{ amount: new Prisma.Decimal('500') }] }],
+        reports: [{ clientPayments: [{ amount: new Prisma.Decimal('500') }] }],
         _count: { reports: 1 },
       });
       const result = await service.findOne('clhp000000000000000000001');
@@ -491,8 +516,8 @@ describe('ProjectsService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         ...baseProject,
         reports: [
-          { incomeEntries: [{ amount: new Prisma.Decimal('400') }] },
-          { incomeEntries: [{ amount: new Prisma.Decimal('600') }] },
+          { clientPayments: [{ amount: new Prisma.Decimal('400') }] },
+          { clientPayments: [{ amount: new Prisma.Decimal('600') }] },
         ],
         _count: { reports: 2 },
       });
