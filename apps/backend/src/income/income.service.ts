@@ -5,21 +5,14 @@ import {
   MonthlyIncomeItemDto,
   MonthlyIncomeProjectDto,
 } from './dto/monthly-income-item.dto';
-import { SetReportPaymentDto } from './dto/set-report-payment.dto';
 import { mapIncomeEntries } from 'src/project-reports/mappers/project-reports.mapper';
 import { VatRatesService } from 'src/vat-rates/vat-rates.service';
-import { PrismaClientKnownRequestError } from 'src/generated/internal/prismaNamespace';
-import { PRISMA_ERROR_CODES } from 'src/common/constants';
-import { ProjectReportNotFoundError } from 'src/project-reports/errors/project-report-not-found.exception';
+import { toClientPaymentResponse } from './mappers/client-payment.mapper';
 import { deriveIncomeTotals } from './utils/income-totals';
 
 /** A stored paid date as the API returns it, or null while unpaid. */
 const toPaidAt = (date: Date | null): string | null =>
   date ? date.toISOString() : null;
-
-/** A paid date from the request: a day, null to clear, undefined to leave as is. */
-const fromPaidAt = (value: string | null | undefined) =>
-  value === undefined ? undefined : value === null ? null : new Date(value);
 
 @Injectable()
 export class IncomeService {
@@ -52,7 +45,6 @@ export class IncomeService {
           id: true,
           date: true,
           projectId: true,
-          incomePaidAt: true,
           vatPaidAt: true,
           project: {
             select: {
@@ -75,6 +67,15 @@ export class IncomeService {
             },
             // Stable order, so the entries listed under a row never reshuffle.
             orderBy: { id: 'asc' },
+          },
+          clientPayments: {
+            select: {
+              id: true,
+              projectReportId: true,
+              amount: true,
+              paymentDate: true,
+            },
+            orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }],
           },
         },
       }),
@@ -143,7 +144,12 @@ export class IncomeService {
         vatPercentage,
         vatAmount,
         totalWithVat,
-        incomePaidAt: toPaidAt(report.incomePaidAt),
+        // The income is paid in parts; what the payments add up to.
+        incomePaid: report.clientPayments.reduce(
+          (sum, p) => sum + p.amount.toNumber(),
+          0,
+        ),
+        payments: report.clientPayments.map(toClientPaymentResponse),
         vatPaidAt: toPaidAt(report.vatPaidAt),
         incomeEntries: mapIncomeEntries(report.incomeEntries),
       });
@@ -158,40 +164,11 @@ export class IncomeService {
         clientName: clientEntry.clientName,
         projects,
         totalIncome: sum((p) => p.totalIncome),
-        incomePaid: sum((p) => (p.incomePaidAt ? p.totalIncome : 0)),
+        incomePaid: sum((p) => p.incomePaid),
         totalVat: sum((p) => p.vatAmount),
         vatPaid: sum((p) => (p.vatPaidAt ? p.vatAmount : 0)),
         totalWithVat: sum((p) => p.totalWithVat),
       };
     });
-  }
-
-  /**
-   * Marks a month's income and/or its VAT paid on a date, or unpaid with null.
-   * The two are independent: a client often pays the income now and the VAT a
-   * month later, and the VAT is then marked on the month it belongs to.
-   */
-  async setReportPayment(
-    reportId: string,
-    dto: SetReportPaymentDto,
-  ): Promise<void> {
-    try {
-      await this.prismaService.projectReport.update({
-        where: { id: reportId },
-        data: {
-          incomePaidAt: fromPaidAt(dto.incomePaidAt),
-          vatPaidAt: fromPaidAt(dto.vatPaidAt),
-        },
-      });
-    } catch (error) {
-      if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code === PRISMA_ERROR_CODES.NOT_FOUND
-      ) {
-        throw new ProjectReportNotFoundError(reportId);
-      }
-      throw error;
-    }
-    this.logger.log(`Project report ${reportId} payment marks updated`);
   }
 }

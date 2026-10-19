@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IncomeEntryResponseDto } from 'src/project-reports/dto/income-entry-response.dto';
+import { ClientPaymentResponseDto } from './client-payment-response.dto';
 
 export class MonthlyIncomeProjectDto {
   @ApiProperty({ description: "The project's report for the month" })
@@ -21,11 +22,14 @@ export class MonthlyIncomeProjectDto {
   @ApiProperty({ description: 'Income plus VAT' })
   totalWithVat!: number;
   @ApiProperty({
-    type: String,
-    nullable: true,
-    description: 'The day the income was paid; null while unpaid',
+    description: "What the client's payments towards the income add up to",
   })
-  incomePaidAt!: string | null;
+  incomePaid!: number;
+  @ApiProperty({
+    type: [ClientPaymentResponseDto],
+    description: 'The partial payments towards the income, oldest first',
+  })
+  payments!: ClientPaymentResponseDto[];
   @ApiProperty({
     type: String,
     nullable: true,
@@ -45,7 +49,7 @@ export class MonthlyIncomeItemDto {
   @ApiProperty({ type: [MonthlyIncomeProjectDto] })
   projects!: MonthlyIncomeProjectDto[];
   @ApiProperty() totalIncome!: number;
-  @ApiProperty({ description: 'Income already marked paid' })
+  @ApiProperty({ description: 'Sum of the payments towards the income' })
   incomePaid!: number;
   @ApiProperty() totalVat!: number;
   @ApiProperty({ description: 'VAT already marked paid' })

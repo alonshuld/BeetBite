@@ -26,3 +26,7 @@ export const deriveIncomeTotals = (
   const vatAmount = vatPercentage ? (income * vatPercentage) / 100 : 0;
   return { vatPercentage, vatAmount, totalWithVat: income + vatAmount };
 };
+
+/** Compares two money amounts in agorot, so float noise cannot tip it. */
+export const exceedsInAgorot = (amount: number, limit: number): boolean =>
+  Math.round(amount * 100) > Math.round(limit * 100);

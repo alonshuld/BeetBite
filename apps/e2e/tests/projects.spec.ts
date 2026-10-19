@@ -378,8 +378,13 @@ dbTest.describe('Projects CRUD', () => {
         // would file it as still owed and keep it out of payment progress,
         // which is the one figure the opening balance exists to correct.
         expect(reports[0].incomeEntries[0].incomeDate).not.toBeNull();
-        // …and the month is marked paid on the turnover summary.
-        expect(reports[0].incomePaidAt).not.toBeNull();
+        // …recorded as one client payment, with the VAT marked paid.
+        const payments = await db.clientPayment.findMany({
+          where: { projectReportId: reports[0].id },
+        });
+        expect(
+          payments.map((p: { amount: unknown }) => Number(p.amount)),
+        ).toEqual([45000]);
         expect(reports[0].vatPaidAt).not.toBeNull();
       },
     );

@@ -13,10 +13,18 @@ vi.mock("react-router-dom", async (importOriginal) => {
   return { ...actual, useOutletContext: vi.fn(() => ({ month: "2025-03" })) };
 });
 
-const setReportPayment = vi.fn();
+const createPayment = vi.fn();
+const updatePayment = vi.fn();
+const deletePayment = vi.fn();
+const setVatPayment = vi.fn();
+const payInFull = vi.fn();
 vi.mock("@/api/endpoints/income", () => ({
   useGetMonthlyIncomeQuery: vi.fn(),
-  useSetReportPaymentMutation: () => [setReportPayment, { isLoading: false }],
+  useCreateClientPaymentMutation: () => [createPayment, {}],
+  useUpdateClientPaymentMutation: () => [updatePayment, {}],
+  useDeleteClientPaymentMutation: () => [deletePayment, {}],
+  useSetVatPaymentMutation: () => [setVatPayment, { isLoading: false }],
+  usePayInFullMutation: () => [payInFull, { isLoading: false }],
 }));
 
 import { useGetMonthlyIncomeQuery } from "@/api/endpoints/income";
@@ -34,7 +42,8 @@ function project(
     vatPercentage: 18,
     vatAmount,
     totalWithVat: totalIncome + vatAmount,
-    incomePaidAt: null,
+    incomePaid: 0,
+    payments: [],
     vatPaidAt: null,
     incomeEntries: [
       {
@@ -48,14 +57,23 @@ function project(
   };
 }
 
-// Tower Block: 5,000 + 900 VAT, both paid. Bridge: 3,000 + 540, income paid,
-// VAT still owed. Annex: 2,000 + 360, nothing paid.
+// Tower Block: 5,000 + 900 VAT, both paid. Bridge: 3,000 + 540, income paid
+// in two parts so far 1,000 + 500, VAT still owed. Annex: 2,000 + 360, nothing
+// paid.
 const tower = project({
   projectId: "p1",
   projectName: "Tower Block",
   requesterName: "Dana",
   totalIncome: 5000,
-  incomePaidAt: "2025-03-05T00:00:00.000Z",
+  incomePaid: 5000,
+  payments: [
+    {
+      id: "pay-1",
+      projectReportId: "r-p1",
+      amount: 5000,
+      paymentDate: "2025-03-05T00:00:00.000Z",
+    },
+  ],
   vatPaidAt: "2025-03-05T00:00:00.000Z",
 });
 const bridge = project({
@@ -63,7 +81,21 @@ const bridge = project({
   projectName: "Bridge",
   requesterName: "Eli",
   totalIncome: 3000,
-  incomePaidAt: "2025-03-10T00:00:00.000Z",
+  incomePaid: 1500,
+  payments: [
+    {
+      id: "pay-2",
+      projectReportId: "r-p2",
+      amount: 1000,
+      paymentDate: "2025-03-10T00:00:00.000Z",
+    },
+    {
+      id: "pay-3",
+      projectReportId: "r-p2",
+      amount: 500,
+      paymentDate: "2025-03-18T00:00:00.000Z",
+    },
+  ],
   incomeEntries: [
     { id: "e2", amount: 1000, incomeDate: null, tag: "Frame" },
     { id: "e3", amount: 2000, incomeDate: null, tag: null },
@@ -92,7 +124,7 @@ const mockItems: MonthlyIncomeItem[] = [
     clientId: "c2",
     clientName: "Globex",
     totalIncome: 5000,
-    incomePaid: 3000,
+    incomePaid: 1500,
     totalVat: 900,
     vatPaid: 0,
     totalWithVat: 5900,
@@ -147,7 +179,14 @@ function controlFigures(title: string) {
 describe("MonthlyIncomePage", () => {
   beforeEach(() => {
     setQuery({ data: mockItems, isLoading: false });
-    setReportPayment.mockReset().mockResolvedValue({ data: undefined });
+    for (const fn of [
+      createPayment,
+      updatePayment,
+      deletePayment,
+      setVatPayment,
+      payInFull,
+    ])
+      fn.mockReset().mockResolvedValue({ data: undefined });
   });
 
   it("is titled Turnover Summary", () => {
@@ -160,7 +199,7 @@ describe("MonthlyIncomePage", () => {
   describe("control rows at the top", () => {
     it("controls income on its own: total, paid and what is left", () => {
       renderPage();
-      expect(controlFigures("Income")).toEqual(["₪10,000", "₪8,000", "₪2,000"]);
+      expect(controlFigures("Income")).toEqual(["₪10,000", "₪6,500", "₪3,500"]);
     });
 
     it("controls VAT on a separate row", () => {
@@ -209,27 +248,49 @@ describe("MonthlyIncomePage", () => {
       expect(screen.queryByText("Profit")).toBeNull();
     });
 
-    it("shows income and VAT as paid or not, each on its own", () => {
+    it("shows the income's status and the VAT's paid mark, each on its own", () => {
       renderPage();
       expect(
         screen.getByRole("button", {
-          name: "Mark unpaid — Income excl. VAT — Bridge",
+          name: "Partial — Income excl. VAT — Bridge",
         }),
       ).toHaveAttribute("aria-pressed", "true");
       expect(
-        screen.getByRole("button", { name: "Mark paid — VAT — Bridge" }),
-      ).toHaveAttribute("aria-pressed", "false");
-    });
-
-    it("shows the day each part was paid", () => {
-      renderPage();
-      const cells = within(rowOf("Bridge")).getAllByRole("cell");
-      expect(
-        within(cells[2]).getByRole("button", { name: "10/03/25" }),
+        within(rowOf("Bridge")).getByText(/Paid ₪1,500/),
       ).toBeInTheDocument();
       expect(
-        within(cells[3]).queryByRole("button", { name: /\d\// }),
-      ).toBeNull();
+        screen.getByRole("button", { name: "Mark paid — VAT — Bridge" }),
+      ).toHaveAttribute("aria-pressed", "false");
+      expect(
+        screen.getByRole("button", {
+          name: "Paid — Income excl. VAT — Tower Block",
+        }),
+      ).toHaveAttribute("aria-pressed", "true");
+      expect(
+        screen.getByRole("button", {
+          name: "Unpaid — Income excl. VAT — Annex",
+        }),
+      ).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("lists each income payment with its date and amount", () => {
+      renderPage();
+      const items = within(
+        screen.getByRole("list", { name: "Income payments — Bridge" }),
+      ).getAllByRole("listitem");
+      expect(items).toHaveLength(2);
+      expect(items[0]).toHaveTextContent("10 Mar 2025");
+      expect(items[0]).toHaveTextContent("₪1,000");
+      expect(items[1]).toHaveTextContent("18 Mar 2025");
+      expect(items[1]).toHaveTextContent("₪500");
+    });
+
+    it("shows the day the VAT was paid", () => {
+      renderPage();
+      const cells = within(rowOf("Tower Block")).getAllByRole("cell");
+      expect(
+        within(cells[3]).getByRole("button", { name: "05/03/25" }),
+      ).toBeInTheDocument();
     });
 
     it("warns when the month has no VAT rate yet", () => {
@@ -265,7 +326,128 @@ describe("MonthlyIncomePage", () => {
     });
   });
 
-  describe("marking paid", () => {
+  describe("income payments", () => {
+    it("records the income still owed in full, on the day chosen", async () => {
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", {
+          name: "Paid — Income excl. VAT — Bridge",
+        }),
+      );
+      expect(screen.getByLabelText("Amount (₪) — Bridge")).toHaveValue(1500);
+      fireEvent.change(
+        screen.getByLabelText("Payment date — Income excl. VAT — Bridge"),
+        { target: { value: "2025-03-28" } },
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(createPayment).toHaveBeenCalledWith({
+        projectReportId: "r-p2",
+        amount: 1500,
+        paymentDate: "2025-03-28",
+      });
+      expect(screen.queryByLabelText("Amount (₪) — Bridge")).toBeNull();
+    });
+
+    it("records a partial payment typed by the user, dated today by default", async () => {
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", {
+          name: "Partial — Income excl. VAT — Annex",
+        }),
+      );
+      await userEvent.type(
+        screen.getByLabelText("Amount (₪) — Annex"),
+        "750.5",
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(createPayment).toHaveBeenCalledWith({
+        projectReportId: "r-p3",
+        amount: 750.5,
+        paymentDate: new Date().toISOString().slice(0, 10),
+      });
+    });
+
+    it("does not save without an amount", async () => {
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", {
+          name: "Partial — Income excl. VAT — Annex",
+        }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(createPayment).not.toHaveBeenCalled();
+    });
+
+    it("keeps the row open when the server refuses the payment", async () => {
+      createPayment.mockResolvedValue({ error: { status: 400 } });
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", {
+          name: "Partial — Income excl. VAT — Annex",
+        }),
+      );
+      await userEvent.type(screen.getByLabelText("Amount (₪) — Annex"), "9999");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      expect(screen.getByLabelText("Amount (₪) — Annex")).toHaveValue(9999);
+    });
+
+    it("offers no full payment once the income is settled", () => {
+      renderPage();
+      expect(
+        screen.getByRole("button", {
+          name: "Paid — Income excl. VAT — Tower Block",
+        }),
+      ).toBeDisabled();
+    });
+
+    it("deletes one payment", async () => {
+      renderPage();
+      const list = screen.getByRole("list", {
+        name: "Income payments — Bridge",
+      });
+      await userEvent.click(
+        within(within(list).getAllByRole("listitem")[1]).getByRole("button", {
+          name: "Delete",
+        }),
+      );
+      expect(deletePayment).toHaveBeenCalledWith("pay-3");
+    });
+
+    it("marking the income unpaid removes all its payments", async () => {
+      renderPage();
+      await userEvent.click(
+        screen.getByRole("button", {
+          name: "Unpaid — Income excl. VAT — Bridge",
+        }),
+      );
+      expect(deletePayment.mock.calls).toEqual([["pay-2"], ["pay-3"]]);
+    });
+
+    it("corrects a payment's day when the picker loses focus", async () => {
+      renderPage();
+      const list = screen.getByRole("list", {
+        name: "Income payments — Bridge",
+      });
+      await userEvent.click(
+        within(list).getByRole("button", { name: "10 Mar 2025" }),
+      );
+      const input = within(list).getByLabelText("Payment date");
+      fireEvent.change(input, { target: { value: "2025-03-12" } });
+      expect(updatePayment).not.toHaveBeenCalled();
+      fireEvent.blur(input);
+
+      expect(updatePayment).toHaveBeenCalledWith({
+        id: "pay-2",
+        paymentDate: "2025-03-12",
+      });
+    });
+  });
+
+  describe("VAT", () => {
     it("marks the VAT paid on the day picked in the calendar", async () => {
       renderPage();
       await userEvent.click(
@@ -278,75 +460,39 @@ describe("MonthlyIncomePage", () => {
         screen.getByRole("button", { name: "Mark paid — VAT — Bridge" }),
       );
 
-      expect(setReportPayment).toHaveBeenCalledWith({
+      expect(setVatPayment).toHaveBeenCalledWith({
         reportId: "r-p2",
         vatPaidAt: "2025-04-15",
       });
     });
 
-    it("opens the calendar on today", async () => {
+    it("opens the calendar on today, and writes nothing when cancelled", async () => {
       renderPage();
       await userEvent.click(
-        screen.getByRole("button", {
-          name: "Mark paid — Income excl. VAT — Annex",
-        }),
+        screen.getByRole("button", { name: "Mark paid — VAT — Annex" }),
       );
-      expect(
-        screen.getByLabelText("Payment date — Income excl. VAT — Annex"),
-      ).toHaveValue(new Date().toISOString().slice(0, 10));
-    });
-
-    it("writes nothing when the calendar is cancelled", async () => {
-      renderPage();
-      await userEvent.click(
-        screen.getByRole("button", {
-          name: "Mark paid — Income excl. VAT — Annex",
-        }),
+      expect(screen.getByLabelText("Payment date — VAT — Annex")).toHaveValue(
+        new Date().toISOString().slice(0, 10),
       );
       await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
-      expect(setReportPayment).not.toHaveBeenCalled();
-      expect(
-        screen.queryByLabelText("Payment date — Income excl. VAT — Annex"),
-      ).toBeNull();
+      expect(setVatPayment).not.toHaveBeenCalled();
     });
 
-    it("marks a paid part unpaid again", async () => {
+    it("marks the VAT unpaid again", async () => {
       renderPage();
       await userEvent.click(
-        screen.getByRole("button", {
-          name: "Mark unpaid — Income excl. VAT — Bridge",
-        }),
+        screen.getByRole("button", { name: "Mark unpaid — VAT — Tower Block" }),
       );
-      expect(setReportPayment).toHaveBeenCalledWith({
-        reportId: "r-p2",
-        incomePaidAt: null,
+      expect(setVatPayment).toHaveBeenCalledWith({
+        reportId: "r-p1",
+        vatPaidAt: null,
       });
     });
+  });
 
-    it("corrects the day of a paid part", async () => {
-      renderPage();
-      const cell = within(rowOf("Bridge")).getAllByRole("cell")[2];
-      await userEvent.click(
-        within(cell).getByRole("button", { name: "10/03/25" }),
-      );
-      fireEvent.change(
-        screen.getByLabelText("Payment date — Income excl. VAT — Bridge"),
-        { target: { value: "2025-03-11" } },
-      );
-      await userEvent.click(
-        screen.getByRole("button", {
-          name: "Mark paid — Income excl. VAT — Bridge",
-        }),
-      );
-
-      expect(setReportPayment).toHaveBeenCalledWith({
-        reportId: "r-p2",
-        incomePaidAt: "2025-03-11",
-      });
-    });
-
-    it("marks income and VAT paid together with one button", async () => {
+  describe("paid in full incl. VAT", () => {
+    it("settles the income and the VAT on one day", async () => {
       renderPage();
       await userEvent.click(
         screen.getByRole("button", { name: "Paid in full incl. VAT — Annex" }),
@@ -358,35 +504,22 @@ describe("MonthlyIncomePage", () => {
         screen.getByRole("button", { name: "Paid in full incl. VAT — Annex" }),
       );
 
-      expect(setReportPayment).toHaveBeenCalledWith({
+      expect(payInFull).toHaveBeenCalledWith({
         reportId: "r-p3",
-        incomePaidAt: "2025-03-20",
-        vatPaidAt: "2025-03-20",
+        paymentDate: "2025-03-20",
       });
     });
 
-    it("keeps the day of a part already paid when paying in full", async () => {
-      renderPage();
-      await userEvent.click(
-        screen.getByRole("button", { name: "Paid in full incl. VAT — Bridge" }),
-      );
-      await userEvent.click(
-        screen.getByRole("button", { name: "Paid in full incl. VAT — Bridge" }),
-      );
-
-      expect(setReportPayment).toHaveBeenCalledWith({
-        reportId: "r-p2",
-        vatPaidAt: new Date().toISOString().slice(0, 10),
-      });
-    });
-
-    it("offers no full payment once both parts are paid", () => {
+    it("is not offered once the income and the VAT are both paid", () => {
       renderPage();
       expect(
         screen.getByRole("button", {
           name: "Paid in full incl. VAT — Tower Block",
         }),
       ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Paid in full incl. VAT — Bridge" }),
+      ).toBeEnabled();
     });
   });
 

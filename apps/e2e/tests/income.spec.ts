@@ -96,7 +96,7 @@ dbTest.describe('Turnover summary (ריכוז מחזורי)', () => {
   );
 
   dbTest(
-    'marks income and VAT paid on their own days, or both at once',
+    'pays the income in parts and the VAT on its own day, or both at once',
     async ({ page, db }) => {
       const client = await db.client.create({ data: { name: 'Pay Client' } });
       const sub = await db.subcontractor.create({
@@ -109,7 +109,7 @@ dbTest.describe('Turnover summary (ריכוז מחזורי)', () => {
             clientId: client.id,
             name,
             estimatedAmount: 300000,
-            description: 'paid marks',
+            description: 'income payments',
             requesterName: 'Test Requester',
             location: 'Test Location',
           },
@@ -131,42 +131,77 @@ dbTest.describe('Turnover summary (ריכוז מחזורי)', () => {
       });
       const vat = (10000 * Number(rate.percentage)) / 100;
       const fmt = (n: number) => `₪${n.toLocaleString('en-US')}`;
-      const paidAt = async (name: string) => {
+      /** Each income payment as "amount@day", and the VAT's paid day. */
+      const state = async (name: string) => {
         const r = await db.projectReport.findUniqueOrThrow({
           where: { id: reports[name] },
+          include: { clientPayments: { orderBy: { paymentDate: 'asc' } } },
         });
-        return [r.incomePaidAt, r.vatPaidAt].map(
-          (d: Date | null) => d?.toISOString().slice(0, 10) ?? null,
-        );
+        return {
+          payments: r.clientPayments.map(
+            (p: { amount: unknown; paymentDate: Date }) =>
+              `${Number(p.amount)}@${p.paymentDate.toISOString().slice(0, 10)}`,
+          ),
+          vatPaidAt: r.vatPaidAt?.toISOString().slice(0, 10) ?? null,
+        };
       };
+      const remaining = (row: string) =>
+        page
+          .getByRole('group', { name: row })
+          .getByText('Remaining')
+          .locator('xpath=following-sibling::*');
 
       await page.goto(`${BASE}/income`);
       await page.waitForLoadState('networkidle');
 
-      const income = page.getByRole('group', { name: 'Income' });
-      const vatRow = page.getByRole('group', { name: 'VAT' });
-      await expect(income).toContainText(fmt(20000));
-      await expect(vatRow).toContainText(fmt(2 * vat));
+      await expect(remaining('Income')).toHaveText(fmt(20000));
+      await expect(remaining('VAT')).toHaveText(fmt(2 * vat));
 
-      // The income now…
+      // A first part of the income…
       await page
         .getByRole('button', {
-          name: 'Mark paid — Income excl. VAT — Split Project',
+          name: 'Partial — Income excl. VAT — Split Project',
         })
         .click();
+      await page.getByLabel('Amount (₪) — Split Project').fill('4000');
       await page
         .getByLabel('Payment date — Income excl. VAT — Split Project')
         .fill('2026-05-12');
+      await page.getByRole('button', { name: 'Save' }).click();
+      await expect
+        .poll(() => state('Split Project'))
+        .toEqual({ payments: ['4000@2026-05-12'], vatPaidAt: null });
+      await expect(remaining('Income')).toHaveText(fmt(16000));
+
+      // …more than what is left of the income is refused…
       await page
         .getByRole('button', {
-          name: 'Mark paid — Income excl. VAT — Split Project',
+          name: 'Partial — Income excl. VAT — Split Project',
         })
         .click();
-      await expect
-        .poll(() => paidAt('Split Project'))
-        .toEqual(['2026-05-12', null]);
+      await page.getByLabel('Amount (₪) — Split Project').fill('6001');
+      await page.getByRole('button', { name: 'Save' }).click();
+      await expect(
+        page.getByText(/would exceed the income owed/i),
+      ).toBeVisible();
+      await page.getByRole('button', { name: 'Cancel' }).click();
 
-      // …and its VAT a month later, still on May's row.
+      // …the ✓ fills in the 6,000 left…
+      await page
+        .getByRole('button', {
+          name: 'Paid — Income excl. VAT — Split Project',
+          exact: true,
+        })
+        .click();
+      await expect(page.getByLabel('Amount (₪) — Split Project')).toHaveValue(
+        '6000',
+      );
+      await page
+        .getByLabel('Payment date — Income excl. VAT — Split Project')
+        .fill('2026-05-20');
+      await page.getByRole('button', { name: 'Save' }).click();
+
+      // …and the VAT a month later, still on May's row.
       await page
         .getByRole('button', { name: 'Mark paid — VAT — Split Project' })
         .click();
@@ -177,44 +212,32 @@ dbTest.describe('Turnover summary (ריכוז מחזורי)', () => {
         .getByRole('button', { name: 'Mark paid — VAT — Split Project' })
         .click();
       await expect
-        .poll(() => paidAt('Split Project'))
-        .toEqual(['2026-05-12', '2026-06-10']);
+        .poll(() => state('Split Project'))
+        .toEqual({
+          payments: ['4000@2026-05-12', '6000@2026-05-20'],
+          vatPaidAt: '2026-06-10',
+        });
 
       // The other client paid everything at once.
       await page
         .getByRole('button', { name: 'Paid in full incl. VAT — Full Project' })
         .click();
-      await page.getByLabel('Payment date — Full Project').fill('2026-05-20');
+      await page.getByLabel('Payment date — Full Project').fill('2026-05-25');
       await page
         .getByRole('button', { name: 'Paid in full incl. VAT — Full Project' })
         .click();
       await expect
-        .poll(() => paidAt('Full Project'))
-        .toEqual(['2026-05-20', '2026-05-20']);
-      await expect(
-        page.getByRole('button', {
-          name: 'Paid in full incl. VAT — Full Project',
-        }),
-      ).toBeDisabled();
+        .poll(() => state('Full Project'))
+        .toEqual({ payments: ['10000@2026-05-25'], vatPaidAt: '2026-05-25' });
 
-      // Everything is in: nothing left on either control row.
-      await expect(income).toContainText(fmt(20000));
-      await expect(
-        vatRow.getByText('Remaining').locator('xpath=following-sibling::*'),
-      ).toHaveText('₪0');
+      await expect(remaining('Income')).toHaveText('₪0');
+      await expect(remaining('VAT')).toHaveText('₪0');
 
       // A mistake is undone by clicking the green ✓.
       await page
-        .getByRole('button', {
-          name: 'Mark unpaid — VAT — Split Project',
-        })
+        .getByRole('button', { name: 'Mark unpaid — VAT — Split Project' })
         .click();
-      await expect
-        .poll(() => paidAt('Split Project'))
-        .toEqual(['2026-05-12', null]);
-      await expect(
-        vatRow.getByText('Remaining').locator('xpath=following-sibling::*'),
-      ).toHaveText(fmt(vat));
+      await expect(remaining('VAT')).toHaveText(fmt(vat));
     },
   );
 

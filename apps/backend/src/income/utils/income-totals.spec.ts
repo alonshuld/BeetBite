@@ -1,5 +1,5 @@
 import { Prisma } from 'src/generated/client';
-import { deriveIncomeTotals } from './income-totals';
+import { deriveIncomeTotals, exceedsInAgorot } from './income-totals';
 
 const rates = [
   {
@@ -23,5 +23,15 @@ describe('deriveIncomeTotals', () => {
       vatAmount: 0,
       totalWithVat: 1000,
     });
+  });
+});
+
+describe('exceedsInAgorot', () => {
+  it('ignores floating-point noise below an agora', () => {
+    expect(exceedsInAgorot(0.1 + 0.2, 0.3)).toBe(false);
+  });
+
+  it('catches a single agora over', () => {
+    expect(exceedsInAgorot(100.01, 100)).toBe(true);
   });
 });
