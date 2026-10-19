@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BeetBite</title>
+    <!-- Kept in step with the theme by ThemeContext; Safari paints the bars around the page with it. -->
+    <meta name="theme-color" content="oklch(95.6% 0.004 85)" />
+    <!-- Apply the saved theme before the first paint, so a dark page never starts out light. -->
+    <script>
+      try {
+        if (localStorage.getItem("beetbite.theme") === "dark") {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch {}
+    </script>
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
