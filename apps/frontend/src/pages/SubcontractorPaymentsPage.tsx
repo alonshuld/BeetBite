@@ -22,7 +22,7 @@ import { useLang } from "@/contexts/useLang";
 import { useFieldCheck } from "@/hooks/useFieldCheck";
 import { formatYM, formatISODate } from "@/utils/formatMonth";
 import { Icon } from "@/components/atoms/Icon";
-import { formatILS } from "@/utils/formatMoney";
+import { formatILS, roundToAgorot } from "@/utils/formatMoney";
 
 type PaymentStatus = "Paid" | "Partial" | "Unpaid";
 
@@ -37,9 +37,10 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Compared in agorot, like the server's overpayment guard. */
 function projectStatus(paid: number, owed: number): PaymentStatus {
   if (paid <= 0) return "Unpaid";
-  if (Math.round(paid) >= Math.round(owed)) return "Paid";
+  if (Math.round(paid * 100) >= Math.round(owed * 100)) return "Paid";
   return "Partial";
 }
 
@@ -115,7 +116,9 @@ export default function SubcontractorPaymentsPage() {
       (s, cp) => s + cp.amount,
       0,
     );
-    const owed = Math.round(
+    // To the agora, as the server computes it: rounding to whole shekels
+    // made the ✓ offer e.g. 7,989 against 7,988.60 owed, which it refuses.
+    const owed = roundToAgorot(
       report.totalIncome -
         report.totalIncome * (report.profitMargin / 100) -
         corpTotal,
@@ -527,7 +530,7 @@ export default function SubcontractorPaymentsPage() {
                         0,
                       );
                       const status = projectStatus(paid, pb.owed);
-                      const remaining = pb.owed - paid;
+                      const remaining = roundToAgorot(pb.owed - paid);
                       const isPending = pendingProject[pb.projectId] ?? false;
                       const isEntryOpen = entryOpen[pb.projectId] ?? false;
 

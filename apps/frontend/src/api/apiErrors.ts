@@ -76,6 +76,10 @@ export const hebrewApiErrors: Record<string, string> = {
   SUBCONTRACTOR_PAYMENT_NOT_FOUND: "התשלום לקבלן המשנה לא נמצא.",
   SUBCONTRACTOR_PAYMENT_OVERPAYMENT:
     "תשלום של ₪{amount} יחרוג מהסכום לתשלום. לתשלום: ₪{owed}, שולם עד כה: ₪{paid}.",
+  // Client payments (turnover summary)
+  CLIENT_PAYMENT_NOT_FOUND: "התשלום מהלקוח לא נמצא.",
+  CLIENT_PAYMENT_OVERPAYMENT:
+    'תשלום של ₪{amount} יחרוג מההכנסה ללא מע"מ. הכנסה: ₪{owed}, שולם עד כה: ₪{paid}.',
   // Suppliers
   SUPPLIER_ALREADY_EXISTS: "ספק בשם {name} כבר קיים.",
   SUPPLIER_NOT_FOUND: "הספק לא נמצא.",

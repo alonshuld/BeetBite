@@ -112,7 +112,24 @@ function ie(amount: number, incomeDate: string | null): IncomeEntryInput[] {
   return [{ amount, incomeDate }];
 }
 
+/** The month the demo data showcases — its VAT is left for the user to mark. */
+const SHOWCASE_MONTH = '2026-05-01';
+
 async function report(r: ReportInput) {
+  // Income marked received was paid by the client on that day — one payment
+  // each on the turnover summary. A month received in full had its VAT paid
+  // too, on the last of those days; the showcase month's VAT is still open.
+  const received = r.incomeEntries.filter((e) => e.amount > 0 && e.incomeDate);
+  const fullyReceived =
+    received.length > 0 &&
+    received.length === r.incomeEntries.filter((e) => e.amount > 0).length;
+  const lastReceived = received
+    .map((e) => e.incomeDate!)
+    .sort()
+    .at(-1);
+  const vatPaidAt =
+    fullyReceived && r.date < SHOWCASE_MONTH ? d(lastReceived!) : null;
+
   return prisma.projectReport.create({
     data: {
       projectId: r.projectId,
@@ -120,11 +137,18 @@ async function report(r: ReportInput) {
       date: d(r.date),
       profitMargin: r.profitMargin,
       initiatorIncome: r.initiatorIncome,
+      vatPaidAt,
       incomeEntries: {
         create: r.incomeEntries.map((e) => ({
           amount: e.amount,
           incomeDate: e.incomeDate ? d(e.incomeDate) : null,
           tag: e.tag ?? oneOf(WORK_TAGS),
+        })),
+      },
+      clientPayments: {
+        create: received.map((e) => ({
+          amount: e.amount,
+          paymentDate: d(e.incomeDate!),
         })),
       },
     },
@@ -138,6 +162,7 @@ async function seedMockData(): Promise<void> {
 
   await prisma.subcontractorPayment.deleteMany({});
   await prisma.supplierPayment.deleteMany({});
+  await prisma.clientPayment.deleteMany({});
   await prisma.projectReportIncome.deleteMany({});
   await prisma.projectReport.deleteMany({});
   await prisma.projectClientAssignment.deleteMany({});

@@ -24,12 +24,11 @@ import { SubcontractorNotFoundError } from 'src/subcontractors/errors/subcontrac
 import { OPENING_BALANCE_TAG } from 'src/common/constants';
 
 const PAID_REPORTS_INCLUDE = {
+  // What the client paid towards the income on the turnover summary. VAT is
+  // tracked apart and is not part of the project's price.
   reports: {
     select: {
-      incomeEntries: {
-        where: { incomeDate: { not: null } },
-        select: { amount: true },
-      },
+      clientPayments: { select: { amount: true } },
     },
   },
   _count: {
@@ -106,6 +105,15 @@ export class ProjectsService {
                 subcontractorId: openingBalance.subcontractorId,
                 date: month,
                 profitMargin: new Prisma.Decimal(openingBalance.profitMargin),
+                // Money already received, VAT included: one payment on the
+                // turnover summary (which payment progress counts), VAT paid.
+                vatPaidAt: month,
+                clientPayments: {
+                  create: {
+                    amount: new Prisma.Decimal(openingBalance.amount),
+                    paymentDate: month,
+                  },
+                },
                 incomeEntries: {
                   create: {
                     amount: new Prisma.Decimal(openingBalance.amount),
@@ -184,7 +192,7 @@ export class ProjectsService {
         projectIdToIncomesSumMap.set(
           project.id,
           reports
-            .flatMap((r) => r.incomeEntries)
+            .flatMap((r) => r.clientPayments)
             .reduce((sum, e) => sum + Number(e.amount), 0),
         );
         projectIdToHasReportsMap.set(project.id, _count.reports > 0);
@@ -218,7 +226,7 @@ export class ProjectsService {
 
     const { reports, _count, ...project } = projectWithReports;
     const incomesSum = reports
-      .flatMap((r) => r.incomeEntries)
+      .flatMap((r) => r.clientPayments)
       .reduce((sum, e) => sum + Number(e.amount), 0);
 
     this.logger.log(`Project retrieved: ${id}`);

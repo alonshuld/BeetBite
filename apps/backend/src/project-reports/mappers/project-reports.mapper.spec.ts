@@ -21,6 +21,7 @@ describe('project-reports mapper', () => {
     date: new Date('2024-05-01T00:00:00.000Z'),
     profitMargin: new Prisma.Decimal('10'),
     initiatorIncome: null as Prisma.Decimal | null,
+    vatPaidAt: null as Date | null,
     project: {
       id: 'project-1',
       name: 'Project 1',
