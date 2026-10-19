@@ -459,7 +459,7 @@ function ProjectRows({
                 disabled={busy || fullyPaid}
                 onClick={() => setPickingFull(true)}
                 aria-label={`${t("paidInFull")} — ${label}`}
-                className={`inline-flex h-7 items-center gap-1 whitespace-nowrap rounded border px-2 text-xs font-semibold transition-colors ${
+                className={`inline-flex h-7 items-center gap-1 whitespace-nowrap rounded-full border px-2 text-xs font-semibold transition-colors ${
                   fullyPaid
                     ? "border-success bg-success/12 text-success"
                     : "border-border text-text-muted hover:border-success hover:text-success"
@@ -598,7 +598,7 @@ function ProjectRows({
               <button
                 type="button"
                 onClick={closeEntry}
-                className="inline-flex h-8 items-center rounded border border-border px-3 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
+                className="inline-flex h-8 items-center rounded-full border border-border px-3 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
               >
                 {t("cancel")}
               </button>
@@ -627,7 +627,7 @@ function ControlRow({
     <div
       role="group"
       aria-label={title}
-      className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-border bg-surface p-4"
+      className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-border bg-surface shadow-(--shadow-card) p-4"
     >
       <span className="text-lead font-semibold text-text">{title}</span>
       <div className="tnum flex flex-wrap items-end gap-6">
@@ -745,7 +745,7 @@ export default function MonthlyIncomePage() {
               <div
                 role="group"
                 aria-label={t("groupBy")}
-                className="inline-flex h-9 items-center gap-0.5 rounded border border-border bg-surface-2 p-0.5"
+                className="inline-flex h-9 items-center gap-0.5 rounded-full border border-border bg-surface p-[3px]"
               >
                 {(["client", "requester"] as const).map((g) => (
                   <button
@@ -753,9 +753,9 @@ export default function MonthlyIncomePage() {
                     type="button"
                     onClick={() => setGroupBy(g)}
                     aria-pressed={groupBy === g}
-                    className={`h-full rounded-sm px-2.5 text-label font-semibold transition-colors duration-150 ${
+                    className={`h-full rounded-full px-3.5 text-label font-semibold transition-colors duration-150 ${
                       groupBy === g
-                        ? "bg-surface text-text shadow-xs"
+                        ? "bg-ink text-on-ink"
                         : "text-text-dim hover:text-text"
                     }`}
                   >
@@ -769,10 +769,12 @@ export default function MonthlyIncomePage() {
           {visibleGroups.map((group) => (
             <div
               key={group.key}
-              className="rounded-lg border border-border bg-surface p-4"
+              className="rounded-lg border border-border bg-surface shadow-(--shadow-card) p-4"
             >
               <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-                <h2 className="font-serif text-lead text-text">{group.name}</h2>
+                <h2 className="font-display text-lead text-text">
+                  {group.name}
+                </h2>
                 <div className="tnum">
                   <Figure
                     large={false}
@@ -786,7 +788,7 @@ export default function MonthlyIncomePage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-surface-2">
+                    <tr className="border-b border-border">
                       <th className={`${TH} text-start`}>{t("project")}</th>
                       <th className={`${TH} text-start`}>{t("requester")}</th>
                       <th className={`${TH} text-end`}>{t("incomeExclVat")}</th>

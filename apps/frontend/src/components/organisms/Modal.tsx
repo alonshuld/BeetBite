@@ -44,7 +44,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center animate-fadeIn bg-[oklch(12%_0.03_350/0.6)] backdrop-blur-[2px] sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center animate-fadeIn bg-[oklch(15%_0.01_285/0.45)] backdrop-blur-[3px] sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
@@ -52,26 +52,26 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`flex max-h-[92vh] w-full animate-sheetIn flex-col overflow-hidden border border-border bg-surface shadow-modal rounded-t-lg sm:rounded-lg ${
+        className={`flex max-h-[92vh] w-full animate-sheetIn flex-col overflow-hidden border border-border bg-surface shadow-modal rounded-t-[24px] sm:rounded-[24px] ${
           large ? "sm:max-w-[760px]" : "sm:max-w-[540px]"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
-          <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-6 py-4">
-            <h2 className="text-title text-text">{title}</h2>
+          <div className="flex shrink-0 items-center justify-between gap-4 px-7 pt-6 pb-3">
+            <h2 className="text-title font-bold text-text">{title}</h2>
             <button
               onClick={onClose}
-              className="-me-1.5 rounded p-1.5 text-text-dim transition-colors hover:bg-surface-2 hover:text-text"
+              className="-me-1.5 rounded-full p-2 text-text-dim transition-colors hover:bg-surface-3 hover:text-text"
               aria-label="Close"
             >
               <Icon name="close" size={17} />
             </button>
           </div>
         )}
-        <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        <div className="flex-1 overflow-y-auto px-7 py-4">{children}</div>
         {footer && (
-          <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-surface-2 px-6 py-4">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-surface px-7 py-4">
             {footer}
           </div>
         )}

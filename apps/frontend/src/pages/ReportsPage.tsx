@@ -763,7 +763,7 @@ function ClientCard({ client, reportCount, onClick }: ClientCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4 text-start transition-colors duration-150 hover:border-beet/45 hover:bg-beet-tint"
+      className="group flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-surface shadow-(--shadow-card) p-4 text-start transition-colors duration-150 hover:border-beet/45 hover:bg-beet-tint"
     >
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate text-lead font-semibold text-text">
@@ -1006,7 +1006,7 @@ function TileTagEditor({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={t("tagPlaceholder")}
-        className="w-24 rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-text focus:outline-hidden focus:ring-1 focus:ring-primary"
+        className="w-24 rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-text outline-hidden focus:border-beet"
       />
       <button
         onClick={() => void handleSave()}

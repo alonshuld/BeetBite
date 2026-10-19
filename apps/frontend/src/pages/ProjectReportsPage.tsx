@@ -560,7 +560,7 @@ export default function ProjectReportsPage() {
           value={`₪${formatNumber(totalPaid)}`}
           tone="positive"
         />
-        <div className="flex flex-col justify-between gap-2 rounded-lg border border-border bg-surface p-4">
+        <div className="flex flex-col justify-between gap-2 rounded-lg border border-border bg-surface shadow-(--shadow-card) p-4">
           <span className="tnum text-hero font-semibold leading-none text-text">
             {completionPct}%
           </span>
@@ -621,7 +621,7 @@ export default function ProjectReportsPage() {
             }
           />
         ) : (
-          <div className="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
+          <div className="rounded-lg border border-border bg-surface shadow-(--shadow-card) p-4 flex flex-col gap-3">
             {/* Income entries */}
             {currentReport.incomeEntries.map((entry) => {
               const isReceived = Boolean(entry.incomeDate);

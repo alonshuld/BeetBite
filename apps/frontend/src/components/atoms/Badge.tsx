@@ -6,15 +6,13 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
 }
 
-// No background tint on the coloured variants. They were written as
-// `bg-success/12` etc., but Tailwind 3 had no /12 or /14 opacity step, so those
-// classes never rendered and the badges have always shipped without a fill.
-// Tailwind 4 would honour them, so they are omitted to keep the look as shipped.
+// Soft pills: a faint wash of the state's colour behind its ink, so a column
+// of statuses reads by colour before the words are read.
 const variantClasses: Record<BadgeVariant, string> = {
-  green: "text-success border-(color:--badge-success-border)",
-  red: "text-danger border-(color:--badge-danger-border)",
-  yellow: "text-warning border-(color:--badge-warning-border)",
-  beet: "text-beet-bright border-(color:--badge-beet-border)",
+  green: "bg-success/10 text-success border-(color:--badge-success-border)",
+  red: "bg-danger/10 text-danger border-(color:--badge-danger-border)",
+  yellow: "bg-warning/12 text-warning border-(color:--badge-warning-border)",
+  beet: "bg-beet-tint text-beet border-(color:--badge-beet-border)",
   muted: "bg-surface-3 text-text-muted border-border",
 };
 
@@ -30,7 +28,7 @@ export function Badge({
 }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-[3px] rounded-sm text-micro font-semibold whitespace-nowrap border ${variantClasses[variant]} ${className}`}
+      className={`inline-flex items-center gap-1 px-2.5 py-[3px] rounded-full text-micro font-semibold whitespace-nowrap border ${variantClasses[variant]} ${className}`}
       {...props}
     />
   );

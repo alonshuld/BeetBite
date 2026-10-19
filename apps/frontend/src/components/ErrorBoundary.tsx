@@ -11,7 +11,7 @@ export function ErrorFallback() {
         <Icon name="alert" size={26} />
       </div>
       <div className="flex flex-col gap-2 max-w-xs">
-        <h1 className="font-serif text-2xl text-text">{t("errorTitle")}</h1>
+        <h1 className="font-display text-2xl text-text">{t("errorTitle")}</h1>
         <p className="text-text-muted text-sm">{t("errorDescription")}</p>
       </div>
       <ButtonPrimary onClick={() => window.location.reload()}>

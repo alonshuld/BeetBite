@@ -15,8 +15,8 @@ export function Toggle({ label, className = "", id, ...props }: ToggleProps) {
     >
       <span className="relative inline-flex">
         <input type="checkbox" id={id} className="sr-only peer" {...props} />
-        <span className="block w-[38px] h-[22px] rounded-full bg-surface-3 border border-border-strong transition-colors duration-150 peer-checked:bg-beet peer-checked:border-beet peer-focus-visible:outline-solid peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-beet" />
-        <span className="pointer-events-none absolute top-[3px] inset-s-[3px] w-4 h-4 rounded-full bg-text-dim shadow-xs transition-transform duration-150 peer-checked:bg-white peer-checked:ltr:translate-x-4 peer-checked:rtl:-translate-x-4" />
+        <span className="block w-[38px] h-[22px] rounded-full bg-border-strong border border-border-strong transition-colors duration-150 peer-checked:bg-beet peer-checked:border-beet peer-focus-visible:outline-solid peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-beet" />
+        <span className="pointer-events-none absolute top-[3px] inset-s-[3px] w-4 h-4 rounded-full bg-white shadow-xs transition-transform duration-150 peer-checked:bg-white peer-checked:ltr:translate-x-4 peer-checked:rtl:-translate-x-4" />
       </span>
       {label && <span className="text-sm text-text">{label}</span>}
     </label>

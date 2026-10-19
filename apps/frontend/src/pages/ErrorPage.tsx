@@ -21,7 +21,7 @@ export default function ErrorPage() {
       </div>
 
       <div className="flex flex-col gap-2 max-w-xs">
-        <h1 className="font-serif text-2xl text-text">
+        <h1 className="font-display text-2xl text-text">
           {is404 ? t("pageNotFound") : t("errorTitle")}
         </h1>
         <p className="text-text-muted text-sm">

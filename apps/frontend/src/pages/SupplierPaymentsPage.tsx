@@ -286,9 +286,9 @@ function SupplierGroup({
   const allPaid = outstanding <= 0 && group.projectPayments.length > 0;
 
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-surface">
+    <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-(--shadow-card)">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-        <h2 className="font-serif text-lead text-text">
+        <h2 className="font-display text-lead text-text">
           {group.supplier.name}
         </h2>
         <div className="flex items-center gap-3">
@@ -343,7 +343,7 @@ function SupplierGroup({
               <col className="w-[11%]" />
             </colgroup>
             <thead>
-              <tr className="border-b border-border bg-surface-2">
+              <tr className="border-b border-border">
                 <Th>{t("project")}</Th>
                 <Th className="hidden sm:table-cell">{t("description")}</Th>
                 <Th align="end">{t("amountILS")}</Th>
@@ -476,7 +476,7 @@ export default function SupplierPaymentsPage() {
       />
 
       {!isLoading && groups.length > 0 && (
-        <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-border bg-surface p-4">
+        <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-border bg-surface shadow-(--shadow-card) p-4">
           <span className="text-lead font-semibold text-text">
             {t("grandTotal")}
           </span>

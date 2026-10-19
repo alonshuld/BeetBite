@@ -60,7 +60,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center gap-3">
           <Logo size={64} />
           <div className="text-center">
-            <h1 className="font-serif text-[30px] leading-tight text-text">
+            <h1 className="font-display text-[30px] leading-tight text-text">
               BeetBite
             </h1>
             <p className="text-sm text-text-muted">

@@ -16,6 +16,10 @@
 
   --color-rose: var(--rose);
 
+  --color-ink: var(--ink);
+  --color-ink-hover: var(--ink-hover);
+  --color-on-ink: var(--on-ink);
+
   --color-surface-2: var(--surface2);
   --color-surface-3: var(--surface3);
   --color-surface: var(--surface);
@@ -31,8 +35,8 @@
   --color-warning: var(--warning);
   --color-danger: var(--danger);
 
-  --font-sans: Assistant, system-ui, sans-serif;
-  --font-serif: Frank Ruhl Libre, Georgia, serif;
+  --font-sans: Heebo, system-ui, sans-serif;
+  --font-display: Heebo, system-ui, sans-serif;
 
   --text-micro: 11px;
   --text-micro--line-height: 1.45;
@@ -46,8 +50,8 @@
   --text-lead--line-height: 1.5;
   --text-title: 20px;
   --text-title--line-height: 1.25;
-  --text-page: 26px;
-  --text-page--line-height: 1.18;
+  --text-page: 28px;
+  --text-page--line-height: 1.15;
   --text-hero: 34px;
   --text-hero--line-height: 1.1;
 
@@ -87,6 +91,7 @@
   --radius: var(--radius);
   --radius-lg: var(--radius-lg);
 
+  --shadow-card: var(--shadow-card);
   --shadow-pop: var(--shadow-pop);
   --shadow-modal: var(--shadow-modal);
 }
@@ -112,93 +117,107 @@
 /*
  * BeetBite tokens.
  *
- * The app is pink on purpose: every neutral sits on the beet hue (350) with
- * real chroma, so paper, rules and ink all read as tints of the brand rather
- * than grey with an accent dropped on top. The exported account-approval PDF
- * is the formal document and keeps its own restrained palette — the screens
- * do not imitate it.
+ * Quiet, warm paper with white cards floating on it, near-black ink, and one
+ * saturated violet for whatever you can act on. Neutrals carry a whisper of
+ * warmth (hue 85) so the page never reads as cold office grey; the accent is
+ * the only loud colour on screen. The exported account-approval PDF is the
+ * formal document and keeps its own restrained palette — the screens do not
+ * imitate it.
  *
  * Money keeps a semantic scale of its own, apart from the accent: the accent
  * marks what you can act on, the money colours mark what a figure is.
  */
 :root {
-  /* Brand — actions, navigation, focus. Never used to state an amount. */
-  --beet: oklch(50% 0.21 5);
-  --beet-bright: oklch(60% 0.20 5);
-  --beet-dim: oklch(40% 0.17 5);
-  --beet-glow: oklch(50% 0.21 5 / 0.14);
-  --beet-tint: oklch(95% 0.035 5);
-  --rose: oklch(60% 0.16 350);
+  /* Brand — navigation, selection, focus. Never used to state an amount. */
+  --beet: oklch(54% 0.25 293);
+  --beet-bright: oklch(60% 0.23 293);
+  --beet-dim: oklch(46% 0.22 293);
+  --beet-glow: oklch(54% 0.25 293 / 0.16);
+  --beet-tint: oklch(95.5% 0.03 293);
+  --rose: oklch(62% 0.18 330);
 
-  /* Surfaces — a pink paper stack, each step a little deeper in chroma. */
-  --bg: oklch(96.5% 0.008 350);
-  --surface: oklch(99.4% 0.003 350);
-  --surface2: oklch(97% 0.010 350);
-  --surface3: oklch(94% 0.013 350);
+  /* Ink — the solid primary button and selected chips, the screenshot black. */
+  --ink: oklch(19% 0.006 285);
+  --ink-hover: oklch(30% 0.008 285);
+  --on-ink: oklch(99% 0 0);
+
+  /* Surfaces — warm paper under pure white cards. */
+  --bg: oklch(95.6% 0.004 85);
+  --surface: oklch(100% 0 0);
+  --surface2: oklch(97.4% 0.003 85);
+  --surface3: oklch(94.6% 0.004 85);
 
   /* Rules. Solid, not alpha: a translucent hairline muddies over tinted rows. */
-  --border: oklch(86% 0.016 350);
-  --border-strong: oklch(76% 0.022 350);
+  --border: oklch(92.6% 0.004 85);
+  --border-strong: oklch(85% 0.006 85);
 
-  --text: oklch(21% 0.020 350);
-  --text-muted: oklch(47% 0.018 350);
-  --text-dim: oklch(62% 0.016 350);
+  --text: oklch(19% 0.006 285);
+  --text-muted: oklch(45% 0.008 285);
+  --text-dim: oklch(60% 0.008 285);
 
   /* Money semantics */
-  --success: oklch(52% 0.14 155);
-  --warning: oklch(60% 0.14 65);
-  --danger: oklch(52% 0.21 25);
+  --success: oklch(56% 0.15 155);
+  --warning: oklch(64% 0.15 60);
+  --danger: oklch(56% 0.21 25);
 
-  --badge-success-border: oklch(52% 0.14 155 / 0.30);
-  --badge-warning-border: oklch(60% 0.14 65 / 0.32);
-  --badge-danger-border: oklch(52% 0.21 25 / 0.30);
-  --badge-beet-border: oklch(50% 0.21 5 / 0.30);
+  --badge-success-border: oklch(56% 0.15 155 / 0.22);
+  --badge-warning-border: oklch(64% 0.15 60 / 0.26);
+  --badge-danger-border: oklch(56% 0.21 25 / 0.22);
+  --badge-beet-border: oklch(54% 0.25 293 / 0.22);
 
-  /* Elevation — only for things that genuinely float. Cards use a rule. */
-  --shadow-pop: 0 4px 16px oklch(25% 0.06 350 / 0.12),
-    0 1px 3px oklch(25% 0.06 350 / 0.08);
-  --shadow-modal: 0 24px 60px oklch(20% 0.06 350 / 0.28),
-    0 2px 8px oklch(20% 0.06 350 / 0.12);
+  /* Elevation. Cards get a breath of shadow under their rule; pop-overs and
+     dialogs genuinely float. */
+  --shadow-card: 0 1px 2px oklch(20% 0.01 85 / 0.04),
+    0 1px 1px oklch(20% 0.01 85 / 0.02);
+  --shadow-pop: 0 12px 32px oklch(20% 0.01 285 / 0.12),
+    0 2px 6px oklch(20% 0.01 285 / 0.06);
+  --shadow-modal: 0 32px 80px oklch(20% 0.01 285 / 0.22),
+    0 4px 12px oklch(20% 0.01 285 / 0.08);
 
-  --sidebar-w: 248px;
-  --radius-sm: 4px;
-  --radius: 8px;
-  --radius-lg: 12px;
+  --sidebar-w: 260px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
 }
 
 [data-theme="dark"] {
-  --beet: oklch(54% 0.21 5);
-  --beet-bright: oklch(66% 0.19 5);
-  --beet-dim: oklch(42% 0.17 5);
-  --beet-glow: oklch(58% 0.21 5 / 0.22);
-  --beet-tint: oklch(30% 0.07 5);
-  --rose: oklch(72% 0.15 350);
+  --beet: oklch(62% 0.22 293);
+  --beet-bright: oklch(70% 0.19 293);
+  --beet-dim: oklch(52% 0.22 293);
+  --beet-glow: oklch(65% 0.22 293 / 0.26);
+  --beet-tint: oklch(30% 0.08 293);
+  --rose: oklch(74% 0.15 330);
 
-  --bg: oklch(15% 0.018 350);
-  --surface: oklch(18.5% 0.020 350);
-  --surface2: oklch(22.5% 0.022 350);
-  --surface3: oklch(27% 0.024 350);
+  --ink: oklch(96% 0.003 85);
+  --ink-hover: oklch(88% 0.004 85);
+  --on-ink: oklch(19% 0.006 285);
 
-  --border: oklch(31% 0.022 350);
-  --border-strong: oklch(42% 0.026 350);
+  --bg: oklch(14.5% 0.005 285);
+  --surface: oklch(19% 0.006 285);
+  --surface2: oklch(22.5% 0.007 285);
+  --surface3: oklch(27% 0.008 285);
 
-  --text: oklch(95% 0.008 350);
-  --text-muted: oklch(72% 0.016 350);
-  --text-dim: oklch(56% 0.016 350);
+  --border: oklch(27.5% 0.008 285);
+  --border-strong: oklch(38% 0.01 285);
+
+  --text: oklch(96% 0.003 85);
+  --text-muted: oklch(74% 0.006 285);
+  --text-dim: oklch(58% 0.008 285);
 
   --success: oklch(74% 0.15 160);
-  --warning: oklch(78% 0.14 70);
-  --danger: oklch(66% 0.19 25);
+  --warning: oklch(79% 0.14 70);
+  --danger: oklch(68% 0.19 25);
 
-  --badge-success-border: oklch(74% 0.15 160 / 0.45);
-  --badge-warning-border: oklch(78% 0.14 70 / 0.45);
-  --badge-danger-border: oklch(66% 0.19 25 / 0.45);
-  --badge-beet-border: oklch(66% 0.19 5 / 0.45);
+  --badge-success-border: oklch(74% 0.15 160 / 0.35);
+  --badge-warning-border: oklch(79% 0.14 70 / 0.35);
+  --badge-danger-border: oklch(68% 0.19 25 / 0.35);
+  --badge-beet-border: oklch(70% 0.19 293 / 0.35);
 
-  --shadow-pop: 0 4px 16px oklch(6% 0.02 350 / 0.50),
-    0 1px 3px oklch(6% 0.02 350 / 0.34);
-  --shadow-modal: 0 24px 60px oklch(6% 0.02 350 / 0.64),
-    0 2px 8px oklch(6% 0.02 350 / 0.42);
+  --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.3);
+  --shadow-pop: 0 12px 32px oklch(0% 0 0 / 0.5),
+    0 2px 6px oklch(0% 0 0 / 0.3);
+  --shadow-modal: 0 32px 80px oklch(0% 0 0 / 0.6),
+    0 4px 12px oklch(0% 0 0 / 0.35);
 }
 
 /*
@@ -221,7 +240,7 @@
     height: 100%;
     background: var(--bg);
     color: var(--text);
-    font-family: "Assistant", system-ui, sans-serif;
+    font-family: "Heebo", system-ui, sans-serif;
     font-size: 14px;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
@@ -232,14 +251,14 @@
     overflow: hidden;
   }
 
-  /* Headings carry the serif; set here so every h1–h3 gets it without a class. */
+  /* Headings: the same face, heavier and drawn in a touch tighter. */
   h1,
   h2,
   h3 {
-    font-family: "Frank Ruhl Libre", Georgia, serif;
+    font-family: "Heebo", system-ui, sans-serif;
     font-weight: 700;
     line-height: 1.18;
-    letter-spacing: -0.005em;
+    letter-spacing: -0.015em;
   }
 
   ::selection {
@@ -340,6 +359,16 @@ input[type="month"] {
   outline: 2px solid var(--beet);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
+}
+
+/*
+ * Text fields draw their own focus state (accent border plus a soft glow from
+ * `fieldChrome`); stacking the outline on top of that read as a double ring.
+ */
+input:not([type="checkbox"], [type="radio"], [type="range"]):focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
 }
 
 /* RTL — tables align to the reading edge. */

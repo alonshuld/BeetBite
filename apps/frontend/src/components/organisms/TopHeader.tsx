@@ -47,7 +47,7 @@ export function TopHeader({
   const labelKey = SCREEN_LABELS[rootPath];
 
   return (
-    <header className="flex h-[60px] shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-4">
+    <header className="flex h-[64px] shrink-0 items-center justify-between gap-3 px-7 pt-3 max-[768px]:px-4">
       <div className="flex min-w-0 items-center gap-2.5">
         <ButtonIcon
           className="lg:hidden"
@@ -57,7 +57,7 @@ export function TopHeader({
           <Icon name="menu" size={18} />
         </ButtonIcon>
         {labelKey && (
-          <span className="truncate text-sm font-semibold text-text-muted">
+          <span className="truncate text-sm font-medium text-text-dim">
             {t(labelKey)}
           </span>
         )}

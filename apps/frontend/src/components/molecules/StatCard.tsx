@@ -23,7 +23,7 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <div
-      className={`flex flex-col gap-1 rounded-lg border border-border bg-surface p-4 ${className}`}
+      className={`flex flex-col gap-1 rounded-lg border border-border bg-surface p-5 shadow-(--shadow-card) ${className}`}
       {...props}
     >
       <span
