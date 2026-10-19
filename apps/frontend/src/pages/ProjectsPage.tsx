@@ -63,10 +63,10 @@ function FilterToggle({
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`h-9 rounded border px-3 text-label font-semibold transition-colors duration-150 ${
+      className={`h-9 rounded-full border px-4 text-label font-semibold transition-colors duration-150 ${
         active
-          ? "border-beet bg-beet text-white"
-          : "border-border bg-surface text-text-muted hover:border-border-strong hover:bg-surface-2 hover:text-text"
+          ? "border-ink bg-ink text-on-ink"
+          : "border-border bg-surface text-text hover:border-border-strong hover:bg-surface-2 hover:text-text"
       }`}
     >
       {label}
@@ -392,10 +392,10 @@ export default function ProjectsPage() {
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-(--shadow-card)">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-border bg-surface-2">
+              <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("project")}
                 </th>

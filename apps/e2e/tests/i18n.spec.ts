@@ -58,18 +58,22 @@ dbTest.describe('Language and direction', () => {
 
   dbTest('the sidebar swaps edges under RTL', async ({ page, db }) => {
     void db;
-    // The sidebar's outer edge is declared as `ltr:border-r rtl:border-l`, so
-    // the rendered edge is what proves the direction variant actually resolved.
-    // (The active nav link carries no accent border of its own — it is marked
-    // by a tinted background, which is the same on both sides.)
+    // On desktop the sidebar is a floating card with a border on every side,
+    // so its border no longer says which edge it hugs. Where it is drawn
+    // does: it sits against the left edge in English and the right in Hebrew,
+    // which only happens if the direction actually flipped the layout.
     const sidebar = page.locator('aside').first();
-    await expect(sidebar).toHaveCSS('border-right-width', '1px');
-    await expect(sidebar).toHaveCSS('border-left-width', '0px');
+    const viewportWidth = page.viewportSize()!.width;
+    const centreX = async () => {
+      const box = (await sidebar.boundingBox())!;
+      return box.x + box.width / 2;
+    };
+
+    await expect.poll(centreX).toBeLessThan(viewportWidth / 2);
 
     await page.getByRole('button', { name: 'עב' }).click();
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
 
-    await expect(sidebar).toHaveCSS('border-left-width', '1px');
-    await expect(sidebar).toHaveCSS('border-right-width', '0px');
+    await expect.poll(centreX).toBeGreaterThan(viewportWidth / 2);
   });
 });

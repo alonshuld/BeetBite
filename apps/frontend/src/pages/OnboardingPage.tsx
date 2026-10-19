@@ -74,7 +74,7 @@ export default function OnboardingPage() {
           }}
         />
 
-        <div className="relative w-full max-w-[520px] flex flex-col gap-6">
+        <div className="relative w-full max-w-[560px] flex flex-col gap-6">
           <div className="text-center">
             <h1 className="text-page text-text">{t("onboardingHeading")}</h1>
             <p className="text-[14px] text-text-muted mt-1">
@@ -82,7 +82,7 @@ export default function OnboardingPage() {
             </p>
           </div>
 
-          <div className="bg-surface rounded p-7">
+          <div className="rounded-lg border border-border bg-surface p-7 shadow-(--shadow-card) max-[768px]:p-5">
             <CompanySettingsForm value={value} onChange={setValue} />
 
             <div className="flex items-center justify-end gap-3 mt-2">

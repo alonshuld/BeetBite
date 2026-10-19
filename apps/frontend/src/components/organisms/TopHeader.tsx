@@ -47,8 +47,8 @@ export function TopHeader({
   const labelKey = SCREEN_LABELS[rootPath];
 
   return (
-    <header className="flex h-[60px] shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-4">
-      <div className="flex min-w-0 items-center gap-2.5">
+    <header className="flex h-[64px] shrink-0 items-center justify-between gap-3 px-7 pt-3 max-[768px]:px-4">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
         <ButtonIcon
           className="lg:hidden"
           onClick={onMenuClick}
@@ -57,19 +57,22 @@ export function TopHeader({
           <Icon name="menu" size={18} />
         </ButtonIcon>
         {labelKey && (
-          <span className="truncate text-sm font-semibold text-text-muted">
+          <span className="truncate text-sm font-medium text-text-dim">
             {t(labelKey)}
           </span>
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         {/* The month is the working period for every overview screen, so it
             sits apart from the display settings with a rule between them. */}
         {isOverviewScreen && (
           <>
             <MonthPicker value={month} onChange={onMonthChange} />
-            <span className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
+            <span
+              className="mx-0.5 h-5 w-px bg-border sm:mx-1"
+              aria-hidden="true"
+            />
           </>
         )}
         <ThemeToggle />

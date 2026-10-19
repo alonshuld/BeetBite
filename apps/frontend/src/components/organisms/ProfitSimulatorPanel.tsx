@@ -70,7 +70,7 @@ function MarginSlider({
           step={0.1}
           value={value}
           onChange={(e) => commit(parseFloat(e.target.value), MARGIN_MAX)}
-          className="w-14 rounded border border-border bg-surface px-1 py-0.5 text-xs text-text text-end focus:outline-hidden focus:ring-1 focus:ring-primary"
+          className="w-14 rounded-field border border-border bg-surface px-1.5 py-0.5 text-xs text-text text-end outline-hidden focus:border-beet"
         />
         <span className="text-xs text-text-muted">%</span>
       </div>

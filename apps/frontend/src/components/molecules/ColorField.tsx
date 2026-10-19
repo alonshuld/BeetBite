@@ -43,7 +43,7 @@ export function ColorField({ id, label, value, onChange }: ColorFieldProps) {
           aria-label={label}
           value={value}
           onChange={(e) => onChange(e.target.value.toLowerCase())}
-          className="h-9 w-11 shrink-0 cursor-pointer rounded-sm border border-border bg-surface p-0.5"
+          className="h-9 w-11 shrink-0 cursor-pointer rounded-field border border-border bg-surface p-0.5"
         />
         <input
           id={inputId}

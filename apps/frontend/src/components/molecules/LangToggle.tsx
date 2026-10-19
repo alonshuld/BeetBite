@@ -16,7 +16,7 @@ export function LangToggle({
 }: LangToggleProps) {
   return (
     <div
-      className={`inline-flex h-9 items-center gap-0.5 rounded border border-border bg-surface-2 p-0.5 ${className}`}
+      className={`inline-flex h-9 items-center gap-0.5 rounded-full border border-border bg-surface p-[3px] ${className}`}
       role="group"
     >
       {(["en", "he"] as const).map((l) => (
@@ -24,10 +24,8 @@ export function LangToggle({
           key={l}
           onClick={() => onChange(l)}
           aria-pressed={lang === l}
-          className={`h-full rounded-sm px-2.5 text-label font-semibold transition-colors duration-150 ${
-            lang === l
-              ? "bg-surface text-text shadow-xs"
-              : "text-text-dim hover:text-text"
+          className={`h-full rounded-full px-3 text-label font-semibold transition-colors duration-150 ${
+            lang === l ? "bg-ink text-on-ink" : "text-text-dim hover:text-text"
           }`}
         >
           {l === "en" ? "EN" : "עב"}

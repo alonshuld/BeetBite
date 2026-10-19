@@ -66,7 +66,7 @@ export default function AppShell() {
         <main className="flex-1 overflow-auto bg-(--bg)">
           {/* Capped so a table on a wide monitor does not stretch its rows
               past a comfortable scan width. */}
-          <div className="mx-auto w-full max-w-[1400px] px-7 py-6 max-[768px]:px-4 max-[768px]:py-5">
+          <div className="mx-auto w-full max-w-[1400px] px-7 pt-3 pb-10 max-[768px]:px-4 max-[768px]:py-5">
             <Outlet context={{ month }} />
           </div>
         </main>
