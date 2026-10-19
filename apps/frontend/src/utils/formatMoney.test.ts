@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vite-plus/test";
-import { formatILS, formatNumber } from "./formatMoney";
+import { formatILS, formatNumber, roundToAgorot } from "./formatMoney";
 
 describe("formatNumber", () => {
   it("keeps whole numbers without decimals", () => {
@@ -31,5 +31,17 @@ describe("formatILS", () => {
   it("prefixes the shekel sign", () => {
     expect(formatILS(2500.4)).toBe("₪2,500.40");
     expect(formatILS(2500)).toBe("₪2,500");
+  });
+});
+
+describe("roundToAgorot", () => {
+  it("keeps agorot instead of rounding to whole shekels", () => {
+    expect(roundToAgorot(7988.6)).toBe(7988.6);
+    expect(roundToAgorot(7988.44)).toBe(7988.44);
+  });
+
+  it("drops float noise past the agora", () => {
+    expect(roundToAgorot(7988.6 - 0.6)).toBe(7988);
+    expect(roundToAgorot(0.1 + 0.2)).toBe(0.3);
   });
 });

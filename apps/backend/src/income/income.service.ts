@@ -6,6 +6,13 @@ import {
   MonthlyIncomeProjectDto,
 } from './dto/monthly-income-item.dto';
 import { mapIncomeEntries } from 'src/project-reports/mappers/project-reports.mapper';
+import { VatRatesService } from 'src/vat-rates/vat-rates.service';
+import { toClientPaymentResponse } from './mappers/client-payment.mapper';
+import { deriveIncomeTotals } from './utils/income-totals';
+
+/** A stored paid date as the API returns it, or null while unpaid. */
+const toPaidAt = (date: Date | null): string | null =>
+  date ? date.toISOString() : null;
 
 @Injectable()
 export class IncomeService {
@@ -14,6 +21,7 @@ export class IncomeService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly assignmentsService: ProjectClientAssignmentsService,
+    private readonly vatRatesService: VatRatesService,
   ) {}
 
   async getMonthlyIncome(month: string): Promise<MonthlyIncomeItemDto[]> {
@@ -25,39 +33,54 @@ export class IncomeService {
       Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() + 1, 1),
     );
 
-    const reports = await this.prismaService.projectReport.findMany({
-      where: {
-        date: {
-          gte: startOfMonth,
-          lt: startOfNextMonth,
+    const [reports, vatRates] = await Promise.all([
+      this.prismaService.projectReport.findMany({
+        where: {
+          date: {
+            gte: startOfMonth,
+            lt: startOfNextMonth,
+          },
         },
-      },
-      select: {
-        projectId: true,
-        project: {
-          select: {
-            name: true,
-            client: {
-              select: {
-                id: true,
-                name: true,
+        select: {
+          id: true,
+          date: true,
+          projectId: true,
+          vatPaidAt: true,
+          project: {
+            select: {
+              name: true,
+              requesterName: true,
+              client: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
           },
-        },
-        profitMargin: true,
-        incomeEntries: {
-          select: {
-            id: true,
-            amount: true,
-            incomeDate: true,
-            tag: true,
+          incomeEntries: {
+            select: {
+              id: true,
+              amount: true,
+              incomeDate: true,
+              tag: true,
+            },
+            // Stable order, so the entries listed under a row never reshuffle.
+            orderBy: { id: 'asc' },
           },
-          // Stable order, so a row doesn't jump when its date is edited in place.
-          orderBy: { id: 'asc' },
+          clientPayments: {
+            select: {
+              id: true,
+              projectReportId: true,
+              amount: true,
+              paymentDate: true,
+            },
+            orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }],
+          },
         },
-      },
-    });
+      }),
+      this.vatRatesService.findAllEntries(),
+    ]);
 
     this.logger.log(
       `Retrieved ${reports.length} project reports for month ${month}`,
@@ -106,34 +129,45 @@ export class IncomeService {
         (sum, e) => sum + e.amount.toNumber(),
         0,
       );
-      const receivedIncome = report.incomeEntries
-        .filter((e) => e.incomeDate !== null)
-        .reduce((sum, e) => sum + e.amount.toNumber(), 0);
-      const pendingIncome = totalIncome - receivedIncome;
-      const profit =
-        (totalIncome * (report.profitMargin?.toNumber() ?? 0)) / 100;
+      const { vatPercentage, vatAmount, totalWithVat } = deriveIncomeTotals(
+        totalIncome,
+        vatRates,
+        report.date,
+      );
 
       clientEntry.projects.set(report.projectId, {
+        reportId: report.id,
         projectId: report.projectId,
         projectName: report.project.name,
+        requesterName: report.project.requesterName,
         totalIncome,
-        receivedIncome,
-        pendingIncome,
-        profit,
+        vatPercentage,
+        vatAmount,
+        totalWithVat,
+        // The income is paid in parts; what the payments add up to.
+        incomePaid: report.clientPayments.reduce(
+          (sum, p) => sum + p.amount.toNumber(),
+          0,
+        ),
+        payments: report.clientPayments.map(toClientPaymentResponse),
+        vatPaidAt: toPaidAt(report.vatPaidAt),
         incomeEntries: mapIncomeEntries(report.incomeEntries),
       });
     }
 
     return Array.from(clientMap.values()).map((clientEntry) => {
       const projects = Array.from(clientEntry.projects.values());
-      const totalIncome = projects.reduce((sum, p) => sum + p.totalIncome, 0);
-      const totalProfit = projects.reduce((sum, p) => sum + p.profit, 0);
+      const sum = (pick: (p: MonthlyIncomeProjectDto) => number) =>
+        projects.reduce((total, p) => total + pick(p), 0);
       return {
         clientId: clientEntry.clientId,
         clientName: clientEntry.clientName,
         projects,
-        totalIncome,
-        totalProfit,
+        totalIncome: sum((p) => p.totalIncome),
+        incomePaid: sum((p) => p.incomePaid),
+        totalVat: sum((p) => p.vatAmount),
+        vatPaid: sum((p) => (p.vatPaidAt ? p.vatAmount : 0)),
+        totalWithVat: sum((p) => p.totalWithVat),
       };
     });
   }
