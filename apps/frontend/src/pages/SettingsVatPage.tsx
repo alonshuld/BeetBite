@@ -1,3 +1,4 @@
+import { fieldLabel } from "@/components/atoms/field";
 import { useState } from "react";
 import { PageHeader } from "@/components/molecules/PageHeader";
 import { MonthPicker } from "@/components/molecules/MonthPicker";
@@ -57,74 +58,72 @@ export default function SettingsVatPage() {
     <div className="flex flex-col gap-5">
       <PageHeader title={t("vatRate")} subtitle={t("vatRateSubtitle")} />
 
-      <div className="bg-surface rounded p-5 max-w-[480px] flex flex-col gap-1">
-        <span className="text-label font-semibold text-text-muted">
-          {t("currentVatRate")}
-        </span>
-        <span className="text-2xl font-semibold text-text">
-          {resolved?.percentage != null
-            ? `${resolved.percentage}%`
-            : t("notConfigured")}
-        </span>
-      </div>
-
-      <div className="bg-surface rounded p-5 max-w-[480px] flex flex-col gap-3">
-        <h3 className="text-label font-semibold text-text-muted">
-          {t("setVatRate")}
-        </h3>
-        <div className="flex items-end gap-3 flex-wrap">
-          <div className="flex flex-col gap-1">
-            <span className="text-label font-semibold text-text-muted">
-              {t("effectiveFrom")}
-            </span>
-            <MonthPicker value={month} onChange={setMonth} />
-          </div>
-          <Input
-            label={t("vatPercentLabel")}
-            type="number"
-            min={0}
-            max={100}
-            step={0.1}
-            value={percentage}
-            onChange={(e) => setPercentage(e.target.value)}
-            className="w-32"
-          />
-          <ButtonPrimary
-            disabled={saving || !percentage}
-            onClick={() => void handleSave()}
-          >
-            {t("save")}
-          </ButtonPrimary>
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <div className="rounded-lg border border-border bg-surface p-6 shadow-(--shadow-card) flex flex-col justify-center gap-1">
+          <span className="text-sm font-semibold text-text-muted">
+            {t("currentVatRate")}
+          </span>
+          <span className="tnum text-hero font-extrabold text-text">
+            {resolved?.percentage != null
+              ? `${resolved.percentage}%`
+              : t("notConfigured")}
+          </span>
         </div>
-      </div>
 
-      <div className="bg-surface rounded p-5 max-w-[480px]">
-        <h3 className="text-label font-semibold text-text-muted mb-3">
-          {t("vatRateHistory")}
-        </h3>
-        {isLoading ? (
-          <LoadingState label={t("loading")} />
-        ) : history.length === 0 ? (
-          <p className="text-text-muted text-sm">{t("noData")}</p>
-        ) : (
-          <table className="w-full text-sm">
-            <tbody>
-              {history.map((entry) => (
-                <tr
-                  key={entry.id}
-                  className="border-b border-border last:border-0"
-                >
-                  <td className="py-2 text-text-muted">
-                    {formatYM(entry.effectiveMonth.slice(0, 7), lang)}
-                  </td>
-                  <td className="py-2 text-right rtl:text-left font-medium text-text">
-                    {entry.percentage}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <div className="rounded-lg border border-border bg-surface p-6 shadow-(--shadow-card) flex flex-col gap-4">
+          <h3 className="text-base font-bold text-text">{t("setVatRate")}</h3>
+          <div className="flex items-end gap-3 flex-wrap">
+            <div className="flex flex-col gap-1.5">
+              <span className={fieldLabel}>{t("effectiveFrom")}</span>
+              <MonthPicker value={month} onChange={setMonth} />
+            </div>
+            <Input
+              label={t("vatPercentLabel")}
+              type="number"
+              min={0}
+              max={100}
+              step={0.1}
+              value={percentage}
+              onChange={(e) => setPercentage(e.target.value)}
+              className="h-9 w-32"
+            />
+            <ButtonPrimary
+              disabled={saving || !percentage}
+              onClick={() => void handleSave()}
+            >
+              {t("save")}
+            </ButtonPrimary>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border bg-surface p-6 shadow-(--shadow-card) md:col-span-2">
+          <h3 className="mb-3 text-base font-bold text-text">
+            {t("vatRateHistory")}
+          </h3>
+          {isLoading ? (
+            <LoadingState label={t("loading")} />
+          ) : history.length === 0 ? (
+            <p className="text-text-muted text-sm">{t("noData")}</p>
+          ) : (
+            <table className="w-full text-sm">
+              <tbody>
+                {history.map((entry) => (
+                  <tr
+                    key={entry.id}
+                    className="border-b border-border last:border-0"
+                  >
+                    <td className="py-2.5 text-text-muted">
+                      {formatYM(entry.effectiveMonth.slice(0, 7), lang)}
+                    </td>
+                    <td className="py-2.5 text-end font-semibold text-text">
+                      {entry.percentage}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </div>
   );

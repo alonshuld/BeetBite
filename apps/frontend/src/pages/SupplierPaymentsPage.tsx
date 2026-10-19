@@ -469,9 +469,18 @@ export default function SupplierPaymentsPage() {
         title={t("supplierPayments")}
         subtitle={formatYM(month, lang)}
         actions={
-          <ButtonPrimary onClick={() => setBatchOpen(true)}>
-            + {t("documentSupplierPayments")}
-          </ButtonPrimary>
+          <>
+            {!isLoading && groups.length > 0 && (
+              <SearchInput
+                placeholder={t("search")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            )}
+            <ButtonPrimary onClick={() => setBatchOpen(true)}>
+              + {t("documentSupplierPayments")}
+            </ButtonPrimary>
+          </>
         }
       />
 
@@ -501,11 +510,6 @@ export default function SupplierPaymentsPage() {
         />
       ) : (
         <>
-          <SearchInput
-            placeholder={t("search")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
           {visibleGroups.length === 0 && (
             <EmptyState
               icon={<Icon name="search" size={22} />}

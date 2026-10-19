@@ -82,14 +82,17 @@ export default function InitiatorsPage() {
         title={t("initiators")}
         subtitle={t("initiatorsSubtitle")}
         actions={
-          <ButtonPrimary onClick={openAdd}>+ {t("addInitiator")}</ButtonPrimary>
+          <>
+            <SearchInput
+              placeholder={t("search")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <ButtonPrimary onClick={openAdd}>
+              + {t("addInitiator")}
+            </ButtonPrimary>
+          </>
         }
-      />
-
-      <SearchInput
-        placeholder={t("search")}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
       />
 
       {isLoading ? (

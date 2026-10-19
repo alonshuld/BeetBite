@@ -10,7 +10,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
  * on the dense table rows where these appear several to a line.
  */
 const base =
-  "inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-sm font-semibold " +
+  "inline-flex shrink-0 items-center justify-center gap-1.5 h-9 px-4 rounded-full text-sm font-semibold whitespace-nowrap " +
   "transition-[background-color,border-color,color] duration-150 " +
   "disabled:opacity-45 disabled:cursor-not-allowed disabled:pointer-events-none";
 

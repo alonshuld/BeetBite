@@ -387,9 +387,18 @@ export default function SubcontractorPaymentsPage() {
         title={t("subcontractorPayments")}
         subtitle={formatYM(month, lang)}
         actions={
-          <ButtonGhost onClick={() => setTeamsOpen(true)}>
-            {t("teams")}
-          </ButtonGhost>
+          <>
+            {cards.length > 0 && (
+              <SearchInput
+                placeholder={t("search")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            )}
+            <ButtonGhost onClick={() => setTeamsOpen(true)}>
+              {t("teams")}
+            </ButtonGhost>
+          </>
         }
       />
 
@@ -403,11 +412,6 @@ export default function SubcontractorPaymentsPage() {
         />
       ) : (
         <>
-          <SearchInput
-            placeholder={t("search")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
           <div className="flex gap-5 max-[768px]:flex-col">
             {/* Sidebar */}
             <div className="flex flex-col gap-2 w-72 shrink-0 max-[768px]:w-full">

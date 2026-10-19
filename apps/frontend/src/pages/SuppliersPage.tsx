@@ -79,14 +79,17 @@ export default function SuppliersPage() {
         title={t("suppliers")}
         subtitle={t("suppliersSubtitle")}
         actions={
-          <ButtonPrimary onClick={openAdd}>+ {t("addSupplier")}</ButtonPrimary>
+          <>
+            <SearchInput
+              placeholder={t("search")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <ButtonPrimary onClick={openAdd}>
+              + {t("addSupplier")}
+            </ButtonPrimary>
+          </>
         }
-      />
-
-      <SearchInput
-        placeholder={t("search")}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
       />
 
       {isLoading ? (

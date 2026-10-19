@@ -84,10 +84,10 @@ export default function SettingsCompanyPage() {
       {isLoading ? (
         <LoadingState label={t("loading")} />
       ) : (
-        <div className="bg-surface rounded p-7 max-w-[640px]">
+        <div className="rounded-lg border border-border bg-surface px-8 pt-6 shadow-(--shadow-card) max-[768px]:px-5">
           <CompanySettingsForm value={value} onChange={setValue} />
 
-          <div className="flex items-center justify-end mt-2">
+          <div className="-mx-8 flex items-center justify-end border-t border-border px-8 py-4 max-[768px]:-mx-5 max-[768px]:px-5">
             <ButtonPrimary
               type="button"
               disabled={saving}

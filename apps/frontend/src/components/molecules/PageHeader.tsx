@@ -28,7 +28,7 @@ export function PageHeader({
         )}
       </div>
       {actions && (
-        <div className="flex shrink-0 items-center gap-2 max-[768px]:justify-end">
+        <div className="flex min-w-0 items-center gap-2 max-[768px]:justify-end">
           {actions}
         </div>
       )}

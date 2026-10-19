@@ -79,14 +79,15 @@ export default function ClientsPage() {
         title={t("clients")}
         subtitle={t("manageClientsSubtitle")}
         actions={
-          <ButtonPrimary onClick={openAdd}>+ {t("addClient")}</ButtonPrimary>
+          <>
+            <SearchInput
+              placeholder={t("search")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <ButtonPrimary onClick={openAdd}>+ {t("addClient")}</ButtonPrimary>
+          </>
         }
-      />
-
-      <SearchInput
-        placeholder={t("search")}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
       />
 
       {isLoading ? (

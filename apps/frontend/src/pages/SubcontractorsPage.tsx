@@ -112,6 +112,11 @@ export default function SubcontractorsPage() {
         subtitle={t("manageSubcontractorsSubtitle")}
         actions={
           <>
+            <SearchInput
+              placeholder={t("search")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
             <ButtonGhost onClick={() => setTeamsOpen(true)}>
               {t("teams")}
             </ButtonGhost>
@@ -120,12 +125,6 @@ export default function SubcontractorsPage() {
             </ButtonPrimary>
           </>
         }
-      />
-
-      <SearchInput
-        placeholder={t("search")}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
       />
 
       {isLoading ? (
