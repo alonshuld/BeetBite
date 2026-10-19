@@ -117,7 +117,7 @@ export function MonthPicker({
       <button
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="inline-flex h-9 min-w-[150px] items-center justify-between gap-2 rounded-full border border-border bg-surface px-4 text-sm font-semibold text-text transition-colors duration-150 hover:border-border-strong hover:bg-surface-2"
+        className="inline-flex h-9 items-center justify-between gap-2 rounded-full border border-border bg-surface px-3.5 sm:min-w-[150px] sm:px-4 text-sm font-semibold text-text transition-colors duration-150 hover:border-border-strong hover:bg-surface-2"
       >
         <span className="tnum">
           {MONTH_NAMES[lang][month]} {year}

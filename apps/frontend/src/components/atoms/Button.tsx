@@ -57,7 +57,7 @@ export function ButtonDanger({ className = "", ...props }: ButtonProps) {
 export function ButtonIcon({ className = "", ...props }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center w-9 h-9 rounded-full border border-border-strong/70 bg-surface text-text-muted transition-colors duration-150 hover:bg-surface-2 hover:text-text hover:border-border-strong active:bg-surface-3 disabled:opacity-45 disabled:cursor-not-allowed disabled:pointer-events-none ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center w-9 h-9 rounded-full border border-border-strong/70 bg-surface text-text-muted transition-colors duration-150 hover:bg-surface-2 hover:text-text hover:border-border-strong active:bg-surface-3 disabled:opacity-45 disabled:cursor-not-allowed disabled:pointer-events-none ${className}`}
       {...props}
     />
   );
