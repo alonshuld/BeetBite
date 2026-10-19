@@ -48,7 +48,7 @@ export function ButtonQuiet({ className = "", ...props }: ButtonProps) {
 export function ButtonDanger({ className = "", ...props }: ButtonProps) {
   return (
     <button
-      className={`${base} bg-transparent text-danger border border-danger/45 hover:bg-danger hover:text-white hover:border-danger active:bg-danger/85 ${className}`}
+      className={`${base} bg-danger/8 text-danger border border-danger/30 hover:bg-danger hover:text-white hover:border-danger active:bg-danger/85 ${className}`}
       {...props}
     />
   );
