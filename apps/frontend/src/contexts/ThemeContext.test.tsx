@@ -80,4 +80,26 @@ describe("ThemeContext / ThemeProvider", () => {
     );
     expect(screen.getByTestId("theme")).toHaveTextContent("dark");
   });
+
+  it("sets the theme-color meta to the page background of the active theme", async () => {
+    const style = document.createElement("style");
+    style.textContent =
+      ':root { --bg: #f1f0ed; } [data-theme="dark"] { --bg: #0a0a0c; }';
+    const meta = document.createElement("meta");
+    meta.name = "theme-color";
+    document.head.append(style, meta);
+    try {
+      render(
+        <ThemeProvider>
+          <ThemeDisplay />
+        </ThemeProvider>,
+      );
+      expect(meta.content).toBe("#f1f0ed");
+      await userEvent.click(screen.getByText("Go dark"));
+      expect(meta.content).toBe("#0a0a0c");
+    } finally {
+      style.remove();
+      meta.remove();
+    }
+  });
 });
