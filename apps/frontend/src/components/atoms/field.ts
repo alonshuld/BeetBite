@@ -4,11 +4,11 @@
  * rather than being retyped three times and drifting.
  */
 export const fieldChrome =
-  "rounded-sm bg-surface border border-border text-text " +
+  "rounded-field bg-surface border border-border-strong/70 text-text " +
   "outline-hidden transition-[border-color,box-shadow] duration-150 " +
   "placeholder:text-text-dim " +
   "hover:border-border-strong " +
-  "focus:border-beet focus:shadow-[0_0_0_3px_var(--beet-glow)] " +
+  "focus:border-beet focus:shadow-[0_0_0_4px_var(--beet-glow)] " +
   "disabled:opacity-45 disabled:cursor-not-allowed disabled:bg-surface-2";
 
 /*
@@ -16,7 +16,7 @@ export const fieldChrome =
  * to this does not reliably win (Tailwind's own output order decides), so a
  * control that needs another size builds on `fieldChrome` instead.
  */
-export const fieldBase = `w-full px-3 py-2 text-sm ${fieldChrome}`;
+export const fieldBase = `w-full px-3.5 py-2 text-sm ${fieldChrome}`;
 
 /*
  * Sentence case, not the tracked-out caps this app used to set. Hebrew has no

@@ -35,7 +35,7 @@ describe("Badge", () => {
   it("applies beet variant classes", () => {
     render(<Badge variant="beet">New</Badge>);
     const badge = screen.getByText("New");
-    expect(badge.className).toContain("text-beet-bright");
+    expect(badge.className).toContain("text-beet");
   });
 
   it("merges custom className", () => {

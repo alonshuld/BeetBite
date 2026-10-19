@@ -79,14 +79,17 @@ export default function SuppliersPage() {
         title={t("suppliers")}
         subtitle={t("suppliersSubtitle")}
         actions={
-          <ButtonPrimary onClick={openAdd}>+ {t("addSupplier")}</ButtonPrimary>
+          <>
+            <SearchInput
+              placeholder={t("search")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <ButtonPrimary onClick={openAdd}>
+              + {t("addSupplier")}
+            </ButtonPrimary>
+          </>
         }
-      />
-
-      <SearchInput
-        placeholder={t("search")}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
       />
 
       {isLoading ? (
@@ -105,10 +108,10 @@ export default function SuppliersPage() {
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-(--shadow-card)">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-border bg-surface-2">
+              <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-label font-semibold text-text-muted rtl:text-right">
                   {t("name")}
                 </th>

@@ -387,9 +387,18 @@ export default function SubcontractorPaymentsPage() {
         title={t("subcontractorPayments")}
         subtitle={formatYM(month, lang)}
         actions={
-          <ButtonGhost onClick={() => setTeamsOpen(true)}>
-            {t("teams")}
-          </ButtonGhost>
+          <>
+            {cards.length > 0 && (
+              <SearchInput
+                placeholder={t("search")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            )}
+            <ButtonGhost onClick={() => setTeamsOpen(true)}>
+              {t("teams")}
+            </ButtonGhost>
+          </>
         }
       />
 
@@ -403,16 +412,11 @@ export default function SubcontractorPaymentsPage() {
         />
       ) : (
         <>
-          <SearchInput
-            placeholder={t("search")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
           <div className="flex gap-5 max-[768px]:flex-col">
             {/* Sidebar */}
             <div className="flex flex-col gap-2 w-72 shrink-0 max-[768px]:w-full">
               {visibleCards.length === 0 && (
-                <p className="rounded border border-border bg-surface p-4 text-sm text-text-muted">
+                <p className="rounded-lg border border-border bg-surface p-4 shadow-(--shadow-card) text-sm text-text-muted">
                   {t("noResults")}
                 </p>
               )}
@@ -425,10 +429,10 @@ export default function SubcontractorPaymentsPage() {
                     onClick={() => {
                       setSelectedKey(card.key);
                     }}
-                    className={`text-left p-4 rounded border transition-colors ${
+                    className={`text-left p-4 rounded-lg border shadow-(--shadow-card) transition-colors ${
                       isActive
-                        ? "bg-(--beet-glow) border-beet"
-                        : "bg-surface border-border hover:bg-surface-2"
+                        ? "bg-beet-tint border-beet"
+                        : "bg-surface border-border hover:border-border-strong"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
@@ -493,13 +497,13 @@ export default function SubcontractorPaymentsPage() {
             {selectedCard ? (
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-serif text-xl text-text">
+                  <h2 className="font-display text-xl text-text">
                     {selectedCard.label}
                   </h2>
                 </div>
                 <table className="w-full border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-surface-2">
+                    <tr className="border-b border-border">
                       <th className="text-left py-2 px-3 text-label font-semibold text-text-muted rtl:text-right">
                         {t("project")}
                       </th>
@@ -703,7 +707,7 @@ export default function SubcontractorPaymentsPage() {
                                           type="date"
                                           autoFocus
                                           aria-label={t("paymentDate")}
-                                          className="px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
+                                          className="px-2 py-0.5 rounded-field border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
                                           defaultValue={
                                             payment.paymentDate?.slice(0, 10) ??
                                             todayISO()
@@ -754,7 +758,7 @@ export default function SubcontractorPaymentsPage() {
                                             maxLength={500}
                                             aria-label={t("description")}
                                             placeholder={t("description")}
-                                            className="min-w-0 flex-1 px-1.5 py-0.5 rounded-sm border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
+                                            className="min-w-0 flex-1 px-2 py-0.5 rounded-field border border-border bg-surface text-text text-xs outline-hidden focus:border-beet"
                                             value={
                                               descriptionDrafts[payment.id]
                                             }
@@ -783,7 +787,7 @@ export default function SubcontractorPaymentsPage() {
                                                 payment.description,
                                               )
                                             }
-                                            className="inline-flex h-6 items-center gap-1 rounded-sm border border-beet bg-beet px-2 font-semibold text-white transition-opacity hover:opacity-90"
+                                            className="inline-flex h-6 items-center gap-1 rounded-full border border-beet bg-beet px-2 font-semibold text-white transition-opacity hover:opacity-90"
                                           >
                                             <Icon name="check" size={12} />
                                             {t("save")}
@@ -792,7 +796,7 @@ export default function SubcontractorPaymentsPage() {
                                             onClick={() =>
                                               closeDescriptionEditor(payment.id)
                                             }
-                                            className="inline-flex h-6 items-center rounded-sm border border-border px-2 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
+                                            className="inline-flex h-6 items-center rounded-full border border-border px-2 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
                                           >
                                             {t("cancel")}
                                           </button>
@@ -966,7 +970,7 @@ export default function SubcontractorPaymentsPage() {
                                   <button
                                     onClick={() => closeEntry(pb.projectId)}
                                     title={t("cancel")}
-                                    className="inline-flex h-8 items-center justify-center rounded border border-border px-2.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
+                                    className="inline-flex h-8 items-center justify-center rounded-full border border-border px-2.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
                                   >
                                     <Icon name="close" size={14} />
                                   </button>

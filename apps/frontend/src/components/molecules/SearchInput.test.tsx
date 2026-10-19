@@ -45,10 +45,10 @@ describe("SearchInput", () => {
 
   // Full width on a phone, a fixed width from the small breakpoint up, so no
   // page has to size it (and none leaves a gap beside it on a phone).
-  it("spans the full width on a phone and caps it on wider screens", () => {
+  it("spans the full width on a phone and fixes it on wider screens", () => {
     render(<SearchInput />);
     const wrapper = screen.getByRole("searchbox").parentElement;
-    expect(wrapper).toHaveClass("w-full", "sm:max-w-xs");
-    expect(wrapper).not.toHaveClass("max-w-xs");
+    expect(wrapper).toHaveClass("w-full", "sm:w-80");
+    expect(wrapper).not.toHaveClass("w-80");
   });
 });

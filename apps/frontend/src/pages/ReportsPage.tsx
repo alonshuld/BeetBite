@@ -391,7 +391,16 @@ export default function ReportsPage() {
           <PageHeader
             title={t("projectReports")}
             actions={
-              <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
+              <>
+                {clientsInReports.length > 0 && (
+                  <SearchInput
+                    placeholder={t("search")}
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
+                  />
+                )}
+                <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
+              </>
             }
           />
 
@@ -404,11 +413,6 @@ export default function ReportsPage() {
             />
           ) : (
             <>
-              <SearchInput
-                placeholder={t("search")}
-                value={clientSearch}
-                onChange={(e) => setClientSearch(e.target.value)}
-              />
               {visibleClients.length === 0 && (
                 <EmptyState title={t("noResults")} />
               )}
@@ -430,7 +434,7 @@ export default function ReportsPage() {
         </>
       ) : (
         <>
-          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-4">
+          <div className="flex flex-wrap items-end justify-between gap-4 pb-2">
             <div className="flex min-w-0 flex-col gap-1.5">
               <button
                 onClick={() => setSelectedClientId(null)}
@@ -439,7 +443,7 @@ export default function ReportsPage() {
                 <Icon name="chevronLeft" size={13} className="rtl:rotate-180" />
                 {t("clients")}
               </button>
-              <h1 className="truncate text-page text-text">
+              <h1 className="truncate text-page font-extrabold text-text">
                 {selectedClientName}
               </h1>
             </div>
@@ -470,7 +474,16 @@ export default function ReportsPage() {
                   ₪{formatNumber(totalSubcontractorPayments)}
                 </span>
               </div>
-              <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
+              <div className="flex w-full items-center gap-2 sm:w-auto">
+                {selectedClientReports.length > 0 && (
+                  <SearchInput
+                    placeholder={t("search")}
+                    value={projectSearch}
+                    onChange={(e) => setProjectSearch(e.target.value)}
+                  />
+                )}
+                <ButtonPrimary onClick={openModal}>+ {t("add")}</ButtonPrimary>
+              </div>
             </div>
           </div>
 
@@ -483,11 +496,6 @@ export default function ReportsPage() {
             />
           ) : (
             <>
-              <SearchInput
-                placeholder={t("search")}
-                value={projectSearch}
-                onChange={(e) => setProjectSearch(e.target.value)}
-              />
               {visibleClientReports.length === 0 && (
                 <EmptyState title={t("noResults")} />
               )}
@@ -763,7 +771,7 @@ function ClientCard({ client, reportCount, onClick }: ClientCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4 text-start transition-colors duration-150 hover:border-beet/45 hover:bg-beet-tint"
+      className="group flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-surface shadow-(--shadow-card) p-4 text-start transition-colors duration-150 hover:border-beet/45 hover:bg-beet-tint"
     >
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate text-lead font-semibold text-text">
@@ -1006,7 +1014,7 @@ function TileTagEditor({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={t("tagPlaceholder")}
-        className="w-24 rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-text focus:outline-hidden focus:ring-1 focus:ring-primary"
+        className="w-24 rounded-field border border-border bg-surface px-2 py-0.5 text-xs text-text outline-hidden focus:border-beet"
       />
       <button
         onClick={() => void handleSave()}
